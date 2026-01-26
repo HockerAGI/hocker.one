@@ -8,7 +8,7 @@ export default function AuthBox() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState<string>("");
+  const [msg, setMsg] = useState("");
 
   async function submit() {
     setMsg("");
@@ -61,7 +61,7 @@ export default function AuthBox() {
           {mode === "signin" ? "Entrar" : "Crear"}
         </button>
 
-        {msg ? <div style={{ fontSize: 13, opacity: 0.8 }}>{msg}</div> : null}
+        {msg ? <div style={{ fontSize: 13, opacity: 0.85 }}>{msg}</div> : null}
       </div>
     </div>
   );
