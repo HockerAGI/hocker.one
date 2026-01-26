@@ -18,7 +18,7 @@ export default function EventsFeed() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [msg, setMsg] = useState("");
 
-  const [nodeId, setNodeId] = useState(process.env.HOCKER_DEFAULT_NODE_ID || "local-node-01");
+  const [nodeId, setNodeId] = useState("local-node-01");
   const [level, setLevel] = useState<EventLevel>("info");
   const [type, setType] = useState("manual");
   const [message, setMessage] = useState("Evento de prueba desde HOCKER ONE");
@@ -65,12 +65,20 @@ export default function EventsFeed() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ display: "grid", gap: 6 }}>
             <span>Node ID</span>
-            <input value={nodeId} onChange={(e) => setNodeId(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }} />
+            <input
+              value={nodeId}
+              onChange={(e) => setNodeId(e.target.value)}
+              style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+            />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
             <span>Nivel</span>
-            <select value={level} onChange={(e) => setLevel(e.target.value as EventLevel)} style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}>
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value as EventLevel)}
+              style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+            >
               <option value="info">info</option>
               <option value="warn">warn</option>
               <option value="error">error</option>
@@ -81,12 +89,20 @@ export default function EventsFeed() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }}>
           <label style={{ display: "grid", gap: 6 }}>
             <span>Tipo</span>
-            <input value={type} onChange={(e) => setType(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }} />
+            <input
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+            />
           </label>
 
           <label style={{ display: "grid", gap: 6 }}>
             <span>Mensaje</span>
-            <input value={message} onChange={(e) => setMessage(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }} />
+            <input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+            />
           </label>
         </div>
 
