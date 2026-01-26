@@ -10,27 +10,17 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     {
       cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          response.cookies.set({ name, value: "", ...options, maxAge: 0 });
-        }
+        get: (n) => request.cookies.get(n)?.value,
+        set: (n, v, o) => response.cookies.set({ name: n, value: v, ...o }),
+        remove: (n, o) => response.cookies.set({ name: n, value: "", ...o, maxAge: 0 })
       }
     }
   );
 
   const { data } = await supabase.auth.getUser();
-  const isAuthed = !!data.user;
 
-  if (request.nextUrl.pathname.startsWith("/dashboard") && !isAuthed) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.searchParams.set("auth", "required");
-    return NextResponse.redirect(url);
+  if (!data.user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return response;
