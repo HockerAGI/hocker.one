@@ -2,20 +2,25 @@
 
 HOCKER ONE unifica lo que antes era Control H.
 
-Rol:
+## Rol
 - Panel maestro del ecosistema HOCKER
-- Orquestador de nodos
-- Emisor de comandos
-- Receptor de eventos
+- Emite comandos (tabla `commands`)
+- Recibe eventos (tabla `events`)
+- Registra nodos (tabla `nodes`)
 
-Arquitectura:
+## Nodo físico
+El CPU físico NO corre IA pesada.
+Es un ejecutor local:
+- Lee `commands`
+- Ejecuta acciones
+- Escribe `events` + actualiza `nodes.last_seen_at`
+
+## Stack
 - Frontend: Next.js (Vercel)
-- Backend: Supabase
-- Nodo físico: ejecutor (NO IA pesada)
+- DB/Auth/Storage: Supabase
+- Node agent: repo `hocker-nodes` (después)
 
-Regla de oro:
-- El panel manda
-- El nodo ejecuta
-- Todo se registra
-
-Nunca subir secretos a GitHub.
+## Regla de secretos
+- GitHub: solo `.env.example` vacío
+- Vercel/Supabase: llaves reales
+- Nunca subir `.env` con valores
