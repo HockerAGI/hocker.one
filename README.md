@@ -1,15 +1,15 @@
 # HOCKER ONE (Control Plane)
-HOCKER ONE = Control H unificado. Panel maestro para:
-- Login (Supabase)
-- Enviar comandos a nodos (tabla commands)
-- Ver eventos del ecosistema (tabla events)
+HOCKER ONE = panel maestro (antes Control H).
 
-## Requisitos
-- Node.js 18+ (Vercel lo maneja)
-- Proyecto Supabase (URL + ANON KEY)
+## Qué hace
+- Login (Supabase Auth)
+- Protege /dashboard
+- Envia comandos (tabla commands)
+- Lee/crea eventos (tabla events)
+- Base para integrar el nodo físico (hocker-nodes)
 
-## Configuración (local)
-1) Copia `.env.example` a `.env.local`
+## Setup local
+1) Copia `.env.example` → `.env.local`
 2) Llena:
 - NEXT_PUBLIC_SUPABASE_URL
 - NEXT_PUBLIC_SUPABASE_ANON_KEY
