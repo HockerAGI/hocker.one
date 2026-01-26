@@ -6,10 +6,10 @@ import type { CommandStatus } from "@/lib/types";
 
 export default function CommandBox() {
   const supabase = useMemo(() => createBrowserSupabase(), []);
-  const [nodeId, setNodeId] = useState(process.env.HOCKER_DEFAULT_NODE_ID || "local-node-01");
+  const [nodeId, setNodeId] = useState("local-node-01");
   const [command, setCommand] = useState("status");
   const [payload, setPayload] = useState(`{}`);
-  const [msg, setMsg] = useState<string>("");
+  const [msg, setMsg] = useState("");
 
   async function send() {
     setMsg("");
@@ -38,15 +38,24 @@ export default function CommandBox() {
   return (
     <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
       <h2 style={{ marginTop: 0 }}>Enviar comando</h2>
+
       <div style={{ display: "grid", gap: 10 }}>
         <label style={{ display: "grid", gap: 6 }}>
           <span>Node ID</span>
-          <input value={nodeId} onChange={(e) => setNodeId(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }} />
+          <input
+            value={nodeId}
+            onChange={(e) => setNodeId(e.target.value)}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+          />
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
           <span>Comando</span>
-          <input value={command} onChange={(e) => setCommand(e.target.value)} style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }} />
+          <input
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+          />
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
@@ -55,7 +64,12 @@ export default function CommandBox() {
             value={payload}
             onChange={(e) => setPayload(e.target.value)}
             rows={5}
-            style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #ccc",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+            }}
           />
         </label>
 
@@ -66,7 +80,7 @@ export default function CommandBox() {
         {msg ? <div style={{ fontSize: 13, opacity: 0.85 }}>{msg}</div> : null}
 
         <div style={{ fontSize: 12, opacity: 0.7 }}>
-          Ejemplos de comandos: <code>status</code>, <code>reboot</code>, <code>run_task</code>, <code>deploy</code>.
+          Ejemplos: <code>status</code>, <code>reboot</code>, <code>run_task</code>, <code>deploy</code>.
         </div>
       </div>
     </div>
