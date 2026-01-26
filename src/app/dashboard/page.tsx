@@ -10,6 +10,7 @@ export default function DashboardPage() {
           <h1 style={{ marginBottom: 6 }}>Dashboard</h1>
           <div style={{ opacity: 0.75 }}>Centro de mando: comandos → nodos / eventos → panel.</div>
         </div>
+
         <form action="/signout" method="post">
           <button type="submit" style={{ padding: "10px 14px", cursor: "pointer" }}>
             Cerrar sesión
