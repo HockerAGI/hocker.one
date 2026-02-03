@@ -1,37 +1,114 @@
 create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
 
+-- =========================
+-- TYPES
+-- =========================
+do $$ begin
+  create type public.command_status as enum ('queued','running','succeeded','failed','cancelled','needs_approval');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.event_level as enum ('info','warn','error','critical');
+exception when duplicate_object then null; end $$;
+
+-- =========================
+-- PROFILES
+-- =========================
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
-  role text default 'owner',
+  role text not null default 'owner', -- owner/admin/operator
   created_at timestamptz default now()
 );
 
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer as $$
+begin
+  insert into public.profiles (id, display_name, role)
+  values (new.id, coalesce(new.email, 'user'), 'owner')
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
+
+-- =========================
+-- SYSTEM CONTROLS (KILL SWITCH)
+-- =========================
+create table if not exists public.system_controls (
+  id text primary key default 'global',
+  kill_switch boolean not null default false,
+  meta jsonb default '{}'::jsonb,
+  updated_at timestamptz default now()
+);
+
+insert into public.system_controls (id, kill_switch)
+values ('global', false)
+on conflict (id) do nothing;
+
+-- =========================
+-- NODES
+-- =========================
 create table if not exists public.nodes (
   id text primary key,
   name text not null,
-  type text not null default 'local',
-  status text not null default 'unknown',
+  type text not null default 'local', -- local/cloud
+  status text not null default 'unknown', -- online/offline/unknown
   last_seen_at timestamptz,
   meta jsonb default '{}'::jsonb,
   created_at timestamptz default now()
 );
 
+-- =========================
+-- AGIS
+-- =========================
+create table if not exists public.agis (
+  id text primary key,
+  name text not null,
+  purpose text,
+  status text not null default 'offline', -- online/offline/degraded
+  endpoints jsonb default '{}'::jsonb,
+  permissions jsonb default '{}'::jsonb,
+  meta jsonb default '{}'::jsonb,
+  updated_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+-- =========================
+-- COMMANDS
+-- =========================
 create table if not exists public.commands (
   id uuid primary key default uuid_generate_v4(),
+  correlation_id uuid not null default uuid_generate_v4(),
   node_id text references public.nodes(id) on delete set null,
   command text not null,
   payload jsonb default '{}'::jsonb,
-  status text not null default 'queued',
+  signature text not null, -- HMAC sha256
+  status public.command_status not null default 'queued',
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz default now(),
-  executed_at timestamptz
+  executed_at timestamptz,
+  finished_at timestamptz,
+  result jsonb default '{}'::jsonb,
+  error text
 );
 
+create index if not exists idx_commands_created_at on public.commands (created_at desc);
+create index if not exists idx_commands_node_status on public.commands (node_id, status);
+
+-- =========================
+-- EVENTS
+-- =========================
 create table if not exists public.events (
   id uuid primary key default uuid_generate_v4(),
+  correlation_id uuid,
+  command_id uuid references public.commands(id) on delete set null,
   node_id text references public.nodes(id) on delete set null,
-  level text not null default 'info',
+  level public.event_level not null default 'info',
   type text not null default 'generic',
   message text not null,
   data jsonb default '{}'::jsonb,
@@ -39,50 +116,127 @@ create table if not exists public.events (
 );
 
 create index if not exists idx_events_created_at on public.events (created_at desc);
-create index if not exists idx_commands_created_at on public.commands (created_at desc);
-create index if not exists idx_commands_node_status on public.commands (node_id, status);
 
+-- =========================
+-- AUDIT LOGS (VERTX)
+-- =========================
+create table if not exists public.audit_logs (
+  id uuid primary key default uuid_generate_v4(),
+  actor_type text not null, -- user/agi/system
+  actor_id text,
+  action text not null,
+  target text,
+  meta jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_audit_created_at on public.audit_logs (created_at desc);
+
+-- =========================
+-- NOVA CHAT
+-- =========================
+create table if not exists public.nova_threads (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete cascade,
+  title text default 'NOVA Chat',
+  created_at timestamptz default now()
+);
+
+create table if not exists public.nova_messages (
+  id uuid primary key default uuid_generate_v4(),
+  thread_id uuid references public.nova_threads(id) on delete cascade,
+  role text not null, -- user | nova | system
+  content text not null,
+  meta jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+-- =========================
+-- HOCKER SUPPLY (MVP)
+-- =========================
+create table if not exists public.supply_products (
+  id uuid primary key default uuid_generate_v4(),
+  sku text unique,
+  name text not null,
+  description text,
+  unit_cost numeric(12,2) default 0,
+  price numeric(12,2) default 0,
+  stock int default 0,
+  meta jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.supply_orders (
+  id uuid primary key default uuid_generate_v4(),
+  status text not null default 'pending', -- pending/paid/producing/shipped/delivered/cancelled
+  customer_name text,
+  customer_phone text,
+  total numeric(12,2) default 0,
+  meta jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.supply_order_items (
+  id uuid primary key default uuid_generate_v4(),
+  order_id uuid references public.supply_orders(id) on delete cascade,
+  product_id uuid references public.supply_products(id) on delete set null,
+  qty int not null default 1,
+  unit_price numeric(12,2) default 0,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_supply_orders_created_at on public.supply_orders (created_at desc);
+
+-- =========================
+-- RLS (browser: SOLO LECTURA)
+-- =========================
 alter table public.profiles enable row level security;
+alter table public.system_controls enable row level security;
 alter table public.nodes enable row level security;
+alter table public.agis enable row level security;
 alter table public.commands enable row level security;
 alter table public.events enable row level security;
+alter table public.audit_logs enable row level security;
+alter table public.nova_threads enable row level security;
+alter table public.nova_messages enable row level security;
+alter table public.supply_products enable row level security;
+alter table public.supply_orders enable row level security;
+alter table public.supply_order_items enable row level security;
 
+-- Profiles: read/update own
 create policy "profiles_read_own" on public.profiles
-for select to authenticated
-using (id = auth.uid());
-
-create policy "profiles_upsert_own" on public.profiles
-for insert to authenticated
-with check (id = auth.uid());
+for select to authenticated using (id = auth.uid());
 
 create policy "profiles_update_own" on public.profiles
-for update to authenticated
-using (id = auth.uid());
+for update to authenticated using (id = auth.uid());
 
-create policy "nodes_read" on public.nodes
-for select to authenticated
-using (true);
+-- Controls: read for authenticated
+create policy "controls_select_auth" on public.system_controls
+for select to authenticated using (true);
 
-create policy "nodes_write" on public.nodes
-for insert to authenticated
-with check (true);
+-- Read-only for authenticated (writes ONLY via service role)
+create policy "nodes_select_auth" on public.nodes for select to authenticated using (true);
+create policy "agis_select_auth" on public.agis for select to authenticated using (true);
+create policy "commands_select_auth" on public.commands for select to authenticated using (true);
+create policy "events_select_auth" on public.events for select to authenticated using (true);
+create policy "audit_select_auth" on public.audit_logs for select to authenticated using (true);
 
-create policy "nodes_update" on public.nodes
-for update to authenticated
-using (true);
+create policy "supply_products_select_auth" on public.supply_products for select to authenticated using (true);
+create policy "supply_orders_select_auth" on public.supply_orders for select to authenticated using (true);
+create policy "supply_items_select_auth" on public.supply_order_items for select to authenticated using (true);
 
-create policy "commands_read" on public.commands
-for select to authenticated
-using (true);
+-- NOVA chat: lectura por dueño
+create policy "nova_threads_select_own" on public.nova_threads
+for select to authenticated using (user_id = auth.uid());
 
-create policy "commands_write" on public.commands
-for insert to authenticated
-with check (true);
+create policy "nova_messages_select_own" on public.nova_messages
+for select to authenticated using (
+  exists (
+    select 1 from public.nova_threads t
+    where t.id = nova_messages.thread_id
+      and t.user_id = auth.uid()
+  )
+);
 
-create policy "events_read" on public.events
-for select to authenticated
-using (true);
-
-create policy "events_write" on public.events
-for insert to authenticated
-with check (true);
+-- NO INSERT/UPDATE policies for commands/events/nodes/agis/audit/chat/supply
+-- => navegador NO puede mutar. Solo service role (server/NOVA/agent).
