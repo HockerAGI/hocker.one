@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { normalizeProjectId, defaultProjectId } from "@/lib/project";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
 
   const text = String(body.text ?? "");
   const node_id = String(body.node_id ?? process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ?? "node-hocker-01");
+  const project_id = normalizeProjectId(body.project_id ?? defaultProjectId());
   const thread_id_in = body.thread_id ? String(body.thread_id) : null;
 
   if (!text) return NextResponse.json({ ok: false, error: "Falta text" }, { status: 400 });
@@ -21,12 +23,17 @@ export async function POST(req: Request) {
   let thread_id = thread_id_in;
 
   if (!thread_id) {
-    const t = await admin.from("nova_threads").insert({ user_id: data.user.id, title: "NOVA Chat" }).select("id").single();
+    const t = await admin
+      .from("nova_threads")
+      .insert({ project_id, user_id: data.user.id, title: "NOVA Chat" })
+      .select("id")
+      .single();
+
     if (t.error) return NextResponse.json({ ok: false, error: t.error.message }, { status: 400 });
     thread_id = t.data.id;
   }
 
-  const ins1 = await admin.from("nova_messages").insert({ thread_id, role: "user", content: text });
+  const ins1 = await admin.from("nova_messages").insert({ project_id, thread_id, role: "user", content: text });
   if (ins1.error) return NextResponse.json({ ok: false, error: ins1.error.message }, { status: 400 });
 
   const url = process.env.NOVA_ORCHESTRATOR_URL ?? "";
@@ -36,7 +43,7 @@ export async function POST(req: Request) {
   const r = await fetch(`${url}/v1/chat`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-hocker-key": key },
-    body: JSON.stringify({ text, node_id, user_id: data.user.id, thread_id })
+    body: JSON.stringify({ text, node_id, project_id, user_id: data.user.id, thread_id })
   });
 
   const j = await r.json().catch(() => ({}));
@@ -45,6 +52,7 @@ export async function POST(req: Request) {
   const reply = String(j.reply ?? "");
   if (reply) {
     await admin.from("nova_messages").insert({
+      project_id,
       thread_id,
       role: "nova",
       content: reply,
@@ -52,5 +60,11 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, thread_id, reply, action: j.action ?? null, commandId: j.commandId ?? null });
+  return NextResponse.json({
+    ok: true,
+    thread_id,
+    reply,
+    action: j.action ?? null,
+    commandId: j.commandId ?? null
+  });
 }
