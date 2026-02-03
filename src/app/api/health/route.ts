@@ -4,6 +4,6 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     service: "hocker-one",
-    env: process.env.HOCKER_ENV ?? "unknown"
+    ts: new Date().toISOString()
   });
 }
