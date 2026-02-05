@@ -1,89 +1,75 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { requireRole } from "@/lib/authz";
 import { normalizeProjectId, defaultProjectId } from "@/lib/project";
+import { requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request, ctx: { params: { id: string } }) {
-  const auth = await requireRole(["owner", "admin"]);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
-
   const url = new URL(req.url);
   const project_id = normalizeProjectId(url.searchParams.get("project_id") ?? defaultProjectId());
 
+  const auth = await requireRole(["owner", "admin", "operator"], project_id);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
   const admin = createAdminSupabase();
-  const { data, error } = await admin
+  const q = await admin
     .from("supply_products")
     .select("*")
-    .eq("project_id", project_id)
+    .eq("project_id", auth.project_id)
     .eq("id", ctx.params.id)
     .single();
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 404 });
-  return NextResponse.json({ ok: true, data });
+  if (q.error) return NextResponse.json({ ok: false, error: q.error.message }, { status: 404 });
+  return NextResponse.json({ ok: true, item: q.data });
 }
 
 export async function PUT(req: Request, ctx: { params: { id: string } }) {
-  const auth = await requireRole(["owner", "admin"]);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
-
   const body = await req.json().catch(() => ({}));
   const project_id = normalizeProjectId(body.project_id ?? defaultProjectId());
 
-  const patch: any = {};
-  if (body.sku !== undefined) patch.sku = body.sku ? String(body.sku) : null;
-  if (body.name !== undefined) patch.name = String(body.name ?? "").trim();
-  if (body.description !== undefined) patch.description = body.description ? String(body.description) : null;
-  if (body.unit_cost !== undefined) patch.unit_cost = Number(body.unit_cost ?? 0);
-  if (body.price !== undefined) patch.price = Number(body.price ?? 0);
-  if (body.stock !== undefined) patch.stock = Number(body.stock ?? 0);
+  const auth = await requireRole(["owner", "admin"], project_id);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const admin = createAdminSupabase();
-  const { error } = await admin
+
+  const upd = await admin
     .from("supply_products")
-    .update(patch)
-    .eq("project_id", project_id)
-    .eq("id", ctx.params.id);
+    .update({
+      sku: body.sku != null ? String(body.sku) : undefined,
+      name: body.name != null ? String(body.name) : undefined,
+      description: body.description != null ? String(body.description) : undefined,
+      price_cents: body.price_cents != null ? Number(body.price_cents) : undefined,
+      currency: body.currency != null ? String(body.currency) : undefined,
+      stock: body.stock != null ? Number(body.stock) : undefined,
+      active: body.active != null ? Boolean(body.active) : undefined,
+      meta: body.meta != null ? body.meta : undefined,
+      updated_at: new Date().toISOString()
+    })
+    .eq("project_id", auth.project_id)
+    .eq("id", ctx.params.id)
+    .select("*")
+    .single();
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-
-  await admin.from("audit_logs").insert({
-    project_id,
-    actor_type: "user",
-    actor_id: auth.user!.id,
-    action: "supply_product_update",
-    target: `supply_products:${ctx.params.id}`,
-    meta: { patch: Object.keys(patch) }
-  });
-
-  return NextResponse.json({ ok: true });
+  if (upd.error) return NextResponse.json({ ok: false, error: upd.error.message }, { status: 400 });
+  return NextResponse.json({ ok: true, item: upd.data });
 }
 
 export async function DELETE(req: Request, ctx: { params: { id: string } }) {
-  const auth = await requireRole(["owner", "admin"]);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
-
   const url = new URL(req.url);
   const project_id = normalizeProjectId(url.searchParams.get("project_id") ?? defaultProjectId());
 
+  const auth = await requireRole(["owner", "admin"], project_id);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
   const admin = createAdminSupabase();
-  const { error } = await admin
+
+  const del = await admin
     .from("supply_products")
     .delete()
-    .eq("project_id", project_id)
+    .eq("project_id", auth.project_id)
     .eq("id", ctx.params.id);
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-
-  await admin.from("audit_logs").insert({
-    project_id,
-    actor_type: "user",
-    actor_id: auth.user!.id,
-    action: "supply_product_delete",
-    target: `supply_products:${ctx.params.id}`,
-    meta: {}
-  });
-
+  if (del.error) return NextResponse.json({ ok: false, error: del.error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
