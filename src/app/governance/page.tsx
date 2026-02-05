@@ -1,71 +1,98 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import AppNav from "@/components/AppNav";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
 export default function GovernancePage() {
-  const supabase = useMemo(() => createBrowserSupabase(), []);
-  const [enabled, setEnabled] = useState(false);
-  const [msg, setMsg] = useState("");
+  const sb = useMemo(() => createBrowserSupabase(), []);
+  const [projectId, setProjectId] = useState(defaultProjectId());
+  const [kill, setKill] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
-  async function load() {
-    const { data, error } = await supabase.from("system_controls").select("kill_switch").eq("id", "global").single();
-    if (error) return setMsg(error.message);
-    setEnabled(Boolean(data?.kill_switch));
-    setMsg("");
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("hocker_project_id");
+      if (stored) setProjectId(normalizeProjectId(stored));
+    } catch {}
+  }, []);
+
+  async function refresh() {
+    setErr(null);
+    const r = await sb
+      .from("system_controls")
+      .select("kill_switch, updated_at")
+      .eq("project_id", projectId)
+      .single();
+
+    if (r.error) {
+      setErr(r.error.message);
+      return;
+    }
+    setKill(Boolean(r.data?.kill_switch));
+    setUpdatedAt(r.data?.updated_at ?? null);
   }
+
+  useEffect(() => {
+    refresh();
+    const t = setInterval(refresh, 2500);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   async function toggle(next: boolean) {
-    setMsg("");
-    const r = await fetch("/api/governance/killswitch", {
+    setErr(null);
+    const res = await fetch("/api/governance/killswitch", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ enabled: next })
+      body: JSON.stringify({ project_id: projectId, action: next ? "on" : "off" })
     });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) return setMsg(j?.error ?? "Error");
-    await load();
+
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErr(j?.error ?? "Error");
+      return;
+    }
+    setKill(Boolean(j.kill_switch));
+    setUpdatedAt(j.updated_at ?? null);
   }
 
-  useEffect(() => { load(); }, []);
-
   return (
-    <main style={{ maxWidth: 1100, margin: "28px auto", padding: 16 }}>
-      <header style={{ display: "grid", gap: 12 }}>
-        <h1 style={{ margin: 0 }}>Governance</h1>
-        <AppNav />
-        <div style={{ opacity: 0.75 }}>Kill-switch: bloquea ejecución de NOVA + Node en segundos.</div>
-      </header>
+    <div className="space-y-4">
+      <div className="rounded-lg border p-4 space-y-2">
+        <h1 className="text-xl font-semibold">Governance</h1>
 
-      <section style={{ marginTop: 16 }}>
-        <div style={{ border: "1px solid #e6eefc", borderRadius: 16, padding: 16, background: "#fff" }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ fontSize: 14 }}>
-              Estado:{" "}
-              <b style={{ color: enabled ? "#b00020" : "#0b1b3a" }}>
-                {enabled ? "ACTIVO (bloqueando)" : "INACTIVO"}
-              </b>
+        <div className="flex items-center gap-2">
+          <span className="text-xs opacity-70">Project</span>
+          <input
+            className="rounded border px-3 py-2 text-sm"
+            value={projectId}
+            onChange={(e) => setProjectId(normalizeProjectId(e.target.value))}
+          />
+        </div>
+
+        {err && <div className="text-sm text-red-600">{err}</div>}
+
+        <div className="flex items-center justify-between rounded border p-3">
+          <div>
+            <div className="text-sm font-medium">Kill-switch</div>
+            <div className="text-xs opacity-70">
+              Estado: <b>{kill ? "ON (bloquea ejecución)" : "OFF"}</b>
+              {updatedAt ? ` · actualizado ${new Date(updatedAt).toLocaleString()}` : ""}
             </div>
-
-            <button
-              onClick={() => toggle(!enabled)}
-              style={{
-                padding: "12px 14px",
-                cursor: "pointer",
-                borderRadius: 12,
-                border: "1px solid #d6e3ff",
-                background: enabled ? "#fff" : "#1e5eff",
-                color: enabled ? "#0b1b3a" : "#fff"
-              }}
-            >
-              {enabled ? "Desactivar" : "Activar"}
-            </button>
           </div>
 
-          {msg ? <div style={{ marginTop: 10, fontSize: 13 }}>{msg}</div> : null}
+          <div className="flex gap-2">
+            <button className="rounded border px-3 py-2" onClick={() => toggle(false)} disabled={!kill}>
+              Apagar
+            </button>
+            <button className="rounded bg-black text-white px-3 py-2" onClick={() => toggle(true)} disabled={kill}>
+              Encender
+            </button>
+          </div>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
