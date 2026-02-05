@@ -1,153 +1,152 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { createBrowserSupabase } from "@/lib/supabase";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
-type Msg = {
-  id: string;
-  role: "user" | "nova" | "system";
-  content: string;
-  created_at: string;
-};
+type Msg = { id: string; role: "user" | "assistant"; content: string; created_at: string };
 
 export default function NovaChat() {
-  const sb = useMemo(() => createBrowserSupabase(), []);
+  const supabase = useMemo(() => createBrowserSupabase(), []);
+
   const [projectId, setProjectId] = useState(defaultProjectId());
+  const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
+
+  const [nodeId, setNodeId] = useState(process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ?? "node-hocker-01");
   const [threadId, setThreadId] = useState<string | null>(null);
+
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState("");
-  const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  // Cuando cambias de proyecto: “cambia de cuarto”, no mezcles chats
   useEffect(() => {
-    try {
-      const storedProject = localStorage.getItem("hocker_project_id");
-      const pid = storedProject ? normalizeProjectId(storedProject) : defaultProjectId();
-      setProjectId(pid);
+    setThreadId(null);
+    setMessages([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pid]);
 
-      const storedThread = localStorage.getItem(`nova_thread_id:${pid}`);
-      if (storedThread) setThreadId(storedThread);
-    } catch {}
-  }, []);
+  async function loadMessages(tid: string) {
+    const { data, error } = await supabase
+      .from("nova_messages")
+      .select("id, role, content, created_at")
+      .eq("project_id", pid)
+      .eq("thread_id", tid)
+      .order("created_at", { ascending: true });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("hocker_project_id", projectId);
-      const storedThread = localStorage.getItem(`nova_thread_id:${projectId}`);
-      setThreadId(storedThread ? storedThread : null);
-      setMsgs([]);
-    } catch {}
-  }, [projectId]);
+    if (!error) setMessages((data ?? []) as any);
+  }
 
-  useEffect(() => {
-    let cancelled = false;
+  async function ensureThread(): Promise<string> {
+    if (threadId) return threadId;
 
-    async function load() {
-      if (!threadId) return;
-      setErr(null);
-
-      const { data, error } = await sb
-        .from("nova_messages")
-        .select("id,role,content,created_at")
-        .eq("project_id", projectId)
-        .eq("thread_id", threadId)
-        .order("created_at", { ascending: true })
-        .limit(200);
-
-      if (cancelled) return;
-      if (error) setErr(error.message);
-      else setMsgs((data ?? []) as any);
-    }
-
-    load();
-    const t = setInterval(load, 2500);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [sb, projectId, threadId]);
-
-  async function send() {
-    setErr(null);
-    const v = text.trim();
-    if (!v) return;
-
-    setSending(true);
-
-    const r = await fetch("/api/nova/chat", {
+    const r = await fetch("/api/nova/thread", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: projectId,
-        text: v,
-        thread_id: threadId
-      })
+      body: JSON.stringify({ project_id: pid }),
     });
 
     const j = await r.json().catch(() => ({}));
-    setSending(false);
+    const tid = String(j.thread_id ?? "");
+    if (!tid) throw new Error("No se pudo crear thread");
+    setThreadId(tid);
+    return tid;
+  }
 
-    if (!r.ok) {
-      setErr(j?.error ?? "Error");
-      return;
-    }
+  async function send() {
+    const t = text.trim();
+    if (!t) return;
 
-    const newThread = String(j.thread_id ?? "");
-    if (newThread) {
-      setThreadId(newThread);
-      try {
-        localStorage.setItem(`nova_thread_id:${projectId}`, newThread);
-      } catch {}
-    }
-
+    setLoading(true);
     setText("");
+
+    try {
+      const tid = await ensureThread();
+
+      // optimista: lo pintamos al instante
+      setMessages((m) => [
+        ...m,
+        { id: crypto.randomUUID(), role: "user", content: t, created_at: new Date().toISOString() } as any,
+      ]);
+
+      const r = await fetch("/api/nova/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: pid, thread_id: tid, node_id: nodeId, text: t }),
+      });
+
+      await r.json().catch(() => ({}));
+      await loadMessages(tid);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">NOVA Chat</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-xs opacity-70">Project</span>
-          <input
-            className="rounded border px-3 py-2 text-sm"
-            value={projectId}
-            onChange={(e) => setProjectId(normalizeProjectId(e.target.value))}
-          />
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">NOVA Chat</h2>
+          <p className="text-sm text-slate-500">Conversación por proyecto (no se mezcla).</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col">
+            <label className="text-xs text-slate-500">Proyecto</label>
+            <input
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder="global / chido / supply..."
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs text-slate-500">Node</label>
+            <input
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              value={nodeId}
+              onChange={(e) => setNodeId(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      {err && <div className="text-sm text-red-600">{err}</div>}
-
-      <div className="h-[340px] overflow-auto rounded border p-3 space-y-2">
-        {msgs.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "text-right" : "text-left"}>
-            <div className="text-xs opacity-60">{m.role.toUpperCase()}</div>
-            <div className="inline-block rounded border px-3 py-2 max-w-[90%]">
-              {m.content}
-            </div>
+      <div className="mt-4 h-[420px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        {messages.length === 0 ? (
+          <div className="text-sm text-slate-500">Escribe para empezar…</div>
+        ) : (
+          <div className="space-y-2">
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                  m.role === "user" ? "ml-auto bg-slate-900 text-white" : "mr-auto bg-white text-slate-900 border border-slate-200"
+                }`}
+              >
+                {m.content}
+              </div>
+            ))}
           </div>
-        ))}
-        {msgs.length === 0 && <div className="opacity-60 text-sm">Sin mensajes</div>}
+        )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="mt-3 flex gap-2">
         <input
-          className="flex-1 rounded border px-3 py-2"
+          className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Escribe…"
+          placeholder="Escribe aquí…"
           onKeyDown={(e) => {
             if (e.key === "Enter") send();
           }}
         />
         <button
-          className="rounded bg-black text-white px-4 disabled:opacity-60"
           onClick={send}
-          disabled={sending}
+          disabled={loading}
+          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {sending ? "…" : "Enviar"}
+          {loading ? "..." : "Enviar"}
         </button>
       </div>
     </div>
