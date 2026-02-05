@@ -1,16 +1,44 @@
 import { createServerSupabase } from "./supabase-server";
+import { normalizeProjectId, defaultProjectId } from "./project";
 
-export async function requireRole(allowed: Array<"owner" | "admin">) {
-  const sb = createServerSupabase();
-  const { data } = await sb.auth.getUser();
-  if (!data.user) return { ok: false as const, status: 401, error: "No autorizado", user: null, role: null };
+export type AuthzOk = {
+  ok: true;
+  user: { id: string; email?: string | null };
+  project_id: string;
+  role: "owner" | "admin" | "operator";
+};
 
-  const { data: profile } = await sb.from("profiles").select("role").eq("id", data.user.id).single();
-  const role = (profile?.role ?? "operator") as any;
+export type AuthzFail = { ok: false; status: number; error: string };
 
-  if (!allowed.includes(role)) {
-    return { ok: false as const, status: 403, error: "Permisos insuficientes", user: data.user, role };
-  }
+export type AuthzResult = AuthzOk | AuthzFail;
 
-  return { ok: true as const, status: 200, error: null, user: data.user, role };
+export async function requireRole(
+  allowedRoles: Array<"owner" | "admin" | "operator">,
+  projectId?: string | null
+): Promise<AuthzResult> {
+  const supabase = createServerSupabase();
+
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return { ok: false, status: 401, error: "No autorizado" };
+
+  const project_id = normalizeProjectId(projectId ?? defaultProjectId());
+
+  const { data: membership, error } = await supabase
+    .from("project_members")
+    .select("role")
+    .eq("project_id", project_id)
+    .eq("user_id", u.user.id)
+    .single();
+
+  if (error || !membership?.role) return { ok: false, status: 403, error: "Sin acceso a este proyecto" };
+
+  const role = membership.role as AuthzOk["role"];
+  if (!allowedRoles.includes(role)) return { ok: false, status: 403, error: "Permisos insuficientes" };
+
+  return {
+    ok: true,
+    user: { id: u.user.id, email: u.user.email },
+    project_id,
+    role
+  };
 }
