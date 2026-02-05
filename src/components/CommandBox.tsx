@@ -19,7 +19,7 @@ export default function CommandBox() {
       const r = await fetch("/api/commands", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: pid, node_id: nodeId, command: text, payload: {} }),
+        body: JSON.stringify({ project_id: pid, node_id: nodeId, command: text, payload: {} })
       });
       const j = await r.json().catch(() => ({}));
       setOut(j);
@@ -30,7 +30,7 @@ export default function CommandBox() {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-end">
         <div className="flex flex-col">
           <label className="text-xs text-slate-500">Proyecto</label>
           <input
@@ -56,7 +56,7 @@ export default function CommandBox() {
             className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="status"
+            placeholder="status / fs.list / shell.exec"
           />
         </div>
 
