@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { normalizeProjectId, defaultProjectId } from "@/lib/project";
+import { requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const supabase = createServerSupabase();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
-
   const admin = createAdminSupabase();
   const body = await req.json().catch(() => ({}));
 
@@ -20,12 +16,15 @@ export async function POST(req: Request) {
 
   if (!text) return NextResponse.json({ ok: false, error: "Falta text" }, { status: 400 });
 
+  const auth = await requireRole(["owner", "admin", "operator"], project_id);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
   let thread_id = thread_id_in;
 
   if (!thread_id) {
     const t = await admin
       .from("nova_threads")
-      .insert({ project_id, user_id: data.user.id, title: "NOVA Chat" })
+      .insert({ project_id: auth.project_id, user_id: auth.user.id, title: "NOVA Chat" })
       .select("id")
       .single();
 
@@ -33,7 +32,12 @@ export async function POST(req: Request) {
     thread_id = t.data.id;
   }
 
-  const ins1 = await admin.from("nova_messages").insert({ project_id, thread_id, role: "user", content: text });
+  const ins1 = await admin.from("nova_messages").insert({
+    project_id: auth.project_id,
+    thread_id,
+    role: "user",
+    content: text
+  });
   if (ins1.error) return NextResponse.json({ ok: false, error: ins1.error.message }, { status: 400 });
 
   const url = process.env.NOVA_ORCHESTRATOR_URL ?? "";
@@ -43,7 +47,13 @@ export async function POST(req: Request) {
   const r = await fetch(`${url}/v1/chat`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-hocker-key": key },
-    body: JSON.stringify({ text, node_id, project_id, user_id: data.user.id, thread_id })
+    body: JSON.stringify({
+      text,
+      node_id,
+      project_id: auth.project_id,
+      user_id: auth.user.id,
+      thread_id
+    })
   });
 
   const j = await r.json().catch(() => ({}));
@@ -52,7 +62,7 @@ export async function POST(req: Request) {
   const reply = String(j.reply ?? "");
   if (reply) {
     await admin.from("nova_messages").insert({
-      project_id,
+      project_id: auth.project_id,
       thread_id,
       role: "nova",
       content: reply,
