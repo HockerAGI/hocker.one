@@ -1,115 +1,154 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
-import VoiceInput from "@/components/VoiceInput";
+import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
-type Msg = { id: string; role: string; content: string; created_at: string };
-
-function speak(text: string) {
-  try {
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "es-MX";
-    synth.cancel();
-    synth.speak(u);
-  } catch {}
-}
+type Msg = {
+  id: string;
+  role: "user" | "nova" | "system";
+  content: string;
+  created_at: string;
+};
 
 export default function NovaChat() {
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  const sb = useMemo(() => createBrowserSupabase(), []);
+  const [projectId, setProjectId] = useState(defaultProjectId());
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [text, setText] = useState("NOVA, dame el status del nodo");
-  const [nodeId, setNodeId] = useState(process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID || "node-hocker-01");
-  const [msg, setMsg] = useState("");
-  const [tts, setTts] = useState(true);
-
-  async function load(tid: string) {
-    const { data, error } = await supabase
-      .from("nova_messages")
-      .select("id,role,content,created_at")
-      .eq("thread_id", tid)
-      .order("created_at", { ascending: true });
-
-    if (error) return setMsg(error.message);
-    setMessages((data ?? []) as any);
-    setMsg("");
-  }
-
-  async function send() {
-    setMsg("");
-    const r = await fetch("/api/nova/chat", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text, node_id: nodeId, thread_id: threadId })
-    });
-
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) return setMsg(j?.error ?? "Error");
-
-    const tid = j.thread_id as string;
-    if (!threadId) setThreadId(tid);
-    setText("");
-    await load(tid);
-
-    if (tts && j.reply) speak(String(j.reply));
-  }
+  const [text, setText] = useState("");
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("hocker.threadId");
-    if (saved) {
-      setThreadId(saved);
-      load(saved);
-    }
+    try {
+      const storedProject = localStorage.getItem("hocker_project_id");
+      const pid = storedProject ? normalizeProjectId(storedProject) : defaultProjectId();
+      setProjectId(pid);
+
+      const storedThread = localStorage.getItem(`nova_thread_id:${pid}`);
+      if (storedThread) setThreadId(storedThread);
+    } catch {}
   }, []);
 
   useEffect(() => {
-    if (threadId) localStorage.setItem("hocker.threadId", threadId);
-  }, [threadId]);
+    try {
+      localStorage.setItem("hocker_project_id", projectId);
+      const storedThread = localStorage.getItem(`nova_thread_id:${projectId}`);
+      setThreadId(storedThread ? storedThread : null);
+      setMsgs([]);
+    } catch {}
+  }, [projectId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (!threadId) return;
+      setErr(null);
+
+      const { data, error } = await sb
+        .from("nova_messages")
+        .select("id,role,content,created_at")
+        .eq("project_id", projectId)
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+
+      if (cancelled) return;
+      if (error) setErr(error.message);
+      else setMsgs((data ?? []) as any);
+    }
+
+    load();
+    const t = setInterval(load, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [sb, projectId, threadId]);
+
+  async function send() {
+    setErr(null);
+    const v = text.trim();
+    if (!v) return;
+
+    setSending(true);
+
+    const r = await fetch("/api/nova/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: projectId,
+        text: v,
+        thread_id: threadId
+      })
+    });
+
+    const j = await r.json().catch(() => ({}));
+    setSending(false);
+
+    if (!r.ok) {
+      setErr(j?.error ?? "Error");
+      return;
+    }
+
+    const newThread = String(j.thread_id ?? "");
+    if (newThread) {
+      setThreadId(newThread);
+      try {
+        localStorage.setItem(`nova_thread_id:${projectId}`, newThread);
+      } catch {}
+    }
+
+    setText("");
+  }
 
   return (
-    <div style={{ border: "1px solid #e6eefc", borderRadius: 16, padding: 16, background: "#fff" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <h2 style={{ margin: 0 }}>Chat con NOVA</h2>
-
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 12, opacity: 0.8 }}>Node</span>
-            <input value={nodeId} onChange={(e) => setNodeId(e.target.value)} style={{ padding: 10, borderRadius: 12, border: "1px solid #d6e3ff" }} />
-          </label>
-
-          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, opacity: 0.85 }}>
-            <input type="checkbox" checked={tts} onChange={(e) => setTts(e.target.checked)} />
-            Voz (TTS)
-          </label>
-
-          <VoiceInput onText={(t) => setText((prev) => (prev ? prev + " " + t : t))} />
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold">NOVA Chat</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-xs opacity-70">Project</span>
+          <input
+            className="rounded border px-3 py-2 text-sm"
+            value={projectId}
+            onChange={(e) => setProjectId(normalizeProjectId(e.target.value))}
+          />
         </div>
       </div>
 
-      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, border: "1px solid #eef3ff", background: "#fbfcff", height: 320, overflow: "auto" }}>
-        {messages.length === 0 ? (
-          <div style={{ opacity: 0.7 }}>No hay mensajes todavía. Escribe o usa voz.</div>
-        ) : (
-          messages.map((m) => (
-            <div key={m.id} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 12, opacity: 0.65 }}>
-                <b>{m.role.toUpperCase()}</b> · {new Date(m.created_at).toLocaleString()}
-              </div>
-              <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
+      {err && <div className="text-sm text-red-600">{err}</div>}
+
+      <div className="h-[340px] overflow-auto rounded border p-3 space-y-2">
+        {msgs.map((m) => (
+          <div key={m.id} className={m.role === "user" ? "text-right" : "text-left"}>
+            <div className="text-xs opacity-60">{m.role.toUpperCase()}</div>
+            <div className="inline-block rounded border px-3 py-2 max-w-[90%]">
+              {m.content}
             </div>
-          ))
-        )}
+          </div>
+        ))}
+        {msgs.length === 0 && <div className="opacity-60 text-sm">Sin mensajes</div>}
       </div>
 
-      <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Escribe aquí..." style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }} />
-        <button onClick={send} style={{ padding: "12px 14px", cursor: "pointer", borderRadius: 12, border: "1px solid #1e5eff", background: "#1e5eff", color: "#fff" }}>
-          Enviar
+      <div className="flex gap-2">
+        <input
+          className="flex-1 rounded border px-3 py-2"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Escribe…"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") send();
+          }}
+        />
+        <button
+          className="rounded bg-black text-white px-4 disabled:opacity-60"
+          onClick={send}
+          disabled={sending}
+        >
+          {sending ? "…" : "Enviar"}
         </button>
-        {msg ? <div style={{ fontSize: 13, opacity: 0.85 }}>{msg}</div> : null}
       </div>
     </div>
   );
