@@ -1,71 +1,114 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
+import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
 export default function CommandBox() {
-  const [nodeId, setNodeId] = useState(process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID || "node-hocker-01");
-  const [command, setCommand] = useState("status");
-  const [payload, setPayload] = useState(`{}`);
-  const [msg, setMsg] = useState<string>("");
+  const [projectId, setProjectId] = useState(defaultProjectId());
+  const [nodeId, setNodeId] = useState("node-hocker-01");
+  const [command, setCommand] = useState("PING");
+  const [payload, setPayload] = useState("{}");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  async function send() {
-    setMsg("");
-    let payloadObj: any = {};
+  useEffect(() => {
     try {
-      payloadObj = payload?.trim() ? JSON.parse(payload) : {};
+      const stored = localStorage.getItem("hocker_project_id");
+      if (stored) setProjectId(normalizeProjectId(stored));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("hocker_project_id", projectId);
+    } catch {}
+  }, [projectId]);
+
+  async function submit() {
+    setMsg(null);
+    setLoading(true);
+
+    let p: any = {};
+    try {
+      p = payload ? JSON.parse(payload) : {};
     } catch {
-      return setMsg("Payload debe ser JSON válido. Ej: {}");
+      setLoading(false);
+      setMsg("Payload JSON inválido");
+      return;
     }
 
     const r = await fetch("/api/commands", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ node_id: nodeId, command, payload: payloadObj })
+      body: JSON.stringify({
+        project_id: projectId,
+        node_id: nodeId,
+        command,
+        payload: p
+      })
     });
 
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return setMsg(j?.error ?? "Error");
-    setMsg(`✅ Encolado. id: ${j.id}`);
+    setLoading(false);
+
+    if (!r.ok) {
+      setMsg(j?.error ?? "Error");
+      return;
+    }
+    setMsg(`OK: ${j.id} (${j.status})`);
   }
 
   return (
-    <div style={{ border: "1px solid #e6eefc", borderRadius: 16, padding: 16, background: "#fff" }}>
-      <h2 style={{ marginTop: 0 }}>Enviar comando (firmado)</h2>
-
-      <div style={{ display: "grid", gap: 10 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Node ID</span>
-          <input value={nodeId} onChange={(e) => setNodeId(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }} />
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Comando</span>
-          <select value={command} onChange={(e) => setCommand(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }}>
-            <option value="status">status</option>
-            <option value="ping">ping</option>
-          </select>
-        </label>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Payload (JSON)</span>
-          <textarea
-            value={payload}
-            onChange={(e) => setPayload(e.target.value)}
-            rows={5}
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              border: "1px solid #d6e3ff",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-            }}
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex-1">
+          <label className="text-xs opacity-70">Project ID</label>
+          <input
+            className="w-full rounded border px-3 py-2"
+            value={projectId}
+            onChange={(e) => setProjectId(normalizeProjectId(e.target.value))}
+            placeholder="global"
           />
-        </label>
+        </div>
+        <div className="flex-1">
+          <label className="text-xs opacity-70">Node ID</label>
+          <input
+            className="w-full rounded border px-3 py-2"
+            value={nodeId}
+            onChange={(e) => setNodeId(e.target.value)}
+            placeholder="node-hocker-01"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs opacity-70">Command</label>
+          <input
+            className="w-full rounded border px-3 py-2"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="PING"
+          />
+        </div>
+      </div>
 
-        <button onClick={send} style={{ padding: "12px 14px", cursor: "pointer", borderRadius: 12, border: "1px solid #1e5eff", background: "#1e5eff", color: "#fff" }}>
-          Enviar
+      <div>
+        <label className="text-xs opacity-70">Payload (JSON)</label>
+        <textarea
+          className="w-full rounded border px-3 py-2 font-mono text-sm"
+          rows={4}
+          value={payload}
+          onChange={(e) => setPayload(e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={submit}
+          disabled={loading}
+          className="rounded bg-black text-white px-4 py-2 disabled:opacity-60"
+        >
+          {loading ? "Enviando..." : "Enviar comando"}
         </button>
-
-        {msg ? <div style={{ fontSize: 13, opacity: 0.85 }}>{msg}</div> : null}
+        {msg && <span className="text-sm opacity-80">{msg}</span>}
       </div>
     </div>
   );
