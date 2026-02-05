@@ -1,44 +1,57 @@
-import { createServerSupabase } from "./supabase-server";
-import { normalizeProjectId, defaultProjectId } from "./project";
+// src/lib/authz.ts
+import { createServerSupabase } from "@/lib/supabase-server";
+import { normalizeProjectId } from "@/lib/project";
 
-export type AuthzOk = {
-  ok: true;
-  user: { id: string; email?: string | null };
-  project_id: string;
-  role: "owner" | "admin" | "operator";
-};
+export type AppRole = "owner" | "admin" | "operator" | "viewer";
 
-export type AuthzFail = { ok: false; status: number; error: string };
-
-export type AuthzResult = AuthzOk | AuthzFail;
-
-export async function requireRole(
-  allowedRoles: Array<"owner" | "admin" | "operator">,
-  projectId?: string | null
-): Promise<AuthzResult> {
+export async function getUser() {
   const supabase = createServerSupabase();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return null;
+  return data.user;
+}
 
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return { ok: false, status: 401, error: "No autorizado" };
+export async function getGlobalRole(userId: string): Promise<AppRole> {
+  const supabase = createServerSupabase();
+  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  const role = String(data?.role ?? "operator") as AppRole;
+  return role;
+}
 
-  const project_id = normalizeProjectId(projectId ?? defaultProjectId());
+export async function getProjectRole(userId: string, projectId: string): Promise<AppRole> {
+  const supabase = createServerSupabase();
+  const pid = normalizeProjectId(projectId);
 
-  const { data: membership, error } = await supabase
+  // Si es owner/admin global, ya ganó
+  const globalRole = await getGlobalRole(userId);
+  if (globalRole === "owner" || globalRole === "admin") return globalRole;
+
+  const { data } = await supabase
     .from("project_members")
     .select("role")
-    .eq("project_id", project_id)
-    .eq("user_id", u.user.id)
-    .single();
+    .eq("project_id", pid)
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (error || !membership?.role) return { ok: false, status: 403, error: "Sin acceso a este proyecto" };
+  return (String(data?.role ?? "viewer") as AppRole) ?? "viewer";
+}
 
-  const role = membership.role as AuthzOk["role"];
-  if (!allowedRoles.includes(role)) return { ok: false, status: 403, error: "Permisos insuficientes" };
+export async function requireRole(roles: AppRole[]) {
+  const user = await getUser();
+  if (!user) return { ok: false, status: 401, error: "No autorizado", user: null as any };
 
-  return {
-    ok: true,
-    user: { id: u.user.id, email: u.user.email },
-    project_id,
-    role
-  };
+  const role = await getGlobalRole(user.id);
+  if (!roles.includes(role)) return { ok: false, status: 403, error: "Sin permiso", user: null as any };
+
+  return { ok: true, status: 200, error: null, user };
+}
+
+export async function requireProjectRole(projectId: string, roles: AppRole[]) {
+  const user = await getUser();
+  if (!user) return { ok: false, status: 401, error: "No autorizado", user: null as any };
+
+  const role = await getProjectRole(user.id, projectId);
+  if (!roles.includes(role)) return { ok: false, status: 403, error: "Sin permiso en este proyecto", user: null as any };
+
+  return { ok: true, status: 200, error: null, user, role };
 }
