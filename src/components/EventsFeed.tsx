@@ -1,125 +1,114 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
-import type { EventLevel } from "@/lib/types";
+import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
-type EventRow = {
+type Row = {
   id: string;
-  node_id: string | null;
-  level: EventLevel;
-  type: string;
+  project_id: string;
+  level: "info" | "warn" | "error";
   message: string;
   created_at: string;
 };
 
 export default function EventsFeed() {
-  const supabase = useMemo(() => createBrowserSupabase(), []);
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [msg, setMsg] = useState("");
+  const sb = useMemo(() => createBrowserSupabase(), []);
+  const [projectId, setProjectId] = useState(defaultProjectId());
+  const [rows, setRows] = useState<Row[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [manualText, setManualText] = useState("");
 
-  const [nodeId, setNodeId] = useState(process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID || "node-hocker-01");
-  const [level, setLevel] = useState<EventLevel>("info");
-  const [type, setType] = useState("manual");
-  const [message, setMessage] = useState("Nota manual desde HOCKER ONE");
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("hocker_project_id");
+      if (stored) setProjectId(normalizeProjectId(stored));
+    } catch {}
+  }, []);
 
-  async function load() {
-    const q = supabase
-      .from("events")
-      .select("id,node_id,level,type,message,created_at")
-      .order("created_at", { ascending: false })
-      .limit(40);
+  useEffect(() => {
+    let cancelled = false;
 
-    const { data, error } = nodeId ? await q.eq("node_id", nodeId) : await q;
-    if (error) return setMsg(error.message);
+    async function load() {
+      setErr(null);
+      const { data, error } = await sb
+        .from("events")
+        .select("id,project_id,level,message,created_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(30);
 
-    setEvents((data ?? []) as any);
-    setMsg("");
-  }
+      if (cancelled) return;
+      if (error) setErr(error.message);
+      else setRows((data ?? []) as any);
+    }
 
-  async function addManualEvent() {
-    setMsg("");
+    load();
+    const t = setInterval(load, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [sb, projectId]);
+
+  async function createManual() {
+    setErr(null);
+    const text = manualText.trim();
+    if (!text) return;
+
     const r = await fetch("/api/events/manual", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ node_id: nodeId, level, type, message })
+      body: JSON.stringify({ project_id: projectId, level: "info", message: text })
     });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) return setMsg(j?.error ?? "Error");
 
-    setMsg("✅ Nota creada.");
-    await load();
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      setErr(j?.error ?? "Error creando evento");
+      return;
+    }
+    setManualText("");
   }
 
-  useEffect(() => { load(); }, []);
-
   return (
-    <div style={{ border: "1px solid #e6eefc", borderRadius: 16, padding: 16, background: "#fff" }}>
-      <h2 style={{ marginTop: 0 }}>Eventos</h2>
-
-      <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Filtrar por Node ID</span>
-          <input value={nodeId} onChange={(e) => setNodeId(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }} />
-        </label>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <label style={{ display: "grid", gap: 6 }}>
-            <span>Nivel</span>
-            <select value={level} onChange={(e) => setLevel(e.target.value as EventLevel)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }}>
-              <option value="info">info</option>
-              <option value="warn">warn</option>
-              <option value="error">error</option>
-              <option value="critical">critical</option>
-            </select>
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <span>Tipo</span>
-            <input value={type} onChange={(e) => setType(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }} />
-          </label>
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold">Eventos</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-xs opacity-70">Project</span>
+          <input
+            className="rounded border px-3 py-2 text-sm"
+            value={projectId}
+            onChange={(e) => setProjectId(normalizeProjectId(e.target.value))}
+          />
         </div>
-
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Mensaje</span>
-          <input value={message} onChange={(e) => setMessage(e.target.value)} style={{ padding: 12, borderRadius: 12, border: "1px solid #d6e3ff" }} />
-        </label>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={addManualEvent} style={{ padding: "12px 14px", cursor: "pointer", borderRadius: 12, border: "1px solid #1e5eff", background: "#1e5eff", color: "#fff" }}>
-            Crear nota
-          </button>
-          <button onClick={load} style={{ padding: "12px 14px", cursor: "pointer", borderRadius: 12, border: "1px solid #d6e3ff", background: "#fff" }}>
-            Recargar
-          </button>
-        </div>
-
-        {msg ? <div style={{ fontSize: 13, opacity: 0.85 }}>{msg}</div> : null}
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eef3ff" }}>Hora</th>
-              <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eef3ff" }}>Node</th>
-              <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eef3ff" }}>Nivel</th>
-              <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eef3ff" }}>Tipo</th>
-              <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eef3ff" }}>Mensaje</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((e) => (
-              <tr key={e.id}>
-                <td style={{ padding: 8, borderBottom: "1px solid #f6f8ff", whiteSpace: "nowrap" }}>{new Date(e.created_at).toLocaleString()}</td>
-                <td style={{ padding: 8, borderBottom: "1px solid #f6f8ff" }}>{e.node_id ?? "—"}</td>
-                <td style={{ padding: 8, borderBottom: "1px solid #f6f8ff" }}>{e.level}</td>
-                <td style={{ padding: 8, borderBottom: "1px solid #f6f8ff" }}>{e.type}</td>
-                <td style={{ padding: 8, borderBottom: "1px solid #f6f8ff" }}>{e.message}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex gap-2">
+        <input
+          className="flex-1 rounded border px-3 py-2"
+          value={manualText}
+          onChange={(e) => setManualText(e.target.value)}
+          placeholder="Crear evento manual (admin/owner)…"
+        />
+        <button className="rounded bg-black text-white px-4" onClick={createManual}>
+          Enviar
+        </button>
+      </div>
+
+      {err && <div className="text-sm text-red-600">{err}</div>}
+
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div key={r.id} className="rounded border p-3">
+            <div className="flex items-center justify-between text-xs opacity-70">
+              <span>{r.level.toUpperCase()}</span>
+              <span>{new Date(r.created_at).toLocaleString()}</span>
+            </div>
+            <div className="mt-1">{r.message}</div>
+          </div>
+        ))}
+        {rows.length === 0 && <div className="opacity-60 text-sm">Sin eventos</div>}
       </div>
     </div>
   );
