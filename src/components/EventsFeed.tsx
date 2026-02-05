@@ -1,114 +1,182 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { createBrowserSupabase } from "@/lib/supabase";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
-type Row = {
+type Ev = {
   id: string;
-  project_id: string;
-  level: "info" | "warn" | "error";
-  message: string;
   created_at: string;
+  project_id: string;
+  node_id?: string | null;
+  level: "info" | "warn" | "error";
+  event_type: string;
+  message: string;
+  details: any;
 };
 
 export default function EventsFeed() {
-  const sb = useMemo(() => createBrowserSupabase(), []);
+  const supabase = useMemo(() => createBrowserSupabase(), []);
   const [projectId, setProjectId] = useState(defaultProjectId());
-  const [rows, setRows] = useState<Row[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [manualText, setManualText] = useState("");
+  const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
+
+  const [nodeId, setNodeId] = useState("");
+  const [items, setItems] = useState<Ev[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [manualLevel, setManualLevel] = useState<"info" | "warn" | "error">("info");
+  const [manualType, setManualType] = useState("manual.note");
+  const [manualMsg, setManualMsg] = useState("");
+
+  async function load() {
+    setLoading(true);
+
+    let q = supabase
+      .from("events")
+      .select("id, created_at, project_id, node_id, level, event_type, message, details")
+      .eq("project_id", pid)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (nodeId.trim()) q = q.eq("node_id", nodeId.trim());
+
+    const { data, error } = await q;
+    if (!error) setItems((data ?? []) as any);
+
+    setLoading(false);
+  }
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("hocker_project_id");
-      if (stored) setProjectId(normalizeProjectId(stored));
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setErr(null);
-      const { data, error } = await sb
-        .from("events")
-        .select("id,project_id,level,message,created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(30);
-
-      if (cancelled) return;
-      if (error) setErr(error.message);
-      else setRows((data ?? []) as any);
-    }
-
     load();
-    const t = setInterval(load, 2500);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [sb, projectId]);
+    const t = setInterval(load, 3000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pid, nodeId]);
 
-  async function createManual() {
-    setErr(null);
-    const text = manualText.trim();
-    if (!text) return;
+  async function sendManual() {
+    const message = manualMsg.trim();
+    if (!message) return;
 
-    const r = await fetch("/api/events/manual", {
+    await fetch("/api/events/manual", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, level: "info", message: text })
+      body: JSON.stringify({
+        project_id: pid,
+        node_id: nodeId.trim() || null,
+        level: manualLevel,
+        event_type: manualType,
+        message,
+        details: {},
+      }),
     });
 
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      setErr(j?.error ?? "Error creando evento");
-      return;
-    }
-    setManualText("");
+    setManualMsg("");
+    load();
   }
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">Eventos</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-xs opacity-70">Project</span>
-          <input
-            className="rounded border px-3 py-2 text-sm"
-            value={projectId}
-            onChange={(e) => setProjectId(normalizeProjectId(e.target.value))}
-          />
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Eventos</h2>
+          <p className="text-sm text-slate-500">Bitácora del sistema (avisos, errores, acciones).</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col">
+            <label className="text-xs text-slate-500">Proyecto</label>
+            <input
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder="global / chido / supply..."
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs text-slate-500">Filtrar por Node (opcional)</label>
+            <input
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              value={nodeId}
+              onChange={(e) => setNodeId(e.target.value)}
+              placeholder="node-hocker-01"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <input
-          className="flex-1 rounded border px-3 py-2"
-          value={manualText}
-          onChange={(e) => setManualText(e.target.value)}
-          placeholder="Crear evento manual (admin/owner)…"
-        />
-        <button className="rounded bg-black text-white px-4" onClick={createManual}>
-          Enviar
-        </button>
+      <div className="mt-4 rounded-2xl border border-slate-200 p-3">
+        <div className="text-sm font-semibold text-slate-900">Evento manual</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <select
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            value={manualLevel}
+            onChange={(e) => setManualLevel(e.target.value as any)}
+          >
+            <option value="info">info</option>
+            <option value="warn">warn</option>
+            <option value="error">error</option>
+          </select>
+
+          <input
+            className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm min-w-[220px]"
+            value={manualType}
+            onChange={(e) => setManualType(e.target.value)}
+            placeholder="event_type"
+          />
+
+          <input
+            className="flex-[2] rounded-xl border border-slate-200 px-3 py-2 text-sm min-w-[260px]"
+            value={manualMsg}
+            onChange={(e) => setManualMsg(e.target.value)}
+            placeholder="mensaje"
+          />
+
+          <button
+            onClick={sendManual}
+            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+          >
+            Enviar
+          </button>
+        </div>
       </div>
 
-      {err && <div className="text-sm text-red-600">{err}</div>}
+      <div className="mt-4">
+        {loading ? (
+          <div className="text-sm text-slate-500">Cargando...</div>
+        ) : items.length === 0 ? (
+          <div className="text-sm text-slate-500">No hay eventos en este proyecto.</div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((e) => (
+              <div key={e.id} className="rounded-2xl border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-500">{new Date(e.created_at).toLocaleString()}</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      {e.event_type} <span className="text-xs text-slate-500">{e.node_id ? `(${e.node_id})` : ""}</span>
+                    </span>
+                    <span className="text-xs text-slate-500">Proyecto: {e.project_id}</span>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                    {e.level}
+                  </span>
+                </div>
 
-      <div className="space-y-2">
-        {rows.map((r) => (
-          <div key={r.id} className="rounded border p-3">
-            <div className="flex items-center justify-between text-xs opacity-70">
-              <span>{r.level.toUpperCase()}</span>
-              <span>{new Date(r.created_at).toLocaleString()}</span>
-            </div>
-            <div className="mt-1">{r.message}</div>
+                <div className="mt-2 text-sm text-slate-700">{e.message}</div>
+
+                {e.details && Object.keys(e.details).length > 0 && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-slate-600">Ver detalles</summary>
+                    <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-800">
+                      {JSON.stringify(e.details, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-        {rows.length === 0 && <div className="opacity-60 text-sm">Sin eventos</div>}
+        )}
       </div>
     </div>
   );
