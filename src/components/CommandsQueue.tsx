@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
 type Cmd = {
@@ -48,17 +48,17 @@ export default function CommandsQueue() {
     await fetch("/api/commands/approve", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id, project_id: pid }),
+      body: JSON.stringify({ id, project_id: pid })
     });
     load();
   }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Cola de comandos</h2>
-          <p className="text-sm text-slate-500">Lo que está pendiente, corriendo y resultados del nodo.</p>
+          <p className="text-sm text-slate-500">Pendientes, corriendo y resultados (por proyecto).</p>
         </div>
 
         <div className="flex flex-col">
