@@ -1,59 +1,64 @@
 import { NextResponse } from "next/server";
+import { createServerSupabase } from "@/lib/supabase-server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { requireRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const admin = createAdminSupabase();
+  const supabase = createServerSupabase();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
+
+  // rol
+  const { data: prof } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+  const role = String(prof?.role ?? "operator");
+  if (!["owner", "admin"].includes(role)) {
+    return NextResponse.json({ ok: false, error: "No tienes permiso para aprobar" }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const id = String(body.id ?? "");
-
   if (!id) return NextResponse.json({ ok: false, error: "Falta id" }, { status: 400 });
 
-  // Load command with project_id first
-  const cmd = await admin
+  const admin = createAdminSupabase();
+
+  const { data: cmd, error: cErr } = await admin
     .from("commands")
     .select("id, project_id, status, node_id, command")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (cmd.error || !cmd.data) {
-    return NextResponse.json({ ok: false, error: cmd.error?.message ?? "Comando no encontrado" }, { status: 404 });
+  if (cErr || !cmd) return NextResponse.json({ ok: false, error: "Comando no encontrado" }, { status: 404 });
+
+  if (cmd.status !== "needs_approval") {
+    return NextResponse.json({ ok: true, already: true, status: cmd.status, project_id: cmd.project_id });
   }
 
-  const project_id = cmd.data.project_id;
-
-  // AuthZ for that project
-  const auth = await requireRole(["owner", "admin"], project_id);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
-
-  if (cmd.data.status !== "needs_approval") {
-    return NextResponse.json({ ok: false, error: "Este comando no requiere aprobación" }, { status: 409 });
-  }
-
-  const upd = await admin
+  const { error: uErr } = await admin
     .from("commands")
-    .update({
-      status: "queued",
-      approved_by: auth.user.id,
-      approved_at: new Date().toISOString()
-    })
-    .eq("id", id)
-    .select("id,status")
-    .single();
+    .update({ status: "queued", approved_by: data.user.id })
+    .eq("id", id);
 
-  if (upd.error) {
-    return NextResponse.json({ ok: false, error: upd.error.message }, { status: 400 });
-  }
+  if (uErr) return NextResponse.json({ ok: false, error: uErr.message }, { status: 500 });
 
   await admin.from("audit_logs").insert({
-    project_id: auth.project_id,
-    actor_id: auth.user.id,
-    action: "command_approved",
-    target: `commands:${id}`,
-    metadata: { node_id: cmd.data.node_id, command: cmd.data.command }
+    project_id: cmd.project_id,
+    actor_type: "user",
+    actor_id: data.user.id,
+    action: "command.approve",
+    target_type: "command",
+    target_id: id,
+    details: { node_id: cmd.node_id, command: cmd.command },
   });
 
-  return NextResponse.json({ ok: true, id: upd.data.id, status: upd.data.status });
+  await admin.from("events").insert({
+    project_id: cmd.project_id,
+    node_id: cmd.node_id,
+    level: "info",
+    event_type: "command.approved",
+    message: `Comando aprobado: ${cmd.command}`,
+    details: { command_id: id, approved_by: data.user.id },
+  });
+
+  return NextResponse.json({ ok: true, id, project_id: cmd.project_id, status: "queued" });
 }
