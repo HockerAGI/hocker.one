@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { requireRole } from "@/lib/authz";
-import { normalizeProjectId, defaultProjectId } from "@/lib/project";
+import { requireProjectRole } from "@/lib/authz";
+import { normalizeProjectId } from "@/lib/project";
 
 export const runtime = "nodejs";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const user = await requireRole(["owner", "admin", "operator"]);
-  if (!user) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const url = new URL(req.url);
+  const project_id = normalizeProjectId(url.searchParams.get("project_id") ?? "global");
 
-  const admin = createAdminSupabase();
+  const auth = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
   const id = String(params.id ?? "");
-
-  // por defecto: global (para no romper)
-  const project_id = normalizeProjectId(defaultProjectId());
+  const admin = createAdminSupabase();
 
   const { data: order, error: oErr } = await admin
     .from("supply_orders")
@@ -34,14 +34,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const user = await requireRole(["owner", "admin", "operator"]);
-  if (!user) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
+  const body = await req.json().catch(() => ({}));
+  const project_id = normalizeProjectId(body.project_id ?? "global");
+
+  const auth = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const admin = createAdminSupabase();
   const id = String(params.id ?? "");
-  const body = await req.json().catch(() => ({}));
 
-  const project_id = normalizeProjectId(body.project_id ?? defaultProjectId());
   const patch: any = {};
   if (body.status) patch.status = String(body.status);
   if (body.customer_name !== undefined) patch.customer_name = String(body.customer_name ?? "");
@@ -49,26 +50,22 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.meta !== undefined) patch.meta = body.meta ?? {};
   patch.updated_at = new Date().toISOString();
 
-  const { error } = await admin
-    .from("supply_orders")
-    .update(patch)
-    .eq("project_id", project_id)
-    .eq("id", id);
-
+  const { error } = await admin.from("supply_orders").update(patch).eq("project_id", project_id).eq("id", id);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  const user = await requireRole(["owner", "admin"]);
-  if (!user) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
+  const body = await req.json().catch(() => ({}));
+  const project_id = normalizeProjectId(body.project_id ?? "global");
+
+  const auth = await requireProjectRole(project_id, ["owner", "admin"]);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const admin = createAdminSupabase();
   const id = String(params.id ?? "");
-  const body = await req.json().catch(() => ({}));
-  const project_id = normalizeProjectId(body.project_id ?? defaultProjectId());
 
-  // cancelación suave (mejor que borrar)
   const { error } = await admin
     .from("supply_orders")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
@@ -76,5 +73,6 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     .eq("id", id);
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
   return NextResponse.json({ ok: true, cancelled: true });
 }
