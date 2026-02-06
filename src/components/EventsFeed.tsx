@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
 type Ev = {
@@ -9,10 +9,10 @@ type Ev = {
   created_at: string;
   project_id: string;
   node_id?: string | null;
-  level: "info" | "warn" | "error";
-  event_type: string;
+  level: "info" | "warn" | "error" | "critical";
+  type: string;
   message: string;
-  details: any;
+  data: any;
 };
 
 export default function EventsFeed() {
@@ -24,7 +24,7 @@ export default function EventsFeed() {
   const [items, setItems] = useState<Ev[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [manualLevel, setManualLevel] = useState<"info" | "warn" | "error">("info");
+  const [manualLevel, setManualLevel] = useState<Ev["level"]>("info");
   const [manualType, setManualType] = useState("manual.note");
   const [manualMsg, setManualMsg] = useState("");
 
@@ -33,7 +33,7 @@ export default function EventsFeed() {
 
     let q = supabase
       .from("events")
-      .select("id, created_at, project_id, node_id, level, event_type, message, details")
+      .select("id, created_at, project_id, node_id, level, type, message, data")
       .eq("project_id", pid)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -64,10 +64,10 @@ export default function EventsFeed() {
         project_id: pid,
         node_id: nodeId.trim() || null,
         level: manualLevel,
-        event_type: manualType,
+        type: manualType,
         message,
-        details: {},
-      }),
+        data: {}
+      })
     });
 
     setManualMsg("");
@@ -79,7 +79,7 @@ export default function EventsFeed() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Eventos</h2>
-          <p className="text-sm text-slate-500">Bitácora del sistema (avisos, errores, acciones).</p>
+          <p className="text-sm text-slate-500">Bitácora del sistema (por proyecto).</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -116,13 +116,14 @@ export default function EventsFeed() {
             <option value="info">info</option>
             <option value="warn">warn</option>
             <option value="error">error</option>
+            <option value="critical">critical</option>
           </select>
 
           <input
             className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm min-w-[220px]"
             value={manualType}
             onChange={(e) => setManualType(e.target.value)}
-            placeholder="event_type"
+            placeholder="type"
           />
 
           <input
@@ -132,10 +133,7 @@ export default function EventsFeed() {
             placeholder="mensaje"
           />
 
-          <button
-            onClick={sendManual}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-          >
+          <button onClick={sendManual} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">
             Enviar
           </button>
         </div>
@@ -154,22 +152,21 @@ export default function EventsFeed() {
                   <div className="flex flex-col">
                     <span className="text-xs text-slate-500">{new Date(e.created_at).toLocaleString()}</span>
                     <span className="text-sm font-semibold text-slate-900">
-                      {e.event_type} <span className="text-xs text-slate-500">{e.node_id ? `(${e.node_id})` : ""}</span>
+                      {e.type} <span className="text-xs text-slate-500">{e.node_id ? `(${e.node_id})` : ""}</span>
                     </span>
                     <span className="text-xs text-slate-500">Proyecto: {e.project_id}</span>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                    {e.level}
-                  </span>
+
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{e.level}</span>
                 </div>
 
                 <div className="mt-2 text-sm text-slate-700">{e.message}</div>
 
-                {e.details && Object.keys(e.details).length > 0 && (
+                {e.data && Object.keys(e.data).length > 0 && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-slate-600">Ver detalles</summary>
+                    <summary className="cursor-pointer text-xs text-slate-600">Ver data</summary>
                     <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-800">
-                      {JSON.stringify(e.details, null, 2)}
+                      {JSON.stringify(e.data, null, 2)}
                     </pre>
                   </details>
                 )}
