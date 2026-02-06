@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
+import VoiceInput from "@/components/VoiceInput";
 
-type Msg = { id: string; role: "user" | "assistant"; content: string; created_at: string };
+type Msg = { id: string; role: "user" | "nova"; content: string; created_at: string };
 
 export default function NovaChat() {
   const supabase = useMemo(() => createBrowserSupabase(), []);
@@ -19,7 +20,7 @@ export default function NovaChat() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Cuando cambias de proyecto: “cambia de cuarto”, no mezcles chats
+  // Cambias proyecto = cambias cuarto (no mezcles chats)
   useEffect(() => {
     setThreadId(null);
     setMessages([]);
@@ -34,7 +35,15 @@ export default function NovaChat() {
       .eq("thread_id", tid)
       .order("created_at", { ascending: true });
 
-    if (!error) setMessages((data ?? []) as any);
+    if (!error) {
+      const norm = (data ?? []).map((m: any) => ({
+        id: m.id,
+        role: m.role === "user" ? "user" : "nova",
+        content: m.content,
+        created_at: m.created_at
+      }));
+      setMessages(norm as any);
+    }
   }
 
   async function ensureThread(): Promise<string> {
@@ -43,19 +52,20 @@ export default function NovaChat() {
     const r = await fetch("/api/nova/thread", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: pid }),
+      body: JSON.stringify({ project_id: pid })
     });
 
     const j = await r.json().catch(() => ({}));
     const tid = String(j.thread_id ?? "");
     if (!tid) throw new Error("No se pudo crear thread");
+
     setThreadId(tid);
     return tid;
   }
 
-  async function send() {
-    const t = text.trim();
-    if (!t) return;
+  async function sendText(t: string) {
+    const msg = t.trim();
+    if (!msg) return;
 
     setLoading(true);
     setText("");
@@ -63,19 +73,18 @@ export default function NovaChat() {
     try {
       const tid = await ensureThread();
 
-      // optimista: lo pintamos al instante
+      // Optimista: lo pintamos al instante
       setMessages((m) => [
         ...m,
-        { id: crypto.randomUUID(), role: "user", content: t, created_at: new Date().toISOString() } as any,
+        { id: crypto.randomUUID(), role: "user", content: msg, created_at: new Date().toISOString() } as any
       ]);
 
-      const r = await fetch("/api/nova/chat", {
+      await fetch("/api/nova/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: pid, thread_id: tid, node_id: nodeId, text: t }),
+        body: JSON.stringify({ project_id: pid, thread_id: tid, node_id: nodeId, text: msg })
       });
 
-      await r.json().catch(() => ({}));
       await loadMessages(tid);
     } finally {
       setLoading(false);
@@ -114,14 +123,16 @@ export default function NovaChat() {
 
       <div className="mt-4 h-[420px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
         {messages.length === 0 ? (
-          <div className="text-sm text-slate-500">Escribe para empezar…</div>
+          <div className="text-sm text-slate-500">Escribe o dicta para empezar…</div>
         ) : (
           <div className="space-y-2">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                  m.role === "user" ? "ml-auto bg-slate-900 text-white" : "mr-auto bg-white text-slate-900 border border-slate-200"
+                  m.role === "user"
+                    ? "ml-auto bg-slate-900 text-white"
+                    : "mr-auto bg-white text-slate-900 border border-slate-200"
                 }`}
               >
                 {m.content}
@@ -131,23 +142,25 @@ export default function NovaChat() {
         )}
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex gap-2 items-center">
         <input
           className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Escribe aquí…"
           onKeyDown={(e) => {
-            if (e.key === "Enter") send();
+            if (e.key === "Enter") sendText(text);
           }}
         />
         <button
-          onClick={send}
+          onClick={() => sendText(text)}
           disabled={loading}
           className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {loading ? "..." : "Enviar"}
         </button>
+
+        <VoiceInput onText={(t) => sendText(t)} disabled={loading} />
       </div>
     </div>
   );
