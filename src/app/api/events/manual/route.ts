@@ -1,30 +1,36 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { normalizeProjectId, defaultProjectId } from "@/lib/project";
-import { requireRole } from "@/lib/authz";
+import { requireProjectRole } from "@/lib/authz";
+import { normalizeProjectId } from "@/lib/project";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const admin = createAdminSupabase();
   const body = await req.json().catch(() => ({}));
+  const project_id = normalizeProjectId(body.project_id ?? "global");
 
-  const project_id = normalizeProjectId(body.project_id ?? defaultProjectId());
-  const level = (String(body.level ?? "info") as "info" | "warn" | "error");
-  const message = String(body.message ?? "");
-
-  if (!message) return NextResponse.json({ ok: false, error: "Falta message" }, { status: 400 });
-
-  const auth = await requireRole(["owner", "admin"], project_id);
+  const auth = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
-  const ins = await admin.from("events").insert({
-    project_id: auth.project_id,
-    level,
-    message,
-    meta: { manual: true }
+  const node_id = body.node_id ? String(body.node_id) : null;
+  const level = String(body.level ?? "info");
+  const type = String(body.type ?? "manual.note");
+  const message = String(body.message ?? "");
+  const data = body.data ?? {};
+
+  const admin = createAdminSupabase();
+
+  const { error } = await admin.from("events").insert({ project_id, node_id, level, type, message, data });
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
+  await admin.from("audit_logs").insert({
+    project_id,
+    actor_type: "user",
+    actor_id: auth.user.id,
+    action: "event.manual",
+    target: "events",
+    meta: { node_id, level, type }
   });
 
-  if (ins.error) return NextResponse.json({ ok: false, error: ins.error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
