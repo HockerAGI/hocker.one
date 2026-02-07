@@ -1,48 +1,32 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
-import { createAdminSupabase } from "@/lib/supabase-admin";
-import { requireProjectRole } from "@/lib/authz";
 import { normalizeProjectId } from "@/lib/project";
+import { requireProjectRole } from "@/lib/authz";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 import { signCommand } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-const ALLOWED_NODE_COMMANDS = new Set([
-  "status",
-  "fs.list",
-  "fs.read",
-  "fs.write",
-  "shell.exec"
-]);
-
-const ALWAYS_NEEDS_APPROVAL = new Set([
-  "shell.exec",
-  "fs.write"
-]);
+const ALLOWED = new Set(["status", "fs.list", "fs.read", "fs.write", "shell.exec"]);
+const NEEDS_APPROVAL = new Set(["fs.write", "shell.exec"]);
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
+  const body = await req.json().catch(() => ({} as any));
+
   const project_id = normalizeProjectId(body.project_id ?? "global");
   const node_id = String(body.node_id ?? "").trim();
   const command = String(body.command ?? "").trim();
   const payload = body.payload ?? {};
 
   if (!node_id) return NextResponse.json({ ok: false, error: "Falta node_id" }, { status: 400 });
-  if (!command) return NextResponse.json({ ok: false, error: "Falta command" }, { status: 400 });
+  if (!ALLOWED.has(command)) return NextResponse.json({ ok: false, error: "Comando no permitido" }, { status: 400 });
 
-  // Permiso por proyecto
   const auth = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
-  if (!ALLOWED_NODE_COMMANDS.has(command)) {
-    return NextResponse.json(
-      { ok: false, error: `Comando no permitido: ${command}` },
-      { status: 400 }
-    );
-  }
-
   const admin = createAdminSupabase();
 
+  // kill-switch
   const { data: controls } = await admin
     .from("system_controls")
     .select("kill_switch")
@@ -51,16 +35,15 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (controls?.kill_switch) {
-    return NextResponse.json({ ok: false, error: "Kill-switch activo (proyecto apagado)" }, { status: 503 });
+    return NextResponse.json({ ok: false, error: "Kill-switch activo" }, { status: 503 });
   }
 
   const secret = process.env.HOCKER_COMMAND_SIGNING_SECRET ?? "";
   if (!secret) return NextResponse.json({ ok: false, error: "Falta HOCKER_COMMAND_SIGNING_SECRET" }, { status: 500 });
 
-  const id = randomUUID();
-  const needs_approval = ALWAYS_NEEDS_APPROVAL.has(command);
+  const id = crypto.randomUUID();
+  const needs_approval = NEEDS_APPROVAL.has(command);
   const status = needs_approval ? "needs_approval" : "queued";
-
   const signature = signCommand(secret, { id, project_id, node_id, command, payload });
 
   const { error } = await admin.from("commands").insert({
@@ -77,23 +60,14 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
-  await admin.from("audit_logs").insert({
-    project_id,
-    actor_type: "user",
-    actor_id: auth.user.id,
-    action: "command.create",
-    target: `command:${id}`,
-    meta: { node_id, command, needs_approval }
-  });
-
   await admin.from("events").insert({
     project_id,
     node_id,
     level: "info",
     type: "command.created",
-    message: needs_approval ? `Comando creado (requiere aprobación): ${command}` : `Comando encolado: ${command}`,
-    data: { command_id: id, created_by: auth.user.id, status }
+    message: needs_approval ? `Comando requiere aprobación: ${command}` : `Comando encolado: ${command}`,
+    data: { command_id: id, by: auth.user.id, status }
   });
 
-  return NextResponse.json({ ok: true, id, project_id, node_id, status, needs_approval });
+  return NextResponse.json({ ok: true, id, status, needs_approval });
 }
