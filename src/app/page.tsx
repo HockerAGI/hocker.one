@@ -2,20 +2,21 @@ import AuthBox from "@/components/AuthBox";
 
 export default function HomePage() {
   return (
-    <main style={{ maxWidth: 980, margin: "40px auto", padding: 16 }}>
-      <div style={{ background: "#fff", border: "1px solid #e6eefc", borderRadius: 16, padding: 18 }}>
-        <h1 style={{ margin: 0 }}>HOCKER ONE</h1>
-        <p style={{ marginTop: 8, opacity: 0.8 }}>
-          Control Plane del ecosistema. Login → comandos firmados → auditoría → ejecución cloud/local.
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold tracking-tight">HOCKER.ONE</h1>
+        <p className="mt-2 text-slate-600">
+          Entra con tu correo. Te mando un link y listo. Luego vas al dashboard y hablas con NOVA.
         </p>
-      </div>
 
-      <div style={{ marginTop: 16 }}>
-        <AuthBox />
-      </div>
+        <div className="mt-6">
+          <AuthBox />
+        </div>
 
-      <div style={{ marginTop: 14, fontSize: 13, opacity: 0.75 }}>
-        Recomendación: deja el signup apagado y crea usuarios por invitación.
+        <div className="mt-6 text-sm text-slate-500">
+          Tip: si el link no te redirige bien, revisa en Supabase el <span className="font-medium">Site URL</span> y el
+          redirect <span className="font-medium">/auth/callback</span>.
+        </div>
       </div>
     </main>
   );
