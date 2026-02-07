@@ -1,13 +1,13 @@
-export function stableStringify(value: any): string {
-  return JSON.stringify(sortKeys(value));
-}
-
-function sortKeys(obj: any): any {
-  if (Array.isArray(obj)) return obj.map(sortKeys);
-  if (obj && typeof obj === "object") {
+export function stableStringify(obj: any): string {
+  const seen = new WeakSet();
+  const sorter = (v: any): any => {
+    if (v === null || typeof v !== "object") return v;
+    if (seen.has(v)) return "[Circular]";
+    seen.add(v);
+    if (Array.isArray(v)) return v.map(sorter);
     const out: any = {};
-    Object.keys(obj).sort().forEach((k) => (out[k] = sortKeys(obj[k])));
+    for (const k of Object.keys(v).sort()) out[k] = sorter(v[k]);
     return out;
-  }
-  return obj;
+  };
+  return JSON.stringify(sorter(obj));
 }
