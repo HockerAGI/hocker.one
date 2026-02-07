@@ -14,8 +14,8 @@ export default function HomePage() {
         </div>
 
         <div className="mt-6 text-sm text-slate-500">
-          Tip: si el link no te redirige bien, revisa en Supabase el <span className="font-medium">Site URL</span> y el
-          redirect <span className="font-medium">/auth/callback</span>.
+          Tip: en Supabase configura <span className="font-medium">Site URL</span> y el redirect
+          <span className="font-medium"> /auth/callback</span>.
         </div>
       </div>
     </main>
