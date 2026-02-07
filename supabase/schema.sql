@@ -1,20 +1,15 @@
--- supabase/schema.sql
-create extension if not exists "uuid-ossp";
+-- HOCKER.ONE / Control Plane schema (Supabase)
 create extension if not exists "pgcrypto";
 
-do $$
-begin
+do $$ begin
   create type public.command_status as enum ('needs_approval','queued','running','succeeded','failed','cancelled');
-exception when duplicate_object then null;
-end $$;
+exception when duplicate_object then null; end $$;
 
-do $$
-begin
+do $$ begin
   create type public.event_level as enum ('info','warn','error','critical');
-exception when duplicate_object then null;
-end $$;
+exception when duplicate_object then null; end $$;
 
--- PROYECTOS
+-- PROJECTS
 create table if not exists public.projects (
   id text primary key,
   name text not null,
@@ -22,27 +17,27 @@ create table if not exists public.projects (
 );
 
 insert into public.projects (id, name)
-values ('global', 'Global')
+values ('global','Global')
 on conflict (id) do nothing;
 
--- USUARIOS / PERFILES (global)
+-- PROFILES (global role)
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
-  role text not null default 'operator', -- owner | admin | operator | viewer (global)
+  role text not null default 'operator', -- owner | admin | operator | viewer
   created_at timestamptz not null default now()
 );
 
--- MEMBRESÍA POR PROYECTO (lo que evita mezcla)
+-- MEMBERSHIP per project
 create table if not exists public.project_members (
   project_id text not null references public.projects(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  role text not null default 'operator', -- owner | admin | operator | viewer (por proyecto)
+  role text not null default 'operator', -- owner | admin | operator | viewer
   created_at timestamptz not null default now(),
   primary key (project_id, user_id)
 );
 
--- NODOS
+-- NODES
 create table if not exists public.nodes (
   id text primary key,
   project_id text not null references public.projects(id) on delete cascade default 'global',
@@ -54,19 +49,23 @@ create table if not exists public.nodes (
   created_at timestamptz not null default now()
 );
 
--- AGIs
-create table if not exists public.agis (
-  id text primary key,
+-- SYSTEM CONTROLS (kill-switch + permissions)
+create table if not exists public.system_controls (
+  id text primary key default 'global',
   project_id text not null references public.projects(id) on delete cascade default 'global',
-  name text not null,
-  type text not null,
-  status text not null default 'offline',
-  endpoint text,
+  kill_switch boolean not null default false,
+  allow_shell boolean not null default false,
+  allow_filesystem boolean not null default true,
   meta jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- COMANDOS (cola)
+insert into public.system_controls (id, project_id)
+values ('global','global')
+on conflict (id) do nothing;
+
+-- COMMANDS (queue)
 create table if not exists public.commands (
   id uuid primary key default gen_random_uuid(),
   project_id text not null references public.projects(id) on delete cascade default 'global',
@@ -85,7 +84,7 @@ create table if not exists public.commands (
   error text
 );
 
--- EVENTOS (log)
+-- EVENTS (log)
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   project_id text not null references public.projects(id) on delete cascade default 'global',
@@ -97,40 +96,13 @@ create table if not exists public.events (
   created_at timestamptz not null default now()
 );
 
--- AUDITORÍA
-create table if not exists public.audit_logs (
-  id uuid primary key default gen_random_uuid(),
-  project_id text not null references public.projects(id) on delete cascade default 'global',
-  actor_type text not null,
-  actor_id uuid,
-  action text not null,
-  target text,
-  meta jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
-
--- CONTROLES (kill-switch + permisos duros)
-create table if not exists public.system_controls (
-  id text primary key default 'global',
-  project_id text not null references public.projects(id) on delete cascade default 'global',
-  kill_switch boolean not null default false,
-  allow_shell boolean not null default false,
-  allow_filesystem boolean not null default true,
-  meta jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-insert into public.system_controls (id, project_id)
-values ('global','global')
-on conflict (id) do nothing;
-
 -- CHAT NOVA
 create table if not exists public.nova_threads (
   id uuid primary key default gen_random_uuid(),
   project_id text not null references public.projects(id) on delete cascade default 'global',
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null default 'NOVA',
+  meta jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -145,7 +117,7 @@ create table if not exists public.nova_messages (
   created_at timestamptz not null default now()
 );
 
--- SUPPLY (MVP)
+-- SUPPLY (MVP products)
 create table if not exists public.supply_products (
   id uuid primary key default gen_random_uuid(),
   project_id text not null references public.projects(id) on delete cascade default 'global',
@@ -161,32 +133,7 @@ create table if not exists public.supply_products (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.supply_orders (
-  id uuid primary key default gen_random_uuid(),
-  project_id text not null references public.projects(id) on delete cascade default 'global',
-  customer_name text,
-  customer_phone text,
-  status text not null default 'new', -- new | paid | in_production | shipped | done | cancelled
-  total numeric not null default 0,
-  meta jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.supply_order_items (
-  id uuid primary key default gen_random_uuid(),
-  project_id text not null references public.projects(id) on delete cascade default 'global',
-  order_id uuid not null references public.supply_orders(id) on delete cascade,
-  product_id uuid references public.supply_products(id) on delete set null,
-  name text not null,
-  qty int not null default 1,
-  unit_price numeric not null default 0,
-  unit_cost numeric not null default 0,
-  meta jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
-
--- HELPERS (RLS)
+-- HELPERS
 create or replace function public.is_global_owner_admin()
 returns boolean language sql stable as $$
   select exists (
@@ -205,23 +152,15 @@ returns boolean language sql stable as $$
   );
 $$;
 
--- Trigger: alta de usuario (primer usuario = owner, resto = operator)
+-- First user = owner, others = operator
 create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 declare
   c int;
   new_role text;
 begin
   select count(*) into c from public.profiles;
-  if c = 0 then
-    new_role := 'owner';
-  else
-    new_role := 'operator';
-  end if;
+  if c = 0 then new_role := 'owner'; else new_role := 'operator'; end if;
 
   insert into public.profiles (id, email, role)
   values (new.id, new.email, new_role)
@@ -240,23 +179,19 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
 
--- RLS ON
+-- RLS
 alter table public.projects enable row level security;
 alter table public.profiles enable row level security;
 alter table public.project_members enable row level security;
 alter table public.nodes enable row level security;
-alter table public.agis enable row level security;
+alter table public.system_controls enable row level security;
 alter table public.commands enable row level security;
 alter table public.events enable row level security;
-alter table public.audit_logs enable row level security;
-alter table public.system_controls enable row level security;
 alter table public.nova_threads enable row level security;
 alter table public.nova_messages enable row level security;
 alter table public.supply_products enable row level security;
-alter table public.supply_orders enable row level security;
-alter table public.supply_order_items enable row level security;
 
--- POLICIES (SOLO lectura, escritura la maneja server/service-role)
+-- POLICIES (read for authenticated members; writes via service role from backend)
 drop policy if exists projects_select_auth on public.projects;
 create policy projects_select_auth on public.projects
 for select to authenticated
@@ -277,8 +212,8 @@ create policy nodes_select_auth on public.nodes
 for select to authenticated
 using (public.is_global_owner_admin() or public.is_project_member(project_id));
 
-drop policy if exists agis_select_auth on public.agis;
-create policy agis_select_auth on public.agis
+drop policy if exists controls_select_auth on public.system_controls;
+create policy controls_select_auth on public.system_controls
 for select to authenticated
 using (public.is_global_owner_admin() or public.is_project_member(project_id));
 
@@ -292,23 +227,10 @@ create policy events_select_auth on public.events
 for select to authenticated
 using (public.is_global_owner_admin() or public.is_project_member(project_id));
 
-drop policy if exists audit_select_auth on public.audit_logs;
-create policy audit_select_auth on public.audit_logs
-for select to authenticated
-using (public.is_global_owner_admin() or public.is_project_member(project_id));
-
-drop policy if exists system_controls_select_auth on public.system_controls;
-create policy system_controls_select_auth on public.system_controls
-for select to authenticated
-using (public.is_global_owner_admin() or public.is_project_member(project_id));
-
 drop policy if exists nova_threads_select_own on public.nova_threads;
 create policy nova_threads_select_own on public.nova_threads
 for select to authenticated
-using (
-  user_id = auth.uid()
-  and (public.is_global_owner_admin() or public.is_project_member(project_id))
-);
+using (user_id = auth.uid() and (public.is_global_owner_admin() or public.is_project_member(project_id)));
 
 drop policy if exists nova_messages_select_own on public.nova_messages;
 create policy nova_messages_select_own on public.nova_messages
@@ -324,15 +246,5 @@ using (
 
 drop policy if exists supply_products_select_auth on public.supply_products;
 create policy supply_products_select_auth on public.supply_products
-for select to authenticated
-using (public.is_global_owner_admin() or public.is_project_member(project_id));
-
-drop policy if exists supply_orders_select_auth on public.supply_orders;
-create policy supply_orders_select_auth on public.supply_orders
-for select to authenticated
-using (public.is_global_owner_admin() or public.is_project_member(project_id));
-
-drop policy if exists supply_items_select_auth on public.supply_order_items;
-create policy supply_items_select_auth on public.supply_order_items
 for select to authenticated
 using (public.is_global_owner_admin() or public.is_project_member(project_id));
