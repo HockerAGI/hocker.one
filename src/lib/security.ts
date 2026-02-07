@@ -1,4 +1,3 @@
-// src/lib/security.ts
 import crypto from "node:crypto";
 import { stableStringify } from "@/lib/stable-json";
 
@@ -13,13 +12,5 @@ export function signCommand(
     String(input.command),
     stableStringify(input.payload ?? {})
   ].join(".");
-
   return crypto.createHmac("sha256", secret).update(base).digest("hex");
-}
-
-export function timingSafeEqual(a: string, b: string) {
-  const ba = Buffer.from(String(a || ""));
-  const bb = Buffer.from(String(b || ""));
-  if (ba.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ba, bb);
 }
