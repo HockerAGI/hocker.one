@@ -1,57 +1,59 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 
-declare global {
-  interface Window {
-    webkitSpeechRecognition?: any;
-    SpeechRecognition?: any;
-  }
-}
+type Props = {
+  onText: (t: string) => void;
+  disabled?: boolean;
+};
 
-export default function VoiceInput({ onText, disabled }: { onText: (t: string) => void; disabled?: boolean }) {
+export default function VoiceInput({ onText, disabled }: Props) {
+  const SpeechRecognition = useMemo(() => {
+    return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  }, []);
+
   const [listening, setListening] = useState(false);
-  const recRef = useRef<any>(null);
+  const supported = !!SpeechRecognition;
+  const isDisabled = !!disabled || !supported;
 
-  useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+  async function start() {
+    if (isDisabled) return;
 
-    const r = new SR();
-    r.lang = "es-MX";
-    r.interimResults = false;
-    r.maxAlternatives = 1;
+    const rec = new SpeechRecognition();
+    rec.lang = "es-MX";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
 
-    r.onresult = (e: any) => {
-      const t = e.results?.[0]?.[0]?.transcript ?? "";
-      if (t) onText(t);
+    rec.onstart = () => setListening(true);
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+
+    rec.onresult = (event: any) => {
+      const text = event?.results?.[0]?.[0]?.transcript ?? "";
+      if (text) onText(text);
     };
-    r.onend = () => setListening(false);
 
-    recRef.current = r;
-  }, [onText]);
-
-  function toggle() {
-    if (!recRef.current || disabled) return;
-    if (listening) {
-      recRef.current.stop();
-      setListening(false);
-    } else {
-      setListening(true);
-      recRef.current.start();
-    }
+    rec.start();
   }
-
-  const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   return (
     <button
-      className="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-50"
-      onClick={toggle}
-      disabled={!supported || disabled}
-      title={!supported ? "Tu navegador no soporta voz" : "Voz"}
+      onClick={start}
+      disabled={isDisabled}
+      style={{
+        padding: "10px 12px",
+        cursor: isDisabled ? "not-allowed" : "pointer",
+        borderRadius: 12,
+        border: "1px solid #1f2937",
+        background: listening ? "rgba(59,130,246,0.12)" : "#0b1220",
+        color: "#fff",
+        fontWeight: 800,
+        minWidth: 120,
+        opacity: isDisabled ? 0.6 : 1,
+      }}
+      title={!supported ? "Voz no soportada en este navegador" : listening ? "Escuchando…" : "Hablar"}
     >
-      {listening ? "🎙️" : "🎤"}
+      {supported ? (listening ? "🎙️ Escuchando…" : "🎙️ Voz") : "🎙️ No disponible"}
     </button>
   );
 }
