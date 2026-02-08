@@ -1,111 +1,227 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import type { CommandStatus } from "@/lib/types";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
 type Cmd = {
   id: string;
-  created_at: string;
-  project_id: string;
-  node_id: string;
+  node_id: string | null;
   command: string;
-  status: string;
+  status: CommandStatus;
+  created_at: string;
+  approved_at?: string | null;
   needs_approval: boolean;
-  payload: any;
-  result?: any;
-  error?: string | null;
+  project_id: string;
+  payload?: any;
 };
 
 export default function CommandsQueue() {
-  const supabase = useMemo(() => createBrowserSupabase(), []);
-  const [projectId, setProjectId] = useState(defaultProjectId());
+  const sb = useMemo(() => createBrowserSupabase(), []);
+
+  const [projectId, setProjectId] = useState<string>(defaultProjectId());
   const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
 
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [items, setItems] = useState<Cmd[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  async function load() {
+  async function refresh() {
     setLoading(true);
-    const { data, error } = await supabase
+    setErr(null);
+
+    const { data, error } = await sb
       .from("commands")
-      .select("id, created_at, project_id, node_id, command, status, needs_approval, payload, result, error")
+      .select(
+        "id,node_id,command,status,created_at,approved_at,needs_approval,project_id,payload"
+      )
       .eq("project_id", pid)
       .order("created_at", { ascending: false })
       .limit(50);
 
-    if (!error) setItems((data ?? []) as any);
+    if (error) setErr(error.message);
+    setItems((data as any) ?? []);
     setLoading(false);
   }
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 2500);
-    return () => clearInterval(t);
+    refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pid]);
 
   async function approve(id: string) {
-    await fetch("/api/commands/approve", {
+    setErr(null);
+    const res = await fetch("/api/commands/approve", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id, project_id: pid })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, project_id: pid }),
     });
-    load();
+
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setErr(j?.error ?? `Approve failed (${res.status})`);
+      return;
+    }
+    await refresh();
+  }
+
+  async function reject(id: string) {
+    setErr(null);
+    const res = await fetch("/api/commands/reject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, project_id: pid }),
+    });
+
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setErr(j?.error ?? `Reject failed (${res.status})`);
+      return;
+    }
+    await refresh();
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Cola de comandos</h2>
-          <p className="text-sm text-slate-500">Pendientes, corriendo y resultados.</p>
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-xs text-slate-500">Proyecto</label>
-          <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={projectId} onChange={(e) => setProjectId(e.target.value)} />
-        </div>
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ fontWeight: 700 }}>Project</div>
+        <input
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          style={{
+            flex: 1,
+            minWidth: 260,
+            padding: "8px 10px",
+            borderRadius: 10,
+            border: "1px solid #1f2937",
+            background: "#0b1220",
+            color: "#fff",
+          }}
+          placeholder="project_id"
+        />
+        <button
+          onClick={refresh}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 10,
+            border: "1px solid #1f2937",
+            background: "#0b1220",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          Refresh
+        </button>
       </div>
 
-      <div className="mt-4">
-        {loading ? (
-          <div className="text-sm text-slate-500">Cargando…</div>
-        ) : items.length === 0 ? (
-          <div className="text-sm text-slate-500">No hay comandos.</div>
-        ) : (
-          <div className="space-y-3">
-            {items.map((c) => (
-              <div key={c.id} className="rounded-2xl border border-slate-200 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-500">{new Date(c.created_at).toLocaleString()}</span>
-                    <span className="text-sm font-semibold text-slate-900">
-                      {c.command} <span className="text-xs text-slate-500">({c.node_id})</span>
-                    </span>
-                    <span className="text-xs text-slate-500">Status: {c.status}</span>
-                  </div>
+      {err && (
+        <div
+          style={{
+            padding: 10,
+            borderRadius: 12,
+            border: "1px solid #7f1d1d",
+            background: "rgba(185,28,28,0.15)",
+            color: "#fecaca",
+          }}
+        >
+          {err}
+        </div>
+      )}
 
-                  {c.status === "needs_approval" && (
+      <div style={{ display: "grid", gap: 10 }}>
+        {loading && <div style={{ opacity: 0.8 }}>Loading…</div>}
+        {!loading && items.length === 0 && (
+          <div style={{ opacity: 0.8 }}>No commands for this project.</div>
+        )}
+
+        {items.map((c) => (
+          <div
+            key={c.id}
+            style={{
+              border: "1px solid #1f2937",
+              borderRadius: 16,
+              padding: 14,
+              background: "#0b1220",
+              color: "#e5e7eb",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontWeight: 800, letterSpacing: 0.3 }}>
+                  {c.command}{" "}
+                  <span style={{ opacity: 0.75, fontWeight: 600 }}>
+                    · {c.status}
+                    {c.needs_approval ? " (needs approval)" : ""}
+                  </span>
+                </div>
+                <div style={{ opacity: 0.75, fontSize: 13 }}>
+                  id: {c.id} · node: {c.node_id ?? "—"} · project:{" "}
+                  {c.project_id} ·{" "}
+                  {new Date(c.created_at).toLocaleString()}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {c.needs_approval && c.status === "needs_approval" && (
+                  <>
                     <button
                       onClick={() => approve(c.id)}
-                      className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white"
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 12,
+                        border: "1px solid #065f46",
+                        background: "rgba(16,185,129,0.12)",
+                        color: "#a7f3d0",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                      }}
                     >
-                      Aprobar
+                      Approve
                     </button>
-                  )}
-                </div>
-
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-xs text-slate-600">Ver payload / resultado</summary>
-                  <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-slate-50 p-3 text-xs">
-                    {JSON.stringify({ payload: c.payload, result: c.result, error: c.error }, null, 2)}
-                  </pre>
-                </details>
+                    <button
+                      onClick={() => reject(c.id)}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 12,
+                        border: "1px solid #7f1d1d",
+                        background: "rgba(185,28,28,0.12)",
+                        color: "#fecaca",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
-            ))}
+            </div>
+
+            {c.payload && (
+              <pre
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  borderRadius: 12,
+                  border: "1px solid #111827",
+                  background: "#060b16",
+                  overflowX: "auto",
+                  fontSize: 12,
+                  color: "#c7d2fe",
+                }}
+              >
+                {JSON.stringify(c.payload, null, 2)}
+              </pre>
+            )}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
