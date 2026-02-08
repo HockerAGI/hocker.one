@@ -1,90 +1,89 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { requireProjectRole } from "@/lib/authz";
 
-export const runtime = "nodejs";
-
-async function callOrchestrator(input: any) {
-  const url = (process.env.NOVA_ORCHESTRATOR_URL ?? "").replace(/\/$/, "");
-  const key = process.env.NOVA_ORCHESTRATOR_KEY ?? "";
-  if (!url || !key) throw new Error("Falta NOVA_ORCHESTRATOR_URL o NOVA_ORCHESTRATOR_KEY");
-
-  const r = await fetch(`${url}/v1/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-hocker-key": key },
-    body: JSON.stringify(input)
-  });
-
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j?.error ?? `Orchestrator error ${r.status}`);
-  return j;
+function isUuid(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({} as any));
-
-  const project_id = String(body.project_id ?? "global").trim();
-  const thread_id = String(body.thread_id ?? "").trim();
-  const node_id = String(body.node_id ?? "node-cloudrun-01").trim();
-  const text = String(body.text ?? "").trim();
-
-  if (!thread_id) return NextResponse.json({ ok: false, error: "Falta thread_id" }, { status: 400 });
-  if (!text) return NextResponse.json({ ok: false, error: "Falta text" }, { status: 400 });
-
-  const auth = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
-
-  const admin = createAdminSupabase();
-
-  const { data: th } = await admin
-    .from("nova_threads")
-    .select("id, user_id, project_id")
-    .eq("id", thread_id)
-    .maybeSingle();
-
-  if (!th || th.user_id !== auth.user.id || th.project_id !== project_id) {
-    return NextResponse.json({ ok: false, error: "Thread inválido" }, { status: 403 });
-  }
-
-  await admin.from("nova_messages").insert({
-    thread_id,
-    project_id,
-    user_id: auth.user.id,
-    role: "user",
-    content: text,
-    meta: { node_id }
-  });
-
-  let out: any;
   try {
-    out = await callOrchestrator({
+    const body = await req.json().catch(() => ({}));
+
+    const project_id = (body?.project_id ?? "global").toString().trim() || "global";
+    let thread_id = (body?.thread_id ?? "").toString().trim();
+    if (!thread_id || !isUuid(thread_id)) thread_id = crypto.randomUUID();
+
+    const text = (body?.message ?? body?.text ?? "").toString().trim();
+    if (!text) {
+      return NextResponse.json({ error: "Falta message/text." }, { status: 400 });
+    }
+
+    const node_id = (body?.node_id ?? "nova").toString().trim() || "nova";
+    const user_id = (body?.user_id ?? null) as string | null;
+
+    const sb = createAdminSupabase();
+
+    // Ensure thread exists
+    await sb.from("nova_threads").upsert(
+      {
+        id: thread_id,
+        project_id,
+        title: body?.title ?? null,
+      },
+      { onConflict: "id" }
+    );
+
+    // Save user message
+    await sb.from("nova_messages").insert({
       project_id,
       thread_id,
-      user_id: auth.user.id,
-      node_id,
-      text
+      role: "user",
+      content: text,
     });
+
+    // Route to orchestrator (nova.agi)
+    // For now, we call a local endpoint configured in env:
+    const base = process.env.NOVA_AGI_URL || process.env.NEXT_PUBLIC_NOVA_AGI_URL;
+    if (!base) {
+      await sb.from("nova_messages").insert({
+        project_id,
+        thread_id,
+        role: "nova",
+        content: "NOVA_AGI_URL no está configurado.",
+      });
+      return NextResponse.json({
+        ok: true,
+        project_id,
+        thread_id,
+        reply: "NOVA_AGI_URL no está configurado.",
+      });
+    }
+
+    const r = await fetch(`${base.replace(/\/$/, "")}/v1/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        text,
+        node_id,
+        project_id,
+        user_id,
+        thread_id,
+      }),
+    });
+
+    const j = await r.json().catch(() => ({}));
+    const reply = (j?.reply ?? j?.text ?? "").toString().trim() || "OK";
+
+    await sb.from("nova_messages").insert({
+      project_id,
+      thread_id,
+      role: "nova",
+      content: reply,
+    });
+
+    return NextResponse.json({ ok: true, project_id, thread_id, reply });
   } catch (e: any) {
-    await admin.from("nova_messages").insert({
-      thread_id,
-      project_id,
-      user_id: auth.user.id,
-      role: "system",
-      content: `Error NOVA: ${String(e?.message ?? e)}`,
-      meta: {}
-    });
-    return NextResponse.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
+    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
   }
-
-  const reply = String(out?.reply ?? "Ok.");
-  await admin.from("nova_messages").insert({
-    thread_id,
-    project_id,
-    user_id: auth.user.id,
-    role: "nova",
-    content: reply,
-    meta: { raw: out }
-  });
-
-  return NextResponse.json({ ok: true, reply, action: out?.action ?? null });
 }
