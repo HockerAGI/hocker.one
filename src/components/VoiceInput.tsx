@@ -13,11 +13,10 @@ export default function VoiceInput({ onText, disabled }: Props) {
   }, []);
 
   const [listening, setListening] = useState(false);
-  const supported = !!SpeechRecognition;
-  const isDisabled = !!disabled || !supported;
 
   async function start() {
-    if (isDisabled) return;
+    if (disabled) return;
+    if (!SpeechRecognition) return;
 
     const rec = new SpeechRecognition();
     rec.lang = "es-MX";
@@ -28,32 +27,36 @@ export default function VoiceInput({ onText, disabled }: Props) {
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
 
-    rec.onresult = (event: any) => {
-      const text = event?.results?.[0]?.[0]?.transcript ?? "";
-      if (text) onText(text);
+    rec.onresult = (e: any) => {
+      const t = e?.results?.[0]?.[0]?.transcript;
+      if (t && typeof t === "string") onText(t);
     };
 
     rec.start();
   }
 
+  if (!SpeechRecognition) {
+    return (
+      <button
+        type="button"
+        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500"
+        disabled
+        title="SpeechRecognition no disponible en este navegador"
+      >
+        Voice (no disponible)
+      </button>
+    );
+  }
+
   return (
     <button
+      type="button"
       onClick={start}
-      disabled={isDisabled}
-      style={{
-        padding: "10px 12px",
-        cursor: isDisabled ? "not-allowed" : "pointer",
-        borderRadius: 12,
-        border: "1px solid #1f2937",
-        background: listening ? "rgba(59,130,246,0.12)" : "#0b1220",
-        color: "#fff",
-        fontWeight: 800,
-        minWidth: 120,
-        opacity: isDisabled ? 0.6 : 1,
-      }}
-      title={!supported ? "Voz no soportada en este navegador" : listening ? "Escuchando…" : "Hablar"}
+      disabled={disabled}
+      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50"
+      title="Dicta por voz"
     >
-      {supported ? (listening ? "🎙️ Escuchando…" : "🎙️ Voz") : "🎙️ No disponible"}
+      {listening ? "Escuchando…" : "Voice"}
     </button>
   );
 }
