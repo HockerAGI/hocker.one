@@ -1,41 +1,57 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { requireProjectRole } from "@/lib/authz";
-
-export const runtime = "nodejs";
+import { requireRole } from "@/lib/authz";
+import { normalizeProjectId } from "@/lib/project";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({} as any));
-  const id = String(body.id ?? "").trim();
-  const project_id = String(body.project_id ?? "global").trim();
+  const auth = await requireRole("owner");
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  if (!id) return NextResponse.json({ ok: false, error: "Falta id" }, { status: 400 });
+  const sb = createAdminSupabase();
 
-  const auth = await requireProjectRole(project_id, ["owner", "admin"]);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-  const admin = createAdminSupabase();
+  const id = body?.id as string | undefined;
+  const requestedProjectId = body?.project_id ? normalizeProjectId(String(body.project_id)) : null;
 
-  const { data: cmd } = await admin.from("commands").select("status, node_id, command").eq("id", id).maybeSingle();
-  if (!cmd) return NextResponse.json({ ok: false, error: "Comando no encontrado" }, { status: 404 });
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  if (cmd.status !== "needs_approval") return NextResponse.json({ ok: true, already: true, status: cmd.status });
-
-  const { error } = await admin
+  const { data: cmd, error: cmdErr } = await sb
     .from("commands")
-    .update({ status: "queued", needs_approval: false, approved_by: auth.user.id })
+    .select("id,project_id,status,needs_approval,command,node_id,payload")
+    .eq("id", id)
+    .single();
+
+  if (cmdErr || !cmd) return NextResponse.json({ error: cmdErr?.message ?? "Command not found" }, { status: 404 });
+
+  const project_id = normalizeProjectId(cmd.project_id);
+
+  if (requestedProjectId && requestedProjectId !== project_id) {
+    return NextResponse.json({ error: "Project mismatch" }, { status: 409 });
+  }
+
+  if (!cmd.needs_approval || cmd.status !== "needs_approval") {
+    return NextResponse.json({ error: "Command does not require approval or is not pending." }, { status: 400 });
+  }
+
+  const { error: upErr } = await sb
+    .from("commands")
+    .update({ status: "queued", approved_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
-  await admin.from("events").insert({
+  await sb.from("audit_logs").insert({
     project_id,
-    node_id: cmd.node_id,
-    level: "info",
-    type: "command.approved",
-    message: `Comando aprobado: ${cmd.command}`,
-    data: { command_id: id, by: auth.user.id }
+    actor_id: auth.userId,
+    action: "approve_command",
+    meta: { command_id: id, command: cmd.command, node_id: cmd.node_id, payload: cmd.payload ?? null },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, project_id });
 }
