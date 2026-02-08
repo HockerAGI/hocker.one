@@ -2,305 +2,288 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
-import type { NovaMessage } from "@/lib/types";
 import VoiceInput from "./VoiceInput";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
-type ChatMsg = NovaMessage & { local_id?: string };
+type Msg = {
+  id: string;
+  thread_id: string;
+  project_id: string;
+  role: "user" | "nova" | "system";
+  content: string;
+  created_at: string;
+};
 
-function safeId(prefix = "m") {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`
-  );
+function uuidv4() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    // @ts-ignore
+    return crypto.randomUUID();
+  }
+  // fallback
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function threadKey(pid: string) {
+  return `hocker.threadId.${pid}`;
 }
 
 export default function NovaChat() {
   const sb = useMemo(() => createBrowserSupabase(), []);
+
   const [projectId, setProjectId] = useState<string>(defaultProjectId());
   const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
 
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string>(() => {
+    try {
+      const k = threadKey(normalizeProjectId(defaultProjectId()));
+      return window.localStorage.getItem(k) || uuidv4();
+    } catch {
+      return uuidv4();
+    }
+  });
 
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
+  const [msgs, setMsgs] = useState<Msg[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const storageKey = useMemo(() => `hocker.one.threadId.${pid}`, [pid]);
-
   useEffect(() => {
-    const stored =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(storageKey)
-        : null;
-    setThreadId(stored || null);
-    setMessages([]);
-    setErr(null);
-  }, [storageKey]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
-
-  async function loadHistory(tid: string) {
-    const { data, error } = await sb
-      .from("nova_messages")
-      .select("id,thread_id,role,content,created_at,project_id")
-      .eq("thread_id", tid)
-      .eq("project_id", pid)
-      .order("created_at", { ascending: true })
-      .limit(100);
-
-    if (error) {
-      setErr(error.message);
-      return;
+    try {
+      const k = threadKey(pid);
+      const existing = window.localStorage.getItem(k);
+      if (existing) setThreadId(existing);
+      else {
+        const n = uuidv4();
+        window.localStorage.setItem(k, n);
+        setThreadId(n);
+      }
+    } catch {
+      // ignore
     }
-    setMessages((data as any) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pid]);
+
+  async function loadHistory(currentPid: string, currentThread: string) {
+    setErr(null);
+    try {
+      const { data, error } = await sb
+        .from("nova_messages")
+        .select("id, project_id, thread_id, role, content, created_at")
+        .eq("project_id", currentPid)
+        .eq("thread_id", currentThread)
+        .order("created_at", { ascending: true })
+        .limit(200);
+
+      if (error) throw error;
+      setMsgs((data as Msg[]) ?? []);
+    } catch (e: any) {
+      setErr(e?.message ?? "No se pudo cargar el historial.");
+    }
   }
 
   useEffect(() => {
-    if (!threadId) return;
-    loadHistory(threadId);
+    loadHistory(pid, threadId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId, pid]);
+  }, [pid, threadId]);
 
-  function persistThreadId(tid: string) {
-    setThreadId(tid);
-    if (typeof window !== "undefined") window.localStorage.setItem(storageKey, tid);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs.length, loading]);
+
+  function setThreadAndPersist(newThreadId: string) {
+    setThreadId(newThreadId);
+    try {
+      window.localStorage.setItem(threadKey(pid), newThreadId);
+    } catch {
+      // ignore
+    }
   }
 
-  function startNewThread() {
+  async function newThread() {
+    const n = uuidv4();
+    setThreadAndPersist(n);
+    setMsgs([]);
     setErr(null);
-    const tid = safeId("t");
-    persistThreadId(tid);
-    setMessages([]);
   }
 
-  async function sendMessage(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  async function send(text: string) {
+    const t = text.trim();
+    if (!t || loading) return;
 
     setErr(null);
     setLoading(true);
 
-    let tid = threadId;
-    if (!tid) {
-      tid = safeId("t");
-      persistThreadId(tid);
-    }
-
-    const localUserId = safeId("u");
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: localUserId as any,
-        thread_id: tid!,
-        role: "user",
-        content: trimmed,
-        created_at: new Date().toISOString(),
-        project_id: pid,
-        local_id: localUserId,
-      } as any,
-    ]);
-
+    const optimisticUser: Msg = {
+      id: `local-${Date.now()}-u`,
+      project_id: pid,
+      thread_id: threadId,
+      role: "user",
+      content: t,
+      created_at: new Date().toISOString(),
+    };
+    setMsgs((m) => [...m, optimisticUser]);
     setInput("");
 
-    const res = await fetch("/api/nova/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        project_id: pid,
-        thread_id: tid,
-        message: trimmed,
-      }),
-    });
+    try {
+      const res = await fetch("/api/nova/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: pid,
+          thread_id: threadId,
+          message: t,
+          text: t, // compat
+        }),
+      });
 
-    if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      setErr(j?.error ?? `Chat failed (${res.status})`);
+      if (!res.ok) throw new Error(j?.error || "NOVA no respondió.");
+
+      if (typeof j?.thread_id === "string" && j.thread_id !== threadId) {
+        setThreadAndPersist(j.thread_id);
+      }
+
+      const reply = (j?.reply ?? "").toString();
+      if (reply) {
+        const optimisticNova: Msg = {
+          id: `local-${Date.now()}-n`,
+          project_id: pid,
+          thread_id: (j?.thread_id ?? threadId) as string,
+          role: "nova",
+          content: reply,
+          created_at: new Date().toISOString(),
+        };
+        setMsgs((m) => [...m, optimisticNova]);
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "No se pudo enviar el mensaje.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const j = await res.json();
-    const assistantText: string = j.reply ?? "(no reply)";
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: safeId("a") as any,
-        thread_id: tid!,
-        role: "assistant",
-        content: assistantText,
-        created_at: new Date().toISOString(),
-        project_id: pid,
-      } as any,
-    ]);
-
-    setLoading(false);
   }
 
   return (
-    <div style={{ display: "grid", gap: 12, height: "calc(100vh - 120px)" }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <div style={{ fontWeight: 800 }}>Project</div>
-        <input
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          style={{
-            flex: 1,
-            minWidth: 260,
-            padding: "8px 10px",
-            borderRadius: 10,
-            border: "1px solid #1f2937",
-            background: "#0b1220",
-            color: "#fff",
-          }}
-          placeholder="project_id"
-        />
-        <button
-          onClick={startNewThread}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 10,
-            border: "1px solid #1f2937",
-            background: "#0b1220",
-            color: "#fff",
-            cursor: "pointer",
-            fontWeight: 700,
-          }}
-        >
-          New thread
-        </button>
-        <div style={{ opacity: 0.7, fontSize: 12 }}>
-          thread: {threadId ? threadId.slice(0, 8) + "…" : "—"}
-        </div>
-      </div>
-
-      {err && (
-        <div
-          style={{
-            padding: 10,
-            borderRadius: 12,
-            border: "1px solid #7f1d1d",
-            background: "rgba(185,28,28,0.15)",
-            color: "#fecaca",
-          }}
-        >
-          {err}
-        </div>
-      )}
-
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: 14,
-          borderRadius: 16,
-          border: "1px solid #1f2937",
-          background: "#0b1220",
-          color: "#e5e7eb",
-        }}
-      >
-        {messages.length === 0 && (
-          <div style={{ opacity: 0.75 }}>
-            Chat por proyecto. La memoria vive en Supabase (nova_threads / nova_messages).
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1">
+          <div className="text-lg font-semibold text-slate-900">NOVA Chat</div>
+          <div className="text-sm text-slate-500">
+            Conversación por proyecto + thread separado.
           </div>
-        )}
+        </div>
 
-        {messages.map((m, idx) => {
-          const isUser = m.role === "user";
-          return (
-            <div
-              key={`${m.id ?? idx}`}
-              style={{
-                display: "flex",
-                justifyContent: isUser ? "flex-end" : "flex-start",
-                marginBottom: 10,
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: "78%",
-                  padding: "10px 12px",
-                  borderRadius: 14,
-                  border: "1px solid #111827",
-                  background: isUser ? "#060b16" : "rgba(59,130,246,0.12)",
-                  color: "#fff",
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.35,
-                }}
-              >
-                <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>
-                  {isUser ? "You" : "NOVA"} · {new Date(m.created_at).toLocaleString()}
-                </div>
-                {m.content}
-              </div>
-            </div>
-          );
-        })}
-        <div ref={bottomRef} />
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gap: 10,
-          border: "1px solid #1f2937",
-          borderRadius: 16,
-          padding: 12,
-          background: "#0b1220",
-        }}
-      >
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            rows={2}
-            style={{
-              flex: 1,
-              padding: 10,
-              borderRadius: 12,
-              border: "1px solid #1f2937",
-              background: "#060b16",
-              color: "#fff",
-              resize: "none",
-            }}
-            placeholder="Type a message…"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage(input);
-              }
-            }}
-          />
+        <div className="flex flex-col gap-2 md:flex-row md:items-end">
+          <div className="w-full md:w-[320px]">
+            <label className="text-xs font-semibold text-slate-600">
+              Project
+            </label>
+            <input
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder="global"
+            />
+          </div>
 
           <button
-            onClick={() => sendMessage(input)}
+            onClick={newThread}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
             disabled={loading}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "1px solid #1f2937",
-              background: loading ? "rgba(255,255,255,0.05)" : "#0b1220",
-              color: "#fff",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontWeight: 800,
-              minWidth: 110,
-            }}
+            title="Nuevo thread para este proyecto"
           >
-            {loading ? "…" : "Send"}
+            New thread
           </button>
+        </div>
+      </div>
 
-          <VoiceInput disabled={loading} onText={(t) => sendMessage(t)} />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-4 py-3">
+          <div className="text-xs text-slate-500">
+            <span className="font-semibold text-slate-700">project:</span> {pid}{" "}
+            · <span className="font-semibold text-slate-700">thread:</span>{" "}
+            <span className="font-mono">{threadId}</span>
+          </div>
         </div>
 
-        <div style={{ opacity: 0.65, fontSize: 12 }}>
-          Tip: Shift+Enter para salto · Cambiar project mantiene thread+memoria separados.
+        <div className="max-h-[520px] overflow-auto px-4 py-4">
+          {err && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {err}
+            </div>
+          )}
+
+          {msgs.length === 0 && !loading && (
+            <div className="text-sm text-slate-500">
+              Sin mensajes todavía. Escribe algo.
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {msgs.map((m) => (
+              <div
+                key={m.id}
+                className={`flex ${
+                  m.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                    m.role === "user"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-50 text-slate-900 border border-slate-200"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap">{m.content}</div>
+                  <div
+                    className={`mt-2 text-[11px] ${
+                      m.role === "user" ? "text-blue-100" : "text-slate-500"
+                    }`}
+                  >
+                    {new Date(m.created_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div className="text-sm text-slate-500">NOVA está escribiendo…</div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 px-4 py-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Escribe tu mensaje…"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(input);
+                }
+              }}
+              disabled={loading}
+            />
+
+            <div className="flex items-center gap-2">
+              <VoiceInput disabled={loading} onText={(t) => send(t)} />
+              <button
+                onClick={() => send(input)}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                disabled={loading || !input.trim()}
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
