@@ -5,53 +5,75 @@ import { normalizeProjectId } from "@/lib/project";
 
 export async function POST(req: Request) {
   const auth = await requireRole("owner");
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
-  const sb = createAdminSupabase();
-
-  let body: any = {};
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    const body = await req.json().catch(() => ({}));
+    const id = (body?.id ?? "").toString();
+
+    if (!id) {
+      return NextResponse.json({ error: "Falta id." }, { status: 400 });
+    }
+
+    const sb = createAdminSupabase();
+
+    const { data: cmd, error: cmdErr } = await sb
+      .from("commands")
+      .select("id, project_id, status, needs_approval, command, node_id")
+      .eq("id", id)
+      .single();
+
+    if (cmdErr || !cmd) {
+      return NextResponse.json({ error: "Comando no encontrado." }, { status: 404 });
+    }
+
+    const cmdProject = normalizeProjectId(cmd.project_id);
+    const requestProject = normalizeProjectId(body?.project_id);
+    if (requestProject && requestProject !== cmdProject) {
+      return NextResponse.json(
+        { error: "project_id no coincide con el comando." },
+        { status: 400 }
+      );
+    }
+
+    if (cmd.status !== "needs_approval" || !cmd.needs_approval) {
+      return NextResponse.json(
+        { error: "Este comando no está esperando aprobación." },
+        { status: 409 }
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    const { error: upErr } = await sb
+      .from("commands")
+      .update({
+        status: "queued",
+        approved_at: now,
+        error: null,
+      })
+      .eq("id", id);
+
+    if (upErr) {
+      return NextResponse.json({ error: upErr.message }, { status: 500 });
+    }
+
+    await sb.from("audit_logs").insert({
+      project_id: cmdProject,
+      actor_type: "user",
+      actor_id: auth.userId,
+      action: "approve_command",
+      target: `command:${id}`,
+      meta: {
+        command: cmd.command,
+        node_id: cmd.node_id,
+      },
+    });
+
+    return NextResponse.json({ ok: true, id, project_id: cmdProject });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
   }
-
-  const id = body?.id as string | undefined;
-  const requestedProjectId = body?.project_id ? normalizeProjectId(String(body.project_id)) : null;
-
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-
-  const { data: cmd, error: cmdErr } = await sb
-    .from("commands")
-    .select("id,project_id,status,needs_approval,command,node_id,payload")
-    .eq("id", id)
-    .single();
-
-  if (cmdErr || !cmd) return NextResponse.json({ error: cmdErr?.message ?? "Command not found" }, { status: 404 });
-
-  const project_id = normalizeProjectId(cmd.project_id);
-
-  if (requestedProjectId && requestedProjectId !== project_id) {
-    return NextResponse.json({ error: "Project mismatch" }, { status: 409 });
-  }
-
-  if (!cmd.needs_approval || cmd.status !== "needs_approval") {
-    return NextResponse.json({ error: "Command does not require approval or is not pending." }, { status: 400 });
-  }
-
-  const { error: upErr } = await sb
-    .from("commands")
-    .update({ status: "queued", approved_at: new Date().toISOString() })
-    .eq("id", id);
-
-  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
-
-  await sb.from("audit_logs").insert({
-    project_id,
-    actor_id: auth.userId,
-    action: "approve_command",
-    meta: { command_id: id, command: cmd.command, node_id: cmd.node_id, payload: cmd.payload ?? null },
-  });
-
-  return NextResponse.json({ ok: true, project_id });
 }
