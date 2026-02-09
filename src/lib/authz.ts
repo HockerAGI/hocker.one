@@ -1,25 +1,45 @@
-import { createServerSupabase } from "@/lib/supabase-server";
-import { normalizeProjectId } from "@/lib/project";
+import type { Role } from "@/lib/types";
 
-export type AppRole = "owner" | "admin" | "operator" | "viewer";
+const RANK: Record<Role, number> = {
+  owner: 4,
+  admin: 3,
+  operator: 2,
+  viewer: 1,
+};
 
-export async function requireProjectRole(projectId: string, roles: AppRole[]) {
-  const supabase = createServerSupabase();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user) return { ok: false, status: 401, error: "No autorizado", user: null as any };
+function normalizeRole(role: any): Role | null {
+  const r = String(role ?? "").toLowerCase().trim();
+  if (r === "owner" || r === "admin" || r === "operator" || r === "viewer") return r;
+  return null;
+}
 
-  const pid = normalizeProjectId(projectId);
+/**
+ * requireRole() acepta:
+ * - un rol string (ej. "admin")
+ * - o un array de roles (ej. ["owner","admin"])
+ *
+ * Uso típico:
+ *   requireRole(userRole, ["owner","admin"])
+ */
+export function requireRole(userRole: any, allowed: Role | Role[]) {
+  const ur = normalizeRole(userRole);
+  const allowList = Array.isArray(allowed) ? allowed : [allowed];
 
-  const { data: member } = await supabase
-    .from("project_members")
-    .select("role")
-    .eq("project_id", pid)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  if (!ur) throw new Error("No autorizado: rol inválido o ausente.");
+  if (!allowList.includes(ur)) throw new Error("Permisos insuficientes.");
 
-  const role = (String(member?.role ?? "viewer") as AppRole);
+  return ur;
+}
 
-  if (!roles.includes(role)) return { ok: false, status: 403, error: "Sin permiso", user: null as any };
-  return { ok: true, status: 200, error: null, user, role, project_id: pid };
+export function hasAtLeast(userRole: any, minRole: Role): boolean {
+  const ur = normalizeRole(userRole);
+  if (!ur) return false;
+  return RANK[ur] >= RANK[minRole];
+}
+
+export function hasAny(userRole: any, allowed: Role | Role[]): boolean {
+  const ur = normalizeRole(userRole);
+  if (!ur) return false;
+  const allowList = Array.isArray(allowed) ? allowed : [allowed];
+  return allowList.includes(ur);
 }
