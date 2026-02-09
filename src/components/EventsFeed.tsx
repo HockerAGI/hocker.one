@@ -54,7 +54,7 @@ export default function EventsFeed() {
         .select("id, project_id, node_id, level, type, message, data, created_at")
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
-        .limit(80);
+        .limit(100);
 
       if (error) throw error;
       setItems((data as Ev[]) ?? []);
@@ -99,16 +99,12 @@ export default function EventsFeed() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
           <div className="text-lg font-semibold text-slate-900">Events</div>
-          <div className="text-sm text-slate-500">
-            Feed de eventos (filtrado por proyecto).
-          </div>
+          <div className="text-sm text-slate-500">Feed de eventos (filtrado por proyecto).</div>
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <div className="w-full md:w-[320px]">
-            <label className="text-xs font-semibold text-slate-600">
-              Project
-            </label>
+            <label className="text-xs font-semibold text-slate-600">Project</label>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={projectId}
@@ -128,15 +124,11 @@ export default function EventsFeed() {
       </div>
 
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {err}
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 text-sm font-semibold text-slate-900">
-          Emit manual event
-        </div>
+        <div className="mb-3 text-sm font-semibold text-slate-900">Emit manual event</div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div className="md:col-span-1">
@@ -173,9 +165,7 @@ export default function EventsFeed() {
           </div>
 
           <div className="md:col-span-4">
-            <label className="text-xs font-semibold text-slate-600">
-              message
-            </label>
+            <label className="text-xs font-semibold text-slate-600">message</label>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={message}
@@ -198,52 +188,34 @@ export default function EventsFeed() {
 
       <div className="space-y-3">
         {loading && <div className="text-sm text-slate-500">Loading…</div>}
-        {!loading && items.length === 0 && (
-          <div className="text-sm text-slate-500">
-            No hay eventos para este proyecto.
-          </div>
-        )}
+        {!loading && items.length === 0 && <div className="text-sm text-slate-500">No hay eventos para este proyecto.</div>}
 
         {items.map((ev) => (
-          <div
-            key={ev.id}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
+          <div key={ev.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${levelBadge(
-                      ev.level
-                    )}`}
-                  >
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${levelBadge(ev.level)}`}>
                     {ev.level}
                   </span>
 
-                  <span className="text-sm font-semibold text-slate-900">
-                    {ev.type}
-                  </span>
+                  <span className="text-sm font-semibold text-slate-900">{ev.type}</span>
 
-                  <span className="text-xs text-slate-500">
-                    {new Date(ev.created_at).toLocaleString()}
-                  </span>
+                  <span className="text-xs text-slate-500">{new Date(ev.created_at).toLocaleString()}</span>
                 </div>
 
                 <div className="text-sm text-slate-800">{ev.message}</div>
 
                 <div className="text-xs text-slate-500">
-                  <span className="font-semibold">project:</span> {ev.project_id}{" "}
-                  · <span className="font-semibold">node:</span>{" "}
-                  {ev.node_id ?? "—"}
+                  <span className="font-semibold">project:</span> {ev.project_id} ·{" "}
+                  <span className="font-semibold">node:</span> {ev.node_id ?? "—"}
                 </div>
               </div>
             </div>
 
             {ev.data && (
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-700">
-                  data
-                </summary>
+                <summary className="cursor-pointer text-sm font-semibold text-slate-700">data</summary>
                 <pre className="mt-2 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800">
                   {JSON.stringify(ev.data, null, 2)}
                 </pre>
