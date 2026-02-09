@@ -1,13 +1,29 @@
-export function normalizeProjectId(v: string) {
-  const s = (v ?? "").trim();
-  if (!s) return "global";
-  return s.toLowerCase().replace(/[^a-z0-9-_]/g, "-").slice(0, 64);
+const FALLBACK = "global";
+
+/** defaultProjectId(): default estable (client/server) */
+export function defaultProjectId(): string {
+  // Client: NEXT_PUBLIC_*
+  // Server: puede existir DEFAULT_PROJECT_ID, etc.
+  const v =
+    (process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID ||
+      process.env.DEFAULT_PROJECT_ID ||
+      FALLBACK) ?? FALLBACK;
+
+  return normalizeProjectId(v);
 }
 
-export function defaultProjectId() {
-  return process.env.NEXT_PUBLIC_HOCKER_DEFAULT_PROJECT_ID ?? "global";
-}
+/**
+ * normalizeProjectId():
+ * - trim + lowercase
+ * - reemplaza espacios por guiones
+ * - permite solo [a-z0-9_-]
+ * - si queda vacío -> "global"
+ */
+export function normalizeProjectId(input: any): string {
+  const raw = String(input ?? "").trim().toLowerCase();
+  if (!raw) return FALLBACK;
 
-export function defaultNodeId() {
-  return process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ?? "node-cloudrun-01";
+  const spaced = raw.replace(/\s+/g, "-");
+  const cleaned = spaced.replace(/[^a-z0-9_-]/g, "");
+  return cleaned || FALLBACK;
 }
