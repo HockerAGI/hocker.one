@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-
-import { createAdminSupabase } from "@/lib/supabase-admin";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { signCommand } from "@/lib/security";
 import { normalizeProjectId, defaultProjectId } from "@/lib/project";
@@ -23,67 +21,70 @@ const SENSITIVE_COMMANDS = new Set([
   "write_file",
 ]);
 
+async function requireProjectAdmin(project_id: string) {
+  const sb = createServerSupabase();
+  const { data } = await sb.auth.getUser();
+  const userId = data?.user?.id;
+  if (!userId) return { ok: false as const, status: 401, error: "No autorizado" };
+
+  const { data: pm, error: pmErr } = await sb
+    .from("project_members")
+    .select("role")
+    .eq("project_id", project_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (pmErr) return { ok: false as const, status: 500, error: pmErr.message };
+  const role = String(pm?.role ?? "");
+  if (!role) return { ok: false as const, status: 403, error: "No eres miembro del proyecto." };
+  if (!["owner", "admin"].includes(role)) {
+    return { ok: false as const, status: 403, error: "Permisos insuficientes (admin/owner)." };
+  }
+
+  return { ok: true as const, sb, userId, role };
+}
+
 export async function POST(req: Request) {
   try {
-    const supabase = createServerSupabase();
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
     const body = await req.json().catch(() => ({}));
 
-    const project_id = normalizeProjectId(body.project_id ?? defaultProjectId());
-    const node_id = (body.node_id ?? "").toString().trim();
-    const command = (body.command ?? "").toString().trim();
-    const payload = body.payload ?? null;
+    const project_id = normalizeProjectId(body?.project_id ?? defaultProjectId());
+    const node_id = String(body?.node_id ?? "").trim();
+    const command = String(body?.command ?? "").trim();
+    const payload = body?.payload ?? {};
 
     if (!project_id || !node_id || !command) {
-      return NextResponse.json(
-        { error: "Faltan project_id, node_id o command." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Faltan project_id, node_id o command." }, { status: 400 });
     }
 
     if (!ALLOWED_NODE_COMMANDS.has(command)) {
       return NextResponse.json({ error: "Comando no permitido." }, { status: 400 });
     }
 
-    // Solo owner/admin pueden emitir comandos
-    const { data: prof, error: profErr } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .single();
+    const auth = await requireProjectAdmin(project_id);
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const sb = auth.sb;
 
-    if (profErr) {
-      return NextResponse.json({ error: profErr.message }, { status: 500 });
+    const secret = (process.env.COMMAND_HMAC_SECRET || "").trim();
+    if (!secret) {
+      return NextResponse.json({ error: "COMMAND_HMAC_SECRET no está configurado." }, { status: 500 });
     }
 
-    const role = (prof?.role ?? "operator").toString();
-    if (!["owner", "admin"].includes(role)) {
-      return NextResponse.json(
-        { error: "Permisos insuficientes." },
-        { status: 403 }
-      );
-    }
-
-    // Kill switch global (por proyecto)
-    const sbAdmin = createAdminSupabase();
-    const { data: ctrl } = await sbAdmin
+    // Lee controls por proyecto (id='global' + project_id)
+    const { data: ctrl, error: ctrlErr } = await sb
       .from("system_controls")
       .select("kill_switch, allow_write")
       .eq("project_id", project_id)
       .eq("id", "global")
       .maybeSingle();
 
+    if (ctrlErr) return NextResponse.json({ error: ctrlErr.message }, { status: 500 });
+
     const kill = !!ctrl?.kill_switch;
     const allowWrite = !!ctrl?.allow_write;
 
     if (kill) {
-      await sbAdmin.from("events").insert({
+      await sb.from("events").insert({
         project_id,
         node_id,
         level: "warn",
@@ -91,74 +92,19 @@ export async function POST(req: Request) {
         message: `Kill-switch activo. Bloqueado: ${command}`,
         data: { payload },
       });
-
-      return NextResponse.json(
-        { error: "Kill-switch activo. Comando bloqueado." },
-        { status: 423 }
-      );
+      return NextResponse.json({ error: "Kill-switch activo. Comando bloqueado." }, { status: 423 });
     }
 
-    if (!allowWrite && SENSITIVE_COMMANDS.has(command)) {
-      const needsApproval = true;
+    const isSensitive = SENSITIVE_COMMANDS.has(command);
 
-      const command_id = crypto.randomUUID();
-      const signature = signCommand(
-        process.env.COMMAND_HMAC_SECRET!,
-        command_id,
-        project_id,
-        node_id,
-        command,
-        payload
-      );
+    // Si no hay allow_write, lo sensible SIEMPRE requiere aprobación
+    const needs_approval = isSensitive && !allowWrite;
+    const status = needs_approval ? "needs_approval" : "queued";
 
-      const { error: insErr } = await sbAdmin.from("commands").insert({
-        id: command_id,
-        project_id,
-        node_id,
-        command,
-        payload,
-        signature,
-        needs_approval: needsApproval,
-        status: "needs_approval",
-        created_by: userId,
-      });
-
-      if (insErr) {
-        return NextResponse.json({ error: insErr.message }, { status: 500 });
-      }
-
-      await sbAdmin.from("audit_logs").insert({
-        project_id,
-        actor_type: "user",
-        actor_id: userId,
-        action: "create_command_needs_approval",
-        target: `command:${command_id}`,
-        meta: { node_id, command },
-      });
-
-      return NextResponse.json({
-        ok: true,
-        id: command_id,
-        project_id,
-        status: "needs_approval",
-        needs_approval: true,
-      });
-    }
-
-    // Normal flow (queued)
     const command_id = crypto.randomUUID();
-    const signature = signCommand(
-      process.env.COMMAND_HMAC_SECRET!,
-      command_id,
-      project_id,
-      node_id,
-      command,
-      payload
-    );
+    const signature = signCommand(secret, command_id, project_id, node_id, command, payload);
 
-    const needs_approval = SENSITIVE_COMMANDS.has(command);
-
-    const { error: insErr } = await sbAdmin.from("commands").insert({
+    const { error: insErr } = await sb.from("commands").insert({
       id: command_id,
       project_id,
       node_id,
@@ -166,28 +112,27 @@ export async function POST(req: Request) {
       payload,
       signature,
       needs_approval,
-      status: needs_approval ? "needs_approval" : "queued",
-      created_by: userId,
+      status,
+      created_by: auth.userId,
     });
 
-    if (insErr) {
-      return NextResponse.json({ error: insErr.message }, { status: 500 });
-    }
+    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
 
-    await sbAdmin.from("audit_logs").insert({
+    // audit_log (permitido por RLS para admin en schema)
+    await sb.from("audit_logs").insert({
       project_id,
       actor_type: "user",
-      actor_id: userId,
+      actor_id: auth.userId,
       action: "create_command",
       target: `command:${command_id}`,
-      meta: { node_id, command, needs_approval },
+      meta: { node_id, command, needs_approval, status },
     });
 
     return NextResponse.json({
       ok: true,
       id: command_id,
       project_id,
-      status: needs_approval ? "needs_approval" : "queued",
+      status,
       needs_approval,
     });
   } catch (e: any) {
