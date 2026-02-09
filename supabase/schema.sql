@@ -1,10 +1,10 @@
--- HOCKER.ONE / Supabase schema (hardened)
--- - Multi-project membership via project_members
+-- HOCKER.ONE / Supabase schema (hardened, multi-project)
+-- - Membership via project_members
 -- - RLS by membership (no using(true))
--- - First user becomes owner; others operator by default
--- - Adds nova_threads / nova_messages + llm_usage for routing/cost tracking
+-- - system_controls is PER PROJECT (PK: id + project_id)
+-- - Adds nova_threads / nova_messages + llm_usage for nova.agi
+-- - Adds audit_logs insert policy for admins (server routes)
 
--- Extensions
 create extension if not exists "pgcrypto";
 
 -- =============================
@@ -33,7 +33,7 @@ using (id = auth.uid())
 with check (id = auth.uid());
 
 -- =============================
--- Projects (optional metadata)
+-- Projects
 -- =============================
 create table if not exists public.projects (
   id text primary key,
@@ -42,20 +42,6 @@ create table if not exists public.projects (
 );
 
 alter table public.projects enable row level security;
-
--- We'll allow members to read project metadata via membership below.
--- Writes can be done via service role.
-drop policy if exists "projects_read_members" on public.projects;
-create policy "projects_read_members"
-on public.projects
-for select
-using (
-  exists (
-    select 1 from public.project_members pm
-    where pm.project_id = projects.id
-      and pm.user_id = auth.uid()
-  )
-);
 
 -- =============================
 -- Project members
@@ -112,6 +98,14 @@ as $$
   );
 $$;
 
+-- Projects: members can read metadata
+drop policy if exists "projects_read_members" on public.projects;
+create policy "projects_read_members"
+on public.projects
+for select
+using (public.is_project_member(projects.id));
+
+-- Project members: self read or admins
 drop policy if exists "pm_self_or_admin_read" on public.project_members;
 create policy "pm_self_or_admin_read"
 on public.project_members
@@ -121,6 +115,7 @@ using (
   or public.is_project_admin(project_id)
 );
 
+-- Project members: admins can manage membership
 drop policy if exists "pm_admin_write" on public.project_members;
 create policy "pm_admin_write"
 on public.project_members
@@ -146,10 +141,8 @@ begin
 
   insert into public.profiles (id, email, role)
   values (new.id, new.email, base_role)
-  on conflict (id) do update
-    set email = excluded.email;
+  on conflict (id) do update set email = excluded.email;
 
-  -- default project bootstrap
   insert into public.projects (id, name)
   values ('global', 'Global')
   on conflict (id) do nothing;
@@ -188,12 +181,14 @@ alter table public.nodes enable row level security;
 
 drop policy if exists "nodes_read_members" on public.nodes;
 create policy "nodes_read_members"
-on public.nodes for select
+on public.nodes
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "nodes_write_admin" on public.nodes;
 create policy "nodes_write_admin"
-on public.nodes for all
+on public.nodes
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
@@ -218,18 +213,19 @@ alter table public.agis enable row level security;
 
 drop policy if exists "agis_read_members" on public.agis;
 create policy "agis_read_members"
-on public.agis for select
+on public.agis
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "agis_write_admin" on public.agis;
 create policy "agis_write_admin"
-on public.agis for all
+on public.agis
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
 -- Seed AGIs (global)
-insert into public.agis (id, project_id, name, role, status, endpoint_url, metadata)
-values
+insert into public.agis (id, project_id, name, role, status, endpoint_url, metadata) values
   ('nova', 'global', 'NOVA', 'orchestrator', 'offline', null, '{"tier":"core"}'),
   ('nova_ads', 'global', 'NOVA ADS', 'ads_manager', 'offline', null, '{"tier":"sub"}'),
   ('candy_ads', 'global', 'Candy Ads', 'creative', 'offline', null, '{"tier":"sub"}'),
@@ -273,12 +269,14 @@ alter table public.commands enable row level security;
 
 drop policy if exists "commands_read_members" on public.commands;
 create policy "commands_read_members"
-on public.commands for select
+on public.commands
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "commands_write_admin" on public.commands;
 create policy "commands_write_admin"
-on public.commands for all
+on public.commands
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
@@ -303,12 +301,14 @@ alter table public.events enable row level security;
 
 drop policy if exists "events_read_members" on public.events;
 create policy "events_read_members"
-on public.events for select
+on public.events
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "events_write_admin" on public.events;
 create policy "events_write_admin"
-on public.events for all
+on public.events
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
@@ -333,11 +333,19 @@ alter table public.audit_logs enable row level security;
 
 drop policy if exists "audit_read_admin" on public.audit_logs;
 create policy "audit_read_admin"
-on public.audit_logs for select
+on public.audit_logs
+for select
 using (public.is_project_admin(project_id));
 
+-- allow inserts from project admins (server routes)
+drop policy if exists "audit_insert_admin" on public.audit_logs;
+create policy "audit_insert_admin"
+on public.audit_logs
+for insert
+with check (public.is_project_admin(project_id));
+
 -- =============================
--- System controls
+-- System controls (PER PROJECT)
 -- =============================
 create table if not exists public.system_controls (
   id text not null,
@@ -352,12 +360,14 @@ alter table public.system_controls enable row level security;
 
 drop policy if exists "controls_read_admin" on public.system_controls;
 create policy "controls_read_admin"
-on public.system_controls for select
+on public.system_controls
+for select
 using (public.is_project_admin(project_id));
 
 drop policy if exists "controls_write_owner" on public.system_controls;
 create policy "controls_write_owner"
-on public.system_controls for all
+on public.system_controls
+for all
 using (public.is_project_owner(project_id))
 with check (public.is_project_owner(project_id));
 
@@ -366,7 +376,7 @@ values ('global', 'global', false, false)
 on conflict (id, project_id) do nothing;
 
 -- =============================
--- Supply (products / orders / suppliers)
+-- Supply (optional)
 -- =============================
 create table if not exists public.supply_products (
   id uuid primary key default gen_random_uuid(),
@@ -389,12 +399,14 @@ alter table public.supply_products enable row level security;
 
 drop policy if exists "supply_products_read_members" on public.supply_products;
 create policy "supply_products_read_members"
-on public.supply_products for select
+on public.supply_products
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "supply_products_write_admin" on public.supply_products;
 create policy "supply_products_write_admin"
-on public.supply_products for all
+on public.supply_products
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
@@ -420,12 +432,14 @@ alter table public.supply_orders enable row level security;
 
 drop policy if exists "supply_orders_read_members" on public.supply_orders;
 create policy "supply_orders_read_members"
-on public.supply_orders for select
+on public.supply_orders
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "supply_orders_write_admin" on public.supply_orders;
 create policy "supply_orders_write_admin"
-on public.supply_orders for all
+on public.supply_orders
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
@@ -444,17 +458,19 @@ alter table public.supply_suppliers enable row level security;
 
 drop policy if exists "supply_suppliers_read_members" on public.supply_suppliers;
 create policy "supply_suppliers_read_members"
-on public.supply_suppliers for select
+on public.supply_suppliers
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "supply_suppliers_write_admin" on public.supply_suppliers;
 create policy "supply_suppliers_write_admin"
-on public.supply_suppliers for all
+on public.supply_suppliers
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
 -- =============================
--- NOVA chat storage
+-- NOVA chat storage (for nova.agi)
 -- =============================
 create table if not exists public.nova_threads (
   id uuid primary key default gen_random_uuid(),
@@ -470,12 +486,14 @@ alter table public.nova_threads enable row level security;
 
 drop policy if exists "nova_threads_read_members" on public.nova_threads;
 create policy "nova_threads_read_members"
-on public.nova_threads for select
+on public.nova_threads
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "nova_threads_write_admin" on public.nova_threads;
 create policy "nova_threads_write_admin"
-on public.nova_threads for all
+on public.nova_threads
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
@@ -496,17 +514,19 @@ alter table public.nova_messages enable row level security;
 
 drop policy if exists "nova_messages_read_members" on public.nova_messages;
 create policy "nova_messages_read_members"
-on public.nova_messages for select
+on public.nova_messages
+for select
 using (public.is_project_member(project_id));
 
 drop policy if exists "nova_messages_write_admin" on public.nova_messages;
 create policy "nova_messages_write_admin"
-on public.nova_messages for all
+on public.nova_messages
+for all
 using (public.is_project_admin(project_id))
 with check (public.is_project_admin(project_id));
 
 -- =============================
--- LLM usage (optional)
+-- LLM usage (optional, written by nova.agi service role)
 -- =============================
 create table if not exists public.llm_usage (
   id uuid primary key default gen_random_uuid(),
@@ -527,5 +547,6 @@ alter table public.llm_usage enable row level security;
 
 drop policy if exists "llm_usage_read_admin" on public.llm_usage;
 create policy "llm_usage_read_admin"
-on public.llm_usage for select
+on public.llm_usage
+for select
 using (public.is_project_admin(project_id));
