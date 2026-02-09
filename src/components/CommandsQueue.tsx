@@ -60,7 +60,7 @@ export default function CommandsQueue() {
         )
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(60);
 
       if (error) throw error;
       setItems((data as Cmd[]) ?? []);
@@ -84,7 +84,6 @@ export default function CommandsQueue() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id, project_id: pid }),
       });
-
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || "No se pudo aprobar.");
       await refresh();
@@ -101,7 +100,6 @@ export default function CommandsQueue() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id, project_id: pid }),
       });
-
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || "No se pudo rechazar.");
       await refresh();
@@ -115,16 +113,12 @@ export default function CommandsQueue() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
           <div className="text-lg font-semibold text-slate-900">Commands</div>
-          <div className="text-sm text-slate-500">
-            Cola + aprobaciones (filtrado por proyecto).
-          </div>
+          <div className="text-sm text-slate-500">Cola + aprobaciones (filtrado por proyecto).</div>
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <div className="w-full md:w-[320px]">
-            <label className="text-xs font-semibold text-slate-600">
-              Project
-            </label>
+            <label className="text-xs font-semibold text-slate-600">Project</label>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={projectId}
@@ -144,32 +138,23 @@ export default function CommandsQueue() {
       </div>
 
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {err}
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>
       )}
 
       <div className="space-y-3">
         {loading && <div className="text-sm text-slate-500">Loading…</div>}
         {!loading && items.length === 0 && (
-          <div className="text-sm text-slate-500">
-            No hay comandos para este proyecto.
-          </div>
+          <div className="text-sm text-slate-500">No hay comandos para este proyecto.</div>
         )}
 
         {items.map((c) => {
           const canModerate = c.status === "needs_approval";
           return (
-            <div
-              key={c.id}
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-            >
+            <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-900">
-                      {c.command}
-                    </span>
+                    <span className="font-semibold text-slate-900">{c.command}</span>
                     <span
                       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusPill(
                         c.status
@@ -185,9 +170,8 @@ export default function CommandsQueue() {
                   </div>
 
                   <div className="text-xs text-slate-500">
-                    <span className="font-semibold">project:</span> {c.project_id}{" "}
-                    · <span className="font-semibold">node:</span>{" "}
-                    {c.node_id ?? "—"} ·{" "}
+                    <span className="font-semibold">project:</span> {c.project_id} ·{" "}
+                    <span className="font-semibold">node:</span> {c.node_id ?? "—"} ·{" "}
                     {new Date(c.created_at).toLocaleString()}
                   </div>
 
@@ -217,25 +201,15 @@ export default function CommandsQueue() {
               </div>
 
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-700">
-                  Payload / Result
-                </summary>
+                <summary className="cursor-pointer text-sm font-semibold text-slate-700">Payload / Result</summary>
                 <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-semibold text-slate-600">
-                      payload
-                    </div>
-                    <pre className="overflow-auto text-xs text-slate-800">
-                      {JSON.stringify(c.payload ?? null, null, 2)}
-                    </pre>
+                    <div className="mb-1 text-xs font-semibold text-slate-600">payload</div>
+                    <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.payload ?? null, null, 2)}</pre>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-semibold text-slate-600">
-                      result
-                    </div>
-                    <pre className="overflow-auto text-xs text-slate-800">
-                      {JSON.stringify(c.result ?? null, null, 2)}
-                    </pre>
+                    <div className="mb-1 text-xs font-semibold text-slate-600">result</div>
+                    <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.result ?? null, null, 2)}</pre>
                   </div>
                 </div>
               </details>
