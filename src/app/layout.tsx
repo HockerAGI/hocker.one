@@ -1,16 +1,20 @@
 import "./globals.css";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata = {
   title: "HOCKER.ONE",
-  description: "Control Plane del ecosistema HOCKER"
+  description: "Control Plane — NOVA Orchestrator",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body className="min-h-screen bg-white text-slate-900">
-        {children}
-      </body>
+    <html lang="es" className="h-full">
+      <body className={`${inter.className} h-full`}>{children}</body>
     </html>
   );
 }
