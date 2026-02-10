@@ -1,118 +1,62 @@
-import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase-server";
-import { normalizeProjectId, defaultProjectId } from "@/lib/project";
+import { ApiError, getControls, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
 
-async function requireProjectOwner(project_id: string) {
-  const sb = createServerSupabase();
-  const { data } = await sb.auth.getUser();
-  const userId = data?.user?.id;
-  if (!userId) return { ok: false as const, status: 401, error: "No autorizado" };
-
-  const { data: pm, error: pmErr } = await sb
-    .from("project_members")
-    .select("role")
-    .eq("project_id", project_id)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (pmErr) return { ok: false as const, status: 500, error: pmErr.message };
-  const role = String(pm?.role ?? "");
-  if (!role) return { ok: false as const, status: 403, error: "No eres miembro del proyecto." };
-  if (role !== "owner") {
-    return { ok: false as const, status: 403, error: "Solo owner puede modificar governance." };
-  }
-
-  return { ok: true as const, sb, userId, role };
-}
-
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const project_id = normalizeProjectId(url.searchParams.get("project_id") ?? defaultProjectId());
+    const q = parseQuery(req);
+    const project_id = String(q.get("project_id") || "global").trim();
 
-    const sb = createServerSupabase();
-    const { data } = await sb.auth.getUser();
-    const userId = data?.user?.id;
-    if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
-    // Verifica que sea miembro (solo lectura)
-    const { data: pm } = await sb
-      .from("project_members")
-      .select("role")
-      .eq("project_id", project_id)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (!pm?.role) return NextResponse.json({ error: "No eres miembro del proyecto." }, { status: 403 });
-
-    const { data: ctrl, error } = await sb
-      .from("system_controls")
-      .select("id, project_id, kill_switch, allow_write, updated_at")
-      .eq("project_id", project_id)
-      .eq("id", "global")
-      .maybeSingle();
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    return NextResponse.json({
-      ok: true,
-      project_id,
-      controls: ctrl ?? { id: "global", project_id, kill_switch: false, allow_write: false, updated_at: null },
-    });
+    const controls = await getControls(ctx.sb, project_id);
+    return json({ ok: true, controls });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const project_id = normalizeProjectId(body?.project_id ?? defaultProjectId());
+    const body = await parseBody(req);
 
-    const auth = await requireProjectOwner(project_id);
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-    const sb = auth.sb;
+    const project_id = String(body.project_id ?? "").trim();
+    const kill_switch = !!body.kill_switch;
+    const allow_write = !!body.allow_write;
 
-    const kill_switch = !!body?.kill_switch;
-    const allow_write = !!body?.allow_write;
+    if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
 
-    const now = new Date().toISOString();
+    const ctx = await requireProjectRole(project_id, ["owner"]);
 
-    const { error: upErr } = await sb.from("system_controls").upsert(
+    const updated_at = new Date().toISOString();
+
+    const { error } = await ctx.sb.from("system_controls").upsert(
       {
         id: "global",
         project_id,
         kill_switch,
         allow_write,
-        updated_at: now,
+        updated_at,
       },
       { onConflict: "id,project_id" }
     );
 
-    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+    if (error) throw new ApiError(500, { error: "No pude guardar seguridad.", details: error.message });
 
-    await sb.from("events").insert({
+    await ctx.sb.from("events").insert({
       project_id,
-      node_id: "governance",
-      level: "info",
-      type: "governance_update",
-      message: `Governance actualizado: kill_switch=${kill_switch} allow_write=${allow_write}`,
+      node_id: null,
+      level: kill_switch ? "warn" : "info",
+      type: "governance.updated",
+      message: `Seguridad actualizada: KillSwitch=${kill_switch ? "ON" : "OFF"}, AllowWrite=${allow_write ? "ON" : "OFF"}`,
       data: { kill_switch, allow_write },
     });
 
-    await sb.from("audit_logs").insert({
-      project_id,
-      actor_type: "user",
-      actor_id: auth.userId,
-      action: "update_system_controls",
-      target: "system_controls:global",
-      meta: { kill_switch, allow_write },
-    });
-
-    return NextResponse.json({ ok: true, project_id, kill_switch, allow_write });
+    const controls = await getControls(ctx.sb, project_id);
+    return json({ ok: true, controls });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
 }
