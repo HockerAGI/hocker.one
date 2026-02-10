@@ -1,71 +1,66 @@
-import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase-server";
-import { normalizeProjectId, defaultProjectId } from "@/lib/project";
+import { ApiError, ensureNode, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
 
-async function requireProjectAdmin(project_id: string) {
-  const sb = createServerSupabase();
-  const { data } = await sb.auth.getUser();
-  const userId = data?.user?.id;
-  if (!userId) return { ok: false as const, status: 401, error: "No autorizado" };
+export async function GET(req: Request) {
+  try {
+    const q = parseQuery(req);
+    const project_id = String(q.get("project_id") || "global").trim();
 
-  const { data: pm, error: pmErr } = await sb
-    .from("project_members")
-    .select("role")
-    .eq("project_id", project_id)
-    .eq("user_id", userId)
-    .maybeSingle();
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
-  if (pmErr) return { ok: false as const, status: 500, error: pmErr.message };
-  const role = String(pm?.role ?? "");
-  if (!role) return { ok: false as const, status: 403, error: "No eres miembro del proyecto." };
-  if (!["owner", "admin"].includes(role)) {
-    return { ok: false as const, status: 403, error: "Permisos insuficientes (admin/owner)." };
+    const { data, error } = await ctx.sb
+      .from("events")
+      .select("id, project_id, node_id, level, type, message, data, created_at")
+      .eq("project_id", project_id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (error) throw new ApiError(500, { error: "No pude listar eventos." });
+
+    return json({ ok: true, items: data ?? [] });
+  } catch (e: any) {
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
-
-  return { ok: true as const, sb, userId, role };
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const project_id = normalizeProjectId(body?.project_id ?? defaultProjectId());
+    const body = await parseBody(req);
 
-    const auth = await requireProjectAdmin(project_id);
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-    const sb = auth.sb;
+    const project_id = String(body.project_id ?? "").trim();
+    const node_id = String(body.node_id ?? "").trim();
+    const level = String(body.level ?? "info").trim();
+    const type = String(body.type ?? "manual").trim();
+    const message = String(body.message ?? "").trim();
+    const data = typeof body.data === "object" && body.data !== null ? body.data : null;
 
-    const node_id = (body?.node_id ?? null) as string | null;
-    const level = String(body?.level ?? "info");
-    const type = String(body?.type ?? "manual");
-    const message = String(body?.message ?? "").trim();
-    const data = body?.data ?? null;
+    if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
+    if (!message) throw new ApiError(400, { error: "message requerido." });
 
-    if (!message) return NextResponse.json({ error: "Falta message." }, { status: 400 });
+    const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
 
-    const { error } = await sb.from("events").insert({
-      project_id,
-      node_id,
-      level,
-      type,
-      message,
-      data,
-    });
+    if (node_id) await ensureNode(ctx.sb, project_id, node_id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const { data: row, error } = await ctx.sb
+      .from("events")
+      .insert({
+        project_id,
+        node_id: node_id || null,
+        level,
+        type,
+        message,
+        data,
+      })
+      .select("id, project_id, node_id, level, type, message, data, created_at")
+      .single();
 
-    await sb.from("audit_logs").insert({
-      project_id,
-      actor_type: "user",
-      actor_id: auth.userId,
-      action: "emit_event_manual",
-      target: `events:${type}`,
-      meta: { node_id, level },
-    });
+    if (error) throw new ApiError(500, { error: "No pude registrar el evento.", details: error.message });
 
-    return NextResponse.json({ ok: true });
+    return json({ ok: true, event: row }, 201);
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
 }
