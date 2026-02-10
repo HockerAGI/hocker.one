@@ -1,79 +1,60 @@
-import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase-server";
-import { normalizeProjectId } from "@/lib/project";
+import { ApiError, ensureNode, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
 
-async function requireProjectAdmin(project_id: string) {
-  const sb = createServerSupabase();
-  const { data } = await sb.auth.getUser();
-  const userId = data?.user?.id;
-  if (!userId) return { ok: false as const, status: 401, error: "No autorizado" };
-
-  const { data: pm, error: pmErr } = await sb
-    .from("project_members")
-    .select("role")
-    .eq("project_id", project_id)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (pmErr) return { ok: false as const, status: 500, error: pmErr.message };
-  const role = String(pm?.role ?? "");
-  if (!role) return { ok: false as const, status: 403, error: "No eres miembro del proyecto." };
-  if (!["owner", "admin"].includes(role)) {
-    return { ok: false as const, status: 403, error: "Permisos insuficientes (admin/owner)." };
-  }
-
-  return { ok: true as const, sb, userId, role };
-}
-
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const id = String(body?.id ?? "").trim();
-    if (!id) return NextResponse.json({ error: "Falta id." }, { status: 400 });
+    const body = await parseBody(req);
+    const project_id = String(body.project_id ?? "").trim();
+    const id = String(body.id ?? "").trim();
+    const reason = String(body.reason ?? "").trim();
 
-    const project_id = normalizeProjectId(body?.project_id ?? "global");
+    if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
+    if (!id) throw new ApiError(400, { error: "id requerido." });
 
-    const auth = await requireProjectAdmin(project_id);
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-    const sb = auth.sb;
+    const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
 
-    const { data: cmd, error: cmdErr } = await sb
+    const { data: cmd, error: e1 } = await ctx.sb
       .from("commands")
-      .select("id, project_id, status, needs_approval, command, node_id")
+      .select("id, project_id, node_id, command, status, needs_approval")
       .eq("id", id)
-      .single();
+      .eq("project_id", project_id)
+      .maybeSingle();
 
-    if (cmdErr || !cmd) return NextResponse.json({ error: "Comando no encontrado." }, { status: 404 });
+    if (e1) throw new ApiError(500, { error: "No pude leer la acción." });
+    if (!cmd?.id) throw new ApiError(404, { error: "Acción no encontrada." });
+    if (cmd.status !== "needs_approval") throw new ApiError(409, { error: "Esta acción no está esperando aprobación." });
 
-    const cmdProject = normalizeProjectId(cmd.project_id);
-    if (cmdProject !== project_id) {
-      return NextResponse.json({ error: "project_id no coincide con el comando." }, { status: 400 });
-    }
+    if (cmd.node_id) await ensureNode(ctx.sb, project_id, cmd.node_id);
 
-    if (cmd.status !== "needs_approval" || !cmd.needs_approval) {
-      return NextResponse.json({ error: "Este comando no está esperando aprobación." }, { status: 409 });
-    }
+    const decided_at = new Date().toISOString();
+    const msg = reason ? `Rechazada: ${reason}` : "Rechazada por moderación.";
 
-    const { error: upErr } = await sb
+    const { error: e2 } = await ctx.sb
       .from("commands")
-      .update({ status: "cancelled", error: "Rejected by admin/owner" })
-      .eq("id", id);
+      .update({
+        status: "cancelled",
+        needs_approval: false,
+        approved_at: decided_at,
+        error: msg,
+      })
+      .eq("id", id)
+      .eq("project_id", project_id);
 
-    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+    if (e2) throw new ApiError(500, { error: "No pude rechazar la acción.", details: e2.message });
 
-    await sb.from("audit_logs").insert({
+    await ctx.sb.from("events").insert({
       project_id,
-      actor_type: "user",
-      actor_id: auth.userId,
-      action: "reject_command",
-      target: `command:${id}`,
-      meta: { command: cmd.command, node_id: cmd.node_id },
+      node_id: cmd.node_id ?? null,
+      level: "warn",
+      type: "command.rejected",
+      message: `Acción rechazada: ${cmd.command}`,
+      data: { command_id: id, command: cmd.command, reason: reason || null },
     });
 
-    return NextResponse.json({ ok: true, id, project_id });
+    return json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
 }
