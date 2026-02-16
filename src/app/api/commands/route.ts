@@ -1,35 +1,33 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { signCommand } from "@/lib/security";
 import type { CommandStatus } from "@/lib/types";
 import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, parseQuery, toApiError } from "../_lib";
 
 export const runtime = "nodejs";
 
-const SENSITIVE_COMMANDS = new Set([
-  "run_sql",
-  "run_script",
-  "write_file",
-  "pull_deploy",
-  "restart_process",
-]);
+const SENSITIVE_COMMANDS = new Set(["run_sql", "shell.exec", "fs.write"]);
 
 export async function GET(req: Request) {
   try {
     const q = parseQuery(req);
     const project_id = String(q.get("project_id") || "global").trim();
+    const id = q.get("id");
+    const node_id = q.get("node_id");
+    const status = q.get("status");
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
-    const { data, error } = await ctx.sb
-      .from("commands")
-      .select("id, project_id, node_id, command, status, needs_approval, signature, payload, result, error, created_at, approved_at, executed_at")
-      .eq("project_id", project_id)
-      .order("created_at", { ascending: false })
-      .limit(120);
+    let query = ctx.sb.from("commands").select("*").eq("project_id", ctx.project_id).order("created_at", { ascending: false }).limit(100);
 
-    if (error) throw new ApiError(500, { error: "No pude listar acciones." });
+    if (id) query = query.eq("id", id);
+    if (node_id) query = query.eq("node_id", node_id);
+    if (status) query = query.eq("status", status);
 
-    return json({ ok: true, items: data ?? [] });
+    const { data, error } = await query;
+    if (error) throw new ApiError(400, { error: error.message });
+
+    return json({ ok: true, items: data ?? [] }, 200);
   } catch (e: any) {
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
@@ -39,52 +37,44 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await parseBody(req);
-
-    const project_id = String(body.project_id ?? "").trim();
+    const project_id = String(body.project_id ?? "global").trim();
     const node_id = String(body.node_id ?? "").trim();
     const command = String(body.command ?? "").trim();
-    const payload = typeof body.payload === "object" && body.payload !== null ? body.payload : {};
+    const payload = body.payload ?? {};
 
-    if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
-    if (!node_id) throw new ApiError(400, { error: "node_id requerido." });
-    if (!command) throw new ApiError(400, { error: "command requerido." });
+    if (!node_id) throw new ApiError(400, { error: "Falta node_id." });
+    if (!command) throw new ApiError(400, { error: "Falta command." });
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+    await ensureNode(ctx.sb, ctx.project_id, node_id);
 
-    const controls = await getControls(ctx.sb, project_id);
+    const controls = await getControls(ctx.sb, ctx.project_id);
+
+    const needs_approval = SENSITIVE_COMMANDS.has(command);
+    const status: CommandStatus = needs_approval ? "needs_approval" : "queued";
 
     if (controls.kill_switch) {
-      // Log de bloqueo (sin node_id para evitar FK)
-      await ctx.sb.from("events").insert({
-        project_id,
-        node_id: null,
-        level: "warn",
-        type: "command.blocked",
-        message: `Bloqueado por Kill Switch: ${command}`,
-        data: { command, node_id },
-      });
-
-      throw new ApiError(423, { error: "El proyecto está en bloqueo total (Kill Switch ON)." });
+      // Kill switch: no corre nada automáticamente
+      if (!needs_approval) {
+        throw new ApiError(423, { error: "Kill Switch ON: no se pueden ejecutar acciones." });
+      }
     }
-
-    // Asegura nodo (FK real)
-    await ensureNode(ctx.sb, project_id, node_id);
-
-    const needs_approval = !controls.allow_write && SENSITIVE_COMMANDS.has(command);
-    const status: CommandStatus = needs_approval ? "needs_approval" : "queued";
 
     const secret = String(process.env.COMMAND_HMAC_SECRET || "").trim();
     if (!secret) throw new ApiError(500, { error: "Falta COMMAND_HMAC_SECRET en el servidor." });
 
-    const id = (globalThis.crypto as any)?.randomUUID ? (globalThis.crypto as any).randomUUID() : `${Date.now()}-${Math.random()}`;
+    // OJO: commands.id es UUID en schema, así que aquí SIEMPRE generamos un UUID válido.
+    const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
-    const signature = signCommand(secret, id, project_id, node_id, command, { ...payload, created_at });
 
-    const { data: row, error } = await ctx.sb
+    // Firma compatible con el agente (incluye created_at separado)
+    const signature = signCommand(secret, id, ctx.project_id, node_id, command, payload, created_at);
+
+    const { data, error } = await ctx.sb
       .from("commands")
       .insert({
         id,
-        project_id,
+        project_id: ctx.project_id,
         node_id,
         command,
         payload,
@@ -93,24 +83,12 @@ export async function POST(req: Request) {
         signature,
         created_at,
       })
-      .select("id, project_id, node_id, command, status, needs_approval, payload, signature, created_at, approved_at, executed_at")
+      .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: "No pude crear la acción.", details: error.message });
+    if (error) throw new ApiError(400, { error: error.message });
 
-    // Evento audit-friendly (real)
-    await ctx.sb.from("events").insert({
-      project_id,
-      node_id,
-      level: "info",
-      type: needs_approval ? "command.needs_approval" : "command.queued",
-      message: needs_approval
-        ? `Acción creada y enviada a aprobación: ${command}`
-        : `Acción creada y enviada a cola: ${command}`,
-      data: { command_id: id, command, node_id },
-    });
-
-    return json({ ok: true, command: row, needs_approval }, 201);
+    return json({ ok: true, item: data }, 201);
   } catch (e: any) {
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
