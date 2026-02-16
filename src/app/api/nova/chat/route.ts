@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
@@ -8,30 +9,28 @@ export async function POST(req: Request) {
 
     const project_id = String(body.project_id ?? "global").trim();
     const thread_id = body.thread_id ? String(body.thread_id).trim() : null;
-    const message = String(body.message ?? body.text ?? "").trim();
-    const prefer = String(body.prefer ?? "auto").trim();
-    const mode = String(body.mode ?? "auto").trim();
+    const message = String(body.message ?? "").trim();
+    const prefer = body.prefer ? String(body.prefer).trim() : null;
+    const mode = body.mode ? String(body.mode).trim() : "chat";
 
-    if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
-    if (!message) throw new ApiError(400, { error: "message requerido." });
+    if (!message) throw new ApiError(400, { error: "Falta message." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
-    const base = String(process.env.NOVA_AGI_URL || "").trim();
-    if (!base) throw new ApiError(500, { error: "NOVA_AGI_URL no está configurado." });
-
+    const url = String(process.env.NOVA_AGI_URL || "").trim();
     const key = String(process.env.NOVA_ORCHESTRATOR_KEY || "").trim();
-    if (!key) throw new ApiError(500, { error: "NOVA_ORCHESTRATOR_KEY no está configurado." });
+    if (!url || !key) throw new ApiError(500, { error: "Faltan NOVA_AGI_URL / NOVA_ORCHESTRATOR_KEY en el servidor." });
 
-    const url = `${base.replace(/\\/+$/, "")}/v1/chat`;
-
-    const allowActions = req.headers.get("x-allow-actions") === "1";
+    const wantActions = req.headers.get("x-allow-actions") === "1";
+    const allowActions = wantActions && (ctx.role === "owner" || ctx.role === "admin");
 
     const upstream = await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${key}`,
+        // Enviamos el header también, por compatibilidad con orquestadores que lo usan.
+        "x-allow-actions": allowActions ? "1" : "0",
       },
       body: JSON.stringify({
         project_id,
@@ -46,19 +45,10 @@ export async function POST(req: Request) {
     });
 
     const text = await upstream.text();
-    let data: any = {};
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { raw: text };
-    }
-
-    if (!upstream.ok) {
-      const msg = data?.error || data?.message || "NOVA no respondió correctamente.";
-      throw new ApiError(upstream.status, { error: msg });
-    }
-
-    return json(data, 200);
+    return new NextResponse(text, {
+      status: upstream.status,
+      headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
+    });
   } catch (e: any) {
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
