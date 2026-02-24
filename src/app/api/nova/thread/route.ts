@@ -4,6 +4,7 @@ export const runtime = "nodejs";
 
 /**
  * DEPRECATED: threads se manejan automáticamente vía /api/nova/chat
+ * Archivo mantenido para retrocompatibilidad con clientes v1.
  */
 export async function POST() {
   return NextResponse.json(
