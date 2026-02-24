@@ -2,8 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { defaultNodeId, defaultProjectId, normalizeNodeId, normalizeProjectId } from "@/lib/project";
-
-type CommandStatus = "queued" | "needs_approval" | "running" | "done" | "failed" | "cancelled";
+import type { CommandStatus } from "@/lib/types";
 
 function pretty(o: any) {
   try {
@@ -72,9 +71,13 @@ export default function CommandBox() {
         if (item?.id) {
           setLast(item);
           setStatus(item.status);
+          // Si el comando ya terminó o falló, dejamos de hacer polling al servidor
+          if (["done", "failed", "cancelled", "error"].includes(item.status)) {
+            clearInterval(t);
+          }
         }
       } catch {}
-    }, 1500);
+    }, 2000); // Polling más relajado, Trigger.dev hace el trabajo pesado
     return () => clearInterval(t);
   }, [last?.id, pid]);
 
@@ -91,10 +94,10 @@ export default function CommandBox() {
         </div>
         <div className="w-full md:flex-1">
           <label className="text-xs font-semibold text-slate-600">Command</label>
-          <input className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={command} onChange={(e) => setCommand(e.target.value)} placeholder="ping / status / read_dir / read_file_head" />
+          <input className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={command} onChange={(e) => setCommand(e.target.value)} placeholder="Ej: meta.send_msg / stripe.charge" />
         </div>
         <button onClick={send} disabled={loading} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
-          {loading ? "Enviando…" : "Enviar"}
+          {loading ? "Ejecutando..." : "Lanzar AGI"}
         </button>
       </div>
 
@@ -104,16 +107,16 @@ export default function CommandBox() {
           <textarea className="mt-1 h-[140px] w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs" value={payload} onChange={(e) => setPayload(e.target.value)} />
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-600">Último resultado</label>
+          <label className="text-xs font-semibold text-slate-600">Memoria de Resultado (Syntia)</label>
           <div className="mt-1 h-[140px] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
-            {last ? pretty(last) : "—"}
+            {last ? pretty(last) : "Esperando ejecución..."}
           </div>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-800">
-          Estado: <b>{status ?? "—"}</b>
+          Estado Orquestador: <b>{status ?? "inactivo"}</b>
         </span>
         {msg && <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-800">{msg}</span>}
       </div>
