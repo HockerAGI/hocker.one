@@ -3,12 +3,22 @@ import crypto from "node:crypto";
 import { signCommand } from "@/lib/security";
 import type { CommandStatus } from "@/lib/types";
 import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, parseQuery, toApiError } from "../_lib";
+import { tasks } from "@trigger.dev/sdk/v3";
+import { Langfuse } from "langfuse-node";
 
 export const runtime = "nodejs";
 
-const SENSITIVE_COMMANDS = new Set(["run_sql", "shell.exec", "fs.write"]);
+const SENSITIVE_COMMANDS = new Set(["run_sql", "shell.exec", "fs.write", "stripe.charge", "meta.send_msg"]);
 
+const langfuse = new Langfuse({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY || "dummy",
+  secretKey: process.env.LANGFUSE_SECRET_KEY || "dummy",
+  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+});
+
+// EL NODO FÍSICO UTILIZA ESTE ENDPOINT PARA PREGUNTAR POR TAREAS (POLLING)
 export async function GET(req: Request) {
+  const trace = langfuse.trace({ name: "Commands_GET_Polling", metadata: { runtime: "Vercel" } });
   try {
     const q = parseQuery(req);
     const project_id = String(q.get("project_id") || "global").trim();
@@ -27,20 +37,29 @@ export async function GET(req: Request) {
     const { data, error } = await query;
     if (error) throw new ApiError(400, { error: error.message });
 
+    trace.update({ statusMessage: "SUCCESS" });
+    await langfuse.flushAsync();
+    
     return json({ ok: true, items: data ?? [] }, 200);
   } catch (e: any) {
+    trace.update({ level: "ERROR", statusMessage: e.message });
+    await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
   }
 }
 
 export async function POST(req: Request) {
+  const trace = langfuse.trace({ name: "Commands_POST_Execute", metadata: { endpoint: "/api/commands" } });
+  
   try {
     const body = await parseBody(req);
     const project_id = String(body.project_id ?? "global").trim();
     const node_id = String(body.node_id ?? "").trim();
     const command = String(body.command ?? "").trim();
     const payload = body.payload ?? {};
+
+    trace.update({ tags: [project_id, command] });
 
     if (!node_id) throw new ApiError(400, { error: "Falta node_id." });
     if (!command) throw new ApiError(400, { error: "Falta command." });
@@ -54,42 +73,55 @@ export async function POST(req: Request) {
     const status: CommandStatus = needs_approval ? "needs_approval" : "queued";
 
     if (controls.kill_switch) {
-      // Kill switch: no corre nada automáticamente
       if (!needs_approval) {
-        throw new ApiError(423, { error: "Kill Switch ON: no se pueden ejecutar acciones." });
+        throw new ApiError(423, { error: "VERTX SECURITY: Kill Switch ON. Operaciones de red bloqueadas." });
       }
     }
 
     const secret = String(process.env.COMMAND_HMAC_SECRET || "").trim();
-    if (!secret) throw new ApiError(500, { error: "Falta COMMAND_HMAC_SECRET en el servidor." });
+    if (!secret) throw new ApiError(500, { error: "VERTX SECURITY: Falta COMMAND_HMAC_SECRET." });
 
-    // OJO: commands.id es UUID en schema, así que aquí SIEMPRE generamos un UUID válido.
     const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
-
-    // Firma compatible con el agente (incluye created_at separado)
     const signature = signCommand(secret, id, ctx.project_id, node_id, command, payload, created_at);
 
     const { data, error } = await ctx.sb
       .from("commands")
-      .insert({
-        id,
-        project_id: ctx.project_id,
-        node_id,
-        command,
-        payload,
-        status,
-        needs_approval,
-        signature,
-        created_at,
-      })
+      .insert({ id, project_id: ctx.project_id, node_id, command, payload, status, needs_approval, signature, created_at })
       .select("*")
       .single();
 
     if (error) throw new ApiError(400, { error: error.message });
 
+    // ==========================================
+    // ENRUTADOR HÍBRIDO (FÍSICO VS NUBE)
+    // ==========================================
+    const isCloudNode = node_id.startsWith("cloud-") || node_id === "hocker-fabric" || node_id.startsWith("trigger-");
+
+    if (!needs_approval) {
+      if (isCloudNode) {
+        // Es de la nube: Empujamos a Trigger.dev
+        try {
+          await tasks.trigger("hocker-core-executor", {
+            commandId: id, nodeId: node_id, command, payload, projectId: ctx.project_id
+          });
+          trace.event({ name: "TriggerDev_Dispatched", input: { id, command } });
+        } catch (triggerError: any) {
+          trace.event({ name: "TriggerDev_Fallback", level: "WARNING", statusMessage: triggerError.message });
+        }
+      } else {
+        // Es un NODO FÍSICO: No hacemos nada más. Se queda 'queued' y el nodo lo recogerá vía GET.
+        trace.event({ name: "PhysicalNode_Queued", input: { id, node_id } });
+      }
+    }
+
+    trace.update({ statusMessage: "SUCCESS" });
+    await langfuse.flushAsync();
+
     return json({ ok: true, item: data }, 201);
   } catch (e: any) {
+    trace.update({ level: "ERROR", statusMessage: e.message });
+    await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
   }
