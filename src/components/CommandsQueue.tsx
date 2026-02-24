@@ -18,6 +18,7 @@ type Cmd = {
   payload: any;
   result: any;
   error: string | null;
+  error_text?: string | null;
 };
 
 function statusPill(status: CommandStatus) {
@@ -31,6 +32,8 @@ function statusPill(status: CommandStatus) {
     case "done":
       return "bg-emerald-50 text-emerald-800 border-emerald-200";
     case "failed":
+      return "bg-red-50 text-red-800 border-red-200";
+    case "error":
       return "bg-red-50 text-red-800 border-red-200";
     case "cancelled":
       return "bg-slate-50 text-slate-700 border-slate-200";
@@ -56,7 +59,7 @@ export default function CommandsQueue() {
       const { data, error } = await sb
         .from("commands")
         .select(
-          "id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at"
+          "id, project_id, node_id, command, status, needs_approval, payload, result, error, error_text, created_at, approved_at, executed_at"
         )
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
@@ -112,13 +115,13 @@ export default function CommandsQueue() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
-          <div className="text-lg font-semibold text-slate-900">Commands</div>
-          <div className="text-sm text-slate-500">Cola + aprobaciones (filtrado por proyecto).</div>
+          <div className="text-lg font-semibold text-slate-900">Orquestador de Comandos</div>
+          <div className="text-sm text-slate-500">Cola, aprobaciones y logs del Automation Fabric.</div>
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <div className="w-full md:w-[320px]">
-            <label className="text-xs font-semibold text-slate-600">Project</label>
+            <label className="text-xs font-semibold text-slate-600">Proyecto</label>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={projectId}
@@ -132,7 +135,7 @@ export default function CommandsQueue() {
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
             disabled={loading}
           >
-            Refresh
+            Actualizar Matrix
           </button>
         </div>
       </div>
@@ -142,13 +145,15 @@ export default function CommandsQueue() {
       )}
 
       <div className="space-y-3">
-        {loading && <div className="text-sm text-slate-500">Loading…</div>}
+        {loading && <div className="text-sm text-slate-500">Cargando flujos...</div>}
         {!loading && items.length === 0 && (
-          <div className="text-sm text-slate-500">No hay comandos para este proyecto.</div>
+          <div className="text-sm text-slate-500">No hay comandos ejecutándose en este proyecto.</div>
         )}
 
         {items.map((c) => {
           const canModerate = c.status === "needs_approval";
+          const displayError = c.error || c.error_text;
+
           return (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -175,9 +180,9 @@ export default function CommandsQueue() {
                     {new Date(c.created_at).toLocaleString()}
                   </div>
 
-                  {c.error && (
+                  {displayError && (
                     <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                      {c.error}
+                      <strong>Falla Detectada:</strong> {displayError}
                     </div>
                   )}
                 </div>
@@ -188,27 +193,27 @@ export default function CommandsQueue() {
                     disabled={!canModerate}
                     className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
                   >
-                    Approve
+                    Aprobar AGI
                   </button>
                   <button
                     onClick={() => reject(c.id)}
                     disabled={!canModerate}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50"
                   >
-                    Reject
+                    Rechazar
                   </button>
                 </div>
               </div>
 
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-700">Payload / Result</summary>
+                <summary className="cursor-pointer text-sm font-semibold text-slate-700">Ver Datos y Resultados (Syntia)</summary>
                 <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-semibold text-slate-600">payload</div>
+                    <div className="mb-1 text-xs font-bold text-slate-600">Payload Entrada</div>
                     <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.payload ?? null, null, 2)}</pre>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-semibold text-slate-600">result</div>
+                    <div className="mb-1 text-xs font-bold text-slate-600">Resultados de Salida</div>
                     <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.result ?? null, null, 2)}</pre>
                   </div>
                 </div>
