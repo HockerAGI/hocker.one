@@ -1,133 +1,80 @@
-import { NextResponse } from "next/server";
-import { ApiError, getControls, json, requireProjectRole } from "@/app/api/_lib";
+import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
 
-function asInt(v: any, def = 0) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : def;
-}
-
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const project_id = url.searchParams.get("project_id") || "global";
-    const limit = Math.min(Math.max(asInt(url.searchParams.get("limit"), 50), 1), 200);
-    const status = url.searchParams.get("status");
+    const q = parseQuery(req);
+    const project_id = String(q.get("project_id") || "global").trim();
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
-    let q = ctx.sb
+    const { data, error } = await ctx.sb
       .from("supply_orders")
-      .select(
-        `
+      .select(`
         *,
-        items:supply_order_items(
-          *,
-          product:supply_products(
-            id,
-            name,
-            sku,
-            price_cents,
-            currency
-          )
-        )
-      `,
-      )
+        items:supply_order_items(*)
+      `)
       .eq("project_id", project_id)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+      .order("created_at", { ascending: false });
 
-    if (status) q = q.eq("status", status);
+    if (error) throw new ApiError(500, { error: "Error al cargar las órdenes de compra." });
 
-    const { data, error } = await q;
-    if (error) throw new ApiError(500, { error: error.message });
-
-    return NextResponse.json({ ok: true, orders: data || [] });
-  } catch (e) {
-    return json(e);
+    return json({ ok: true, items: data ?? [] });
+  } catch (e: any) {
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = await parseBody(req);
+    const project_id = String(body.project_id ?? "").trim();
+    
+    if (!project_id) throw new ApiError(400, { error: "project_id es requerido." });
 
-    const project_id = String(body.project_id || "global");
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
-    const controls = await getControls(ctx.sb, project_id);
-    if (controls.kill_switch) throw new ApiError(423, { error: "Kill-switch activo. Escrituras bloqueadas." });
-    if (!controls.allow_write && ctx.role === "operator") {
-      throw new ApiError(423, { error: "Escrituras deshabilitadas (allow_write=false)." });
-    }
-
     const customer_name = String(body.customer_name || "").trim();
-    if (!customer_name) throw new ApiError(400, { error: "customer_name requerido." });
+    const total_cents = parseInt(body.total_cents, 10) || 0;
+    
+    if (!customer_name) throw new ApiError(400, { error: "Falta el nombre del cliente." });
 
-    const items = Array.isArray(body.items) ? body.items : [];
-    if (!items.length) throw new ApiError(400, { error: "items requerido (min 1)." });
-
-    const cleanItems = items
-      .map((it: any) => ({
-        product_id: String(it.product_id || "").trim(),
-        qty: Math.max(1, asInt(it.qty, 1)),
-      }))
-      .filter((it: any) => it.product_id);
-
-    if (!cleanItems.length) throw new ApiError(400, { error: "items inválidos." });
-
-    const meta = {
-      customer_email: body.customer_email ? String(body.customer_email) : null,
-      shipping_address: body.shipping_address ? String(body.shipping_address) : null,
-      notes: body.notes ? String(body.notes) : null,
-      payment_provider: body.payment_provider ? String(body.payment_provider) : null,
-      payment_ref: body.payment_ref ? String(body.payment_ref) : null,
-      shipping_cents: asInt(body.shipping_cents, 0),
-    };
-
-    const currency = body.currency ? String(body.currency) : "MXN";
-
-    const { data: rpcData, error: rpcErr } = await ctx.sb.rpc("supply_create_order", {
-      p_project_id: project_id,
-      p_status: "pending",
-      p_customer_name: customer_name,
-      p_customer_phone: body.customer_phone ? String(body.customer_phone) : null,
-      p_currency: currency,
-      p_items: cleanItems,
-      p_meta: meta,
-    });
-
-    if (rpcErr) throw new ApiError(500, { error: rpcErr.message });
-
-    const orderId = (rpcData as any)?.order?.id;
-    if (!orderId) throw new ApiError(500, { error: "RPC no devolvió order.id" });
-
-    const { data: order, error: oerr } = await ctx.sb
+    // Inserción de la orden principal
+    const { data: order, error: orderErr } = await ctx.sb
       .from("supply_orders")
-      .select(
-        `
-        *,
-        items:supply_order_items(
-          *,
-          product:supply_products(
-            id,
-            name,
-            sku,
-            price_cents,
-            currency
-          )
-        )
-      `,
-      )
-      .eq("project_id", project_id)
-      .eq("id", orderId)
+      .insert({
+        project_id,
+        customer_name,
+        customer_phone: body.customer_phone || null,
+        total_cents,
+        currency: body.currency || "MXN",
+        status: body.status || "pending",
+        meta: body.meta || {}
+      })
+      .select("*")
       .single();
 
-    if (oerr) throw new ApiError(500, { error: oerr.message });
+    if (orderErr || !order) throw new ApiError(500, { error: "No se pudo crear la orden." });
 
-    return NextResponse.json({ ok: true, order });
-  } catch (e) {
-    return json(e);
+    // Si enviaron items, los procesamos (Opcional en la misma petición)
+    if (Array.isArray(body.items) && body.items.length > 0) {
+       const itemsToInsert = body.items.map((item: any) => ({
+           order_id: order.id,
+           product_id: item.product_id,
+           qty: item.qty || 1,
+           unit_price_cents: item.unit_price_cents || 0,
+           line_total_cents: (item.qty || 1) * (item.unit_price_cents || 0),
+           currency: item.currency || "MXN"
+       }));
+       
+       await ctx.sb.from("supply_order_items").insert(itemsToInsert);
+    }
+
+    return json({ ok: true, item: order }, 201);
+  } catch (e: any) {
+    const ex = toApiError(e);
+    return json(ex.payload, ex.status);
   }
 }
