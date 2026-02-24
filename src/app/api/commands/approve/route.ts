@@ -40,7 +40,6 @@ export async function POST(req: Request) {
 
     await ensureNode(ctx.sb, ctx.project_id, cmd.node_id);
 
-    // 1. Aprobación inmutable en HockerChain (Supabase)
     const { data, error } = await ctx.sb
       .from("commands")
       .update({ 
@@ -56,18 +55,23 @@ export async function POST(req: Request) {
 
     if (error) throw new ApiError(400, { error: error.message });
 
-    // 2. HOCKER AUTOMATION FABRIC: Disparar ejecución durable inmediatamente tras aprobar
-    try {
-      await tasks.trigger("hocker-core-executor", {
-        commandId: data.id,
-        nodeId: data.node_id,
-        command: data.command,
-        payload: data.payload,
-        projectId: ctx.project_id
-      });
-      trace.event({ name: "TriggerDev_Dispatched_After_Approval", input: { id: data.id, command: data.command } });
-    } catch (triggerError: any) {
-      trace.event({ name: "TriggerDev_Fallback", level: "WARNING", statusMessage: triggerError.message });
+    // ==========================================
+    // ENRUTADOR HÍBRIDO TRAS APROBACIÓN
+    // ==========================================
+    const isCloudNode = data.node_id.startsWith("cloud-") || data.node_id === "hocker-fabric" || data.node_id.startsWith("trigger-");
+
+    if (isCloudNode) {
+      try {
+        await tasks.trigger("hocker-core-executor", {
+          commandId: data.id, nodeId: data.node_id, command: data.command, payload: data.payload, projectId: ctx.project_id
+        });
+        trace.event({ name: "TriggerDev_Dispatched_After_Approval", input: { id: data.id } });
+      } catch (triggerError: any) {
+        trace.event({ name: "TriggerDev_Fallback", level: "WARNING", statusMessage: triggerError.message });
+      }
+    } else {
+      // Si es un nodo físico, al cambiar el estado a "queued", el nodo lo procesará en su próximo ciclo de Polling.
+      trace.event({ name: "PhysicalNode_Approved_And_Queued", input: { id: data.id, node_id: data.node_id } });
     }
 
     trace.update({ statusMessage: "SUCCESS" });
