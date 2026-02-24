@@ -1,59 +1,50 @@
-import { ApiError, ensureNode, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
+import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
+import { Langfuse } from "langfuse-node";
 
 export const runtime = "nodejs";
 
+const langfuse = new Langfuse({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY || "dummy",
+  secretKey: process.env.LANGFUSE_SECRET_KEY || "dummy",
+  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+});
+
 export async function POST(req: Request) {
+  const trace = langfuse.trace({ name: "Commands_Reject", metadata: { endpoint: "/api/commands/reject" } });
+
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "").trim();
+    const project_id = String(body.project_id ?? "global").trim();
     const id = String(body.id ?? "").trim();
-    const reason = String(body.reason ?? "").trim();
 
-    if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
-    if (!id) throw new ApiError(400, { error: "id requerido." });
+    if (!id) throw new ApiError(400, { error: "Falta id." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
+    trace.update({ userId: ctx.user?.id || "admin", tags: [project_id, "rejection"] });
 
-    const { data: cmd, error: e1 } = await ctx.sb
+    const { data, error } = await ctx.sb
       .from("commands")
-      .select("id, project_id, node_id, command, status, needs_approval")
-      .eq("id", id)
-      .eq("project_id", project_id)
-      .maybeSingle();
-
-    if (e1) throw new ApiError(500, { error: "No pude leer la acción." });
-    if (!cmd?.id) throw new ApiError(404, { error: "Acción no encontrada." });
-    if (cmd.status !== "needs_approval") throw new ApiError(409, { error: "Esta acción no está esperando aprobación." });
-
-    if (cmd.node_id) await ensureNode(ctx.sb, project_id, cmd.node_id);
-
-    const decided_at = new Date().toISOString();
-    const msg = reason ? `Rechazada: ${reason}` : "Rechazada por moderación.";
-
-    const { error: e2 } = await ctx.sb
-      .from("commands")
-      .update({
-        status: "cancelled",
+      .update({ 
+        status: "cancelled", 
         needs_approval: false,
-        approved_at: decided_at,
-        error: msg,
+        error_text: "Comando rechazado manualmente por el administrador.",
+        finished_at: new Date().toISOString()
       })
+      .eq("project_id", ctx.project_id)
       .eq("id", id)
-      .eq("project_id", project_id);
+      .select("*")
+      .single();
 
-    if (e2) throw new ApiError(500, { error: "No pude rechazar la acción.", details: e2.message });
+    if (error) throw new ApiError(400, { error: error.message });
 
-    await ctx.sb.from("events").insert({
-      project_id,
-      node_id: cmd.node_id ?? null,
-      level: "warn",
-      type: "command.rejected",
-      message: `Acción rechazada: ${cmd.command}`,
-      data: { command_id: id, command: cmd.command, reason: reason || null },
-    });
+    trace.event({ name: "Command_Cancelled_By_Admin", input: { commandId: id } });
+    trace.update({ statusMessage: "SUCCESS" });
+    await langfuse.flushAsync();
 
-    return json({ ok: true });
+    return json({ ok: true, item: data }, 200);
   } catch (e: any) {
+    trace.update({ level: "ERROR", statusMessage: e.message });
+    await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
   }
