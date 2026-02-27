@@ -13,9 +13,7 @@ export async function GET(req: Request) {
   try {
     const q = parseQuery(req);
     const project_id = String(q.get("project_id") || "global").trim();
-
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
-
     const controls = await getControls(ctx.sb, project_id);
     return json({ ok: true, controls });
   } catch (e: any) {
@@ -29,13 +27,9 @@ export async function POST(req: Request) {
 
   try {
     const body = await parseBody(req);
-
     const project_id = String(body.project_id ?? "").trim();
-
-    // Compat: algunos clientes viejos mandan { action: "on"|"off" }
-    const action = body.action ? String(body.action).trim().toLowerCase() : null;
-    const kill_switch = action ? action === "on" : !!body.kill_switch;
-    const allow_write = body.allow_write !== undefined ? !!body.allow_write : false;
+    const kill_switch = !!body.kill_switch;
+    const allow_write = !!body.allow_write;
 
     if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
 
@@ -45,18 +39,13 @@ export async function POST(req: Request) {
     const updated_at = new Date().toISOString();
 
     const { error } = await ctx.sb.from("system_controls").upsert(
-      {
-        id: "global",
-        project_id,
-        kill_switch,
-        allow_write,
-        updated_at,
-      },
+      { id: "global", project_id, kill_switch, allow_write, updated_at },
       { onConflict: "id,project_id" }
     );
 
     if (error) throw new ApiError(500, { error: "No pude guardar seguridad.", details: error.message });
 
+    // DB check permite info|warn|error
     await ctx.sb.from("events").insert({
       project_id,
       node_id: null,
@@ -66,22 +55,14 @@ export async function POST(req: Request) {
       data: { kill_switch, allow_write, user: ctx.user.id },
     });
 
-    trace.event({
-      name: "Security_Policy_Changed",
-      level: kill_switch ? "WARNING" : "DEFAULT",
-      input: { kill_switch, allow_write }
-    });
-
-    const controls = await getControls(ctx.sb, project_id);
-    
     trace.update({ statusMessage: "SUCCESS" });
     await langfuse.flushAsync();
 
+    const controls = await getControls(ctx.sb, project_id);
     return json({ ok: true, controls });
   } catch (e: any) {
     trace.update({ level: "ERROR", statusMessage: e.message });
     await langfuse.flushAsync();
-    
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
   }
