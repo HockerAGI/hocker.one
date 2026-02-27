@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { Role } from "@/lib/types";
 
 export class ApiError extends Error {
@@ -96,8 +97,10 @@ export async function ensureNode(sb: any, project_id: string, node_id: string) {
   if (!existing?.id) {
     // Lógica Zero-Trust: Detectar si es un nodo de la Automation Fabric
     const isCloudNode = nid.startsWith("cloud-") || nid === "hocker-fabric" || nid.startsWith("trigger-");
-    
-    const { error: e2 } = await sb.from("nodes").insert({
+
+    // Inserción server-side (service_role) para evitar bloqueos por RLS
+    const admin = createAdminSupabase();
+    const { error: e2 } = await admin.from("nodes").insert({
       id: nid,
       project_id,
       name: isCloudNode ? `Virtual Node: ${nid}` : nid,
