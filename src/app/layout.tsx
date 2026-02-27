@@ -1,22 +1,15 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
-import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
+import { WorkspaceProvider } from "@/components/WorkspaceContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Hocker ONE - Control Plane",
-  description: "Matriz de Automatización y Soberanía AOSP",
+  description: "Panel maestro del ecosistema HOCKER",
   verification: {
     other: {
       "facebook-domain-verification": "fi8sfczfunadjl5tih4iuaht0o2y7s",
@@ -24,15 +17,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <head>
-        {/* Pixel de Meta Inyectado con Estrategia AfterInteractive para no bloquear el renderizado */}
         <Script id="facebook-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -48,9 +36,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-50 text-slate-900`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-50 text-slate-900`}>
         <noscript>
           <img
             height="1"
@@ -60,8 +46,8 @@ export default function RootLayout({
             alt="Facebook Pixel"
           />
         </noscript>
-        <PwaRegister />
-        {children}
+
+        <WorkspaceProvider>{children}</WorkspaceProvider>
       </body>
     </html>
   );
