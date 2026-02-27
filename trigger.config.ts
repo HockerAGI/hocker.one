@@ -4,8 +4,7 @@ export default defineConfig({
   project: process.env.TRIGGER_PROJECT_ID || "hocker-core",
   runtime: "node",
   logLevel: "info",
-  // Tiempo máximo de ejecución para tareas complejas (Ads, Scraping, etc.)
-  maxDuration: 300, 
+  maxDuration: 300,
   retries: {
     enabledInDev: true,
     default: {
@@ -16,6 +15,5 @@ export default defineConfig({
       randomize: true,
     },
   },
-  // Directorio donde Trigger buscará las tareas (el archivo hocker-core.ts que creamos)
   dirs: ["src/trigger"],
 });
