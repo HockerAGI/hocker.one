@@ -7,7 +7,7 @@ import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 type Evt = {
   id: string;
   created_at: string;
-  level: "info" | "warning" | "error" | "critical";
+  level: "info" | "warn" | "error";
   type: string;
   message: string;
   data: any;
@@ -44,24 +44,22 @@ export default function EventsFeed() {
 
   const getLevelStyles = (level: string) => {
     switch (level) {
-      case "critical": return "border-red-500 bg-red-50 text-red-900";
-      case "error": return "border-orange-300 bg-orange-50 text-orange-900";
-      case "warning": return "border-amber-300 bg-amber-50 text-amber-900";
+      case "error": return "border-red-200 bg-red-50 text-red-900";
+      case "warn": return "border-amber-200 bg-amber-50 text-amber-900";
       default: return "border-slate-200 bg-white text-slate-800";
     }
   };
 
   const getBadgeStyles = (level: string) => {
     switch (level) {
-      case "critical": return "bg-red-600 text-white";
-      case "error": return "bg-orange-500 text-white";
-      case "warning": return "bg-amber-500 text-white";
+      case "error": return "bg-red-600 text-white";
+      case "warn": return "bg-amber-500 text-white";
       default: return "bg-slate-200 text-slate-700";
     }
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="hocker-card p-6">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Registro de Memoria</h2>
@@ -100,7 +98,7 @@ export default function EventsFeed() {
                 {e.data && Object.keys(e.data).length > 0 && (
                   <details className="cursor-pointer group">
                     <summary className="text-xs font-semibold text-slate-500 hover:text-blue-600">Ver Datos Técnicos</summary>
-                    <pre className="mt-2 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-green-400 shadow-inner">
+                    <pre className="mt-2 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-emerald-200 shadow-inner">
                       {JSON.stringify(e.data, null, 2)}
                     </pre>
                   </details>
