@@ -25,7 +25,7 @@ export type CommandRow = {
   command: string;
   payload: any;
   signature: string;
-  error_text: string | null;
+  error: string | null;
 };
 
 export type EventRow = {
