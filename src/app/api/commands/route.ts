@@ -3,12 +3,13 @@ import crypto from "node:crypto";
 import { signCommand } from "@/lib/security";
 import type { CommandStatus } from "@/lib/types";
 import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, parseQuery, toApiError } from "../_lib";
-import { tasks } from "@trigger.dev/sdk/v3";
+import { tasks } from "@trigger.dev/sdk";
 import { Langfuse } from "langfuse-node";
 
 export const runtime = "nodejs";
 
 const SENSITIVE_COMMANDS = new Set(["run_sql", "shell.exec", "fs.write", "stripe.charge", "meta.send_msg"]);
+const READONLY_COMMANDS = new Set(["ping", "status", "read_dir", "read_file_head"]);
 
 const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY || "dummy",
@@ -69,6 +70,11 @@ export async function POST(req: Request) {
 
     const controls = await getControls(ctx.sb, ctx.project_id);
 
+    // Modo lectura: bloquea cualquier cosa que no sea lectura
+    if (!controls.allow_write && !READONLY_COMMANDS.has(command)) {
+      throw new ApiError(423, { error: "Modo lectura activo. Activa 'Modo de Escritura' en Seguridad para ejecutar acciones." });
+    }
+
     const needs_approval = SENSITIVE_COMMANDS.has(command);
     const status: CommandStatus = needs_approval ? "needs_approval" : "queued";
 
@@ -87,7 +93,7 @@ export async function POST(req: Request) {
 
     const { data, error } = await ctx.sb
       .from("commands")
-      .insert({ id, project_id: ctx.project_id, node_id, command, payload, status, needs_approval, signature, created_at })
+      .insert({ id, project_id: ctx.project_id, node_id, command, payload, status, needs_approval, signature, created_at, created_by: ctx.user.id })
       .select("*")
       .single();
 
