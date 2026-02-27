@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
-import AppNav from "@/components/AppNav";
+import React, { useEffect, useMemo, useState } from "react";
+import PageShell from "@/components/PageShell";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
@@ -17,19 +17,28 @@ export default function AgisPage() {
   const sb = useMemo(() => createBrowserSupabase(), []);
   const [projectId, setProjectId] = useState(defaultProjectId());
   const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
+
   const [rows, setRows] = useState<AgiRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const { data } = await sb
-      .from("agis")
-      .select("id, name, role, status, metadata")
-      .eq("project_id", pid)
-      .order("metadata->level", { ascending: true });
-    
-    setRows((data as any) ?? []);
-    setLoading(false);
+    setMsg(null);
+    try {
+      const { data, error } = await sb
+        .from("agis")
+        .select("id, name, role, status, metadata")
+        .eq("project_id", pid)
+        .order("metadata->level", { ascending: true });
+
+      if (error) throw error;
+      setRows((data as any) ?? []);
+    } catch (e: any) {
+      setMsg(e?.message ?? "No pude cargar AGIs.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -38,76 +47,111 @@ export default function AgisPage() {
   }, [pid]);
 
   return (
-    <div className="min-h-screen bg-hocker-900 text-slate-200">
-      <AppNav />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold text-white">Mente Colmena AGI</h1>
-            <p className="mt-1 text-sm text-slate-400">Jerarquía y estado operativo del ecosistema cognitivo.</p>
-          </div>
-          <div className="w-full md:w-64">
-            <label className="text-xs font-semibold text-slate-400">Proyecto</label>
+    <PageShell
+      title="Agentes IA"
+      subtitle="Jerarquía y estado de los agentes (desde la tabla agis)."
+      actions={
+        <div className="flex items-end gap-2">
+          <div className="w-56">
+            <label className="text-xs font-semibold text-slate-600">Proyecto</label>
             <input
-              className="mt-1 w-full rounded-xl border border-hocker-800 bg-hocker-800/50 px-4 py-2 text-sm text-white focus:border-hocker-cyan focus:outline-none"
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             />
           </div>
+          <button
+            onClick={load}
+            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            disabled={loading}
+          >
+            {loading ? "Cargando…" : "Recargar"}
+          </button>
         </div>
+      }
+    >
+      {msg ? (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {msg}
+        </div>
+      ) : null}
 
-        {loading ? (
-          <div className="text-sm text-slate-400">Cargando sinapsis de la matriz...</div>
-        ) : rows.length === 0 ? (
-          <div className="rounded-2xl border border-hocker-800 p-8 text-center text-slate-400">
-            No se detectaron AGIs. Asegúrate de ejecutar el script `seedAgis.ts` en nova.agi.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((agi) => {
-              const tags: string[] = agi.metadata?.tags || [];
-              const isGhost = tags.includes("invisible") || tags.includes("stealth") || tags.includes("ghost");
-              const isCore = agi.metadata?.level === 1;
+      {loading ? (
+        <div className="text-sm text-slate-500">Cargando…</div>
+      ) : rows.length === 0 ? (
+        <div className="hocker-card p-8 text-center text-sm text-slate-600">
+          No se detectaron AGIs para este proyecto.
+          <div className="mt-2 text-xs text-slate-500">Tip: ejecuta el seed en <code className="hocker-kbd">nova.agi</code>.</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((agi) => {
+            const tags: string[] = agi.metadata?.tags || [];
+            const isGhost = tags.includes("invisible") || tags.includes("stealth") || tags.includes("ghost");
+            const level = Number(agi.metadata?.level ?? 0);
+            const isCore = level === 1;
 
-              return (
-                <div key={agi.id} className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${isCore ? 'border-hocker-blue/50 bg-hocker-blue/10' : 'border-hocker-800 bg-hocker-800/30'}`}>
-                  {isGhost && (
-                    <div className="absolute -right-6 top-4 rotate-45 bg-slate-700/50 px-8 py-1 text-[10px] font-bold tracking-widest text-slate-300 backdrop-blur-md">
-                      STEALTH
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl font-bold text-xl ${isCore ? 'bg-hocker-blue text-white shadow-[0_0_15px_rgba(14,165,255,0.5)]' : 'bg-hocker-800 text-slate-300'}`}>
-                      {agi.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-lg">{agi.name}</h3>
-                      <p className="text-xs font-medium text-hocker-cyan">{agi.role.toUpperCase()}</p>
-                    </div>
+            return (
+              <div
+                key={agi.id}
+                className={
+                  "relative overflow-hidden rounded-2xl border p-5 transition-all " +
+                  (isCore ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-white")
+                }
+              >
+                {isGhost ? (
+                  <div className="absolute -right-7 top-4 rotate-45 bg-slate-900 px-10 py-1 text-[10px] font-extrabold tracking-widest text-white">
+                    STEALTH
                   </div>
-                  
-                  <div className="mt-4 flex flex-wrap gap-1">
-                    {tags.map((tag) => (
-                      <span key={tag} className="rounded-md bg-hocker-900 px-2 py-1 text-[10px] uppercase text-slate-400 border border-hocker-800">
-                        {tag}
-                      </span>
-                    ))}
+                ) : null}
+
+                <div className="flex items-center gap-3">
+                  <div
+                    className={
+                      "flex h-12 w-12 items-center justify-center rounded-2xl font-extrabold " +
+                      (isCore ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-800")
+                    }
+                    title={`Nivel ${level || "—"}`}
+                  >
+                    {agi.name?.charAt(0) || "A"}
                   </div>
-                  
-                  <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                    <span>Nivel Jerárquico: {agi.metadata?.level}</span>
-                    <span className="flex items-center gap-1">
-                      <div className={`h-2 w-2 rounded-full ${agi.status === 'active' || agi.status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-slate-600'}`}></div>
-                      {agi.status}
-                    </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-lg font-extrabold text-slate-900">{agi.name}</div>
+                    <div className="truncate text-xs font-semibold text-blue-700">{String(agi.role || "").toUpperCase()}</div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
+
+                <div className="mt-4 flex flex-wrap gap-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {tags.length === 0 ? (
+                    <span className="text-xs text-slate-500">Sin tags</span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
+                  <span>Nivel: {level || "—"}</span>
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className={
+                        "h-2 w-2 rounded-full " +
+                        (agi.status === "active" || agi.status === "online" ? "bg-emerald-500" : "bg-slate-400")
+                      }
+                    />
+                    {agi.status}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </PageShell>
   );
 }
