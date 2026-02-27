@@ -31,8 +31,11 @@ export async function POST(req: Request) {
     const body = await parseBody(req);
 
     const project_id = String(body.project_id ?? "").trim();
-    const kill_switch = !!body.kill_switch;
-    const allow_write = !!body.allow_write;
+
+    // Compat: algunos clientes viejos mandan { action: "on"|"off" }
+    const action = body.action ? String(body.action).trim().toLowerCase() : null;
+    const kill_switch = action ? action === "on" : !!body.kill_switch;
+    const allow_write = body.allow_write !== undefined ? !!body.allow_write : false;
 
     if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
 
@@ -54,17 +57,15 @@ export async function POST(req: Request) {
 
     if (error) throw new ApiError(500, { error: "No pude guardar seguridad.", details: error.message });
 
-    // 1. Registro en Supabase (HockerChain)
     await ctx.sb.from("events").insert({
       project_id,
       node_id: null,
-      level: kill_switch ? "critical" : "info",
+      level: kill_switch ? "warn" : "info",
       type: "governance.updated",
       message: `Seguridad actualizada: KillSwitch=${kill_switch ? "ON" : "OFF"}, AllowWrite=${allow_write ? "ON" : "OFF"}`,
       data: { kill_switch, allow_write, user: ctx.user.id },
     });
 
-    // 2. Trazabilidad VERTX en Langfuse
     trace.event({
       name: "Security_Policy_Changed",
       level: kill_switch ? "WARNING" : "DEFAULT",
