@@ -1,5 +1,5 @@
 import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
-import { tasks } from "@trigger.dev/sdk/v3";
+import { tasks } from "@trigger.dev/sdk";
 import { Langfuse } from "langfuse-node";
 
 export const runtime = "nodejs";
@@ -27,6 +27,9 @@ export async function POST(req: Request) {
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "VERTX SECURITY: Kill Switch ON. No se pueden aprobar acciones." });
     }
+    if (!controls.allow_write) {
+      throw new ApiError(423, { error: "Modo lectura activo. Activa 'Modo de Escritura' en Seguridad para aprobar acciones." });
+    }
 
     const { data: cmd, error: cmdErr } = await ctx.sb
       .from("commands")
@@ -37,6 +40,7 @@ export async function POST(req: Request) {
 
     if (cmdErr) throw new ApiError(400, { error: cmdErr.message });
     if (!cmd?.id) throw new ApiError(404, { error: "Comando no encontrado." });
+    if (!cmd.node_id) throw new ApiError(400, { error: "El comando no tiene node_id (destino)." });
 
     await ensureNode(ctx.sb, ctx.project_id, cmd.node_id);
 
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
         status: "queued", 
         needs_approval: false, 
         approved_at: new Date().toISOString(),
-        approved_by: ctx.user?.id || "admin"
+        approved_by: ctx.user?.id || null
       })
       .eq("project_id", ctx.project_id)
       .eq("id", id)
@@ -58,12 +62,13 @@ export async function POST(req: Request) {
     // ==========================================
     // ENRUTADOR HÍBRIDO TRAS APROBACIÓN
     // ==========================================
-    const isCloudNode = data.node_id.startsWith("cloud-") || data.node_id === "hocker-fabric" || data.node_id.startsWith("trigger-");
+    const nodeId = String(data.node_id || "");
+    const isCloudNode = nodeId.startsWith("cloud-") || nodeId === "hocker-fabric" || nodeId.startsWith("trigger-");
 
     if (isCloudNode) {
       try {
         await tasks.trigger("hocker-core-executor", {
-          commandId: data.id, nodeId: data.node_id, command: data.command, payload: data.payload, projectId: ctx.project_id
+          commandId: data.id, nodeId: nodeId, command: data.command, payload: data.payload, projectId: ctx.project_id
         });
         trace.event({ name: "TriggerDev_Dispatched_After_Approval", input: { id: data.id } });
       } catch (triggerError: any) {
