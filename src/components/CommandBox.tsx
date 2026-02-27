@@ -71,8 +71,8 @@ export default function CommandBox() {
         if (item?.id) {
           setLast(item);
           setStatus(item.status);
-          // Si el comando ya terminó o falló, dejamos de hacer polling al servidor
-          if (["done", "failed", "cancelled", "error"].includes(item.status)) {
+          // Si el comando ya terminó, dejamos de hacer polling al servidor
+          if (["done", "canceled", "error"].includes(item.status)) {
             clearInterval(t);
           }
         }
