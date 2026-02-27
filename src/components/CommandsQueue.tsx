@@ -18,7 +18,6 @@ type Cmd = {
   payload: any;
   result: any;
   error: string | null;
-  error_text?: string | null;
 };
 
 function statusPill(status: CommandStatus) {
@@ -31,11 +30,9 @@ function statusPill(status: CommandStatus) {
       return "bg-purple-50 text-purple-800 border-purple-200";
     case "done":
       return "bg-emerald-50 text-emerald-800 border-emerald-200";
-    case "failed":
-      return "bg-red-50 text-red-800 border-red-200";
     case "error":
       return "bg-red-50 text-red-800 border-red-200";
-    case "cancelled":
+    case "canceled":
       return "bg-slate-50 text-slate-700 border-slate-200";
     default:
       return "bg-slate-50 text-slate-700 border-slate-200";
@@ -52,6 +49,9 @@ export default function CommandsQueue() {
   const [err, setErr] = useState<string | null>(null);
   const [items, setItems] = useState<Cmd[]>([]);
 
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [q, setQ] = useState<string>("");
+
   async function refresh() {
     setErr(null);
     setLoading(true);
@@ -59,7 +59,7 @@ export default function CommandsQueue() {
       const { data, error } = await sb
         .from("commands")
         .select(
-          "id, project_id, node_id, command, status, needs_approval, payload, result, error, error_text, created_at, approved_at, executed_at"
+          "id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at"
         )
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
@@ -111,16 +111,27 @@ export default function CommandsQueue() {
     }
   }
 
+  const filtered = useMemo(() => {
+    const qs = q.trim().toLowerCase();
+    return items.filter((c) => {
+      const st = String(c.status || "");
+      if (filterStatus !== "all" && st !== filterStatus) return false;
+      if (!qs) return true;
+      const hay = [c.command, c.id, c.node_id ?? "", JSON.stringify(c.payload ?? {})].join(" ").toLowerCase();
+      return hay.includes(qs);
+    });
+  }, [items, filterStatus, q]);
+
   return (
-    <div className="space-y-4">
+    <div className="hocker-card p-6 space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
-          <div className="text-lg font-semibold text-slate-900">Orquestador de Comandos</div>
-          <div className="text-sm text-slate-500">Cola, aprobaciones y logs del Automation Fabric.</div>
+          <div className="text-lg font-semibold text-slate-900">Cola de acciones</div>
+          <div className="text-sm text-slate-500">Estados reales + aprobaciones cuando aplica.</div>
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
-          <div className="w-full md:w-[320px]">
+          <div className="w-full md:w-[220px]">
             <label className="text-xs font-semibold text-slate-600">Proyecto</label>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
@@ -130,12 +141,39 @@ export default function CommandsQueue() {
             />
           </div>
 
+          <div className="w-full md:w-[220px]">
+            <label className="text-xs font-semibold text-slate-600">Filtrar por estado</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">Todos</option>
+              <option value="needs_approval">needs_approval</option>
+              <option value="queued">queued</option>
+              <option value="running">running</option>
+              <option value="done">done</option>
+              <option value="error">error</option>
+              <option value="canceled">canceled</option>
+            </select>
+          </div>
+
+          <div className="w-full md:w-[320px]">
+            <label className="text-xs font-semibold text-slate-600">Buscar</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="command, id, node…"
+            />
+          </div>
+
           <button
             onClick={refresh}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
             disabled={loading}
           >
-            Actualizar Matrix
+            {loading ? "Cargando…" : "Actualizar"}
           </button>
         </div>
       </div>
@@ -145,14 +183,13 @@ export default function CommandsQueue() {
       )}
 
       <div className="space-y-3">
-        {loading && <div className="text-sm text-slate-500">Cargando flujos...</div>}
-        {!loading && items.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="text-sm text-slate-500">No hay comandos ejecutándose en este proyecto.</div>
         )}
 
-        {items.map((c) => {
+        {filtered.map((c) => {
           const canModerate = c.status === "needs_approval";
-          const displayError = c.error || c.error_text;
+          const displayError = c.error;
 
           return (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
