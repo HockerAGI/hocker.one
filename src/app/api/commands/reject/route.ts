@@ -24,11 +24,11 @@ export async function POST(req: Request) {
 
     const { data, error } = await ctx.sb
       .from("commands")
-      .update({ 
-        status: "canceled", 
+      .update({
+        status: "canceled",
         needs_approval: false,
         error: "Comando rechazado manualmente por el administrador.",
-        finished_at: new Date().toISOString()
+        finished_at: new Date().toISOString(),
       })
       .eq("project_id", ctx.project_id)
       .eq("id", id)
