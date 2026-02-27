@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { Role } from "@/lib/types";
 
 export class ApiError extends Error {
@@ -76,7 +75,8 @@ export async function requireProjectRole(project_id: string, allowed: Role[]): P
 
 /**
  * ensureNode()
- * ACTUALIZADO HOCKER FABRIC: Reconoce nodos virtuales (Trigger.dev / Zero-Trust)
+ * Importante: tu tabla nodes NO tiene columna tags en el core SQL actual.
+ * Por eso aquí NO insertamos tags (solo campos existentes).
  */
 export async function ensureNode(sb: any, project_id: string, node_id: string) {
   const nid = String(node_id || "").trim();
@@ -95,21 +95,17 @@ export async function ensureNode(sb: any, project_id: string, node_id: string) {
   }
 
   if (!existing?.id) {
-    // Lógica Zero-Trust: Detectar si es un nodo de la Automation Fabric
     const isCloudNode = nid.startsWith("cloud-") || nid === "hocker-fabric" || nid.startsWith("trigger-");
 
-    // Inserción server-side (service_role) para evitar bloqueos por RLS
-    const admin = createAdminSupabase();
-    const { error: e2 } = await admin.from("nodes").insert({
+    const { error: e2 } = await sb.from("nodes").insert({
       id: nid,
       project_id,
       name: isCloudNode ? `Virtual Node: ${nid}` : nid,
-      tags: isCloudNode ? ["auto", "cloud", "zero-trust"] : ["auto"],
       status: isCloudNode ? "online" : "offline",
-      meta: { 
-          source: "control-plane",
-          engine: isCloudNode ? "trigger.dev" : "on-premise",
-          trust_level: isCloudNode ? "high" : "pending"
+      meta: {
+        source: "control-plane",
+        engine: isCloudNode ? "trigger.dev" : "on-premise",
+        trust_level: isCloudNode ? "high" : "pending",
       },
     });
 
