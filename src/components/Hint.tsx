@@ -3,13 +3,7 @@
 import React from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
-export default function Hint({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+export default function Hint({ title, children }: { title: string; children: React.ReactNode }) {
   const { tutorial } = useWorkspace();
   if (!tutorial) return null;
 
