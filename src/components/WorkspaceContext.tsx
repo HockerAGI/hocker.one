@@ -20,19 +20,19 @@ const LS_NODE = "hocker.workspace.nodeId";
 const LS_TUTORIAL = "hocker.workspace.tutorial";
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const defaults = useMemo(() => {
-    return {
+  const defaults = useMemo(
+    () => ({
       projectId: normalizeProjectId(defaultProjectId()),
       nodeId: normalizeNodeId(defaultNodeId()),
       tutorial: false,
-    };
-  }, []);
+    }),
+    []
+  );
 
   const [projectId, _setProjectId] = useState(defaults.projectId);
   const [nodeId, _setNodeId] = useState(defaults.nodeId);
   const [tutorial, _setTutorial] = useState(defaults.tutorial);
 
-  // Load localStorage once
   useEffect(() => {
     try {
       const p = localStorage.getItem(LS_PROJECT);
@@ -63,9 +63,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setTutorial = useCallback((v: boolean) => {
-    _setTutorial(!!v);
+    const nv = !!v;
+    _setTutorial(nv);
     try {
-      localStorage.setItem(LS_TUTORIAL, v ? "1" : "0");
+      localStorage.setItem(LS_TUTORIAL, nv ? "1" : "0");
     } catch {}
   }, []);
 
@@ -73,7 +74,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setProjectId(defaults.projectId);
     setNodeId(defaults.nodeId);
     setTutorial(false);
-  }, [defaults.projectId, defaults.nodeId, setNodeId, setProjectId, setTutorial]);
+  }, [defaults.nodeId, defaults.projectId, setNodeId, setProjectId, setTutorial]);
 
   const value: WorkspaceState = {
     projectId,
