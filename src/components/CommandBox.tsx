@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { defaultNodeId, defaultProjectId, normalizeNodeId, normalizeProjectId } from "@/lib/project";
+import { useWorkspace } from "@/components/WorkspaceContext";
+import Hint from "@/components/Hint";
 import type { CommandStatus } from "@/lib/types";
 
 function pretty(o: any) {
@@ -13,14 +14,11 @@ function pretty(o: any) {
 }
 
 export default function CommandBox() {
-  const [projectId, setProjectId] = useState(defaultProjectId());
-  const [nodeId, setNodeId] = useState(defaultNodeId());
+  const { projectId: pid, nodeId: nid } = useWorkspace();
+
   const [command, setCommand] = useState("status");
   const [payload, setPayload] = useState("{}");
   const [msg, setMsg] = useState<string | null>(null);
-
-  const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
-  const nid = useMemo(() => normalizeNodeId(nodeId), [nodeId]);
 
   const [last, setLast] = useState<any>(null);
   const [status, setStatus] = useState<CommandStatus | null>(null);
@@ -62,6 +60,7 @@ export default function CommandBox() {
 
   useEffect(() => {
     if (!last?.id) return;
+
     const t = setInterval(async () => {
       try {
         const r = await fetch(`/api/commands?project_id=${encodeURIComponent(pid)}&id=${encodeURIComponent(last.id)}`);
@@ -71,52 +70,66 @@ export default function CommandBox() {
         if (item?.id) {
           setLast(item);
           setStatus(item.status);
-          // Si el comando ya terminó, dejamos de hacer polling al servidor
-          if (["done", "canceled", "error"].includes(item.status)) {
+          if (["done", "canceled", "error", "failed", "cancelled"].includes(String(item.status))) {
             clearInterval(t);
           }
         }
       } catch {}
-    }, 2000); // Polling más relajado, Trigger.dev hace el trabajo pesado
+    }, 2000);
+
     return () => clearInterval(t);
   }, [last?.id, pid]);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="w-full md:w-[320px]">
-          <label className="text-xs font-semibold text-slate-600">Project</label>
-          <input className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={projectId} onChange={(e) => setProjectId(e.target.value)} />
-        </div>
-        <div className="w-full md:w-[320px]">
-          <label className="text-xs font-semibold text-slate-600">Node</label>
-          <input className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={nodeId} onChange={(e) => setNodeId(e.target.value)} />
-        </div>
-        <div className="w-full md:flex-1">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+      <Hint title="Cómo usar esto">
+        Selecciona <b>Proyecto</b> y <b>Nodo</b> arriba en la barra global. Aquí solo disparas la acción.
+      </Hint>
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="w-full">
           <label className="text-xs font-semibold text-slate-600">Command</label>
-          <input className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={command} onChange={(e) => setCommand(e.target.value)} placeholder="Ej: meta.send_msg / stripe.charge" />
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="Ej: status / ping / shell.exec"
+          />
+          <div className="mt-1 text-xs text-slate-500">
+            Proyecto: <b>{pid}</b> · Nodo: <b>{nid}</b>
+          </div>
         </div>
-        <button onClick={send} disabled={loading} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
-          {loading ? "Ejecutando..." : "Lanzar AGI"}
+
+        <button
+          onClick={send}
+          disabled={loading}
+          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+        >
+          {loading ? "Ejecutando..." : "Lanzar"}
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <label className="text-xs font-semibold text-slate-600">Payload (JSON)</label>
-          <textarea className="mt-1 h-[140px] w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs" value={payload} onChange={(e) => setPayload(e.target.value)} />
+          <textarea
+            className="mt-1 h-[140px] w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-xs"
+            value={payload}
+            onChange={(e) => setPayload(e.target.value)}
+          />
         </div>
+
         <div>
-          <label className="text-xs font-semibold text-slate-600">Memoria de Resultado (Syntia)</label>
+          <label className="text-xs font-semibold text-slate-600">Resultado</label>
           <div className="mt-1 h-[140px] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
             {last ? pretty(last) : "Esperando ejecución..."}
           </div>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-800">
-          Estado Orquestador: <b>{status ?? "inactivo"}</b>
+          Estado: <b>{status ?? "—"}</b>
         </span>
         {msg && <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-800">{msg}</span>}
       </div>
