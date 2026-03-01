@@ -14,7 +14,7 @@ export default function WorkspaceBar() {
           <input
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            className="w-40 bg-transparent outline-none"
+            className="w-44 bg-transparent outline-none"
             placeholder="global"
           />
         </div>
@@ -24,7 +24,7 @@ export default function WorkspaceBar() {
           <input
             value={nodeId}
             onChange={(e) => setNodeId(e.target.value)}
-            className="w-44 bg-transparent outline-none"
+            className="w-56 bg-transparent outline-none"
             placeholder="node-hocker-01"
           />
         </div>
@@ -33,24 +33,22 @@ export default function WorkspaceBar() {
           type="button"
           onClick={reset}
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          title="Restablecer a valores por defecto"
+          title="Reset"
         >
           Reset
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setTutorial(!tutorial)}
-          className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-            tutorial ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-          }`}
-          title="Activa ayudas dentro de cada pantalla"
-        >
-          Tutorial: {tutorial ? "ON" : "OFF"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setTutorial(!tutorial)}
+        className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+          tutorial ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        }`}
+        title="Ayudas dentro de pantallas"
+      >
+        Tutorial: {tutorial ? "ON" : "OFF"}
+      </button>
     </div>
   );
 }
