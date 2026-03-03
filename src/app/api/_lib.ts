@@ -47,8 +47,7 @@ export async function requireProjectRole(project_id: string, allowed: Role[]): P
   const sb = createServerSupabase();
 
   const { data: u, error: uerr } = await sb.auth.getUser();
-  if (uerr) throw new ApiError(401, { error: "No autorizado. Inicia sesión." });
-  if (!u?.user) throw new ApiError(401, { error: "No autorizado. Inicia sesión." });
+  if (uerr || !u?.user) throw new ApiError(401, { error: "No autorizado. Inicia sesión." });
 
   const user = { id: u.user.id, email: u.user.email };
 
@@ -59,35 +58,21 @@ export async function requireProjectRole(project_id: string, allowed: Role[]): P
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (merr) throw new ApiError(403, { error: "No tienes acceso a este proyecto." });
-  if (!mem?.role) throw new ApiError(403, { error: "No tienes acceso a este proyecto." });
+  if (merr || !mem?.role) throw new ApiError(403, { error: "No tienes acceso a este proyecto." });
 
   const role = String(mem.role) as Role;
   if (!allowed.includes(role)) {
-    throw new ApiError(403, {
-      error: "Permisos insuficientes para esta acción.",
-      role,
-    });
+    throw new ApiError(403, { error: "Permisos insuficientes para esta acción.", role });
   }
 
   return { sb, user, project_id, role };
 }
 
-/**
- * ensureNode()
- * Importante: tu tabla nodes NO tiene columna tags en el core SQL actual.
- * Por eso aquí NO insertamos tags (solo campos existentes).
- */
 export async function ensureNode(sb: any, project_id: string, node_id: string) {
   const nid = String(node_id || "").trim();
   if (!nid) return;
 
-  const { data: existing, error: e1 } = await sb
-    .from("nodes")
-    .select("id, project_id")
-    .eq("id", nid)
-    .maybeSingle();
-
+  const { data: existing, error: e1 } = await sb.from("nodes").select("id, project_id").eq("id", nid).maybeSingle();
   if (e1) throw new ApiError(500, { error: "No pude validar el nodo." });
 
   if (existing?.id && existing.project_id !== project_id) {
@@ -101,10 +86,11 @@ export async function ensureNode(sb: any, project_id: string, node_id: string) {
       id: nid,
       project_id,
       name: isCloudNode ? `Virtual Node: ${nid}` : nid,
+      type: "agent",
       status: isCloudNode ? "online" : "offline",
       meta: {
         source: "control-plane",
-        engine: isCloudNode ? "trigger.dev" : "on-premise",
+        engine: isCloudNode ? "automation-fabric" : "on-premise",
         trust_level: isCloudNode ? "high" : "pending",
       },
     });
@@ -118,20 +104,26 @@ export async function ensureNode(sb: any, project_id: string, node_id: string) {
 export async function getControls(sb: any, project_id: string) {
   const { data, error } = await sb
     .from("system_controls")
-    .select("id, project_id, kill_switch, allow_write, updated_at")
+    .select("project_id,id,kill_switch,allow_write,updated_at")
     .eq("project_id", project_id)
     .eq("id", "global")
     .maybeSingle();
 
   if (error) throw new ApiError(500, { error: "No pude leer seguridad del proyecto." });
 
-  return (
-    data ?? {
-      id: "global",
+  if (!data) {
+    const { error: e2 } = await sb.from("system_controls").insert({
       project_id,
+      id: "global",
       kill_switch: false,
       allow_write: false,
-      updated_at: null,
-    }
-  );
+      meta: {},
+    });
+
+    if (e2) throw new ApiError(500, { error: "No pude crear system_controls.", details: e2.message });
+
+    return { project_id, id: "global", kill_switch: false, allow_write: false, updated_at: null };
+  }
+
+  return data;
 }
