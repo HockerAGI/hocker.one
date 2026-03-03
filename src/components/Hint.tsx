@@ -8,9 +8,9 @@ export default function Hint({ title, children }: { title: string; children: Rea
   if (!tutorial) return null;
 
   return (
-    <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-      <div className="font-bold">{title}</div>
-      <div className="mt-1 text-blue-800">{children}</div>
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-700">
+      <div className="text-xs font-extrabold tracking-wide text-blue-800">{title}</div>
+      <div className="mt-1 text-sm">{children}</div>
     </div>
   );
 }
