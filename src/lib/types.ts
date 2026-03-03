@@ -1,11 +1,6 @@
 export type ProjectRole = "owner" | "admin" | "operator" | "viewer";
 export type Role = ProjectRole;
 
-/**
- * Para evitar crashes:
- * - Nuevo estándar: error / canceled
- * - Compat legado: failed / cancelled
- */
 export type CommandStatus =
   | "queued"
   | "needs_approval"
@@ -13,58 +8,72 @@ export type CommandStatus =
   | "done"
   | "error"
   | "canceled"
-  | "failed"
-  | "cancelled";
+  // compat por si ya se coló data vieja
+  | "cancelled"
+  | "failed";
 
 export type NodeStatus = "online" | "offline" | "degraded";
 
 export type CommandRow = {
   id: string;
   project_id: string;
-  created_at: string;
-  created_by: string | null;
-  status: CommandStatus;
-  needs_approval: boolean;
-  approved_at: string | null;
-  approved_by: string | null;
-  executed_at: string | null;
-  executed_by: string | null;
-  finished_at: string | null;
+  node_id: string;
   command: string;
   payload: any;
-  signature: string | null;
+
+  status: CommandStatus;
+  needs_approval: boolean;
+  signature: string;
+
   result: any | null;
   error: string | null;
+
+  created_at: string;
+  approved_at: string | null;
+  started_at: string | null;
+  executed_at: string | null;
+  finished_at: string | null;
 };
+
+export type EventLevel = "info" | "warn" | "error";
 
 export type EventRow = {
   id: string;
   project_id: string;
   node_id: string | null;
-  created_at: string;
-  level: "info" | "warn" | "error";
+  level: EventLevel;
   type: string;
   message: string;
   data: any;
+  created_at: string;
 };
 
 export type NodeRow = {
   id: string;
   project_id: string;
-  created_at: string;
-  last_seen_at: string | null;
+  name: string | null;
+  type: string;
   status: NodeStatus;
+  last_seen_at: string | null;
   meta: any;
-  name?: string | null;
-  type?: string | null;
-  tags?: string[] | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ControlRow = {
-  id: string;
   project_id: string;
-  updated_at: string;
+  id: string;
   kill_switch: boolean;
   allow_write: boolean;
-  notes: string | null;
+  meta: any;
+  created_at: string;
+  updated_at: string;
 };
+
+export type SupplyOrderStatus =
+  | "pending"
+  | "paid"
+  | "producing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
