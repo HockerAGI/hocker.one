@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { signCommand } from "@/lib/security";
 import type { CommandStatus } from "@/lib/types";
-import { ApiError, ensureNode, getControls, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../_lib";
-import { tasks } from "@trigger.dev/sdk";
+import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, parseQuery, toApiError } from "../_lib";
 import { Langfuse } from "langfuse-node";
+import { dispatchCloudCommands, isCloudNode } from "./_cloud";
 
 export const runtime = "nodejs";
 
@@ -70,20 +70,21 @@ export async function POST(req: Request) {
 
     const controls = await getControls(ctx.sb, ctx.project_id);
 
-    // Modo lectura: SOLO comandos de lectura
-    if (!controls.allow_write && !READONLY_COMMANDS.has(command)) {
-      throw new ApiError(423, { error: "Modo lectura activo. Activa 'Modo de escritura' en Seguridad para ejecutar acciones." });
-    }
-
+    // Kill switch: bloquea ejecución inmediata
     const needs_approval = SENSITIVE_COMMANDS.has(command);
     const status: CommandStatus = needs_approval ? "needs_approval" : "queued";
 
     if (controls.kill_switch && !needs_approval) {
-      throw new ApiError(423, { error: "VERTX SECURITY: Kill Switch ON. Operaciones bloqueadas." });
+      throw new ApiError(423, { error: "Kill Switch ON. Operación bloqueada." });
+    }
+
+    // allow_write OFF => solo comandos readonly
+    if (!controls.allow_write && !READONLY_COMMANDS.has(command)) {
+      throw new ApiError(423, { error: "Modo lectura (allow_write OFF). Ve a Seguridad y activa escritura." });
     }
 
     const secret = String(process.env.COMMAND_HMAC_SECRET || "").trim();
-    if (!secret) throw new ApiError(500, { error: "VERTX SECURITY: Falta COMMAND_HMAC_SECRET." });
+    if (!secret) throw new ApiError(500, { error: "Falta COMMAND_HMAC_SECRET." });
 
     const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
@@ -91,41 +92,36 @@ export async function POST(req: Request) {
 
     const { data, error } = await ctx.sb
       .from("commands")
-      .insert({ id, project_id: ctx.project_id, node_id, command, payload, status, needs_approval, signature, created_at })
+      .insert({
+        id,
+        project_id: ctx.project_id,
+        node_id,
+        command,
+        payload,
+        status,
+        needs_approval,
+        signature,
+        created_at,
+      })
       .select("*")
       .single();
 
     if (error) throw new ApiError(400, { error: error.message });
 
-    const isCloudNode =
-      node_id === "hocker-fabric" || node_id.startsWith("cloud-") || node_id.startsWith("trigger-");
-
-    // Si es nube y NO requiere aprobación, disparamos Trigger
-    if (!needs_approval && isCloudNode) {
+    // Best-effort: si es cloud y no requiere aprobación, intenta ejecutar ya
+    let cloudDispatch: any = null;
+    if (!needs_approval && isCloudNode(node_id)) {
       try {
-        await tasks.trigger("hocker-core-executor", {
-          commandId: id,
-          nodeId: node_id,
-          command,
-          payload,
-          projectId: ctx.project_id,
-        });
-      } catch (err: any) {
-        // No rompemos el comando; solo registramos
-        await ctx.sb.from("events").insert({
-          project_id: ctx.project_id,
-          node_id,
-          level: "warn",
-          type: "trigger.dispatch_failed",
-          message: "No se pudo despachar a Trigger.dev",
-          data: { commandId: id, error: String(err?.message || err) },
-        });
+        cloudDispatch = await dispatchCloudCommands(ctx.project_id, 5);
+      } catch (e: any) {
+        cloudDispatch = { dispatched: 0, error: String(e?.message || e) };
       }
     }
 
     trace.update({ statusMessage: "SUCCESS" });
     await langfuse.flushAsync();
-    return json({ ok: true, item: data }, 201);
+
+    return json({ ok: true, item: data, cloud: cloudDispatch }, 201);
   } catch (e: any) {
     trace.update({ level: "ERROR", statusMessage: e.message });
     await langfuse.flushAsync();
