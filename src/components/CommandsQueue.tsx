@@ -21,23 +21,15 @@ type Cmd = {
   error: string | null;
 };
 
-function statusPill(status: CommandStatus) {
-  switch (status) {
-    case "needs_approval":
-      return "bg-amber-50 text-amber-800 border-amber-200";
-    case "queued":
-      return "bg-blue-50 text-blue-800 border-blue-200";
-    case "running":
-      return "bg-purple-50 text-purple-800 border-purple-200";
-    case "done":
-      return "bg-emerald-50 text-emerald-800 border-emerald-200";
-    case "error":
-      return "bg-red-50 text-red-800 border-red-200";
-    case "canceled":
-      return "bg-slate-50 text-slate-700 border-slate-200";
-    default:
-      return "bg-slate-50 text-slate-700 border-slate-200";
-  }
+function statusPill(status: string) {
+  const s = String(status || "").toLowerCase();
+  if (s === "needs_approval") return "bg-amber-50 text-amber-800 border-amber-200";
+  if (s === "queued") return "bg-blue-50 text-blue-800 border-blue-200";
+  if (s === "running") return "bg-purple-50 text-purple-800 border-purple-200";
+  if (s === "done") return "bg-emerald-50 text-emerald-800 border-emerald-200";
+  if (s === "error" || s === "failed") return "bg-red-50 text-red-800 border-red-200";
+  if (s === "canceled" || s === "cancelled") return "bg-slate-50 text-slate-700 border-slate-200";
+  return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
 export default function CommandsQueue() {
@@ -63,7 +55,7 @@ export default function CommandsQueue() {
         .limit(80);
 
       if (error) throw error;
-      setItems((data as Cmd[]) ?? []);
+      setItems((data as any) ?? []);
     } catch (e: any) {
       setErr(e?.message ?? "No se pudo cargar la cola.");
     } finally {
@@ -120,22 +112,22 @@ export default function CommandsQueue() {
   }, [items, filterStatus, q]);
 
   return (
-    <div className="space-y-4">
-      <Hint title="¿Qué es esto?">
-        Esta lista es la cola real. Si una acción dice <b>needs_approval</b>, tienes que aprobarla manualmente.
+    <div className="hocker-card p-6 space-y-4">
+      <Hint title="Qué estás viendo">
+        Esta es la cola real del proyecto <b>{pid}</b>. Si una acción dice <b>needs_approval</b>, debes aprobarla.
       </Hint>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
+        <div className="space-y-1">
           <div className="text-lg font-semibold text-slate-900">Cola de acciones</div>
           <div className="text-sm text-slate-500">Proyecto activo: <b>{pid}</b></div>
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
-          <div className="w-full md:w-[200px]">
-            <label className="text-xs font-semibold text-slate-600">Estado</label>
+          <div className="w-full md:w-[220px]">
+            <label className="text-xs font-semibold text-slate-600">Filtrar por estado</label>
             <select
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
@@ -145,14 +137,16 @@ export default function CommandsQueue() {
               <option value="running">running</option>
               <option value="done">done</option>
               <option value="error">error</option>
+              <option value="failed">failed</option>
               <option value="canceled">canceled</option>
+              <option value="cancelled">cancelled</option>
             </select>
           </div>
 
           <div className="w-full md:w-[320px]">
             <label className="text-xs font-semibold text-slate-600">Buscar</label>
             <input
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="command, id, node…"
@@ -161,7 +155,7 @@ export default function CommandsQueue() {
 
           <button
             onClick={refresh}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
             disabled={loading}
           >
             {loading ? "Cargando…" : "Actualizar"}
@@ -169,25 +163,21 @@ export default function CommandsQueue() {
         </div>
       </div>
 
-      {err && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>
-      )}
+      {err && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>}
 
       <div className="space-y-3">
-        {!loading && filtered.length === 0 && (
-          <div className="text-sm text-slate-500">No hay acciones en este proyecto.</div>
-        )}
+        {!loading && filtered.length === 0 && <div className="text-sm text-slate-500">No hay comandos en este proyecto.</div>}
 
         {filtered.map((c) => {
-          const canModerate = c.status === "needs_approval";
+          const canModerate = String(c.status) === "needs_approval";
           return (
-            <div key={c.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0">
+                <div className="space-y-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate font-semibold text-slate-900">{c.command}</span>
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusPill(c.status)}`}>
-                      {c.status}
+                      {String(c.status)}
                     </span>
                     {c.needs_approval && (
                       <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
@@ -196,12 +186,12 @@ export default function CommandsQueue() {
                     )}
                   </div>
 
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="text-xs text-slate-500">
                     Nodo: <b>{c.node_id ?? "—"}</b> · {new Date(c.created_at).toLocaleString()} · ID: {c.id}
                   </div>
 
                   {c.error && (
-                    <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                       <b>Falla:</b> {c.error}
                     </div>
                   )}
@@ -211,14 +201,14 @@ export default function CommandsQueue() {
                   <button
                     onClick={() => approve(c.id)}
                     disabled={!canModerate}
-                    className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
                   >
                     Aprobar
                   </button>
                   <button
                     onClick={() => reject(c.id)}
                     disabled={!canModerate}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50"
                   >
                     Rechazar
                   </button>
@@ -228,11 +218,11 @@ export default function CommandsQueue() {
               <details className="mt-3">
                 <summary className="cursor-pointer text-sm font-semibold text-slate-700">Ver datos</summary>
                 <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="mb-1 text-xs font-bold text-slate-600">Payload</div>
                     <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.payload ?? null, null, 2)}</pre>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="mb-1 text-xs font-bold text-slate-600">Resultado</div>
                     <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.result ?? null, null, 2)}</pre>
                   </div>
