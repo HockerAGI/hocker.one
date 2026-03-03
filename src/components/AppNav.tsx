@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import NodeBadge from "@/components/NodeBadge";
+import WorkspaceBar from "@/components/WorkspaceBar";
 
 type NavItem = {
   href: string;
@@ -104,7 +105,6 @@ export default function AppNav() {
     <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          {/* Brand */}
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/dashboard" className="group flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
@@ -121,7 +121,6 @@ export default function AppNav() {
             </div>
           </div>
 
-          {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-1">
             {ITEMS.map((it) => {
               const isActive = active === it.href;
@@ -132,9 +131,7 @@ export default function AppNav() {
                   href={it.href}
                   className={
                     "group inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors " +
-                    (isActive
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-700 hover:bg-slate-100")
+                    (isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100")
                   }
                   title={it.desc}
                 >
@@ -145,17 +142,7 @@ export default function AppNav() {
             })}
           </nav>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              className="hidden md:inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              title="Volver"
-            >
-              Volver
-            </button>
-
             <form action="/signout" method="post" className="hidden md:block">
               <button
                 type="submit"
@@ -166,7 +153,6 @@ export default function AppNav() {
               </button>
             </form>
 
-            {/* Mobile menu */}
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -182,12 +168,18 @@ export default function AppNav() {
           </div>
         </div>
 
-        {/* Mobile drawer */}
+        <div className="mt-3 hidden md:block">
+          <WorkspaceBar />
+        </div>
+
         {open && (
-          <div className="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 lg:hidden">
+          <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 lg:hidden">
             <div className="md:hidden">
               <NodeBadge />
             </div>
+
+            <WorkspaceBar compact />
+
             <div className="grid grid-cols-2 gap-2">
               {ITEMS.map((it) => {
                 const isActive = active === it.href;
@@ -208,23 +200,12 @@ export default function AppNav() {
                 );
               })}
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => window.history.back()}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Volver
+
+            <form action="/signout" method="post">
+              <button type="submit" className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                Salir
               </button>
-              <form action="/signout" method="post" className="w-full">
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  Salir
-                </button>
-              </form>
-            </div>
+            </form>
           </div>
         )}
       </div>
