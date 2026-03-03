@@ -16,7 +16,6 @@ export async function POST(req: Request) {
     const body = await parseBody(req);
     const project_id = String(body.project_id ?? "global").trim();
     const id = String(body.id ?? "").trim();
-
     if (!id) throw new ApiError(400, { error: "Falta id." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
@@ -37,10 +36,8 @@ export async function POST(req: Request) {
 
     if (error) throw new ApiError(400, { error: error.message });
 
-    trace.event({ name: "Command_Cancelled_By_Admin", input: { commandId: id } });
     trace.update({ statusMessage: "SUCCESS" });
     await langfuse.flushAsync();
-
     return json({ ok: true, item: data }, 200);
   } catch (e: any) {
     trace.update({ level: "ERROR", statusMessage: e.message });
