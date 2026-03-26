@@ -2,8 +2,8 @@ import { ApiError, ensureNode, json, parseBody, parseQuery, requireProjectRole, 
 
 export const runtime = "nodejs";
 
-function toLevel(v: any): "info" | "warn" | "error" {
-  const s = String(v ?? "info").trim().toLowerCase();
+function normalizeLevel(input: any): "info" | "warn" | "error" {
+  const s = String(input ?? "info").trim().toLowerCase();
   if (s === "warn" || s === "warning") return "warn";
   if (s === "error" || s === "critical") return "error";
   return "info";
@@ -23,7 +23,8 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(200);
 
-    if (error) throw new ApiError(500, { error: error.message });
+    if (error) throw new ApiError(500, { error: "No pude listar eventos." });
+
     return json({ ok: true, items: data ?? [] });
   } catch (e: any) {
     const ex = toApiError(e);
@@ -37,24 +38,33 @@ export async function POST(req: Request) {
 
     const project_id = String(body.project_id ?? "").trim();
     const node_id = String(body.node_id ?? "").trim();
-    const level = toLevel(body.level);
+    const level = normalizeLevel(body.level);
     const type = String(body.type ?? "manual").trim();
     const message = String(body.message ?? "").trim();
-    const data = body.data && typeof body.data === "object" ? body.data : {};
+    const data = typeof body.data === "object" && body.data !== null ? body.data : {};
 
     if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
     if (!message) throw new ApiError(400, { error: "message requerido." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
+
     if (node_id) await ensureNode(ctx.sb, project_id, node_id);
 
     const { data: row, error } = await ctx.sb
       .from("events")
-      .insert({ project_id, node_id: node_id || null, level, type, message, data })
+      .insert({
+        project_id,
+        node_id: node_id || null,
+        level,
+        type,
+        message,
+        data,
+      })
       .select("id, project_id, node_id, level, type, message, data, created_at")
       .single();
 
-    if (error) throw new ApiError(500, { error: error.message });
+    if (error) throw new ApiError(500, { error: "No pude registrar el evento.", details: error.message });
+
     return json({ ok: true, event: row }, 201);
   } catch (e: any) {
     const ex = toApiError(e);
