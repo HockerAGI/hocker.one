@@ -3,8 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import type { CommandStatus } from "@/lib/types";
-import { useWorkspace } from "@/components/WorkspaceContext";
-import Hint from "@/components/Hint";
+import { defaultProjectId, normalizeProjectId } from "@/lib/project";
 
 type Cmd = {
   id: string;
@@ -16,6 +15,8 @@ type Cmd = {
   created_at: string;
   approved_at: string | null;
   executed_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
   payload: any;
   result: any;
   error: string | null;
@@ -34,7 +35,8 @@ function statusPill(status: string) {
 
 export default function CommandsQueue() {
   const sb = useMemo(() => createBrowserSupabase(), []);
-  const { projectId: pid } = useWorkspace();
+  const [projectId, setProjectId] = useState<string>(defaultProjectId());
+  const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -49,13 +51,13 @@ export default function CommandsQueue() {
     try {
       const { data, error } = await sb
         .from("commands")
-        .select("id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at")
+        .select("id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at, started_at, finished_at")
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
         .limit(80);
 
       if (error) throw error;
-      setItems((data as any) ?? []);
+      setItems((data as Cmd[]) ?? []);
     } catch (e: any) {
       setErr(e?.message ?? "No se pudo cargar la cola.");
     } finally {
@@ -112,20 +114,26 @@ export default function CommandsQueue() {
   }, [items, filterStatus, q]);
 
   return (
-    <div className="hocker-card p-6 space-y-4">
-      <Hint title="Qué estás viendo">
-        Esta es la cola real del proyecto <b>{pid}</b>. Si una acción dice <b>needs_approval</b>, debes aprobarla.
-      </Hint>
-
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="space-y-1">
-          <div className="text-lg font-semibold text-slate-900">Cola de acciones</div>
-          <div className="text-sm text-slate-500">Proyecto activo: <b>{pid}</b></div>
+          <div className="text-lg font-semibold text-slate-900">Orquestador de Comandos</div>
+          <div className="text-sm text-slate-500">Cola, aprobaciones y logs del Automation Fabric.</div>
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <div className="w-full md:w-[220px]">
-            <label className="text-xs font-semibold text-slate-600">Filtrar por estado</label>
+            <label className="text-xs font-semibold text-slate-600">Proyecto</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder="global"
+            />
+          </div>
+
+          <div className="w-full md:w-[220px]">
+            <label className="text-xs font-semibold text-slate-600">Estado</label>
             <select
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
               value={filterStatus}
@@ -137,9 +145,7 @@ export default function CommandsQueue() {
               <option value="running">running</option>
               <option value="done">done</option>
               <option value="error">error</option>
-              <option value="failed">failed</option>
               <option value="canceled">canceled</option>
-              <option value="cancelled">cancelled</option>
             </select>
           </div>
 
@@ -169,7 +175,7 @@ export default function CommandsQueue() {
         {!loading && filtered.length === 0 && <div className="text-sm text-slate-500">No hay comandos en este proyecto.</div>}
 
         {filtered.map((c) => {
-          const canModerate = String(c.status) === "needs_approval";
+          const canModerate = c.status === "needs_approval";
           return (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -203,7 +209,7 @@ export default function CommandsQueue() {
                     disabled={!canModerate}
                     className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
                   >
-                    Aprobar
+                    Aprobar AGI
                   </button>
                   <button
                     onClick={() => reject(c.id)}
@@ -216,14 +222,14 @@ export default function CommandsQueue() {
               </div>
 
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-700">Ver datos</summary>
+                <summary className="cursor-pointer text-sm font-semibold text-slate-700">Ver Datos y Resultados (Syntia)</summary>
                 <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-bold text-slate-600">Payload</div>
+                    <div className="mb-1 text-xs font-bold text-slate-600">Payload Entrada</div>
                     <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.payload ?? null, null, 2)}</pre>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-bold text-slate-600">Resultado</div>
+                    <div className="mb-1 text-xs font-bold text-slate-600">Resultados de Salida</div>
                     <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.result ?? null, null, 2)}</pre>
                   </div>
                 </div>
