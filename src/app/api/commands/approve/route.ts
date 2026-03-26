@@ -1,6 +1,6 @@
 import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
+import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
-import { dispatchCloudCommands, isCloudNode } from "../_cloud";
 
 export const runtime = "nodejs";
 
@@ -17,14 +17,20 @@ export async function POST(req: Request) {
     const body = await parseBody(req);
     const project_id = String(body.project_id ?? "global").trim();
     const id = String(body.id ?? "").trim();
+
     if (!id) throw new ApiError(400, { error: "Falta id." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user?.id || "admin", tags: [project_id, "approval"] });
 
     const controls = await getControls(ctx.sb, ctx.project_id);
-    if (controls.kill_switch) throw new ApiError(423, { error: "Kill Switch ON. No se puede aprobar." });
-    if (!controls.allow_write) throw new ApiError(423, { error: "allow_write OFF. No se puede aprobar en modo lectura." });
+    if (controls.kill_switch) {
+      throw new ApiError(423, { error: "VERTX SECURITY: Kill Switch ON. No se pueden aprobar acciones." });
+    }
+
+    if (!controls.allow_write) {
+      throw new ApiError(423, { error: "Modo lectura activo. No se pueden aprobar acciones." });
+    }
 
     const { data: cmd, error: cmdErr } = await ctx.sb
       .from("commands")
@@ -52,19 +58,29 @@ export async function POST(req: Request) {
 
     if (error) throw new ApiError(400, { error: error.message });
 
-    // Si es cloud, intenta ejecutar ya
-    let cloudDispatch: any = null;
-    if (isCloudNode(data.node_id)) {
+    const isCloudNode = data.node_id.startsWith("cloud-") || data.node_id === "hocker-fabric" || data.node_id.startsWith("trigger-");
+
+    if (isCloudNode) {
       try {
-        cloudDispatch = await dispatchCloudCommands(ctx.project_id, 10);
-      } catch (e: any) {
-        cloudDispatch = { dispatched: 0, error: String(e?.message || e) };
+        await tasks.trigger("hocker-core-executor", {
+          commandId: data.id,
+          nodeId: data.node_id,
+          command: data.command,
+          payload: data.payload,
+          projectId: ctx.project_id,
+        });
+        trace.event({ name: "TriggerDev_Dispatched_After_Approval", input: { id: data.id } });
+      } catch (triggerError: any) {
+        trace.event({ name: "TriggerDev_Fallback", level: "WARNING", statusMessage: triggerError.message });
       }
+    } else {
+      trace.event({ name: "PhysicalNode_Approved_And_Queued", input: { id: data.id, node_id: data.node_id } });
     }
 
     trace.update({ statusMessage: "SUCCESS" });
     await langfuse.flushAsync();
-    return json({ ok: true, item: data, cloud: cloudDispatch }, 200);
+
+    return json({ ok: true, item: data }, 200);
   } catch (e: any) {
     trace.update({ level: "ERROR", statusMessage: e.message });
     await langfuse.flushAsync();
