@@ -1,5 +1,3 @@
-cd ~/HOCKER_EMPIRE/hocker.one
-
 cat > src/app/api/supply/orders/[id]/route.ts <<'EOF'
 import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 import { Langfuse } from "langfuse-node";
@@ -12,11 +10,9 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-type Params = Promise<{ id: string }>;
-
-export async function GET(req: Request, { params }: { params: Params }) {
+export async function GET(req: Request, context: any) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const url = new URL(req.url);
     const project_id = String(url.searchParams.get("project_id") || "global").trim();
 
@@ -39,8 +35,8 @@ export async function GET(req: Request, { params }: { params: Params }) {
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: Params }) {
-  const { id } = await params;
+export async function PATCH(req: Request, context: any) {
+  const { id } = await context.params;
   const trace = langfuse.trace({ name: "Supply_Order_Update", metadata: { orderId: id } });
 
   try {
