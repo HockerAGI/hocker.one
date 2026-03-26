@@ -1,3 +1,4 @@
+cat > src/app/api/supply/products/[id]/route.ts <<'EOF'
 import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 import { Langfuse } from "langfuse-node";
 
@@ -9,9 +10,11 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+type Params = Promise<{ id: string }>;
+
+export async function GET(req: Request, { params }: { params: Params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const url = new URL(req.url);
     const project_id = String(url.searchParams.get("project_id") || "global").trim();
 
@@ -34,10 +37,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const trace = langfuse.trace({ name: "Supply_Product_Update", metadata: { productId: params.id } });
+export async function PATCH(req: Request, { params }: { params: Params }) {
+  const { id } = await params;
+  const trace = langfuse.trace({ name: "Supply_Product_Update", metadata: { productId: id } });
+
   try {
-    const { id } = params;
     const body = await parseBody(req);
     const project_id = String(body.project_id ?? "global").trim();
 
@@ -69,3 +73,4 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return json(ex.payload, ex.status);
   }
 }
+EOF
