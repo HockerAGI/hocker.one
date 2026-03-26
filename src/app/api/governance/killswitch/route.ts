@@ -25,19 +25,31 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const trace = langfuse.trace({ name: "Governance_Update", metadata: { module: "VERTX" } });
+  const trace = langfuse.trace({ name: "Governance_KillSwitch_Update", metadata: { module: "VERTX" } });
 
   try {
     const body = await parseBody(req);
 
     const project_id = String(body.project_id ?? "").trim();
-    const kill_switch = !!body.kill_switch;
-    const allow_write = !!body.allow_write;
-
     if (!project_id) throw new ApiError(400, { error: "project_id requerido." });
 
     const ctx = await requireProjectRole(project_id, ["owner"]);
-    trace.update({ userId: ctx.user.id, tags: [project_id, "security"] });
+
+    const current = await getControls(ctx.sb, project_id);
+
+    const nextKill =
+      typeof body.kill_switch === "boolean"
+        ? body.kill_switch
+        : String(body.action ?? "").toLowerCase() === "on"
+          ? true
+          : String(body.action ?? "").toLowerCase() === "off"
+            ? false
+            : current.kill_switch;
+
+    const nextAllow =
+      typeof body.allow_write === "boolean"
+        ? body.allow_write
+        : current.allow_write;
 
     const updated_at = new Date().toISOString();
 
@@ -45,11 +57,11 @@ export async function POST(req: Request) {
       {
         id: "global",
         project_id,
-        kill_switch,
-        allow_write,
+        kill_switch: nextKill,
+        allow_write: nextAllow,
         updated_at,
       },
-      { onConflict: "project_id,id" }
+      { onConflict: "id,project_id" }
     );
 
     if (error) throw new ApiError(500, { error: "No pude guardar seguridad.", details: error.message });
@@ -57,20 +69,19 @@ export async function POST(req: Request) {
     await ctx.sb.from("events").insert({
       project_id,
       node_id: null,
-      level: kill_switch ? "warn" : "info",
+      level: nextKill ? "warn" : "info",
       type: "governance.updated",
-      message: `Seguridad actualizada: KillSwitch=${kill_switch ? "ON" : "OFF"}, AllowWrite=${allow_write ? "ON" : "OFF"}`,
-      data: { kill_switch, allow_write, user: ctx.user.id },
+      message: `Seguridad actualizada: KillSwitch=${nextKill ? "ON" : "OFF"}, AllowWrite=${nextAllow ? "ON" : "OFF"}`,
+      data: { kill_switch: nextKill, allow_write: nextAllow, user: ctx.user.id },
     });
 
     trace.event({
       name: "Security_Policy_Changed",
-      level: kill_switch ? "WARNING" : "DEFAULT",
-      input: { kill_switch, allow_write },
+      level: nextKill ? "WARNING" : "DEFAULT",
+      input: { kill_switch: nextKill, allow_write: nextAllow },
     });
 
     const controls = await getControls(ctx.sb, project_id);
-
     trace.update({ statusMessage: "SUCCESS" });
     await langfuse.flushAsync();
 
