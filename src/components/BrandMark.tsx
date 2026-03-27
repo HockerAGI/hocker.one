@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 
 type BrandMarkProps = {
@@ -9,16 +8,31 @@ type BrandMarkProps = {
   showWordmark?: boolean;
 };
 
+const LOGO_CANDIDATES = [
+  "/brand/hocker-one-logo.png",
+  "/brand/hocker-one-logo.svg",
+];
+
 export default function BrandMark({
   compact = false,
   className = "",
   showWordmark = true,
 }: BrandMarkProps) {
+  const [logoIndex, setLogoIndex] = useState(0);
   const [broken, setBroken] = useState(false);
 
   const size = compact ? 34 : 48;
   const outer = compact ? 42 : 58;
-  const logoSrc = "/brand/hocker-one-logo.png";
+  const logoSrc = LOGO_CANDIDATES[logoIndex] ?? LOGO_CANDIDATES[LOGO_CANDIDATES.length - 1];
+
+  function handleLogoError() {
+    setLogoIndex((i) => {
+      const next = i + 1;
+      if (next < LOGO_CANDIDATES.length) return next;
+      setBroken(true);
+      return i;
+    });
+  }
 
   return (
     <div
@@ -45,14 +59,15 @@ export default function BrandMark({
         }}
       >
         {!broken ? (
-          <Image
+          <img
             src={logoSrc}
             alt="Hocker ONE"
             width={size}
             height={size}
-            priority
-            onError={() => setBroken(true)}
-            style={{ objectFit: "contain" }}
+            loading={compact ? "lazy" : "eager"}
+            decoding="async"
+            onError={handleLogoError}
+            style={{ objectFit: "contain", display: "block" }}
           />
         ) : (
           <div
