@@ -1,22 +1,32 @@
-{
-  "name": "Hocker ONE Matrix",
-  "short_name": "Hocker ONE",
-  "description": "Control Plane y Soberanía AOSP",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0b0f13",
-  "theme_color": "#0b0f13",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+const PROTECTED_PATHS = ["/dashboard", "/chat", "/commands", "/nodes", "/agis", "/supply", "/governance"];
+function isProtected(pathname: string) {
+  return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
+export async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  if (!url || !anon) return NextResponse.next();
+  const res = NextResponse.next();
+  const supabase = createServerClient(url, anon, {
+    cookies: {
+      getAll: () => req.cookies.getAll(),
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          res.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+  const { data } = await supabase.auth.getUser();
+  if (isProtected(pathname) && !data.user) {
+    const redirect = NextResponse.redirect(new URL("/", req.url));
+    return redirect;
+  }
+  return res;
+}
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
