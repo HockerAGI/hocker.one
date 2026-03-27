@@ -16,8 +16,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hocker ONE - Control Plane",
-  description: "Matriz de Automatización y Soberanía AOSP",
+  title: {
+    default: "Hocker ONE",
+    template: "%s | Hocker ONE",
+  },
+  description: "Control Plane oficial del ecosistema HOCKER.",
+  metadataBase: new URL("https://hocker.one"),
+  openGraph: {
+    title: "Hocker ONE",
+    description: "Control Plane oficial del ecosistema HOCKER.",
+    url: "https://hocker.one",
+    siteName: "Hocker ONE",
+    locale: "es_MX",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hocker ONE",
+    description: "Control Plane oficial del ecosistema HOCKER.",
+  },
   verification: {
     other: {
       "facebook-domain-verification": "fi8sfczfunadjl5tih4iuaht0o2y7s",
@@ -49,7 +66,9 @@ export default function RootLayout({
         </Script>
       </head>
 
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-50 text-slate-900`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-50 text-slate-900`}
+      >
         <noscript>
           <img
             height="1"
