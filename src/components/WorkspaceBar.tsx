@@ -9,7 +9,7 @@ export default function WorkspaceBar() {
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
           <span className="text-xs font-semibold text-slate-600">Proyecto</span>
           <input
             value={projectId}
@@ -19,7 +19,7 @@ export default function WorkspaceBar() {
           />
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
           <span className="text-xs font-semibold text-slate-600">Nodo</span>
           <input
             value={nodeId}
@@ -32,7 +32,7 @@ export default function WorkspaceBar() {
         <button
           type="button"
           onClick={reset}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           title="Reset"
         >
           Reset
@@ -42,8 +42,10 @@ export default function WorkspaceBar() {
       <button
         type="button"
         onClick={() => setTutorial(!tutorial)}
-        className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-          tutorial ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        className={`rounded-2xl px-3 py-2 text-sm font-semibold shadow-sm ${
+          tutorial
+            ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white"
+            : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
         }`}
         title="Ayudas dentro de pantallas"
       >
