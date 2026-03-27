@@ -1,4 +1,3 @@
-cat > src/app/api/supply/orders/[id]/route.ts <<'EOF'
 import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 import { Langfuse } from "langfuse-node";
 
@@ -10,7 +9,7 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-export async function GET(req: Request, context: any) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const url = new URL(req.url);
@@ -35,7 +34,7 @@ export async function GET(req: Request, context: any) {
   }
 }
 
-export async function PATCH(req: Request, context: any) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const trace = langfuse.trace({ name: "Supply_Order_Update", metadata: { orderId: id } });
 
@@ -65,10 +64,9 @@ export async function PATCH(req: Request, context: any) {
 
     return json({ ok: true, item: data });
   } catch (e: any) {
-    trace.update({ level: "ERROR", statusMessage: e.message });
+    trace.event({ name: "ERROR", input: { error: e.message } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
   }
 }
-EOF
