@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import PwaRegister from "@/components/PwaRegister";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import "./globals.css";
@@ -20,11 +19,13 @@ export const metadata: Metadata = {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
   },
-  description: "Control Plane oficial del ecosistema HOCKER.",
+  description:
+    "Hocker ONE es el centro privado de control para dirigir tu ecosistema con claridad, orden y una experiencia premium.",
   metadataBase: new URL("https://hocker.one"),
   openGraph: {
     title: "Hocker ONE",
-    description: "Control Plane oficial del ecosistema HOCKER.",
+    description:
+      "Centro privado de control para dirigir tu ecosistema con claridad, orden y una experiencia premium.",
     url: "https://hocker.one",
     siteName: "Hocker ONE",
     locale: "es_MX",
@@ -33,12 +34,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Hocker ONE",
-    description: "Control Plane oficial del ecosistema HOCKER.",
-  },
-  verification: {
-    other: {
-      "facebook-domain-verification": "fi8sfczfunadjl5tih4iuaht0o2y7s",
-    },
+    description:
+      "Centro privado de control para dirigir tu ecosistema con claridad, orden y una experiencia premium.",
   },
 };
 
@@ -49,35 +46,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <head>
-        <Script id="facebook-pixel" strategy="afterInteractive">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '1240482040966982');
-            fbq('track', 'PageView');
-          `}
-        </Script>
-      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-50 text-slate-900`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-slate-950 text-slate-100`}
       >
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1240482040966982&ev=PageView&noscript=1"
-            alt="Facebook Pixel"
-          />
-        </noscript>
-
         <PwaRegister />
         <WorkspaceProvider>{children}</WorkspaceProvider>
       </body>
