@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const sb = createServerSupabase();
+    const sb = await createServerSupabase();
     // Verificamos conexión básica a base de datos
     const { error } = await sb.from("nodes").select("id").limit(1);
     

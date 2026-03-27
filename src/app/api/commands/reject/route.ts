@@ -38,12 +38,12 @@ export async function POST(req: Request) {
     if (error) throw new ApiError(400, { error: error.message });
 
     trace.event({ name: "Command_Cancelled_By_Admin", input: { commandId: id } });
-    trace.update({ statusMessage: "SUCCESS" });
+    trace.event({ name: "SUCCESS" });
     await langfuse.flushAsync();
 
     return json({ ok: true, item: data }, 200);
   } catch (e: any) {
-    trace.update({ level: "ERROR", statusMessage: e.message });
+    trace.event({ name: "ERROR", input: { error: e.message } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);

@@ -119,4 +119,4 @@ export type SupplyOrderRow = {
   created_at: string;
   updated_at: string;
   items?: SupplyOrderItemRow[];
-};
+};export type Role = ProjectRole;

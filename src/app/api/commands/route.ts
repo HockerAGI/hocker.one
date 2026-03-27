@@ -36,12 +36,12 @@ export async function GET(req: Request) {
     const { data, error } = await query;
     if (error) throw new ApiError(400, { error: error.message });
 
-    trace.update({ statusMessage: "SUCCESS" });
+    trace.event({ name: "SUCCESS" });
     await langfuse.flushAsync();
 
     return json({ ok: true, items: data ?? [] }, 200);
   } catch (e: any) {
-    trace.update({ level: "ERROR", statusMessage: e.message });
+    trace.event({ name: "ERROR", input: { error: e.message } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);
@@ -108,19 +108,19 @@ export async function POST(req: Request) {
           });
           trace.event({ name: "TriggerDev_Dispatched", input: { id, command } });
         } catch (triggerError: any) {
-          trace.event({ name: "TriggerDev_Fallback", level: "WARNING", statusMessage: triggerError.message });
+          trace.event({ name: "TriggerDev_Fallback", input: { error: triggerError.message } });
         }
       } else {
         trace.event({ name: "PhysicalNode_Queued", input: { id, node_id } });
       }
     }
 
-    trace.update({ statusMessage: "SUCCESS" });
+    trace.event({ name: "SUCCESS" });
     await langfuse.flushAsync();
 
     return json({ ok: true, item: data }, 201);
   } catch (e: any) {
-    trace.update({ level: "ERROR", statusMessage: e.message });
+    trace.event({ name: "ERROR", input: { error: e.message } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);

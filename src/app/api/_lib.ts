@@ -37,14 +37,14 @@ export function parseQuery(req: Request) {
 }
 
 export type AuthCtx = {
-  sb: ReturnType<typeof createServerSupabase>;
+  sb: Awaited<ReturnType<typeof createServerSupabase>>;
   user: { id: string; email?: string | null };
   project_id: string;
   role: Role;
 };
 
 export async function requireProjectRole(project_id: string, allowed: Role[]): Promise<AuthCtx> {
-  const sb = createServerSupabase();
+  const sb = await createServerSupabase();
 
   const { data: u, error: uerr } = await sb.auth.getUser();
   if (uerr || !u?.user) throw new ApiError(401, { error: "No autorizado. Inicia sesión." });

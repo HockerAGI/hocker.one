@@ -82,12 +82,12 @@ export async function POST(req: Request) {
     });
 
     const controls = await getControls(ctx.sb, project_id);
-    trace.update({ statusMessage: "SUCCESS" });
+    trace.event({ name: "SUCCESS" });
     await langfuse.flushAsync();
 
     return json({ ok: true, controls });
   } catch (e: any) {
-    trace.update({ level: "ERROR", statusMessage: e.message });
+    trace.event({ name: "ERROR", input: { error: e.message } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);

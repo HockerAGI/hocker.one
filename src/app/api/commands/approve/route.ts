@@ -71,18 +71,18 @@ export async function POST(req: Request) {
         });
         trace.event({ name: "TriggerDev_Dispatched_After_Approval", input: { id: data.id } });
       } catch (triggerError: any) {
-        trace.event({ name: "TriggerDev_Fallback", level: "WARNING", statusMessage: triggerError.message });
+        trace.event({ name: "TriggerDev_Fallback", input: { error: triggerError.message } });
       }
     } else {
       trace.event({ name: "PhysicalNode_Approved_And_Queued", input: { id: data.id, node_id: data.node_id } });
     }
 
-    trace.update({ statusMessage: "SUCCESS" });
+    trace.event({ name: "SUCCESS" });
     await langfuse.flushAsync();
 
     return json({ ok: true, item: data }, 200);
   } catch (e: any) {
-    trace.update({ level: "ERROR", statusMessage: e.message });
+    trace.event({ name: "ERROR", input: { error: e.message } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);

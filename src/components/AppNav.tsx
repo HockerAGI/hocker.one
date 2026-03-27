@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactElement } from "react";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import NodeBadge from "@/components/NodeBadge";
-import WorkspaceBar from "@/components/WorkspaceBar";
 
 type NavItem = {
   href: string;
   label: string;
   desc: string;
-  icon: (props: { className?: string }) => JSX.Element;
+  icon: (props: { className?: string }) => ReactElement;
 };
 
 function IconGrid({ className }: { className?: string }) {
@@ -143,6 +143,15 @@ export default function AppNav() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="hidden md:inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              title="Volver"
+            >
+              Volver
+            </button>
+
             <form action="/signout" method="post" className="hidden md:block">
               <button
                 type="submit"
@@ -168,18 +177,11 @@ export default function AppNav() {
           </div>
         </div>
 
-        <div className="mt-3 hidden md:block">
-          <WorkspaceBar />
-        </div>
-
         {open && (
-          <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 lg:hidden">
+          <div className="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 lg:hidden">
             <div className="md:hidden">
               <NodeBadge />
             </div>
-
-            <WorkspaceBar compact />
-
             <div className="grid grid-cols-2 gap-2">
               {ITEMS.map((it) => {
                 const isActive = active === it.href;
@@ -201,11 +203,23 @@ export default function AppNav() {
               })}
             </div>
 
-            <form action="/signout" method="post">
-              <button type="submit" className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-                Salir
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => window.history.back()}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Volver
               </button>
-            </form>
+              <form action="/signout" method="post" className="w-full">
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Salir
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
