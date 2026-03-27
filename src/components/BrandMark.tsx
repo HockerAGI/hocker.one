@@ -35,13 +35,13 @@ export default function BrandMark({
           height: outer,
           borderRadius: 18,
           background:
-            "linear-gradient(145deg, rgba(34,211,238,.26), rgba(59,130,246,.18))",
+            "linear-gradient(145deg, rgba(14,165,233,.18), rgba(37,99,235,.12))",
           border: "1px solid rgba(148,163,184,.22)",
-          boxShadow: "0 18px 36px rgba(2,6,23,.35), inset 0 1px 0 rgba(255,255,255,.1)",
+          boxShadow:
+            "0 18px 36px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.65)",
           display: "grid",
           placeItems: "center",
           overflow: "hidden",
-          backdropFilter: "blur(10px)",
         }}
       >
         {!broken ? (
@@ -62,8 +62,7 @@ export default function BrandMark({
               borderRadius: 16,
               display: "grid",
               placeItems: "center",
-              background:
-                "linear-gradient(180deg, rgba(2,132,199,.85), rgba(29,78,216,.95))",
+              background: "linear-gradient(180deg, #0ea5ff, #2563eb)",
               color: "#fff",
               fontWeight: 900,
               fontSize: compact ? 18 : 22,
@@ -83,7 +82,7 @@ export default function BrandMark({
               fontSize: compact ? 20 : 28,
               fontWeight: 900,
               letterSpacing: "-0.05em",
-              color: "#f8fafc",
+              color: "#0f172a",
             }}
           >
             Hocker
@@ -93,7 +92,7 @@ export default function BrandMark({
               fontSize: compact ? 16 : 22,
               fontWeight: 900,
               letterSpacing: "-0.05em",
-              background: "linear-gradient(90deg, #38bdf8, #2563eb)",
+              background: "linear-gradient(90deg, #0ea5ff, #2563eb)",
               WebkitBackgroundClip: "text",
               color: "transparent",
             }}
