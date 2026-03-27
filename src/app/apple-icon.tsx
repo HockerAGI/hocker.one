@@ -43,8 +43,7 @@ export default function AppleIcon() {
               lineHeight: 1,
               color: "#ffffff",
               transform: "translateY(-3px)",
-              fontFamily:
-                'Inter, "Segoe UI", Arial, Helvetica, sans-serif',
+              fontFamily: 'Inter, "Segoe UI", Arial, Helvetica, sans-serif',
             }}
           >
             h
