@@ -49,8 +49,7 @@ export default function NodeBadge() {
     load();
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, nodeId]);
+  }, [projectId, nodeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!node) {
     return (
@@ -62,7 +61,8 @@ export default function NodeBadge() {
   }
 
   const status = String(node.status || "").toLowerCase();
-  const isCloud = node.id === "hocker-fabric" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
+  const isCloud =
+    node.id === "hocker-fabric" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
   const ok = isCloud || status === "online";
 
   const cls = isCloud
