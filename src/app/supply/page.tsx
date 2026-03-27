@@ -1,7 +1,6 @@
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 import Link from "next/link";
-
 const supply = [
   {
     title: "Catálogo",
@@ -20,14 +19,12 @@ const supply = [
     desc: "Movimiento interno y entrega.",
   },
 ];
-
 const missing = [
   "Productos reales cargados",
   "Órdenes activas sincronizadas",
   "Inventario visible por proyecto",
   "Flujo de logística conectado",
 ];
-
 export default function SupplyPage() {
   return (
     <PageShell
@@ -47,7 +44,6 @@ export default function SupplyPage() {
           Aquí se concentra la estructura comercial y operativa para que cada entrega tenga
           trazabilidad y orden.
         </Hint>
-
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {supply.map((item) => (
             <div key={item.title} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -56,7 +52,6 @@ export default function SupplyPage() {
             </div>
           ))}
         </section>
-
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
             Faltante por conectar
@@ -64,7 +59,6 @@ export default function SupplyPage() {
           <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
             Para dejarlo completo
           </h2>
-
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {missing.map((text) => (
               <div
