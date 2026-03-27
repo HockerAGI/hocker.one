@@ -1,18 +1,57 @@
+import { ImageResponse } from "next/og";
+
+export const runtime = "edge";
+export const size = {
+  width: 512,
+  height: 512,
+};
+export const contentType = "image/png";
+
 export default function Icon() {
-  return (
-    <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#2563eb" />
-        </linearGradient>
-      </defs>
-      <rect width="128" height="128" rx="28" fill="#020617" />
-      <rect x="18" y="18" width="92" height="92" rx="24" fill="url(#g)" />
-      <path
-        d="M44 83V45c0-6.6 5.4-12 12-12h6c10.5 0 19 8.5 19 19s-8.5 19-19 19h-8v12H44Zm12-24h7c4 0 7-3.2 7-7.1 0-4-3.1-7.2-7-7.2h-7V59Z"
-        fill="white"
-      />
-    </svg>
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background:
+            "radial-gradient(circle at 30% 25%, rgba(56,189,248,.28), transparent 28%), linear-gradient(180deg, #020617 0%, #0f172a 100%)",
+        }}
+      >
+        <div
+          style={{
+            width: "82%",
+            height: "82%",
+            borderRadius: "28%",
+            background:
+              "linear-gradient(145deg, #22d3ee 0%, #38bdf8 26%, #2563eb 58%, #1d4ed8 100%)",
+            boxShadow:
+              "inset 0 0 0 1px rgba(255,255,255,.18), 0 28px 56px rgba(0,0,0,.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 300,
+              fontWeight: 900,
+              letterSpacing: "-0.08em",
+              lineHeight: 1,
+              color: "#ffffff",
+              transform: "translateY(-8px)",
+              fontFamily:
+                'Inter, "Segoe UI", Arial, Helvetica, sans-serif',
+            }}
+          >
+            h
+          </div>
+        </div>
+      </div>
+    ),
+    size
   );
 }
