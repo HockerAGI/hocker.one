@@ -1,14 +1,14 @@
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
+import SystemStatus from "@/components/SystemStatus";
+import EventsFeed from "@/components/EventsFeed";
 import Link from "next/link";
-
 const stats = [
   { label: "Estado general", value: "Activo", desc: "Visión privada del ecosistema" },
   { label: "Asistente central", value: "Listo", desc: "Entrada a NOVA" },
   { label: "Nodos", value: "Conectables", desc: "Control distribuido" },
   { label: "Operación", value: "Ordenada", desc: "Flujo unificado" },
 ];
-
 const areas = [
   {
     title: "Dirección",
@@ -35,7 +35,6 @@ const areas = [
     desc: "Mantener una experiencia premium, sólida y fácil de reconocer.",
   },
 ];
-
 export default function DashboardPage() {
   return (
     <PageShell
@@ -57,7 +56,8 @@ export default function DashboardPage() {
           Esta versión muestra la base de tu ecosistema de forma privada y ordenada. Lo que ya
           está disponible aparece listo; lo que falta se muestra claramente como pendiente.
         </Hint>
-
+        <SystemStatus />
+        <EventsFeed />
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((item) => (
             <div
@@ -74,7 +74,6 @@ export default function DashboardPage() {
             </div>
           ))}
         </section>
-
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {areas.map((item) => (
             <div
@@ -86,7 +85,6 @@ export default function DashboardPage() {
             </div>
           ))}
         </section>
-
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -101,7 +99,6 @@ export default function DashboardPage() {
               Ver seguridad →
             </Link>
           </div>
-
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[
               "Asistente central en vivo",
