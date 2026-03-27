@@ -1,46 +1,30 @@
 import Link from "next/link";
-import AppNav from "@/components/AppNav";
 import AuthBox from "@/components/AuthBox";
 import BrandMark from "@/components/BrandMark";
 
 const modules = [
-  {
-    title: "Dashboard",
-    desc: "Telemetría, seguridad, nodos y eventos en una sola vista.",
-  },
-  {
-    title: "Chat NOVA",
-    desc: "Entrada operativa con la IA central del ecosistema.",
-  },
-  {
-    title: "Commands",
-    desc: "Cola de acciones, aprobaciones y ejecución controlada.",
-  },
-  {
-    title: "Nodes",
-    desc: "Visibilidad de nodos físicos y agentes cloud.",
-  },
-  {
-    title: "AGIs",
-    desc: "Jerarquía de inteligencias y perfiles operativos.",
-  },
-  {
-    title: "Supply",
-    desc: "Productos, órdenes y operación interna.",
-  },
+  { title: "Dashboard", desc: "Telemetría, seguridad, nodos y eventos en una sola vista." },
+  { title: "Chat NOVA", desc: "Entrada operativa con la IA central del ecosistema." },
+  { title: "Commands", desc: "Cola de acciones, aprobaciones y ejecución controlada." },
+  { title: "Nodes", desc: "Visibilidad de nodos físicos y agentes cloud." },
+  { title: "AGIs", desc: "Jerarquía de inteligencias y perfiles operativos." },
+  { title: "Supply", desc: "Productos, órdenes y operación interna." },
 ];
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(37,99,235,.10),transparent_26%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] text-slate-900">
-      <AppNav />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(37,99,235,.10),transparent_26%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          <BrandMark />
+          <div className="hidden md:flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
+            Control plane real · Supabase · Vercel · NOVA
+          </div>
+        </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_.9fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-xl shadow-slate-900/5 backdrop-blur">
-            <BrandMark />
-
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.24em] text-sky-700">
+        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_.9fr]">
+          <div className="rounded-[32px] border border-slate-200 bg-white/80 p-8 shadow-xl shadow-slate-900/5 backdrop-blur">
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black uppercase tracking-[0.24em] text-sky-700">
               HOCKER ONE · Control Plane
             </div>
 
@@ -79,10 +63,7 @@ export default function HomePage() {
                 ["NOVA", "Orquestación"],
                 ["HMAC", "Zero-trust"],
               ].map(([title, desc]) => (
-                <div
-                  key={title}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                >
+                <div key={title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-sm font-extrabold text-slate-900">{title}</div>
                   <div className="mt-1 text-xs text-slate-500">{desc}</div>
                 </div>
@@ -90,7 +71,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5">
             <div className="mb-5">
               <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
                 Acceso
@@ -113,7 +94,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5">
+        <section className="mt-6 rounded-[32px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
@@ -130,10 +111,7 @@ export default function HomePage() {
 
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {modules.map((m) => (
-              <div
-                key={m.title}
-                className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-              >
+              <div key={m.title} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                 <div className="text-base font-extrabold text-slate-950">{m.title}</div>
                 <div className="mt-2 text-sm leading-6 text-slate-600">{m.desc}</div>
               </div>
