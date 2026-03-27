@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
 import BrandMark from "@/components/BrandMark";
+import InteractiveBackground from "@/components/InteractiveBackground";
 
 export default function PageShell({
   title,
@@ -15,10 +16,11 @@ export default function PageShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(37,99,235,.08),transparent_26%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(37,99,235,.08),transparent_26%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] text-slate-900">
+      <InteractiveBackground />
       <AppNav />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-[28px] border border-slate-200 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
