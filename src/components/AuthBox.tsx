@@ -14,6 +14,7 @@ export default function AuthBox() {
 
   useEffect(() => {
     let alive = true;
+
     supabase.auth.getUser().then(({ data }) => {
       if (!alive) return;
       setUserEmail(data.user?.email ?? null);
