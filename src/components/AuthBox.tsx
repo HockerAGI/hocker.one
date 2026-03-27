@@ -20,7 +20,7 @@ export default function AuthBox() {
       setUserEmail(data.user?.email ?? null);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user?.email ?? null);
     });
 
@@ -33,16 +33,20 @@ export default function AuthBox() {
   async function sendLink() {
     setError(null);
     setLoading(true);
+
     try {
       const origin = window.location.origin;
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${origin}/auth/callback` },
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+        },
       });
+
       if (error) throw error;
       setSent(true);
     } catch (e: any) {
-      setError(e?.message ?? "Error enviando link");
+      setError(e?.message ?? "No se pudo enviar el enlace.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +75,7 @@ export default function AuthBox() {
           className="mt-4 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           onClick={signOut}
         >
-          Salir
+          Cerrar sesión
         </button>
       </div>
     );
@@ -83,20 +87,20 @@ export default function AuthBox() {
         <BrandMark compact showWordmark={false} />
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Acceso seguro
+            Acceso privado
           </div>
-          <div className="mt-1 text-sm font-semibold text-slate-900">Login por correo</div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">Entrar con enlace</div>
         </div>
       </div>
 
       <p className="mt-3 text-sm text-slate-600">
-        Te mando un enlace mágico. Sin contraseñas. Sin fricción.
+        Recibe un enlace en tu correo y entra de forma directa y segura.
       </p>
 
       <div className="mt-4 space-y-3">
         <input
           className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-          placeholder="tu correo"
+          placeholder="Tu correo"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -118,7 +122,7 @@ export default function AuthBox() {
           onClick={sendLink}
           disabled={loading || !email.trim()}
         >
-          {loading ? "Enviando…" : "Enviar link"}
+          {loading ? "Enviando…" : "Enviar enlace"}
         </button>
       </div>
     </div>
