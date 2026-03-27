@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import Hint from "@/components/Hint";
+import VoiceInput from "@/components/VoiceInput";
 
 type Msg = {
   role: "user" | "assistant";
@@ -21,7 +22,7 @@ export default function NovaChat() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [msgs]);
 
-  async function send(e?: React.FormEvent) {
+  async function send(e?: FormEvent) {
     if (e) e.preventDefault();
     if (!text.trim() || loading) return;
 
@@ -121,14 +122,17 @@ export default function NovaChat() {
         </div>
 
         <div className="border-t border-slate-200 bg-white p-4">
-          <form onSubmit={send} className="flex gap-2">
-            <input
-              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none transition-colors focus:border-blue-500 focus:bg-white"
-              placeholder="Escribe tu instrucción para NOVA..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={loading}
-            />
+          <form onSubmit={send} className="flex flex-col gap-2 md:flex-row">
+            <div className="flex flex-1 gap-2">
+              <input
+                className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none transition-colors focus:border-blue-500 focus:bg-white"
+                placeholder="Escribe tu instrucción para NOVA..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                disabled={loading}
+              />
+              <VoiceInput onText={setText} disabled={loading} />
+            </div>
             <button
               type="submit"
               disabled={loading || !text.trim()}
