@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 type Props = {
   onText: (t: string) => void;
@@ -8,11 +8,13 @@ type Props = {
 };
 
 export default function VoiceInput({ onText, disabled }: Props) {
-  const SpeechRecognition = useMemo(() => {
-    return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  }, []);
-
+  const [SpeechRecognition, setSpeechRecognition] = useState<any>(null);
   const [listening, setListening] = useState(false);
+
+  useEffect(() => {
+    const api = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+    setSpeechRecognition(() => api);
+  }, []);
 
   async function start() {
     if (disabled) return;
