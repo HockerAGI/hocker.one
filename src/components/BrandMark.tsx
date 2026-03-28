@@ -8,9 +8,14 @@ type BrandMarkProps = {
   showWordmark?: boolean;
 };
 
-const LOGO_CANDIDATES = [
+const FULL_LOGO_CANDIDATES = [
   "/brand/hocker-one-logo.png",
   "/brand/hocker-one-logo.svg",
+];
+
+const ISOTYPE_CANDIDATES = [
+  "/brand/hocker-one-isotype.png",
+  "/brand/hocker-one-isotype.svg",
 ];
 
 export default function BrandMark({
@@ -18,17 +23,32 @@ export default function BrandMark({
   className = "",
   showWordmark = true,
 }: BrandMarkProps) {
-  const [logoIndex, setLogoIndex] = useState(0);
+  const [fullIndex, setFullIndex] = useState(0);
+  const [isoIndex, setIsoIndex] = useState(0);
   const [broken, setBroken] = useState(false);
 
-  const size = compact ? 34 : 48;
-  const outer = compact ? 42 : 58;
-  const logoSrc = LOGO_CANDIDATES[logoIndex] ?? LOGO_CANDIDATES[LOGO_CANDIDATES.length - 1];
+  const isFullLogo = showWordmark;
+  const candidates = isFullLogo ? FULL_LOGO_CANDIDATES : ISOTYPE_CANDIDATES;
+  const currentIndex = isFullLogo ? fullIndex : isoIndex;
+  const src = candidates[currentIndex] ?? candidates[0];
+
+  const size = compact ? (showWordmark ? 34 : 30) : showWordmark ? 52 : 40;
+  const outer = compact ? (showWordmark ? 46 : 42) : showWordmark ? 68 : 54;
 
   function handleLogoError() {
-    setLogoIndex((i) => {
+    if (isFullLogo) {
+      setFullIndex((i) => {
+        const next = i + 1;
+        if (next < FULL_LOGO_CANDIDATES.length) return next;
+        setBroken(true);
+        return i;
+      });
+      return;
+    }
+
+    setIsoIndex((i) => {
       const next = i + 1;
-      if (next < LOGO_CANDIDATES.length) return next;
+      if (next < ISOTYPE_CANDIDATES.length) return next;
       setBroken(true);
       return i;
     });
@@ -40,7 +60,7 @@ export default function BrandMark({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 12,
+        gap: showWordmark ? 12 : 0,
       }}
     >
       <div
@@ -49,25 +69,32 @@ export default function BrandMark({
           height: outer,
           borderRadius: 18,
           background:
-            "linear-gradient(145deg, rgba(14,165,233,.18), rgba(37,99,235,.12))",
-          border: "1px solid rgba(148,163,184,.22)",
+            "linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.82))",
+          border: "1px solid rgba(15,23,42,.10)",
           boxShadow:
-            "0 18px 36px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.65)",
+            "0 18px 36px rgba(15,23,42,.16), inset 0 1px 0 rgba(255,255,255,.72)",
           display: "grid",
           placeItems: "center",
           overflow: "hidden",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
         }}
       >
         {!broken ? (
           <img
-            src={logoSrc}
+            src={src}
             alt="Hocker ONE"
             width={size}
             height={size}
             loading={compact ? "lazy" : "eager"}
             decoding="async"
             onError={handleLogoError}
-            style={{ objectFit: "contain", display: "block" }}
+            style={{
+              objectFit: "contain",
+              display: "block",
+              width: size,
+              height: size,
+            }}
           />
         ) : (
           <div
@@ -89,33 +116,6 @@ export default function BrandMark({
           </div>
         )}
       </div>
-
-      {showWordmark ? (
-        <div style={{ lineHeight: 0.92 }}>
-          <div
-            style={{
-              fontSize: compact ? 20 : 28,
-              fontWeight: 900,
-              letterSpacing: "-0.05em",
-              color: "#0f172a",
-            }}
-          >
-            Hocker
-          </div>
-          <div
-            style={{
-              fontSize: compact ? 16 : 22,
-              fontWeight: 900,
-              letterSpacing: "-0.05em",
-              background: "linear-gradient(90deg, #0ea5ff, #2563eb)",
-              WebkitBackgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            ONE
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
