@@ -27,16 +27,17 @@ export default function BrandMark({
   const [isoIndex, setIsoIndex] = useState(0);
   const [broken, setBroken] = useState(false);
 
-  const isFullLogo = showWordmark;
-  const candidates = isFullLogo ? FULL_LOGO_CANDIDATES : ISOTYPE_CANDIDATES;
-  const currentIndex = isFullLogo ? fullIndex : isoIndex;
+  const useFullLogo = showWordmark;
+  const candidates = useFullLogo ? FULL_LOGO_CANDIDATES : ISOTYPE_CANDIDATES;
+  const currentIndex = useFullLogo ? fullIndex : isoIndex;
   const src = candidates[currentIndex] ?? candidates[0];
 
-  const size = compact ? (showWordmark ? 34 : 30) : showWordmark ? 52 : 40;
-  const outer = compact ? (showWordmark ? 46 : 42) : showWordmark ? 68 : 54;
+  const logoSize = useFullLogo ? (compact ? 120 : 180) : compact ? 34 : 44;
+  const frameW = useFullLogo ? (compact ? 168 : 236) : compact ? 42 : 58;
+  const frameH = useFullLogo ? (compact ? 56 : 72) : compact ? 42 : 58;
 
   function handleLogoError() {
-    if (isFullLogo) {
+    if (useFullLogo) {
       setFullIndex((i) => {
         const next = i + 1;
         if (next < FULL_LOGO_CANDIDATES.length) return next;
@@ -60,47 +61,54 @@ export default function BrandMark({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: showWordmark ? 12 : 0,
       }}
     >
       <div
         style={{
-          width: outer,
-          height: outer,
-          borderRadius: 18,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.82))",
-          border: "1px solid rgba(15,23,42,.10)",
-          boxShadow:
-            "0 18px 36px rgba(15,23,42,.16), inset 0 1px 0 rgba(255,255,255,.72)",
+          width: frameW,
+          height: frameH,
+          borderRadius: 22,
           display: "grid",
           placeItems: "center",
-          overflow: "hidden",
+          padding: useFullLogo ? (compact ? "8px 14px" : "10px 18px") : 0,
+          background: useFullLogo
+            ? "linear-gradient(180deg, rgba(2,6,23,.18), rgba(2,6,23,.10))"
+            : "linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.82))",
+          border: useFullLogo
+            ? "1px solid rgba(148,163,184,.28)"
+            : "1px solid rgba(15,23,42,.10)",
+          boxShadow: useFullLogo
+            ? "0 18px 40px rgba(2,6,23,.30), inset 0 1px 0 rgba(255,255,255,.10)"
+            : "0 18px 36px rgba(15,23,42,.16), inset 0 1px 0 rgba(255,255,255,.72)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
+          overflow: "hidden",
         }}
       >
         {!broken ? (
           <img
             src={src}
             alt="Hocker ONE"
-            width={size}
-            height={size}
+            width={logoSize}
+            height={logoSize}
             loading={compact ? "lazy" : "eager"}
             decoding="async"
             onError={handleLogoError}
             style={{
               objectFit: "contain",
               display: "block",
-              width: size,
-              height: size,
+              width: logoSize,
+              height: logoSize,
+              filter: useFullLogo
+                ? "drop-shadow(0 10px 18px rgba(0,0,0,.30))"
+                : "drop-shadow(0 8px 12px rgba(0,0,0,.18))",
             }}
           />
         ) : (
           <div
             style={{
-              width: size,
-              height: size,
+              width: useFullLogo ? logoSize : logoSize,
+              height: useFullLogo ? logoSize : logoSize,
               borderRadius: 16,
               display: "grid",
               placeItems: "center",
