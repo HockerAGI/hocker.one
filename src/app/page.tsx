@@ -1,10 +1,13 @@
 export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import AuthBox from "@/components/AuthBox";
 import BrandMark from "@/components/BrandMark";
+
 function has(value: unknown) {
   return Boolean(String(value ?? "").trim());
 }
+
 const readiness = [
   {
     label: "Acceso privado",
@@ -31,6 +34,7 @@ const readiness = [
     pendingText: "Aún por activar el seguimiento de desempeño",
   },
 ];
+
 const pillars = [
   {
     title: "Dirección",
@@ -57,12 +61,14 @@ const pillars = [
     desc: "Una experiencia visual premium, seria y memorable desde el primer clic.",
   },
 ];
+
 const pendingItems = [
   "Asistente central en vivo",
   "Mensajes automáticos para equipos y clientes",
   "Canales externos conectados",
   "Seguimiento unificado de resultados",
 ];
+
 const liveHighlights = [
   {
     title: "Inicio privado",
@@ -81,6 +87,7 @@ const liveHighlights = [
     desc: "Todo lo importante en una sola experiencia.",
   },
 ];
+
 export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#020617] text-slate-100">
@@ -97,44 +104,69 @@ export default function HomePage() {
           }}
         />
       </div>
+
       <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <BrandMark />
+          <div className="flex items-center gap-3">
+            <BrandMark compact showWordmark={false} />
+            <div className="hidden md:block">
+              <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
+                HOCKER ONE
+              </div>
+              <div className="text-sm text-slate-300">
+                Centro privado de control
+              </div>
+            </div>
+          </div>
+
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 backdrop-blur">
             Versión privada · Control total del ecosistema
           </div>
         </header>
-        <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_.95fr]">
-          <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl">
+
+        <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_.95fr]">
+          <div className="rounded-[36px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.24em] text-sky-200">
               Lanzamiento oficial
             </div>
-            <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Tu centro privado para dirigir todo{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
-                HOCKER
-              </span>{" "}
-              desde un solo lugar.
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-              Hocker ONE es la base de mando para organizar tu operación, tu crecimiento y tu
-              comunicación. Esta versión está hecha para ti, para tener el control completo y
-              una visión clara de todo lo que importa.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/dashboard"
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-extrabold text-slate-950 shadow-lg shadow-black/20 transition hover:bg-slate-200"
-              >
-                Entrar al panel
-              </Link>
-              <Link
-                href="/chat"
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
-              >
-                Abrir asistente
-              </Link>
+
+            <div className="mt-6 overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,.18),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(37,99,235,.14),transparent_26%),radial-gradient(circle_at_50%_100%,rgba(14,165,233,.10),transparent_35%),linear-gradient(180deg,rgba(2,6,23,.88),rgba(15,23,42,.56))] p-5 shadow-[0_26px_84px_rgba(0,0,0,.48),0_0_0_1px_rgba(255,255,255,.05),0_0_80px_rgba(56,189,248,.18)] sm:p-7">
+              <div className="flex flex-col items-center justify-center gap-5 text-center">
+                <BrandMark hero showWordmark className="mx-auto" />
+
+                <div className="max-w-3xl">
+                  <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    Tu centro privado para dirigir todo{" "}
+                    <span className="bg-gradient-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
+                      HOCKER
+                    </span>{" "}
+                    desde un solo lugar.
+                  </h1>
+
+                  <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-slate-300">
+                    Hocker ONE es la base de mando para organizar tu operación, tu crecimiento y tu
+                    comunicación. Esta versión está hecha para ti, para tener el control completo y
+                    una visión clara de todo lo que importa.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/dashboard"
+                    className="rounded-2xl bg-white px-5 py-3 text-sm font-extrabold text-slate-950 shadow-lg shadow-black/20 transition hover:bg-slate-200"
+                  >
+                    Entrar al panel
+                  </Link>
+                  <Link
+                    href="/chat"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                  >
+                    Abrir asistente
+                  </Link>
+                </div>
+              </div>
             </div>
+
             <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
               {liveHighlights.map((item) => (
                 <div
@@ -147,7 +179,8 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
+
+          <div className="rounded-[36px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
             <div className="mb-5">
               <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
                 Acceso
@@ -159,13 +192,16 @@ export default function HomePage() {
                 Recibe tu enlace de acceso y entra directo a tu entorno.
               </p>
             </div>
+
             <AuthBox />
+
             <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300">
               Esta versión está preparada para tu uso interno. Más adelante habrá versiones
               específicas para clientes y usuarios según cada servicio.
             </div>
           </div>
         </section>
+
         <section className="mt-6 rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -177,6 +213,7 @@ export default function HomePage() {
               </h3>
             </div>
           </div>
+
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {readiness.map((item) => (
               <div
@@ -206,6 +243,7 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
         <section className="mt-6 rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -220,6 +258,7 @@ export default function HomePage() {
               Una experiencia pensada para ver con claridad, decidir mejor y avanzar con orden.
             </div>
           </div>
+
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {pillars.map((item) => (
               <div
@@ -232,6 +271,7 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
         <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[.95fr_1.05fr]">
           <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
@@ -240,6 +280,7 @@ export default function HomePage() {
             <h3 className="mt-2 text-2xl font-black tracking-tight text-white">
               Presencia, claridad y control
             </h3>
+
             <div className="mt-5 grid gap-3">
               {[
                 "Una marca más sólida y más memorable.",
@@ -256,6 +297,7 @@ export default function HomePage() {
               ))}
             </div>
           </div>
+
           <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
               Aún por activar
@@ -263,6 +305,7 @@ export default function HomePage() {
             <h3 className="mt-2 text-2xl font-black tracking-tight text-white">
               Lo que falta por encender para que quede completo
             </h3>
+
             <div className="mt-5 grid gap-3">
               {pendingItems.map((text) => (
                 <div
@@ -274,6 +317,7 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+
             <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm leading-7 text-slate-300">
               Esta área está pensada para crecer contigo. Primero control total interno; después,
               las versiones de clientes y usuarios por cada servicio.
@@ -281,6 +325,7 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
       <Link
         href="/chat"
         className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/15 px-4 py-3 text-sm font-extrabold text-sky-100 shadow-2xl shadow-sky-500/20 backdrop-blur-xl transition hover:translate-y-[-1px] hover:bg-sky-400/20"
