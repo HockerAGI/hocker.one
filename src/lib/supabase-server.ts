@@ -1,22 +1,20 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+/**
+ * createServerSupabase: El túnel seguro de comunicación entre el servidor y la base de datos.
+ * Optimizada para Next.js 15 con persistencia de estado vía Cookies.
+ */
 export async function createServerSupabase() {
-  const url =
-    (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim();
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
-  const anon =
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "").trim();
-
-  if (!url) {
-    throw new Error("SUPABASE_URL no configurado");
+  if (!url || !anon) {
+    console.error("[NOVA Server] Error Crítico: Credenciales de Supabase no detectadas en el entorno del servidor.");
+    throw new Error("Protocolo de Matriz de Servidor no configurado.");
   }
 
-  if (!anon) {
-    throw new Error("SUPABASE_ANON_KEY no configurado");
-  }
-
-  // ✅ FIX REAL NEXT 15
+  // ✅ Integración asíncrona para Next.js 15
   const cookieStore = await cookies();
 
   return createServerClient(url, anon, {
@@ -27,7 +25,9 @@ export async function createServerSupabase() {
       set(name: string, value: string, options: any) {
         try {
           cookieStore.set({ name, value, ...options });
-        } catch {}
+        } catch (e) {
+          // Es normal que falle en Server Components de lectura, lo manejamos en silencio.
+        }
       },
       remove(name: string, options: any) {
         try {
@@ -37,7 +37,9 @@ export async function createServerSupabase() {
             ...options,
             maxAge: 0,
           });
-        } catch {}
+        } catch (e) {
+          // Silencio administrativo en Server Components.
+        }
       },
     },
   });
