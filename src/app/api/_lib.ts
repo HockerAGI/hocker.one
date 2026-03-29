@@ -69,6 +69,7 @@ export async function requireProjectRole(project_id: string, allowed: Role[]): P
   }
 
   const normalizedProject = normalizeProjectId(project_id);
+
   const { data: member, error } = await sb
     .from("project_members")
     .select("role")
@@ -160,6 +161,7 @@ export async function getControls(sb: any, project_id: string) {
     if (insertErr) {
       throw new ApiError(500, { error: "Error al inicializar el sistema de gobernanza." });
     }
+
     return created;
   }
 
