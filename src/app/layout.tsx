@@ -18,7 +18,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: { default: "Hocker ONE", template: "%s | Hocker ONE" },
-  description: "Sistema de Conciencia Digital Unificada. Control total sobre el ecosistema AGI Technologies.",
+  description:
+    "Sistema de Conciencia Digital Unificada. Control total sobre el ecosistema AGI Technologies.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
