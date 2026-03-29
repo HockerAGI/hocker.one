@@ -39,7 +39,7 @@ export default function NodeBadge() {
         .eq("id", nodeId)
         .maybeSingle();
 
-      setNode((data as any) ?? null);
+      setNode((data as NodeRow) ?? null);
     } catch {
       setNode(null);
     }
@@ -49,12 +49,13 @@ export default function NodeBadge() {
     load();
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
-  }, [projectId, nodeId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, nodeId]);
 
   if (!node) {
     return (
-      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 shadow-sm backdrop-blur-md">
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
         Nodo: Desconectado
       </div>
     );
@@ -65,33 +66,25 @@ export default function NodeBadge() {
     node.id === "hocker-fabric" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
   const ok = isCloud || status === "online";
 
-  // Estilos Ring-Inset de alta gama para la insignia
-  const getBadgeStyle = () => {
-    if (isCloud) return {
-      container: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20",
-      dot: "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"
-    };
-    if (ok) return {
-      container: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
-      dot: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
-    };
-    return {
-      container: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20",
-      dot: "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-    };
-  };
+  const classes = isCloud
+    ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
+    : ok
+      ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+      : "border-rose-400/20 bg-rose-500/10 text-rose-200";
 
-  const style = getBadgeStyle();
+  const dot = isCloud
+    ? "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse"
+    : ok
+      ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
+      : "bg-rose-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]";
 
   return (
     <div
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest shadow-sm transition-all ${style.container}`}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest shadow-sm ${classes}`}
       title={`Última señal: ${relative(node.last_seen_at)}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-      <span className="truncate max-w-[120px]">
-        {isCloud ? "Nube Central" : node.name || "En línea"}
-      </span>
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+      <span className="truncate max-w-[120px]">{isCloud ? "Nube Central" : node.name || "En línea"}</span>
     </div>
   );
 }
