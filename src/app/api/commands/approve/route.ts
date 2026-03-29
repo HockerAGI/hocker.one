@@ -1,10 +1,10 @@
-import { ApiError, ensureNode, getControls, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
+import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
+import { verifyCommandSignature } from "@/lib/security";
 
 export const runtime = "nodejs";
 
-// Inicialización de la Caja Negra (Telemetría de IA)
 const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY || "dummy",
   secretKey: process.env.LANGFUSE_SECRET_KEY || "dummy",
@@ -21,34 +21,49 @@ export async function POST(req: Request) {
 
     if (!id) throw new ApiError(400, { error: "Falta el ID del comando a aprobar." });
 
-    // Validación de autoridad
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user?.id || "admin", tags: [project_id, "approval"] });
 
-    // Escudo de Gobernanza
     const controls = await getControls(ctx.sb, ctx.project_id);
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "BLOQUEO: Kill Switch Activo. Imposible aprobar la orden." });
     }
 
-    if (!controls.allow_write) {
-      throw new ApiError(403, { error: "MODO SEGURO: El panel está en modo de solo lectura." });
-    }
-
-    // Recuperamos el comando intacto de la base de datos
     const { data: cmdData, error: fetchErr } = await ctx.sb
       .from("commands")
       .select("*")
       .eq("id", id)
       .eq("project_id", ctx.project_id)
-      .single();
+      .maybeSingle();
 
-    if (fetchErr || !cmdData) throw new ApiError(404, { error: "Orden no localizada en la memoria." });
+    if (fetchErr || !cmdData) {
+      throw new ApiError(404, { error: "Orden no localizada en la memoria." });
+    }
 
-    // Confirmamos que el nodo objetivo exista
-    await ensureNode(ctx.sb, ctx.project_id, cmdData.node_id);
+    if (cmdData.status !== "needs_approval") {
+      throw new ApiError(409, { error: "La orden ya no está pendiente de aprobación." });
+    }
 
-    // Cambiamos el estado de "Requiere Aprobación" a "En Cola"
+    const secret = String(process.env.COMMAND_HMAC_SECRET || "").trim();
+    if (!secret) {
+      throw new ApiError(500, { error: "Llave HMAC ausente. No se puede validar la orden." });
+    }
+
+    const signatureOk = verifyCommandSignature(
+      secret,
+      cmdData.signature,
+      cmdData.id,
+      cmdData.project_id,
+      cmdData.node_id,
+      cmdData.command,
+      cmdData.payload,
+      cmdData.created_at
+    );
+
+    if (!signatureOk) {
+      throw new ApiError(403, { error: "La firma del comando es inválida. Operación abortada." });
+    }
+
     const { data, error } = await ctx.sb
       .from("commands")
       .update({
@@ -63,8 +78,10 @@ export async function POST(req: Request) {
 
     if (error) throw new ApiError(500, { error: "Falla al registrar la aprobación en la base de datos." });
 
-    // Enrutamiento Inteligente: Nube vs Físico
-    const isCloudNode = data.node_id.startsWith("cloud-") || data.node_id === "hocker-fabric" || data.node_id.startsWith("trigger-");
+    const isCloudNode =
+      String(cmdData.node_id || "").startsWith("cloud-") ||
+      cmdData.node_id === "hocker-fabric" ||
+      String(cmdData.node_id || "").startsWith("trigger-");
 
     if (isCloudNode) {
       try {
@@ -73,21 +90,29 @@ export async function POST(req: Request) {
           nodeId: data.node_id,
           command: data.command,
           payload: data.payload,
-          projectId: ctx.project_id,
+          projectId: data.project_id,
         });
-        trace.event({ name: "Disparo_A_Nube_Exitoso", input: { id: data.id } });
       } catch (triggerError: any) {
-        trace.event({ name: "Falla_TriggerDev", input: { error: triggerError.message } });
-        throw new ApiError(500, { error: `El motor de ejecución remoto falló: ${triggerError.message}` });
+        await ctx.sb
+          .from("commands")
+          .update({
+            status: "error",
+            error: `Fallo al despachar después de aprobar: ${triggerError.message}`,
+            finished_at: new Date().toISOString(),
+          })
+          .eq("project_id", ctx.project_id)
+          .eq("id", id);
+
+        throw new ApiError(500, {
+          error: `La orden fue aprobada, pero el motor remoto falló: ${triggerError.message}`,
+        });
       }
-    } else {
-      // El nodo físico (ej. tu celular) leerá esta cola por su cuenta
-      trace.event({ name: "En_Espera_Nodo_Fisico", input: { id: data.id, node_id: data.node_id } });
     }
 
+    trace.event({ name: "Orden_Aprobada", input: { commandId: id } });
     trace.event({ name: "OPERACION_EXITOSA" });
-    return json({ ok: true, item: data });
 
+    return json({ ok: true, item: data });
   } catch (e: any) {
     const apiErr = toApiError(e);
     trace.event({ name: "ERROR_OPERATIVO", level: "ERROR", output: { error: apiErr.payload } });
