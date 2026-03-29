@@ -53,9 +53,9 @@ export default function NodeBadge() {
 
   if (!node) {
     return (
-      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm">
-        <span className="h-2 w-2 rounded-full bg-slate-300" />
-        Nodo: no detectado
+      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 shadow-sm backdrop-blur-md">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+        Nodo: Desconectado
       </div>
     );
   }
@@ -65,17 +65,33 @@ export default function NodeBadge() {
     node.id === "hocker-fabric" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
   const ok = isCloud || status === "online";
 
-  const cls = isCloud
-    ? "border-blue-200 bg-blue-50 text-blue-800"
-    : ok
-    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-    : "border-red-200 bg-red-50 text-red-800";
+  // Estilos Ring-Inset de alta gama para la insignia
+  const getBadgeStyle = () => {
+    if (isCloud) return {
+      container: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20",
+      dot: "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"
+    };
+    if (ok) return {
+      container: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+      dot: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
+    };
+    return {
+      container: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20",
+      dot: "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+    };
+  };
+
+  const style = getBadgeStyle();
 
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${cls}`}>
-      <span className={`h-2 w-2 rounded-full ${isCloud ? "bg-blue-500" : ok ? "bg-emerald-500" : "bg-red-500"}`} />
-      {isCloud ? "Fabric" : "Nodo"}: {node.name || node.id}
-      <span className="opacity-70">· {relative(node.last_seen_at)}</span>
+    <div
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest shadow-sm transition-all ${style.container}`}
+      title={`Última señal: ${relative(node.last_seen_at)}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+      <span className="truncate max-w-[120px]">
+        {isCloud ? "Nube Central" : node.name || "En línea"}
+      </span>
     </div>
   );
 }
