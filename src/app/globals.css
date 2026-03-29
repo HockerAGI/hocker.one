@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc; /* Fondo base claro */
-  --foreground: #0f172a; /* Texto principal oscuro */
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 html,
@@ -20,6 +20,25 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* ==========================================
+   CLASES ESTRUCTURALES HOCKER (Restauradas y Evolucionadas)
+   Estas clases evitan que AppNav y componentes antiguos se rompan.
+   ========================================== */
+@layer components {
+  .hocker-card {
+    @apply rounded-[24px] border border-slate-200/80 bg-white/80 shadow-sm backdrop-blur-xl;
+  }
+  .hocker-muted {
+    @apply text-sm text-slate-500;
+  }
+  .hocker-kbd {
+    @apply rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-500;
+  }
+  .hocker-glass {
+    @apply border border-slate-200/80 bg-white/60 backdrop-blur-md shadow-sm;
+  }
 }
 
 /* ==========================================
