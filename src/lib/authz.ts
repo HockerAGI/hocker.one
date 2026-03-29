@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/types";
+import { ApiError } from "./_lib"; // Enlace directo a nuestra matriz de errores
 
 const RANK: Record<Role, number> = {
   owner: 4,
@@ -14,19 +15,19 @@ function normalizeRole(role: any): Role | null {
 }
 
 /**
- * requireRole() acepta:
- * - un rol string (ej. "admin")
- * - o un array de roles (ej. ["owner","admin"])
- *
- * Uso típico:
- *   requireRole(userRole, ["owner","admin"])
+ * Protocolo de Autoridad Estricta
  */
 export function requireRole(userRole: any, allowed: Role | Role[]) {
   const ur = normalizeRole(userRole);
   const allowList = Array.isArray(allowed) ? allowed : [allowed];
 
-  if (!ur) throw new Error("No autorizado: rol inválido o ausente.");
-  if (!allowList.includes(ur)) throw new Error("Permisos insuficientes.");
+  if (!ur) {
+    throw new ApiError(401, { error: "ACCESO DENEGADO: No se detectó un rol válido en la sesión." });
+  }
+  
+  if (!allowList.includes(ur)) {
+    throw new ApiError(403, { error: "AUTORIDAD INSUFICIENTE: Tu nivel de acceso no permite esta operación." });
+  }
 
   return ur;
 }
