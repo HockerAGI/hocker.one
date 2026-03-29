@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
 import type { Role } from "@/lib/types";
 
-// Escudo central de manejo de errores
 export class ApiError extends Error {
   status: number;
   payload: any;
@@ -14,14 +14,28 @@ export class ApiError extends Error {
   }
 }
 
-export function json(payload: any, status: number = 200) {
-  return NextResponse.json(payload, { status });
+export function json(payload: any, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
 export function toApiError(e: any) {
   if (e instanceof ApiError) return e;
-  const msg = typeof e?.message === "string" ? e.message : "Error interno en la matriz.";
-  return new ApiError(500, { error: msg });
+  const status = typeof e?.status === "number" ? e.status : 500;
+  const msg =
+    typeof e?.message === "string"
+      ? e.message
+      : typeof e?.payload?.error === "string"
+        ? e.payload.error
+        : "Error interno en la matriz.";
+  return new ApiError(status, { error: msg });
 }
 
 export async function parseBody(req: Request) {
@@ -33,8 +47,7 @@ export async function parseBody(req: Request) {
 }
 
 export function parseQuery(req: Request) {
-  const url = new URL(req.url);
-  return url.searchParams;
+  return new URL(req.url).searchParams;
 }
 
 export type AuthCtx = {
@@ -44,78 +57,110 @@ export type AuthCtx = {
   role: Role;
 };
 
-// Protocolo de validación de identidad
 export async function requireProjectRole(project_id: string, allowed: Role[]): Promise<AuthCtx> {
   const sb = await createServerSupabase();
-  const { data: { session }, error: authErr } = await sb.auth.getSession();
+  const {
+    data: { user },
+    error: authErr,
+  } = await sb.auth.getUser();
 
-  if (authErr || !session?.user) {
+  if (authErr || !user) {
     throw new ApiError(401, { error: "Acceso denegado. Protocolo de seguridad no superado." });
   }
 
-  // Definición de rol táctico del usuario
-  const role: Role = "owner"; 
+  const normalizedProject = normalizeProjectId(project_id);
+  const { data: member, error } = await sb
+    .from("project_members")
+    .select("role")
+    .eq("project_id", normalizedProject)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  if (!allowed.includes(role)) {
-     throw new ApiError(403, { error: "Permisos insuficientes para ejecutar esta operación táctica." });
+  if (error) {
+    throw new ApiError(500, { error: "No se pudo validar la membresía del proyecto." });
   }
 
-  return { sb, user: { id: session.user.id, email: session.user.email }, project_id, role };
+  const role = String(member?.role ?? "").toLowerCase() as Role | "";
+  if (!role) {
+    throw new ApiError(403, { error: "No perteneces a este proyecto." });
+  }
+
+  if (!allowed.includes(role)) {
+    throw new ApiError(403, { error: "Permisos insuficientes para ejecutar esta operación táctica." });
+  }
+
+  return {
+    sb,
+    user: { id: user.id, email: user.email },
+    project_id: normalizedProject,
+    role,
+  };
 }
 
-// Radar de agentes: Registra nuevos nodos automáticamente si no existen
 export async function ensureNode(sb: any, project_id: string, nid: string | null) {
-  if (!nid) return;
+  const nodeId = normalizeNodeId(nid);
+  if (!nodeId) return;
 
   const { data: existing } = await sb
     .from("nodes")
     .select("id")
     .eq("project_id", project_id)
-    .eq("id", nid)
+    .eq("id", nodeId)
     .maybeSingle();
 
-  if (!existing?.id) {
-    const isCloudNode = nid.startsWith("cloud-") || nid === "hocker-fabric" || nid.startsWith("trigger-");
+  if (existing?.id) return;
 
-    const { error: e2 } = await sb.from("nodes").insert({
-      id: nid,
-      project_id,
-      name: isCloudNode ? `Nube Central: ${nid}` : `Agente Físico: ${nid}`,
-      type: "agent",
-      status: isCloudNode ? "online" : "offline",
-      meta: {
-        source: "control-plane",
-        engine: isCloudNode ? "automation-fabric" : "on-premise",
-        trust_level: isCloudNode ? "high" : "pending",
-      },
-    });
+  const isCloudNode =
+    nodeId.startsWith("cloud-") || nodeId === "hocker-fabric" || nodeId.startsWith("trigger-");
 
-    if (e2 && !String(e2.message || "").toLowerCase().includes("duplicate")) {
-      throw new ApiError(500, { error: "Falla de red al intentar registrar el nuevo nodo en la matriz." });
-    }
+  const { error: insertErr } = await sb.from("nodes").insert({
+    id: nodeId,
+    project_id,
+    name: isCloudNode ? `Nube Central: ${nodeId}` : `Agente Físico: ${nodeId}`,
+    type: isCloudNode ? "cloud" : "agent",
+    status: isCloudNode ? "online" : "offline",
+    last_seen_at: new Date().toISOString(),
+    tags: isCloudNode ? ["cloud", "core"] : ["agent"],
+    meta: {
+      source: "control-plane",
+      engine: isCloudNode ? "automation-fabric" : "on-premise",
+      trust_level: isCloudNode ? "high" : "pending",
+    },
+  });
+
+  if (insertErr && !String(insertErr.message || "").toLowerCase().includes("duplicate")) {
+    throw new ApiError(500, { error: "Falla de red al intentar registrar el nuevo nodo en la matriz." });
   }
 }
 
-// Lector de Protocolos de Gobernanza (Kill Switch)
 export async function getControls(sb: any, project_id: string) {
+  const normalizedProject = normalizeProjectId(project_id);
+
   const { data, error } = await sb
     .from("system_controls")
     .select("project_id,id,kill_switch,allow_write,updated_at")
-    .eq("project_id", project_id)
+    .eq("project_id", normalizedProject)
     .eq("id", "global")
     .maybeSingle();
 
-  if (error) throw new ApiError(500, { error: "Falla crítica al leer los protocolos de seguridad del proyecto." });
+  if (error) {
+    throw new ApiError(500, { error: "Falla crítica al leer los protocolos de seguridad del proyecto." });
+  }
 
   if (!data) {
-    const { error: e2 } = await sb.from("system_controls").insert({
-      project_id,
+    const created = {
+      project_id: normalizedProject,
       id: "global",
       kill_switch: false,
-      allow_write: true
-    });
-    if (e2) throw new ApiError(500, { error: "Error al inicializar el sistema de gobernanza." });
-    return { kill_switch: false, allow_write: true };
+      allow_write: false,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: insertErr } = await sb.from("system_controls").insert(created);
+    if (insertErr) {
+      throw new ApiError(500, { error: "Error al inicializar el sistema de gobernanza." });
+    }
+    return created;
   }
 
   return data;
