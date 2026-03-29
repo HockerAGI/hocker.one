@@ -7,7 +7,13 @@ export const size = {
 };
 export const contentType = "image/png";
 
-export default function AppleIcon() {
+export default async function AppleIcon() {
+  // Configuración del enlace táctico al activo visual exacto
+  const isotypeUrl = new URL(
+    "/brand/hocker-one-isotype.png", // Asegúrate de que el nombre coincida exactamente en public/brand/
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://hocker.one"
+  );
+
   return new ImageResponse(
     (
       <div
@@ -17,40 +23,36 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background:
-            "radial-gradient(circle at 30% 25%, rgba(56,189,248,.25), transparent 28%), linear-gradient(180deg, #020617 0%, #0f172a 100%)",
+          background: "#ffffff",
         }}
       >
         <div
           style={{
-            width: "84%",
-            height: "84%",
-            borderRadius: "26%",
-            background:
-              "linear-gradient(145deg, #22d3ee 0%, #38bdf8 26%, #2563eb 58%, #1d4ed8 100%)",
+            width: "88%",
+            height: "88%",
+            borderRadius: "22%",
+            background: "linear-gradient(145deg, #38bdf8 0%, #2563eb 50%, #1d4ed8 100%)",
             boxShadow:
-              "inset 0 0 0 1px rgba(255,255,255,.18), 0 18px 34px rgba(0,0,0,.38)",
+              "inset 0 2px 4px rgba(255,255,255,0.3), 0 12px 24px rgba(0,0,0,0.15)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden", // Sella los bordes
           }}
         >
-          <div
+          {/* Inyección directa del isótopo original para identidad absoluta en el celular */}
+          <img
+            src={isotopeUrl.toString()}
+            alt="Hocker ONE Isotype"
             style={{
-              fontSize: 104,
-              fontWeight: 900,
-              letterSpacing: "-0.08em",
-              lineHeight: 1,
-              color: "#ffffff",
-              transform: "translateY(-3px)",
-              fontFamily: 'Inter, "Segoe UI", Arial, Helvetica, sans-serif',
+              width: "70%",
+              height: "70%",
+              objectFit: "contain",
             }}
-          >
-            h
-          </div>
+          />
         </div>
       </div>
     ),
-    size
+    { ...size }
   );
 }
