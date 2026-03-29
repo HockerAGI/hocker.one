@@ -22,15 +22,16 @@ type Cmd = {
   error: string | null;
 };
 
+// Estética Ring-Inset premium para las insignias
 function statusPill(status: string) {
   const s = String(status || "").toLowerCase();
-  if (s === "needs_approval") return "bg-amber-50 text-amber-800 border-amber-200";
-  if (s === "queued") return "bg-blue-50 text-blue-800 border-blue-200";
-  if (s === "running") return "bg-purple-50 text-purple-800 border-purple-200";
-  if (s === "done") return "bg-emerald-50 text-emerald-800 border-emerald-200";
-  if (s === "error" || s === "failed") return "bg-red-50 text-red-800 border-red-200";
-  if (s === "canceled" || s === "cancelled") return "bg-slate-50 text-slate-700 border-slate-200";
-  return "bg-slate-50 text-slate-700 border-slate-200";
+  if (s === "needs_approval") return "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20";
+  if (s === "queued") return "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20";
+  if (s === "running") return "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20";
+  if (s === "done") return "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20";
+  if (s === "error" || s === "failed") return "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20";
+  if (s === "canceled" || s === "cancelled") return "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-500/20";
+  return "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-500/20";
 }
 
 export default function CommandsQueue() {
@@ -114,123 +115,136 @@ export default function CommandsQueue() {
   }, [items, filterStatus, q]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="space-y-1">
-          <div className="text-lg font-semibold text-slate-900">Orquestador de Comandos</div>
-          <div className="text-sm text-slate-500">Cola, aprobaciones y logs del Automation Fabric.</div>
+          <h2 className="text-xl font-black tracking-tight text-slate-900">Orquestador de Comandos</h2>
+          <p className="text-sm text-slate-500">Cola, aprobaciones y logs del Automation Fabric.</p>
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-end">
-          <div className="w-full md:w-[220px]">
-            <label className="text-xs font-semibold text-slate-600">Proyecto</label>
-            <input
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              placeholder="global"
-            />
-          </div>
-
-          <div className="w-full md:w-[220px]">
-            <label className="text-xs font-semibold text-slate-600">Estado</label>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end">
+          <div className="w-full md:w-[160px]">
+            <label className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Estado</label>
             <select
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              className="mt-1.5 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
-              <option value="all">Todos</option>
-              <option value="needs_approval">needs_approval</option>
-              <option value="queued">queued</option>
-              <option value="running">running</option>
-              <option value="done">done</option>
-              <option value="error">error</option>
-              <option value="canceled">canceled</option>
+              <option value="all">Todos los estados</option>
+              <option value="needs_approval">Requiere aprobación</option>
+              <option value="queued">En cola</option>
+              <option value="running">Ejecutando</option>
+              <option value="done">Completado</option>
+              <option value="error">Error</option>
+              <option value="canceled">Cancelado</option>
             </select>
           </div>
 
-          <div className="w-full md:w-[320px]">
-            <label className="text-xs font-semibold text-slate-600">Buscar</label>
+          <div className="w-full md:w-[260px]">
+            <label className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Buscar</label>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="command, id, node…"
+              placeholder="Filtro por ID, comando, nodo..."
             />
           </div>
 
           <button
             onClick={refresh}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+            className="mt-2 w-full md:mt-0 md:w-auto rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02] hover:bg-slate-800 active:scale-[0.98] disabled:opacity-60 disabled:hover:scale-100"
             disabled={loading}
           >
-            {loading ? "Cargando…" : "Actualizar"}
+            {loading ? "Sincronizando..." : "Actualizar"}
           </button>
         </div>
       </div>
 
-      {err && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>}
+      {err && (
+        <div className="animate-in fade-in rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700 shadow-sm">
+          {err}
+        </div>
+      )}
 
       <div className="space-y-3">
-        {!loading && filtered.length === 0 && <div className="text-sm text-slate-500">No hay comandos en este proyecto.</div>}
+        {!loading && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+            <div className="text-slate-400 mb-2">
+               <svg className="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </div>
+            <div className="text-sm font-medium text-slate-900">Malla despejada</div>
+            <div className="text-sm text-slate-500">No hay comandos registrados en este proyecto bajo estos filtros.</div>
+          </div>
+        )}
 
         {filtered.map((c) => {
           const canModerate = c.status === "needs_approval";
           return (
-            <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate font-semibold text-slate-900">{c.command}</span>
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusPill(c.status)}`}>
+            <div key={c.id} className="group flex flex-col rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="truncate text-base font-bold text-slate-900">{c.command}</span>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${statusPill(c.status)}`}>
                       {String(c.status)}
                     </span>
                     {c.needs_approval && (
-                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                        requiere aprobación
+                      <span className="inline-flex items-center rounded-full bg-amber-500 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm animate-pulse">
+                        Acción Requerida
                       </span>
                     )}
                   </div>
 
-                  <div className="text-xs text-slate-500">
-                    Nodo: <b>{c.node_id ?? "—"}</b> · {new Date(c.created_at).toLocaleString()} · ID: {c.id}
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+                    <span className="rounded-md bg-slate-100 px-2 py-1">Nodo: <b className="text-slate-700">{c.node_id ?? "—"}</b></span>
+                    <span>•</span>
+                    <span>{new Date(c.created_at).toLocaleString()}</span>
+                    <span>•</span>
+                    <span className="font-mono text-[10px] text-slate-400">ID: {c.id}</span>
                   </div>
 
                   {c.error && (
-                    <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                      <b>Falla:</b> {c.error}
+                    <div className="mt-2 rounded-xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-red-800">
+                      <b className="font-bold">Falla Operativa:</b> {c.error}
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => approve(c.id)}
-                    disabled={!canModerate}
-                    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-                  >
-                    Aprobar AGI
-                  </button>
-                  <button
-                    onClick={() => reject(c.id)}
-                    disabled={!canModerate}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    Rechazar
-                  </button>
-                </div>
+                {canModerate && (
+                  <div className="flex flex-wrap gap-2 md:shrink-0 md:ml-4">
+                     <button
+                      onClick={() => approve(c.id)}
+                      disabled={!canModerate}
+                      className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] hover:bg-blue-500 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    >
+                      Aprobar AGI
+                    </button>
+                    <button
+                      onClick={() => reject(c.id)}
+                      disabled={!canModerate}
+                      className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-red-50 hover:text-red-700 hover:border-red-200 active:scale-[0.98]"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-700">Ver Datos y Resultados (Syntia)</summary>
-                <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-bold text-slate-600">Payload Entrada</div>
-                    <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.payload ?? null, null, 2)}</pre>
+              <details className="group/details mt-4 border-t border-slate-100 pt-3">
+                <summary className="cursor-pointer list-none text-xs font-bold uppercase tracking-[0.1em] text-slate-500 transition-colors hover:text-blue-600">
+                  <span className="flex items-center gap-1.5">
+                    <svg className="h-4 w-4 transition-transform group-open/details:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    Inspeccionar Datos (Memoria Syntia)
+                  </span>
+                </summary>
+                <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="flex flex-col rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+                    <div className="border-b border-slate-800 bg-slate-900 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Payload Entrada</div>
+                    <pre className="p-4 overflow-auto font-mono text-[12px] text-blue-300">{JSON.stringify(c.payload ?? null, null, 2)}</pre>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 text-xs font-bold text-slate-600">Resultados de Salida</div>
-                    <pre className="overflow-auto text-xs text-slate-800">{JSON.stringify(c.result ?? null, null, 2)}</pre>
+                  <div className="flex flex-col rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+                    <div className="border-b border-slate-800 bg-slate-900 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Resultados de Salida</div>
+                    <pre className="p-4 overflow-auto font-mono text-[12px] text-emerald-300">{JSON.stringify(c.result ?? null, null, 2)}</pre>
                   </div>
                 </div>
               </details>
