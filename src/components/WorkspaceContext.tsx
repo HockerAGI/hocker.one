@@ -41,7 +41,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch {
-      // ignore
+      // Ignorar errores de parsing para evitar romper la UI
     } finally {
       setReady(true);
     }
@@ -52,7 +52,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      // ignore
+      // Prevenir fallos en navegadores que bloquean localStorage (modo incógnito estricto)
     }
   }, [state, ready]);
 
@@ -73,13 +73,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 export function useWorkspace() {
   const ctx = useContext(Ctx);
   if (!ctx) {
-    return {
-      ...DEFAULTS,
-      setProjectId: () => {},
-      setNodeId: () => {},
-      setTutorial: () => {},
-      reset: () => {},
-    } as WorkspaceCtx;
+    throw new Error("useWorkspace debe ser utilizado dentro de un WorkspaceProvider");
   }
   return ctx;
 }
