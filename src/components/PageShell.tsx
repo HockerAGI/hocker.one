@@ -3,6 +3,7 @@ import Link from "next/link";
 import AppNav from "@/components/AppNav";
 import BrandMark from "@/components/BrandMark";
 import InteractiveBackground from "@/components/InteractiveBackground";
+import ErrorBoundary from "@/components/ErrorBoundary"; // El nuevo escudo
 
 export default function PageShell({
   title,
@@ -20,7 +21,6 @@ export default function PageShell({
       <InteractiveBackground />
       <AppNav />
 
-      {/* Se agregó animación de entrada cinemática al contenedor principal */}
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
         <div className="rounded-[28px] border border-slate-200/80 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl transition-all">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b border-slate-100/50 pb-5">
@@ -59,7 +59,10 @@ export default function PageShell({
           </div>
 
           <div className="mt-6">
-            {children}
+            {/* Aquí es donde el escudo abraza tu plataforma */}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </div>
         </div>
       </main>
