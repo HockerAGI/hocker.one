@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { defaultNodeId, defaultProjectId } from "@/lib/project";
 
 type WorkspaceState = {
   projectId: string;
@@ -16,13 +17,12 @@ type WorkspaceCtx = WorkspaceState & {
 };
 
 const DEFAULTS: WorkspaceState = {
-  projectId: "global",
-  nodeId: "hocker-node-1",
-  tutorial: false,
+  projectId: defaultProjectId(),
+  nodeId: defaultNodeId(),
+  tutorial: true,
 };
 
 const KEY = "hocker.workspace.v1";
-
 const Ctx = createContext<WorkspaceCtx | null>(null);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
@@ -37,11 +37,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setState({
           projectId: parsed.projectId || DEFAULTS.projectId,
           nodeId: parsed.nodeId || DEFAULTS.nodeId,
-          tutorial: Boolean(parsed.tutorial),
+          tutorial: typeof parsed.tutorial === "boolean" ? parsed.tutorial : DEFAULTS.tutorial,
         });
       }
     } catch {
-      // Ignorar errores de parsing para evitar romper la UI
+      // Sincronización silenciosa
     } finally {
       setReady(true);
     }
@@ -52,7 +52,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      // Prevenir fallos en navegadores que bloquean localStorage (modo incógnito estricto)
+      // sin-op
     }
   }, [state, ready]);
 
@@ -72,8 +72,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
 export function useWorkspace() {
   const ctx = useContext(Ctx);
-  if (!ctx) {
-    throw new Error("useWorkspace debe ser utilizado dentro de un WorkspaceProvider");
-  }
+  if (!ctx) throw new Error("useWorkspace debe ser utilizado dentro de un WorkspaceProvider");
   return ctx;
 }
