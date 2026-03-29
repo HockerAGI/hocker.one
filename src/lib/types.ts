@@ -1,17 +1,24 @@
-export type ProjectRole = "owner" | "admin" | "operator" | "viewer";
+/**
+ * JERARQUÍA DE AUTORIDAD HOCKER
+ */
+export type Role = "owner" | "admin" | "operator" | "viewer";
 
+/**
+ * CICLO DE VIDA DE COMANDOS
+ */
 export type CommandStatus =
-  | "queued"
-  | "needs_approval"
-  | "running"
-  | "done"
-  | "error"
-  | "canceled"
-  | "failed"
-  | "cancelled";
+  | "queued"          // En espera en la cola
+  | "needs_approval"  // Retenido por el Escudo de Seguridad
+  | "running"         // Siendo procesado por un nodo
+  | "done"            // Ejecutado con éxito
+  | "error"           // Fallo de ejecución en el nodo
+  | "canceled";       // Abortado manualmente por el Director
 
 export type NodeStatus = "online" | "offline" | "degraded";
 
+/**
+ * REGISTROS DE COMANDOS
+ */
 export type CommandRow = {
   id: string;
   project_id: string;
@@ -30,17 +37,23 @@ export type CommandRow = {
   created_at: string;
 };
 
+/**
+ * REGISTROS DE MEMORIA (RADAR)
+ */
 export type EventRow = {
   id: string;
   project_id: string;
   node_id: string | null;
-  level: "info" | "warn" | "error" | "warning" | "critical";
+  level: "info" | "warn" | "error" | "critical";
   type: string;
   message: string;
   data: any;
   created_at: string;
 };
 
+/**
+ * INFRAESTRUCTURA DE NODOS
+ */
 export type NodeRow = {
   id: string;
   project_id: string;
@@ -54,6 +67,9 @@ export type NodeRow = {
   updated_at: string;
 };
 
+/**
+ * ESCUDO DE GOBERNANZA
+ */
 export type ControlRow = {
   id: string;
   project_id: string;
@@ -63,6 +79,17 @@ export type ControlRow = {
   created_at: string;
   updated_at: string;
 };
+
+/**
+ * LOGÍSTICA (HKR SUPPLY)
+ */
+export type SupplyOrderStatus =
+  | "pending"
+  | "paid"
+  | "producing"
+  | "shipped"
+  | "delivered"
+  | "canceled";
 
 export type SupplyProductRow = {
   id: string;
@@ -79,44 +106,3 @@ export type SupplyProductRow = {
   created_at: string;
   updated_at: string;
 };
-
-export type SupplyOrderStatus =
-  | "pending"
-  | "paid"
-  | "producing"
-  | "shipped"
-  | "delivered"
-  | "cancelled";
-
-export type SupplyOrderItemRow = {
-  id: string;
-  project_id: string;
-  order_id: string;
-  product_id: string | null;
-  qty: number;
-  unit_price_cents: number;
-  line_total_cents: number;
-  currency: string;
-  created_at: string;
-  product?: {
-    id: string;
-    name: string;
-    sku: string | null;
-    price_cents: number;
-    currency: string;
-  } | null;
-};
-
-export type SupplyOrderRow = {
-  id: string;
-  project_id: string;
-  status: SupplyOrderStatus;
-  customer_name: string | null;
-  customer_phone: string | null;
-  total_cents: number;
-  currency: string;
-  meta: any;
-  created_at: string;
-  updated_at: string;
-  items?: SupplyOrderItemRow[];
-};export type Role = ProjectRole;
