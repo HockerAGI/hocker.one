@@ -161,7 +161,6 @@ export async function getControls(sb: any, project_id: string) {
     if (insertErr) {
       throw new ApiError(500, { error: "Error al inicializar el sistema de gobernanza." });
     }
-
     return created;
   }
 
