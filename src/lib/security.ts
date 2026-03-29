@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
 
+/**
+ * Ordenamiento profundo para asegurar firmas idénticas.
+ */
 function sortKeysDeep(value: any): any {
   if (Array.isArray(value)) return value.map(sortKeysDeep);
   if (value && typeof value === "object") {
@@ -11,16 +14,15 @@ function sortKeysDeep(value: any): any {
 }
 
 /**
- * canonicalJson():
- * JSON ordenado y estable para que la firma sea idéntica entre panel y agente.
+ * JSON Canónico: El lenguaje universal entre el panel y tus nodos (Termux/Cloud).
  */
 export function canonicalJson(value: any): string {
   return JSON.stringify(sortKeysDeep(value ?? {}));
 }
 
 /**
- * Firma HMAC estable (DEBE match con hocker-node-agent/src/lib/signature.ts)
- * base = id | project_id | node_id | command | created_at | canonical(payload)
+ * Sello Digital Hocker (HMAC SHA-256)
+ * Blindaje contra manipulación de órdenes.
  */
 export function signCommand(
   secret: string,
@@ -45,11 +47,18 @@ export function verifyCommandSignature(
   payload: any,
   created_at: string
 ): boolean {
-  if (!signature) return false;
+  if (!signature || !secret) return false;
+
   const expected = signCommand(secret, id, project_id, node_id, command, payload, created_at);
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  } catch {
-    return false;
+  
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(signature, "hex"),
+    Buffer.from(expected, "hex")
+  );
+
+  if (!isValid) {
+    console.warn(`[VERTX SECURITY] Intento de inyección detectado: Firma inválida para comando ${command} en nodo ${node_id}.`);
   }
+
+  return isValid;
 }
