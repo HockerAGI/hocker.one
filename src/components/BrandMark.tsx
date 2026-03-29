@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image"; // Inyectamos el motor de Vercel
 
 type BrandMarkProps = {
   compact?: boolean;
@@ -34,35 +35,13 @@ export default function BrandMark({
   const currentIndex = useFullLogo ? fullIndex : isoIndex;
   const src = candidates[currentIndex] ?? candidates[0];
 
-  const frameWidth = useFullLogo
-    ? hero
-      ? "min(92vw, 920px)"
-      : compact
-      ? "280px"
-      : "460px"
-    : compact
-    ? "44px"
-    : "60px";
-
-  const frameHeight = useFullLogo
-    ? hero
-      ? "clamp(130px, 18vw, 220px)"
-      : compact
-      ? "88px"
-      : "132px"
-    : compact
-    ? "44px"
-    : "60px";
-
-  const imageWidth = useFullLogo
-    ? hero
-      ? "min(88vw, 860px)"
-      : compact
-      ? "260px"
-      : "420px"
-    : compact
-    ? "34px"
-    : "44px";
+  // Estructura matemática optimizada para el renderizado
+  const dimensions = {
+    frameWidth: useFullLogo ? (hero ? "min(92vw, 920px)" : compact ? "280px" : "460px") : (compact ? "44px" : "60px"),
+    frameHeight: useFullLogo ? (hero ? "clamp(130px, 18vw, 220px)" : compact ? "88px" : "132px") : (compact ? "44px" : "60px"),
+    padding: useFullLogo ? (hero ? "18px 22px" : compact ? "10px 14px" : "14px 18px") : 0,
+    borderRadius: useFullLogo ? 28 : 18,
+  };
 
   function handleLogoError() {
     if (useFullLogo) {
@@ -95,10 +74,10 @@ export default function BrandMark({
       <div
         style={{
           position: "relative",
-          width: frameWidth,
-          height: frameHeight,
-          borderRadius: useFullLogo ? 28 : 18,
-          padding: useFullLogo ? (hero ? "18px 22px" : compact ? "10px 14px" : "14px 18px") : 0,
+          width: dimensions.frameWidth,
+          height: dimensions.frameHeight,
+          borderRadius: dimensions.borderRadius,
+          padding: dimensions.padding,
           background: useFullLogo
             ? "linear-gradient(180deg, rgba(2,6,23,.82), rgba(15,23,42,.52))"
             : "linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.84))",
@@ -114,7 +93,7 @@ export default function BrandMark({
           transform: hero ? "translateZ(0)" : "none",
         }}
       >
-        {useFullLogo ? (
+        {useFullLogo && (
           <>
             <div
               aria-hidden="true"
@@ -138,31 +117,26 @@ export default function BrandMark({
               }}
             />
           </>
-        ) : null}
+        )}
 
         {!broken ? (
-          <img
-            src={src}
-            alt="Hocker ONE"
-            width={0}
-            height={0}
-            loading={compact ? "lazy" : "eager"}
-            decoding="async"
-            onError={handleLogoError}
-            style={{
-              position: "relative",
-              zIndex: 1,
-              objectFit: "contain",
-              display: "block",
-              width: imageWidth,
-              height: "auto",
-              maxWidth: "100%",
-              maxHeight: "100%",
-              filter: useFullLogo
-                ? "drop-shadow(0 12px 26px rgba(0,0,0,.34))"
-                : "drop-shadow(0 8px 12px rgba(0,0,0,.18))",
-            }}
-          />
+          // Contenedor relativo necesario para Next.js Image con layout "fill"
+          <div style={{ position: "relative", width: "100%", height: "100%", zIndex: 1 }}>
+            <Image
+              src={src}
+              alt="Hocker ONE Logo"
+              fill
+              priority={hero} // Carga prioritaria si es el logo principal
+              sizes="(max-width: 768px) 100vw, 50vw" // Optimizacion de entrega Vercel
+              style={{
+                objectFit: "contain",
+                filter: useFullLogo
+                  ? "drop-shadow(0 12px 26px rgba(0,0,0,.34))"
+                  : "drop-shadow(0 8px 12px rgba(0,0,0,.18))",
+              }}
+              onError={handleLogoError}
+            />
+          </div>
         ) : (
           <div
             style={{
@@ -179,6 +153,7 @@ export default function BrandMark({
               fontSize: hero ? 34 : 22,
               letterSpacing: "-0.06em",
               boxShadow: "inset 0 1px 0 rgba(255,255,255,.18)",
+              margin: "auto", // Centrado automático si falla la imagen
             }}
           >
             H
