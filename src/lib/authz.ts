@@ -1,5 +1,12 @@
 import type { Role } from "@/lib/types";
-import { ApiError } from "./_lib"; // Enlace directo a nuestra matriz de errores
+
+// Definimos ApiError aquí localmente para romper la dependencia circular 
+// y asegurar que el build no falle.
+export class ApiError extends Error {
+  constructor(public status: number, public payload: any) {
+    super(payload.error || "Acceso Denegado");
+  }
+}
 
 const RANK: Record<Role, number> = {
   owner: 4,
@@ -14,19 +21,16 @@ function normalizeRole(role: any): Role | null {
   return null;
 }
 
-/**
- * Protocolo de Autoridad Estricta
- */
 export function requireRole(userRole: any, allowed: Role | Role[]) {
   const ur = normalizeRole(userRole);
   const allowList = Array.isArray(allowed) ? allowed : [allowed];
 
   if (!ur) {
-    throw new ApiError(401, { error: "ACCESO DENEGADO: No se detectó un rol válido en la sesión." });
+    throw new ApiError(401, { error: "IDENTIDAD NO DETECTADA: El sistema requiere un rol válido." });
   }
   
   if (!allowList.includes(ur)) {
-    throw new ApiError(403, { error: "AUTORIDAD INSUFICIENTE: Tu nivel de acceso no permite esta operación." });
+    throw new ApiError(403, { error: "NIVEL INSUFICIENTE: No tienes autoridad para ejecutar esta acción." });
   }
 
   return ur;
