@@ -37,13 +37,34 @@ export default function EventsFeed() {
   }
 
   useEffect(() => {
+    // 1. Carga inicial
     load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
+
+    // 2. Conexión de Espejo en Tiempo Real (WebSockets)
+    const channel = sb
+      .channel('events-live-feed')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT', // Solo escuchamos cuando nace un nuevo evento
+          schema: 'public',
+          table: 'events',
+          filter: `project_id=eq.${pid}`
+        },
+        () => {
+          // Cuando llega un aviso de la matriz, recargamos la lista al instante
+          load();
+        }
+      )
+      .subscribe();
+
+    // Limpieza al salir de la pantalla
+    return () => {
+      sb.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pid]);
 
-  // Estilos de borde y fondo ultra-sutiles para la tarjeta
   const getLevelStyles = (level: string) => {
     switch (level) {
       case "critical":
@@ -58,7 +79,6 @@ export default function EventsFeed() {
     }
   };
 
-  // Insignias precisas estilo Ring-Inset
   const getBadgeStyles = (level: string) => {
     switch (level) {
       case "critical":
@@ -84,10 +104,10 @@ export default function EventsFeed() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">En Vivo</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Reflejo Instantáneo</span>
             </div>
           </div>
-          <p className="mt-1.5 text-sm text-slate-500">Radar cronológico. Todo lo que el ecosistema piensa, ejecuta y detecta.</p>
+          <p className="mt-1.5 text-sm text-slate-500">Radar cronológico. Conectado al espejo central sin retrasos.</p>
         </div>
         
         <div className="w-full md:w-64 shrink-0">
