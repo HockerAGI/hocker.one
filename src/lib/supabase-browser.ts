@@ -1,17 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 
+/**
+ * createBrowserSupabase: Enlace estándar para la interfaz de usuario.
+ */
 export function createBrowserSupabase() {
-  const url =
-    (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim();
-  const anon =
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "").trim();
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
-  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL no está configurado.");
-  if (!anon) throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY no está configurado.");
+  if (!url || !anon) {
+    throw new Error("Falla de enlace: Credenciales públicas de Supabase no detectadas.");
+  }
 
   return createClient(url, anon, {
     auth: {
-      persistSession: true,
+      persistSession: true, // Vital para la experiencia PWA
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
