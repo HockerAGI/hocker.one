@@ -93,29 +93,29 @@ export default function AgisRegistry({
   return (
     <section className={className}>
       <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
               Inteligencias activas
             </div>
             <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{title}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">{subtitle}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">{subtitle}</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="grid grid-cols-3 gap-3 text-center md:gap-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition-colors hover:border-slate-300 hover:bg-white">
               <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
                 Total
               </div>
               <div className="mt-1 text-2xl font-black text-slate-950">{stats.total}</div>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 transition-colors hover:border-emerald-300 hover:bg-emerald-100/50">
               <div className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">
                 Activas
               </div>
               <div className="mt-1 text-2xl font-black text-emerald-900">{stats.active}</div>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:border-amber-300 hover:bg-amber-100/50">
               <div className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700">
                 Pendientes
               </div>
@@ -124,15 +124,15 @@ export default function AgisRegistry({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
             <article
               key={item.name}
-              className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+              className="group relative rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:bg-white hover:shadow-xl hover:shadow-slate-900/5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-lg font-black tracking-tight text-slate-950">
+                  <div className="text-lg font-black tracking-tight text-slate-950 transition-colors group-hover:text-blue-600">
                     {item.name}
                   </div>
                   <div className="mt-1 text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
@@ -140,20 +140,27 @@ export default function AgisRegistry({
                   </div>
                 </div>
                 <div
-                  className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] ${accentClasses(item.accent)}`}
+                  className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] transition-colors ${accentClasses(item.accent)}`}
                 >
                   {item.status}
                 </div>
               </div>
 
-              <p className="mt-3 text-sm leading-7 text-slate-600">{item.desc}</p>
+              <p className="mt-4 text-sm leading-6 text-slate-600">{item.desc}</p>
             </article>
           ))}
         </div>
 
-        <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-600">
-          Si todavía no ves datos vivos aquí, la pantalla se mantiene funcional y lista para conectar
-          el origen real cuando lo actives.
+        <div className="mt-6 flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600 transition-colors hover:bg-white hover:border-slate-300">
+          <svg className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4"/>
+            <path d="M12 8h.01"/>
+          </svg>
+          <p>
+            Si todavía no ves datos vivos aquí, la pantalla se mantiene funcional y lista para conectar
+            el origen real cuando lo actives en Supabase.
+          </p>
         </div>
       </div>
     </section>
