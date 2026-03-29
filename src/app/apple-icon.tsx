@@ -8,9 +8,9 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function AppleIcon() {
-  // Configuración del enlace táctico al activo visual exacto
+  // Aquí definimos isotypeUrl (con Y)
   const isotypeUrl = new URL(
-    "/brand/hocker-one-isotype.png", // Asegúrate de que el nombre coincida exactamente en public/brand/
+    "/brand/hocker-one-isotype.png",
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://hocker.one"
   );
 
@@ -37,12 +37,12 @@ export default async function AppleIcon() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            overflow: "hidden", // Sella los bordes
+            overflow: "hidden", 
           }}
         >
-          {/* Inyección directa del isótopo original para identidad absoluta en el celular */}
+          {/* Aquí inyectamos isotypeUrl (corregido con Y) */}
           <img
-            src={isotopeUrl.toString()}
+            src={isotypeUrl.toString()}
             alt="Hocker ONE Isotype"
             style={{
               width: "70%",
