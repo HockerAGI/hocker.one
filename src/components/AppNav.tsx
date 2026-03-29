@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation"; // Inyectamos el enrutador inteligente
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, type ReactElement } from "react";
 import NodeBadge from "@/components/NodeBadge";
 import WorkspaceBar from "@/components/WorkspaceBar";
@@ -14,9 +14,6 @@ type NavItem = {
   icon: (props: { className?: string }) => ReactElement;
 };
 
-// ==========================================
-// ICONOGRAFÍA PREMIUM (Bordes redondeados y suaves)
-// ==========================================
 const svgProps = {
   xmlns: "http://www.w3.org/2000/svg",
   viewBox: "0 0 24 24",
@@ -69,12 +66,6 @@ function IconBrain({ className }: { className?: string }) {
       <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
       <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
       <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
-      <path d="M17.599 6.5a3 3 0 0 0 .399-1.375" />
-      <path d="M6.002 5.125A3 3 0 0 0 6.401 6.5" />
-      <path d="M3.477 10.896a4 4 0 0 1 .585-.396" />
-      <path d="M19.938 10.5a4 4 0 0 1 .585.396" />
-      <path d="M6 18a4 4 0 0 1-1.967-.516" />
-      <path d="M19.967 17.484A4 4 0 0 1 18 18" />
     </svg>
   );
 }
@@ -107,7 +98,7 @@ const ITEMS: NavItem[] = [
 
 export default function AppNav() {
   const pathname = usePathname() || "/";
-  const router = useRouter(); // Cargamos el enrutador de Vercel
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const active = useMemo(() => {
@@ -116,21 +107,20 @@ export default function AppNav() {
   }, [pathname]);
 
   return (
-    <div className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl transition-all">
-      <div className="mx-auto max-w-7xl px-4 py-3">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-2xl">
+      <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <Link href="/dashboard" className="group flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 rounded-2xl">
+              <Link href="/dashboard" className="rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
                 <BrandMark compact showWordmark />
               </Link>
-
               <div className="hidden md:block">
                 <NodeBadge />
               </div>
             </div>
 
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden items-center gap-1 lg:flex">
               {ITEMS.map((it) => {
                 const isActive = active === it.href;
                 const Icon = it.icon;
@@ -139,14 +129,14 @@ export default function AppNav() {
                     key={it.href}
                     href={it.href}
                     className={
-                      "group inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-slate-900 " +
+                      "group inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-sky-400 " +
                       (isActive
-                        ? "bg-slate-950 text-white shadow-lg shadow-slate-900/20"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100")
+                        ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20"
+                        : "text-slate-300 hover:bg-white/5 hover:text-white")
                     }
                     title={it.desc}
                   >
-                    <Icon className={"h-4 w-4 transition-colors " + (isActive ? "text-white" : "text-slate-400 group-hover:text-slate-700")} />
+                    <Icon className={"h-4 w-4 transition-colors " + (isActive ? "text-white" : "text-slate-400")} />
                     <span>{it.label}</span>
                   </Link>
                 );
@@ -156,8 +146,8 @@ export default function AppNav() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => router.back()} // Navegación fluida SPA
-                className="hidden md:inline-flex items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                onClick={() => router.back()}
+                className="hidden rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10 md:inline-flex"
                 title="Volver a la pantalla anterior"
               >
                 Volver
@@ -166,7 +156,7 @@ export default function AppNav() {
               <form action="/signout" method="post" className="hidden md:block">
                 <button
                   type="submit"
-                  className="inline-flex items-center rounded-2xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 hover:shadow-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+                  className="rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
                   title="Cerrar sesión de forma segura"
                 >
                   Salir
@@ -176,11 +166,11 @@ export default function AppNav() {
               <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                aria-expanded={open} // Accesibilidad para lectores de pantalla
+                aria-expanded={open}
                 aria-label={open ? "Cerrar menú" : "Abrir menú"}
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50 transition-colors lg:hidden outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-2 text-slate-200 transition hover:bg-white/10 lg:hidden"
               >
-                <svg {...svgProps} className="h-5 w-5 text-slate-700">
+                <svg {...svgProps} className="h-5 w-5">
                   {open ? (
                     <>
                       <path d="M18 6 6 18" />
@@ -201,8 +191,8 @@ export default function AppNav() {
           <WorkspaceBar />
 
           {open && (
-            <div className="grid gap-2 rounded-3xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md lg:hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="md:hidden mb-1">
+            <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-900/95 p-3 shadow-xl shadow-black/30 backdrop-blur-md lg:hidden">
+              <div className="md:hidden">
                 <NodeBadge />
               </div>
 
@@ -218,8 +208,8 @@ export default function AppNav() {
                       className={
                         "flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition-all active:scale-95 " +
                         (isActive
-                          ? "border-slate-950 bg-slate-950 text-white shadow-md shadow-slate-900/20"
-                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300")
+                          ? "border-sky-400 bg-sky-500 text-white"
+                          : "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10")
                       }
                     >
                       <Icon className={"h-4 w-4 " + (isActive ? "text-white" : "text-slate-400")} />
@@ -229,21 +219,21 @@ export default function AppNav() {
                 })}
               </div>
 
-              <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100">
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setOpen(false);
                     router.back();
                   }}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
                 >
                   Volver
                 </button>
                 <form action="/signout" method="post" className="w-full">
                   <button
                     type="submit"
-                    className="w-full rounded-2xl bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-95 transition-all"
+                    className="w-full rounded-2xl bg-white px-3 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
                   >
                     Salir
                   </button>
@@ -253,6 +243,6 @@ export default function AppNav() {
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }
