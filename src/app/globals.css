@@ -3,90 +3,46 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-}
-
-html,
-body {
-  height: 100%;
+  /* Paleta Táctica: Deep Space Blue */
+  --background: #020617; /* Slate 950 */
+  --foreground: #f8fafc;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  /* Suavizado de fuente para monitores 4K/Retina */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* ==========================================
-   CLASES ESTRUCTURALES HOCKER (Restauradas y Evolucionadas)
-   Estas clases evitan que AppNav y componentes antiguos se rompan.
-   ========================================== */
 @layer components {
+  /* Evolución de la Tarjeta Hocker: Dark Glass Enterprise */
   .hocker-card {
-    @apply rounded-[24px] border border-slate-200/80 bg-white/80 shadow-sm backdrop-blur-xl;
+    @apply rounded-[32px] border border-white/10 bg-slate-900/40 shadow-2xl backdrop-blur-2xl transition-all duration-300;
   }
-  .hocker-muted {
-    @apply text-sm text-slate-500;
-  }
-  .hocker-kbd {
-    @apply rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-500;
-  }
+  
   .hocker-glass {
-    @apply border border-slate-200/80 bg-white/60 backdrop-blur-md shadow-sm;
+    @apply border border-white/5 bg-white/5 backdrop-blur-lg shadow-inner;
+  }
+
+  /* Efecto de Lucidez: Para que los logos y acentos "respiren" */
+  .glow-blue {
+    @apply shadow-[0_0_20px_rgba(14,165,233,0.3)];
   }
 }
 
-/* ==========================================
-   SCROLLBAR PREMIUM (Estilo Vercel/Apple)
-   ========================================== */
+/* Scrollbar minimalista de alta precisión */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  scrollbar-color: rgba(56, 189, 248, 0.2) transparent;
 }
+
 *::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+  width: 6px;
 }
+
 *::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
-  border-radius: 999px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* ==========================================
-   ANIMACIONES DEL FONDO INTERACTIVO
-   ========================================== */
-@layer utilities {
-  .motion-blob-1 {
-    animation: hocker-float-1 30s ease-in-out infinite;
-  }
-  .motion-blob-2 {
-    animation: hocker-float-2 36s ease-in-out infinite;
-  }
-  .motion-blob-3 {
-    animation: hocker-float-3 32s ease-in-out infinite;
-  }
-}
-
-@keyframes hocker-float-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(5%, 8%) scale(1.05); }
-  66% { transform: translate(-3%, 4%) scale(0.95); }
-}
-@keyframes hocker-float-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-6%, -5%) scale(0.95); }
-  66% { transform: translate(4%, -8%) scale(1.05); }
-}
-@keyframes hocker-float-3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(4%, -4%) scale(1.02); }
-  66% { transform: translate(-5%, 5%) scale(0.98); }
+  background: rgba(56, 189, 248, 0.2);
+  border-radius: 10px;
 }
