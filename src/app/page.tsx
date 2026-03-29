@@ -1,64 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import PageShell from "@/components/PageShell";
-import AuthBox from "@/components/AuthBox";
-import BrandMark from "@/components/BrandMark";
+import NovaChat from "@/components/NovaChat";
+import AgisRegistry from "@/components/AgisRegistry";
+import SystemStatus from "@/components/SystemStatus";
+import CommandsQueue from "@/components/CommandsQueue";
+import Hint from "@/components/Hint";
 
 export const metadata: Metadata = {
-  title: "Hocker ONE",
-  description: "Centro privado para operar NOVA, el ecosistema HOCKER y sus módulos clave.",
+  title: "Sala de Mando NOVA",
+  description: "Interfaz de orquestación central de la Mente Colmena.",
 };
-
-const pillars = [
-  {
-    title: "Control claro",
-    body:
-      "Un solo punto de entrada para ver el estado del sistema, tomar decisiones y mover el ecosistema con orden.",
-  },
-  {
-    title: "Diseño premium",
-    body:
-      "Interfaz oscura, limpia y elegante, pensada primero para celular y luego para escritorio, sin paneles saturados.",
-  },
-  {
-    title: "Operación real",
-    body:
-      "Mensajes, comandos, nodos, logística y permisos conectados en una sola base para evitar duplicidad y errores.",
-  },
-];
-
-const modules = [
-  {
-    name: "NOVA Core",
-    text: "Centro de mando, conversación y decisiones estratégicas.",
-  },
-  {
-    name: "Control H",
-    text: "Vista ejecutiva con accesos, métricas y atajos importantes.",
-  },
-  {
-    name: "Hocker Hub",
-    text: "CRM, seguimiento y operación comercial en un solo flujo.",
-  },
-  {
-    name: "HKR Supply",
-    text: "Catálogo, órdenes y trazabilidad con lectura simple.",
-  },
-  {
-    name: "Vertx / Jurix / Numia",
-    text: "Seguridad, legal y finanzas alineadas al mismo control.",
-  },
-  {
-    name: "Red de nodos",
-    text: "Visibilidad sobre agentes, salud y actividad del sistema.",
-  },
-];
 
 export default function HomePage() {
   return (
     <PageShell
-      title="Hocker ONE"
-      subtitle="Acceso privado al centro operativo de NOVA. Entra, valida tu sesión y continúa al tablero principal."
+      title="Sala de Mando"
+      subtitle="Supervisión activa de la Mente Colmena y ejecución de protocolos Omni-Sync."
       actions={
         <Link
           href="/dashboard"
@@ -67,106 +26,130 @@ export default function HomePage() {
           <svg className="h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16M12 4l8 8-8 8" />
           </svg>
-          Abrir dashboard
+          Ir al Dashboard
         </Link>
       }
     >
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
-        <section className="xl:col-span-7">
-          <div className="flex flex-col gap-6 rounded-[28px] border border-white/10 bg-slate-950/40 p-5 shadow-xl shadow-black/20 backdrop-blur-2xl sm:p-6">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-              <div className="max-w-2xl">
-                <BrandMark hero />
-                <p className="mt-5 text-sm font-semibold uppercase tracking-[0.28em] text-sky-300/90">
-                  Soberanía digital • UX premium • operación real
-                </p>
-                <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                  Un centro privado que se siente limpio, rápido y serio.
-                </h2>
-                <p className="mt-4 max-w-xl text-[15px] leading-7 text-slate-300">
-                  Aquí no se mezcla todo. Primero entras, luego validas acceso y después pasas al tablero operativo.
-                  Así la experiencia se ve mejor en móvil, carga más limpio y evita ruido visual.
-                </p>
+      <div className="flex flex-col gap-8">
+        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+          <Hint title="Protocolo de Conciencia Activo">
+            Bienvenido, Director. El Automation Fabric está operando en niveles nominales. Las sub-IAs están listas para la sincronización de objetivos 2025.
+          </Hint>
+        </div>
+
+        <section className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/70 shadow-2xl shadow-black/30 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="p-6 sm:p-8">
+              <div className="grid gap-4 sm:grid-cols-[auto,1fr]">
+                <div className="rounded-[30px] border border-sky-400/15 bg-slate-950/80 p-5 shadow-[0_0_30px_rgba(14,165,233,0.18)]">
+                  <div className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-slate-400">
+                    Logotipo completo
+                  </div>
+                  <div className="mt-4 flex min-h-[170px] items-center justify-center rounded-[22px] border border-white/10 bg-white/5 px-5 py-6">
+                    <Image
+                      src="/brand/hocker-one-logo.png"
+                      alt="Logo completo de Hocker One"
+                      width={360}
+                      height={126}
+                      className="h-16 w-auto drop-shadow-[0_0_18px_rgba(14,165,233,0.38)] sm:h-20"
+                      priority
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-[30px] border border-blue-400/15 bg-slate-950/80 p-5 shadow-[0_0_30px_rgba(59,130,246,0.18)]">
+                  <div className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-slate-400">
+                    Isotipo
+                  </div>
+                  <div className="mt-4 flex min-h-[170px] items-center justify-center rounded-[22px] border border-white/10 bg-white/5 px-5 py-6">
+                    <Image
+                      src="/brand/hocker-one-isotype.png"
+                      alt="Isotipo de Hocker One"
+                      width={240}
+                      height={240}
+                      className="h-24 w-auto drop-shadow-[0_0_18px_rgba(59,130,246,0.5)] sm:h-28"
+                      priority
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-[24px] border border-white/10 bg-white/5 p-3 text-left sm:max-w-md">
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
                 {[
-                  ["Estado", "Preparado para control"],
-                  ["Enfoque", "Móvil primero"],
-                  ["Lectura", "Simple y ejecutiva"],
-                  ["Escala", "Web y app"],
+                  ["Sala activa", "Mando central + chat + estado"],
+                  ["Marca visible", "Logo e isotipo con contraste real"],
+                  ["Lectura limpia", "Pensado para móvil y web"],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500">{label}</div>
-                    <div className="mt-1 text-sm font-semibold text-slate-100">{value}</div>
+                  <div key={label} className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                    <div className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">{label}</div>
+                    <div className="mt-2 text-sm font-semibold leading-6 text-slate-100">{value}</div>
                   </div>
                 ))}
               </div>
+
+              <p className="mt-6 max-w-2xl text-sm leading-6 text-slate-300">
+                La interfaz prioriza claridad, contraste y jerarquía visual. Los accesos críticos viven arriba; la ejecución profunda se despliega abajo.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {pillars.map((item) => (
-                <article key={item.title} className="rounded-[24px] border border-white/10 bg-slate-900/60 p-5">
-                  <h3 className="text-base font-bold text-white">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{item.body}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {modules.map((module) => (
-                <article
-                  key={module.name}
-                  className="rounded-[24px] border border-white/10 bg-gradient-to-br from-slate-900/85 to-slate-950/55 p-5 transition duration-300 hover:-translate-y-0.5 hover:border-sky-400/25 hover:shadow-lg hover:shadow-sky-500/10"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-extrabold uppercase tracking-[0.24em] text-sky-300">{module.name}</h3>
-                    <span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_0_6px_rgba(14,165,233,0.12)]" />
+            <div className="border-t border-white/10 bg-gradient-to-br from-slate-950/90 to-slate-900/70 p-6 sm:p-8 lg:border-l lg:border-t-0">
+              <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/20">
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-sky-300">
+                  Identidad de marca
+                </div>
+                <div className="mt-4 rounded-[24px] border border-white/10 bg-slate-950/70 p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-[22px] border border-sky-400/20 bg-slate-950/90 p-2 shadow-[0_0_24px_rgba(14,165,233,0.2)]">
+                      <Image
+                        src="/brand/hocker-one-isotype.png"
+                        alt="Isotipo de Hocker One"
+                        width={96}
+                        height={96}
+                        className="h-full w-full object-contain drop-shadow-[0_0_16px_rgba(59,130,246,0.45)]"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">
+                        Firma visual
+                      </div>
+                      <div className="mt-1 text-base font-black tracking-tight text-white">Hocker One</div>
+                      <p className="mt-1 text-sm leading-6 text-slate-300">
+                        Azul frío, blanco limpio y fondo oscuro para que la marca se lea sin esfuerzo.
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{module.text}</p>
-                </article>
-              ))}
+                </div>
+                <div className="mt-4 rounded-[20px] border border-white/10 bg-slate-950/60 px-4 py-3 text-sm leading-6 text-slate-300">
+                  Las piezas de marca quedan arriba del pliegue para que la identidad se vea primero en móvil y escritorio, sin perder legibilidad.
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <aside className="xl:col-span-5">
-          <div className="sticky top-6 flex flex-col gap-5">
-            <AuthBox />
-
-            <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-black/30 backdrop-blur-2xl">
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-slate-400">
-                Accesos rápidos
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Link
-                  href="/dashboard"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-                >
-                  Ir al tablero
-                </Link>
-                <Link
-                  href="/chat"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-                >
-                  Abrir NOVA
-                </Link>
-                <Link
-                  href="/supply"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-                >
-                  Ver Supply
-                </Link>
-                <Link
-                  href="/commands"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-                >
-                  Cola de órdenes
-                </Link>
-              </div>
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+          <div className="xl:col-span-8 animate-in fade-in slide-in-from-left duration-700">
+            <div className="hocker-card p-1 shadow-blue-500/5">
+              <NovaChat />
             </div>
           </div>
-        </aside>
+
+          <aside className="flex flex-col gap-8 xl:col-span-4 animate-in fade-in slide-in-from-right duration-700">
+            <SystemStatus />
+            <AgisRegistry title="Células Operativas" />
+          </aside>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 border-t border-white/5 pt-8 mt-4">
+          <div className="lg:col-span-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <div className="flex flex-col gap-4">
+              <h3 className="px-2 text-xs font-black uppercase tracking-[0.3em] text-slate-500">
+                Cola de Ejecución en Tiempo Real
+              </h3>
+              <CommandsQueue />
+            </div>
+          </div>
+        </div>
       </div>
     </PageShell>
   );
