@@ -1,58 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 :root {
-  --background: #020617;
-  --foreground: #e2e8f0;
+  --background: #f8fafc; /* Fondo base claro */
+  --foreground: #0f172a; /* Texto principal oscuro */
 }
+
 html,
 body {
   height: 100%;
 }
+
 body {
-  background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.08), transparent 28%),
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 24%),
-    linear-gradient(180deg, #020617 0%, #07111f 48%, #0b1220 100%);
+  background-color: var(--background);
   color: var(--foreground);
 }
+
 a {
   color: inherit;
   text-decoration: none;
 }
-@layer components {
-  .hocker-card {
-    @apply rounded-3xl border border-white/10 bg-white/5 shadow-sm backdrop-blur-xl;
-  }
-  .hocker-muted {
-    @apply text-sm text-slate-300;
-  }
-  .hocker-kbd {
-    @apply rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-slate-200;
-  }
-  .hocker-glass {
-    @apply border border-white/10 bg-white/5 backdrop-blur-xl;
-  }
-}
+
+/* ==========================================
+   SCROLLBAR PREMIUM (Estilo Vercel/Apple)
+   ========================================== */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
 }
 *::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
+  height: 8px;
+  width: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.35);
+  background: rgba(148, 163, 184, 0.4);
   border-radius: 999px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
-::selection {
-  background: rgba(14, 165, 233, 0.18);
-  color: #f8fafc;
-}
+
+/* ==========================================
+   ANIMACIONES DEL FONDO INTERACTIVO
+   ========================================== */
 @layer utilities {
   .motion-blob-1 {
     animation: hocker-float-1 30s ease-in-out infinite;
@@ -61,20 +52,22 @@ a {
     animation: hocker-float-2 36s ease-in-out infinite;
   }
   .motion-blob-3 {
-    animation: hocker-float-3 42s ease-in-out infinite;
+    animation: hocker-float-3 32s ease-in-out infinite;
   }
 }
+
 @keyframes hocker-float-1 {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  33% { transform: translate3d(64px, -24px, 0) scale(1.06); }
-  66% { transform: translate3d(-36px, 18px, 0) scale(0.96); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5%, 8%) scale(1.05); }
+  66% { transform: translate(-3%, 4%) scale(0.95); }
 }
 @keyframes hocker-float-2 {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-72px, 28px, 0) scale(1.08); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-6%, -5%) scale(0.95); }
+  66% { transform: translate(4%, -8%) scale(1.05); }
 }
 @keyframes hocker-float-3 {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  25% { transform: translate3d(28px, -18px, 0) scale(1.04); }
-  75% { transform: translate3d(-44px, 26px, 0) scale(0.98); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(4%, -4%) scale(1.02); }
+  66% { transform: translate(-5%, 5%) scale(0.98); }
 }
