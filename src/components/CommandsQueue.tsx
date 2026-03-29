@@ -67,7 +67,30 @@ export default function CommandsQueue() {
   }
 
   useEffect(() => {
+    // 1. Carga inicial
     refresh();
+
+    // 2. Conexión de Espejo en Tiempo Real (WebSockets)
+    const channel = sb
+      .channel('commands-live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escucha TODO: Creaciones, actualizaciones (aprobaciones) o eliminaciones
+          schema: 'public',
+          table: 'commands',
+          filter: `project_id=eq.${pid}`
+        },
+        () => {
+          // El sistema reacciona instantáneamente a los cambios en la matriz
+          refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      sb.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pid]);
 
@@ -81,7 +104,7 @@ export default function CommandsQueue() {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || "No se pudo aprobar.");
-      await refresh();
+      // No necesitamos llamar a refresh() aquí, el WebSocket lo actualizará solo.
     } catch (e: any) {
       setErr(e?.message ?? "No se pudo aprobar.");
     }
@@ -97,7 +120,6 @@ export default function CommandsQueue() {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || "No se pudo rechazar.");
-      await refresh();
     } catch (e: any) {
       setErr(e?.message ?? "No se pudo rechazar.");
     }
@@ -118,7 +140,16 @@ export default function CommandsQueue() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="space-y-1">
-          <h2 className="text-xl font-black tracking-tight text-slate-900">Orquestador de Comandos</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-black tracking-tight text-slate-900">Orquestador de Comandos</h2>
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 ring-1 ring-inset ring-emerald-600/20">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Radar Vivo</span>
+            </div>
+          </div>
           <p className="text-sm text-slate-500">Cola, aprobaciones y logs del Automation Fabric.</p>
         </div>
 
@@ -149,14 +180,6 @@ export default function CommandsQueue() {
               placeholder="Filtro por ID, comando, nodo..."
             />
           </div>
-
-          <button
-            onClick={refresh}
-            className="mt-2 w-full md:mt-0 md:w-auto rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02] hover:bg-slate-800 active:scale-[0.98] disabled:opacity-60 disabled:hover:scale-100"
-            disabled={loading}
-          >
-            {loading ? "Sincronizando..." : "Actualizar"}
-          </button>
         </div>
       </div>
 
