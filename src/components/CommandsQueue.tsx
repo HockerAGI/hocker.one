@@ -55,7 +55,9 @@ export default function CommandsQueue() {
     try {
       let query = sb
         .from("commands")
-        .select("id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at, started_at, finished_at")
+        .select(
+          "id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at, started_at, finished_at"
+        )
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
         .limit(80);
@@ -177,7 +179,9 @@ export default function CommandsQueue() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-black text-white">{c.command}</h3>
-                      <span className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] ${statusPill(s)}`}>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] ${statusPill(s)}`}
+                      >
                         {s}
                       </span>
                       {c.needs_approval ? (
@@ -187,15 +191,20 @@ export default function CommandsQueue() {
                       ) : null}
                     </div>
                     <div className="mt-2 text-sm text-slate-400">
-                      Nodo: <span className="text-slate-200">{c.node_id || "—"}</span> · Creado: {new Date(c.created_at).toLocaleString()}
+                      Nodo: <span className="text-slate-200">{c.node_id || "—"}</span> · Creado:{" "}
+                      {new Date(c.created_at).toLocaleString()}
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {c.status === "needs_approval" ? (
                       <>
-                        <button onClick={() => approve(c.id)} className="hocker-button-primary">Aprobar</button>
-                        <button onClick={() => reject(c.id)} className="hocker-button-secondary">Rechazar</button>
+                        <button onClick={() => approve(c.id)} className="hocker-button-primary">
+                          Aprobar
+                        </button>
+                        <button onClick={() => reject(c.id)} className="hocker-button-secondary">
+                          Rechazar
+                        </button>
                       </>
                     ) : null}
                   </div>
