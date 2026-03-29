@@ -66,41 +66,38 @@ export default function SupplyPage() {
         </Link>
       }
     >
-      <div className=\"flex flex-col gap-8\">
-        {/* Guía logística con entrada cinemática */}
-        <div className=\"animate-in fade-in slide-in-from-bottom-2 duration-300\">
-          <Hint title=\"Operación de Suministros\">
+      <div className="flex flex-col gap-8">
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <Hint title="Operación de Suministros">
             Aquí se concentra la fuerza comercial de HKR SUPPLY. Cada orden generada en este sector tiene trazabilidad absoluta dentro de la Mente Colmena, permitiendo un control total sobre las entregas y existencias.
           </Hint>
         </div>
         
-        {/* Cuadrícula de Departamentos Logísticos */}
-        <section className=\"grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both\">
+        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
           {supply.map((item) => (
-            <div key={item.title} className=\"hocker-card p-6 transition-all hover:scale-[1.03] group\">
-              <div className=\"mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 transition-colors group-hover:bg-blue-50\">
+            <div key={item.title} className="hocker-card p-6 transition-all hover:scale-[1.03] group">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 transition-colors group-hover:bg-blue-50">
                 {item.icon}
               </div>
-              <div className=\"text-lg font-black tracking-tight text-slate-950\">{item.title}</div>
-              <div className=\"mt-2 text-sm leading-relaxed text-slate-600\">{item.desc}</div>
+              <div className="text-lg font-black tracking-tight text-slate-950">{item.title}</div>
+              <div className="mt-2 text-sm leading-relaxed text-slate-600">{item.desc}</div>
             </div>
           ))}
         </section>
 
-        {/* Hoja de Ruta de Integración */}
-        <section className=\"hocker-glass rounded-[32px] p-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300 fill-mode-both\">
-          <div className=\"flex flex-col gap-2\">
-            <div className=\"text-xs font-bold uppercase tracking-[0.2em] text-blue-600\">Roadmap Logístico</div>
-            <h2 className=\"text-2xl font-black tracking-tighter text-slate-950\">Objetivos de Integración</h2>
+        <section className="hocker-glass rounded-[32px] p-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300 fill-mode-both">
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">Roadmap Logístico</div>
+            <h2 className="text-2xl font-black tracking-tighter text-slate-950">Objetivos de Integración</h2>
           </div>
           
-          <div className=\"mt-6 grid gap-3 md:grid-cols-2\">
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
             {roadmap.map((text) => (
               <div
                 key={text}
-                className=\"flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 px-5 py-4 text-sm font-bold text-blue-900 shadow-sm transition-all hover:bg-blue-50/60\"
+                className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 px-5 py-4 text-sm font-bold text-blue-900 shadow-sm transition-all hover:bg-blue-50/60"
               >
-                <div className=\"h-2 w-2 rounded-full bg-blue-400 animate-pulse\" />
+                <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
                 Sincronización: {text}
               </div>
             ))}
