@@ -4,59 +4,55 @@ import AgisRegistry from "@/components/AgisRegistry";
 import SystemStatus from "@/components/SystemStatus";
 import CommandsQueue from "@/components/CommandsQueue";
 import Hint from "@/components/Hint";
-import EventsFeed from "@/components/EventsFeed";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Sala de Mando NOVA",
-  description: "Acceso centralizado al Automation Fabric y la Mente Colmena.",
+  description: "Interfaz de orquestación central de la Mente Colmena.",
 };
 
 export default function HomePage() {
   return (
     <PageShell
-      title="Sala de Mando Central"
-      subtitle="Supervisa las inteligencias, audita la memoria y ejecuta comandos directos al ecosistema."
+      title="Sala de Mando"
+      subtitle="Supervisión activa de la Mente Colmena y ejecución de protocolos Omni-Sync."
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <div className="flex flex-col gap-8">
         
-        {/* ==========================================
-            ÁREA DE MANDO PRINCIPAL (IZQUIERDA - 7/12)
-            ========================================== */}
-        <div className="flex flex-col gap-6 xl:col-span-7">
-          <div className="animate-in fade-in slide-in-from-left duration-300">
-            <NovaChat />
-          </div>
-
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-100 fill-mode-both">
-            <Hint title="Inicio de Protocolo Omni-Sync">
-              Soy NOVA. Desde esta interfaz, puedes darme órdenes analíticas o de control. 
-              Si activas el Protocolo de Ejecución, podré inyectar comandos al Automation Fabric.
-            </Hint>
-          </div>
+        {/* FILA SUPERIOR: Sensores y Mensaje Táctico */}
+        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+          <Hint title="Protocolo de Conciencia Activo">
+            Bienvenido, Director. El Automation Fabric está operando en niveles nominales. 
+            Las sub-IAs están listas para la sincronización de objetivos 2025.
+          </Hint>
         </div>
 
-        {/* ==========================================
-            PANEL DE MONITOREO LATERAL (DERECHA - 5/12)
-            ========================================== */}
-        <aside className="flex flex-col gap-6 xl:col-span-5">
-          <div className="animate-in fade-in slide-in-from-right duration-300">
-            <SystemStatus />
+        {/* CUERPO CENTRAL: El Corazón de NOVA y el Radar */}
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+          
+          {/* Zona de Diálogo (Prioridad 1) */}
+          <div className="xl:col-span-8 animate-in fade-in slide-in-from-left duration-700">
+            <div className="hocker-card p-1 shadow-blue-500/5">
+              <NovaChat />
+            </div>
           </div>
-          <div className="animate-in fade-in slide-in-from-right duration-300 delay-100 fill-mode-both">
-            <AgisRegistry title="Células de Inteligencia" />
-          </div>
-        </aside>
 
-        {/* ==========================================
-            ÁREA DE MEMORIA Y FLUJO (INFERIOR)
-            ========================================== */}
-        <footer className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:col-span-12 border-t border-slate-100/60 pt-6 mt-2 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
-          <div className="h-full">
-            <CommandsQueue />
-          </div>
-          <div className="h-full">
-            <EventsFeed />
+          {/* Telemetría y AGIs (Soporte Táctico) */}
+          <aside className="flex flex-col gap-8 xl:col-span-4 animate-in fade-in slide-in-from-right duration-700">
+            <SystemStatus />
+            <AgisRegistry title="Células Operativas" />
+          </aside>
+        </div>
+
+        {/* PIE DE MANDO: Ejecución y Flujo */}
+        <footer className="grid grid-cols-1 gap-8 lg:grid-cols-12 border-t border-white/5 pt-8 mt-4">
+          <div className="lg:col-span-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <div className="flex flex-col gap-4">
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 px-2">
+                Cola de Ejecución en Tiempo Real
+              </h3>
+              <CommandsQueue />
+            </div>
           </div>
         </footer>
       </div>
