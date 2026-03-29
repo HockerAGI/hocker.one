@@ -5,20 +5,20 @@ export type Role = "owner" | "admin" | "operator" | "viewer";
 
 /**
  * CICLO DE VIDA DE COMANDOS
+ * Se soportan ambos spellings para compatibilidad, pero el canónico es "cancelled".
  */
 export type CommandStatus =
-  | "queued"          // En espera en la cola
-  | "needs_approval"  // Retenido por el Escudo de Seguridad
-  | "running"         // Siendo procesado por un nodo
-  | "done"            // Ejecutado con éxito
-  | "error"           // Fallo de ejecución en el nodo
-  | "canceled";       // Abortado manualmente por el Director
+  | "queued"
+  | "needs_approval"
+  | "running"
+  | "done"
+  | "error"
+  | "failed"
+  | "cancelled"
+  | "canceled";
 
 export type NodeStatus = "online" | "offline" | "degraded";
 
-/**
- * REGISTROS DE COMANDOS
- */
 export type CommandRow = {
   id: string;
   project_id: string;
@@ -37,9 +37,6 @@ export type CommandRow = {
   created_at: string;
 };
 
-/**
- * REGISTROS DE MEMORIA (RADAR)
- */
 export type EventRow = {
   id: string;
   project_id: string;
@@ -51,9 +48,6 @@ export type EventRow = {
   created_at: string;
 };
 
-/**
- * INFRAESTRUCTURA DE NODOS
- */
 export type NodeRow = {
   id: string;
   project_id: string;
@@ -67,9 +61,6 @@ export type NodeRow = {
   updated_at: string;
 };
 
-/**
- * ESCUDO DE GOBERNANZA
- */
 export type ControlRow = {
   id: string;
   project_id: string;
@@ -80,15 +71,13 @@ export type ControlRow = {
   updated_at: string;
 };
 
-/**
- * LOGÍSTICA (HKR SUPPLY)
- */
 export type SupplyOrderStatus =
   | "pending"
   | "paid"
   | "producing"
   | "shipped"
   | "delivered"
+  | "cancelled"
   | "canceled";
 
 export type SupplyProductRow = {
@@ -106,3 +95,36 @@ export type SupplyProductRow = {
   created_at: string;
   updated_at: string;
 };
+
+export function normalizeCommandStatus(status: string | null | undefined): CommandStatus {
+  const s = String(status ?? "").toLowerCase().trim();
+  if (s === "canceled") return "cancelled";
+  if (s === "cancelled") return "cancelled";
+  if (
+    s === "queued" ||
+    s === "needs_approval" ||
+    s === "running" ||
+    s === "done" ||
+    s === "error" ||
+    s === "failed"
+  ) {
+    return s;
+  }
+  return "queued";
+}
+
+export function normalizeSupplyOrderStatus(status: string | null | undefined): SupplyOrderStatus {
+  const s = String(status ?? "").toLowerCase().trim();
+  if (s === "canceled") return "cancelled";
+  if (
+    s === "pending" ||
+    s === "paid" ||
+    s === "producing" ||
+    s === "shipped" ||
+    s === "delivered" ||
+    s === "cancelled"
+  ) {
+    return s;
+  }
+  return "pending";
+}
