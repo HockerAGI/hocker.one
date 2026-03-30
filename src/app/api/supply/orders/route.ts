@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { ApiError, getControls, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 import { Langfuse } from "langfuse-node";
 
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
       p_items: items,
     });
 
-    if (error) throw new ApiError(500, { error: "Falla crítica al intentar registrar la transacción y los artículos en la matriz de datos.", details: error.message });
+    if (error) throw new ApiError(500, { error: "Falla crítica al intentar registrar la transacción y los artículos en la matriz de datos.", details: getErrorMessage(error) });
 
     trace.event({ name: "ORDEN_REGISTRADA_CON_EXITO", input: { order_id: data, status } });
     trace.event({ name: "OPERACION_EXITOSA" });

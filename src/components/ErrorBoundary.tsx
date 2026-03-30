@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import React, { Component, ReactNode } from "react";
 
@@ -18,7 +19,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, errorMsg: error.message };
+    return { hasError: true, errorMsg: getErrorMessage(error) };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
 import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
@@ -97,14 +98,14 @@ export async function POST(req: Request) {
           .from("commands")
           .update({
             status: "error",
-            error: `Fallo al despachar después de aprobar: ${triggerError.message}`,
+            error: `Fallo al despachar después de aprobar: ${getErrorMessage(triggerError)}`,
             finished_at: new Date().toISOString(),
           })
           .eq("project_id", ctx.project_id)
           .eq("id", id);
 
         throw new ApiError(500, {
-          error: `La orden fue aprobada, pero el motor remoto falló: ${triggerError.message}`,
+          error: `La orden fue aprobada, pero el motor remoto falló: ${getErrorMessage(triggerError)}`,
         });
       }
     }

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
@@ -31,7 +32,7 @@ export function toApiError(e: any) {
   const status = typeof e?.status === "number" ? e.status : 500;
   const msg =
     typeof e?.message === "string"
-      ? e.message
+      ? getErrorMessage(e)
       : typeof e?.payload?.error === "string"
         ? e.payload.error
         : "Error interno en la matriz.";

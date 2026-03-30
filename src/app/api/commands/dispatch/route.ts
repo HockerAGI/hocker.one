@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { tasks } from "@trigger.dev/sdk/v3";
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
       .order("created_at", { ascending: true }) // Respetar el orden cronológico exacto
       .limit(20);
 
-    if (error) throw new ApiError(500, { error: "Falla al escanear la cola de comandos: " + error.message });
+    if (error) throw new ApiError(500, { error: "Falla al escanear la cola de comandos: " + getErrorMessage(error) });
 
     // Filtrar exclusivamente comandos destinados a la nube (Trigger.dev / Hocker Fabric)
     const cloudCommands = (commands ?? []).filter((cmd: any) =>
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
         console.info(`[NOVA Dispatch] Orden ${cmd.id} inyectada con éxito en la nube.`);
       } catch (triggerError: any) {
         // Aislamiento de fallos: Si un comando falla al enviarse, el bucle continúa con los demás.
-        console.error(`[NOVA Dispatch] Anomalía al despachar orden ${cmd.id}:`, triggerError.message);
+        console.error(`[NOVA Dispatch] Anomalía al despachar orden ${cmd.id}:`, getErrorMessage(triggerError));
       }
     }
 

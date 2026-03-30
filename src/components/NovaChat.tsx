@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
@@ -51,7 +52,7 @@ export default function NovaChat() {
       }
       setMsgs((p) => [...p, { role: "assistant", content: txt }]);
     } catch (err: any) {
-      setMsgs((p) => [...p, { role: "assistant", content: `Error: ${err.message}` }]);
+      setMsgs((p) => [...p, { role: "assistant", content: `Error: ${getErrorMessage(err)}` }]);
     } finally {
       setLoading(false);
     }

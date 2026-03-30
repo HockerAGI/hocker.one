@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import crypto from "node:crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { signCommand } from "@/lib/security";
@@ -147,7 +148,7 @@ export async function POST(req: Request) {
           });
           trace.event({ name: "Disparo_Directo_A_Nube", input: { id, command } });
         } catch (triggerError: any) {
-          trace.event({ name: "Falla_Motor_Remoto", input: { error: triggerError.message } });
+          trace.event({ name: "Falla_Motor_Remoto", input: { error: getErrorMessage(triggerError) } });
         }
       } else {
         trace.event({ name: "En_Espera_Para_Agente_Fisico", input: { id, node_id } });

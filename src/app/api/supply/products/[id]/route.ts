@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 import { Langfuse } from "langfuse-node";
 
@@ -24,7 +25,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       .eq("id", id)
       .maybeSingle();
 
-    if (error) throw new ApiError(500, { error: error.message });
+    if (error) throw new ApiError(500, { error: getErrorMessage(error) });
     if (!data) throw new ApiError(404, { error: "Producto no encontrado" });
 
     return json({ ok: true, item: data });
@@ -57,14 +58,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: error.message });
+    if (error) throw new ApiError(500, { error: getErrorMessage(error) });
 
     trace.event({ name: "Product_Updated", input: body });
     await langfuse.flushAsync();
 
     return json({ ok: true, item: data });
   } catch (e: any) {
-    trace.event({ name: "ERROR", input: { error: e.message } });
+    trace.event({ name: "ERROR", input: { error: getErrorMessage(e) } });
     await langfuse.flushAsync();
     const ex = toApiError(e);
     return json(ex.payload, ex.status);

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      console.error("[NOVA Auth] Falla en el protocolo de acceso:", error.message);
+      console.error("[NOVA Auth] Falla en el protocolo de acceso:", getErrorMessage(error));
       return NextResponse.redirect(
         new URL(`/?error=${encodeURIComponent("Llave de acceso expirada o inválida.")}`, url)
       );

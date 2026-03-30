@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
@@ -124,7 +125,7 @@ export default function EventsFeed() {
 
                 <div className="flex-1">
                   <div className="text-[15px] font-medium leading-relaxed text-slate-100">
-                    {e.message || "Evento del sistema registrado sin descripción."}
+                    {getErrorMessage(e) || "Evento del sistema registrado sin descripción."}
                   </div>
 
                   {e.data && Object.keys(e.data).length > 0 ? (

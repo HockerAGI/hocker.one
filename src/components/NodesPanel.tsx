@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
@@ -43,7 +44,7 @@ export default function NodesPanel() {
       if (error) throw error;
       setItems((data as NodeRow[]) || []);
     } catch (e: any) {
-      setError(e.message || "No se pudieron cargar los nodos.");
+      setError(getErrorMessage(e) || "No se pudieron cargar los nodos.");
       setItems([]);
     } finally {
       setLoading(false);

@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
@@ -102,7 +103,7 @@ export default function CommandsQueue() {
       if (!res.ok) throw new Error(j?.error ?? "No se pudo aprobar.");
       await refresh();
     } catch (e: any) {
-      setErr(e.message);
+      setErr(getErrorMessage(e));
     }
   }
 
@@ -118,7 +119,7 @@ export default function CommandsQueue() {
       if (!res.ok) throw new Error(j?.error ?? "No se pudo rechazar.");
       await refresh();
     } catch (e: any) {
-      setErr(e.message);
+      setErr(getErrorMessage(e));
     }
   }
 

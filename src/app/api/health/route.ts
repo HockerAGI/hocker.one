@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
@@ -24,14 +25,14 @@ export async function GET() {
     const { error } = await sb.from("nodes").select("id").limit(1);
 
     if (error) {
-      console.error("[NOVA System] Anomalía crítica: Falla de enlace con la Matriz de Datos.", error.message);
+      console.error("[NOVA System] Anomalía crítica: Falla de enlace con la Matriz de Datos.", getErrorMessage(error));
       return NextResponse.json(
         {
           status: "degraded",
           infrastructure: "Hocker ONE Automation Fabric",
           checks: { ...envChecks, db: false },
           error: "Pérdida de conexión con el núcleo de datos.",
-          details: error.message,
+          details: getErrorMessage(error),
           timestamp: new Date().toISOString(),
         },
         { status: 500 }

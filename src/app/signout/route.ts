@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { Langfuse } from "langfuse-node";
@@ -46,8 +47,8 @@ export async function POST(req: Request) {
     });
 
   } catch (e: any) {
-    console.error("[NOVA Auth] Error durante el cierre de sesión:", e.message);
-    trace.event({ name: "ERROR_SIGNOUT", level: "ERROR", output: { error: e.message } });
+    console.error("[NOVA Auth] Error durante el cierre de sesión:", getErrorMessage(e));
+    trace.event({ name: "ERROR_SIGNOUT", level: "ERROR", output: { error: getErrorMessage(e) } });
     
     // Aun con error, forzamos la salida hacia el inicio
     return NextResponse.redirect(new URL("/", req.url), { status: 302 });

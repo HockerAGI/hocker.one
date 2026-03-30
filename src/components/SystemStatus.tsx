@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -44,7 +45,7 @@ export default function SystemStatus() {
       if (!res.ok) throw new Error(j?.error || "Falla al sincronizar diagnóstico.");
       setHealth(j);
     } catch (e: any) {
-      setError(e.message);
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

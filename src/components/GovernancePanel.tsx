@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/errors";
 
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
@@ -19,7 +20,7 @@ export default function GovernancePanel() {
       if (!res.ok) throw new Error(j?.error || "Error al cargar los protocolos de seguridad.");
       setControls(j.controls);
     } catch (e: any) {
-      setError(e.message);
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export default function GovernancePanel() {
       if (!res.ok) throw new Error(j?.error || "Error al actualizar los protocolos.");
       setControls(j.controls);
     } catch (e: any) {
-      setError(e.message);
+      setError(getErrorMessage(e));
     } finally {
       setSaving(false);
     }
