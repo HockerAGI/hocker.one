@@ -20,9 +20,10 @@ body {
   color: var(--foreground);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Efecto de Escaneo Cinematográfico */
+/* Efecto de Escaneo Cinematográfico de Fondo */
 body::after {
   content: "";
   position: fixed;
@@ -34,6 +35,7 @@ body::after {
 }
 
 @layer components {
+  /* Nuevo estándar de componentes */
   .hocker-panel-pro {
     @apply rounded-[32px] border border-white/10 bg-slate-900/40 backdrop-blur-3xl shadow-2xl transition-all duration-500 hover:border-sky-500/30;
   }
@@ -42,14 +44,14 @@ body::after {
     @apply text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)];
   }
 
-  /* Glassmorphism Extremo */
   .hocker-glass-vfx {
     @apply relative overflow-hidden rounded-[24px] border border-white/5 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-xl;
   }
 }
 
-/* Scrollbar Táctica */
+/* Scrollbar Táctica para máxima inmersión */
 *::-webkit-scrollbar { width: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { 
   background: #0ea5ff; 
   border-radius: 10px; 
