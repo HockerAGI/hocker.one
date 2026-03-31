@@ -1,4 +1,5 @@
 import { Langfuse } from "langfuse-node";
+import { getErrorMessage } from "@/lib/errors";
 import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
@@ -24,6 +25,7 @@ async function loadControls(sb: any, project_id: string) {
 
   if (data) return data;
 
+  // Inicialización automática de soberanía si el nodo es nuevo
   const created = {
     id: "global",
     project_id,
@@ -40,38 +42,34 @@ async function loadControls(sb: any, project_id: string) {
     .select("*")
     .single();
 
-  if (insertErr) {
-    throw new ApiError(500, { error: "No se pudo inicializar el sistema de gobernanza." });
-  }
-
-  return inserted ?? created;
+  if (insertErr) throw new ApiError(500, { error: "No se pudo inicializar la soberanía del proyecto." });
+  return inserted;
 }
 
 export async function GET(req: Request) {
-  const trace = langfuse.trace({ name: "Lectura_Gobernanza", metadata: { endpoint: "/api/governance/killswitch" } });
+  const trace = langfuse.trace({ name: "Gobernanza_Lectura", metadata: { endpoint: "/api/governance/killswitch" } });
 
   try {
     const q = parseQuery(req);
-    const project_id = String(q.get("project_id") ?? "global").trim();
+    const project_id = String(q.get("project_id") || "global").trim();
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
-    trace.update({ userId: ctx.user.id, tags: [project_id, "governance"] });
+    trace.update({ userId: ctx.user.id, tags: [project_id, "governance_read"] });
 
     const controls = await loadControls(ctx.sb, ctx.project_id);
 
-    trace.event({ name: "LECTURA_EXITOSA" });
     return json({ ok: true, controls });
-  } catch (e: any) {
-    const apiErr = toApiError(e);
-    trace.event({ name: "ERROR_LECTURA", level: "ERROR", output: { error: apiErr.payload } });
-    return json(apiErr.payload, apiErr.status);
+  } catch (err: unknown) {
+    const apiErr = toApiError(err);
+    trace.event({ name: "FALLA_LECTURA", level: "ERROR", output: { error: apiErr.message } });
+    return json(apiErr.body, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
 }
 
 export async function POST(req: Request) {
-  const trace = langfuse.trace({ name: "Gobernanza_Actualizacion", metadata: { endpoint: "/api/governance/killswitch" } });
+  const trace = langfuse.trace({ name: "Gobernanza_Update", metadata: { endpoint: "/api/governance/killswitch" } });
 
   try {
     const body = await parseBody(req);
@@ -80,14 +78,11 @@ export async function POST(req: Request) {
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_write"] });
 
-    const kill_switch = Boolean(body.kill_switch);
-    const allow_write = Boolean(body.allow_write);
-
     const next = {
       id: "global",
       project_id: ctx.project_id,
-      kill_switch,
-      allow_write,
+      kill_switch: Boolean(body.kill_switch),
+      allow_write: Boolean(body.allow_write),
       updated_at: new Date().toISOString(),
     };
 
@@ -97,16 +92,14 @@ export async function POST(req: Request) {
       .select("*")
       .single();
 
-    if (error) {
-      throw new ApiError(500, { error: "No se pudo actualizar el panel de gobernanza." });
-    }
+    if (error) throw new ApiError(500, { error: "Falla al actualizar protocolos de gobernanza." });
 
-    trace.event({ name: "GOBERNANZA_ACTUALIZADA", input: next });
-    return json({ ok: true, controls: data ?? next });
-  } catch (e: any) {
-    const apiErr = toApiError(e);
-    trace.event({ name: "ERROR_GOBERNANZA", level: "ERROR", output: { error: apiErr.payload } });
-    return json(apiErr.payload, apiErr.status);
+    trace.event({ name: "SOBERANIA_ACTUALIZADA", input: next });
+    return json({ ok: true, controls: data });
+  } catch (err: unknown) {
+    const apiErr = toApiError(err);
+    trace.event({ name: "FALLA_POST", level: "ERROR", output: { error: apiErr.message } });
+    return json(apiErr.body, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
