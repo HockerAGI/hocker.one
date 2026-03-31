@@ -20,11 +20,10 @@ export async function POST(req: Request) {
     if (!id) throw new ApiError(400, { error: "Falta el ID del comando a rechazar." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
-    trace.update({ userId: ctx.user?.id || "admin", tags: [project_id, "rejection"] });
-
     const controls = await getControls(ctx.sb, ctx.project_id);
+
     if (controls.kill_switch) {
-      throw new ApiError(423, { error: "BLOQUEO: Kill Switch Activo. El sistema está congelado." });
+      throw new ApiError(423, { error: "BLOQUEO: Kill Switch Activo." });
     }
 
     const { data: cmdData, error: fetchErr } = await ctx.sb
@@ -38,14 +37,14 @@ export async function POST(req: Request) {
       throw new ApiError(404, { error: "Orden no localizada en la memoria." });
     }
 
-    if (cmdData.status !== "needs_approval") {
+    if (String((cmdData as { status?: string }).status ?? "") !== "needs_approval") {
       throw new ApiError(409, { error: "La orden ya no está pendiente de aprobación." });
     }
 
     const { data, error } = await ctx.sb
       .from("commands")
       .update({
-        status: "canceled",
+        status: "cancelled",
         needs_approval: false,
         error: "Orden denegada manualmente por el Director.",
         finished_at: new Date().toISOString(),
@@ -61,10 +60,10 @@ export async function POST(req: Request) {
     trace.event({ name: "OPERACION_EXITOSA" });
 
     return json({ ok: true, item: data });
-  } catch (e: any) {
+  } catch (e: unknown) {
     const apiErr = toApiError(e);
     trace.event({ name: "ERROR_OPERATIVO", level: "ERROR", output: { error: apiErr.payload } });
-    return json(apiErr.payload, apiErr.status);
+    return json(apiErr.body, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
