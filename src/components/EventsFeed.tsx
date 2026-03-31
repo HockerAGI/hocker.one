@@ -1,6 +1,6 @@
 "use client";
-import { getErrorMessage } from "@/lib/errors";
 
+import { getErrorMessage } from "@/lib/errors";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { defaultProjectId, normalizeProjectId } from "@/lib/project";
@@ -11,12 +11,12 @@ type Evt = {
   level: "info" | "warn" | "error" | "warning" | "critical";
   type: string;
   message: string;
-  data: any;
+  data: Record<string, unknown> | null;
 };
 
 export default function EventsFeed() {
   const sb = useMemo(() => createBrowserSupabase(), []);
-  const [projectId, setProjectId] = useState(defaultProjectId());
+  const [projectId] = useState(defaultProjectId());
   const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
   const [items, setItems] = useState<Evt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,8 @@ export default function EventsFeed() {
         .limit(50);
       if (error) throw error;
       setItems((data as Evt[]) ?? []);
-    } catch {
+    } catch (err: unknown) {
+      console.error("[NOVA] Fallo en telemetría:", getErrorMessage(err));
       setItems([]);
     } finally {
       setLoading(false);
@@ -46,7 +47,9 @@ export default function EventsFeed() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "events", filter: `project_id=eq.${pid}` },
-        () => load()
+        (payload) => {
+          setItems((prev) => [payload.new as Evt, ...prev].slice(0, 50));
+        }
       )
       .subscribe();
 
@@ -54,96 +57,84 @@ export default function EventsFeed() {
       sb.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pid]);
-
-  function levelClasses(level: string) {
-    switch (level) {
-      case "critical":
-        return "border-rose-400/20 bg-rose-500/10";
-      case "error":
-        return "border-orange-400/20 bg-orange-500/10";
-      case "warning":
-      case "warn":
-        return "border-amber-400/20 bg-amber-500/10";
-      default:
-        return "border-white/10 bg-white/5";
-    }
-  }
-
-  function badgeClasses(level: string) {
-    switch (level) {
-      case "critical":
-        return "border-rose-400/20 bg-rose-500/10 text-rose-200";
-      case "error":
-        return "border-orange-400/20 bg-orange-500/10 text-orange-200";
-      case "warning":
-      case "warn":
-        return "border-amber-400/20 bg-amber-500/10 text-amber-200";
-      default:
-        return "border-white/10 bg-white/5 text-slate-200";
-    }
-  }
+  }, [sb, pid]);
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-xl shadow-black/30 backdrop-blur-2xl">
-      <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/5 pb-4">
-        <div>
-          <h2 className="text-xl font-black tracking-tight text-white">Registro de Memoria</h2>
-          <p className="mt-1 text-sm text-slate-400">Radar cronológico conectado al espejo central.</p>
+    <section className="hocker-panel-pro flex h-full flex-col overflow-hidden">
+      <div className="flex items-center justify-between border-b border-white/5 bg-sky-500/5 p-5">
+        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-400">
+          Telemetría en Vivo
+        </h3>
+        <div className="flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1">
+          <div className="h-1.5 w-1.5 rounded-full bg-sky-400 animate-pulse" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-sky-400">Sync Activa</span>
         </div>
-        <input
-          className="hocker-input w-52"
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          aria-label="Filtrar por proyecto"
-        />
       </div>
 
-      <div className="space-y-3">
-        {loading && items.length === 0 ? (
-          <div className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 py-12 text-sm text-slate-300">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-sky-400" />
-            <span className="ml-3">Sincronizando memoria central...</span>
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
+        {loading ? (
+          <div className="flex h-full items-center justify-center">
+            <span className="animate-pulse text-[10px] font-black uppercase tracking-[0.3em] text-sky-500">
+              Escaneando red...
+            </span>
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 py-12 text-center text-sm text-slate-300">
-            Aún no hay eventos registrados en este canal.
+          <div className="flex h-full items-center justify-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
+            Sin señales detectadas
           </div>
         ) : (
-          items.map((e) => (
-            <div key={e.id} className={`rounded-[20px] border p-5 ${levelClasses(e.level)}`}>
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div className="flex w-full flex-col gap-2 md:w-48 md:shrink-0">
-                  <span className={`inline-flex w-max items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${badgeClasses(e.level)}`}>
-                    {e.level}
-                  </span>
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    {new Date(e.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                    <span className="block font-normal lowercase">{new Date(e.created_at).toLocaleDateString()}</span>
-                  </span>
-                </div>
+          items.map((e) => {
+            const isCritical = e.level === "error" || e.level === "critical";
+            const isWarn = e.level === "warn" || e.level === "warning";
+            const color = isCritical ? "rose" : isWarn ? "amber" : "sky";
 
-                <div className="flex-1">
-                  <div className="text-[15px] font-medium leading-relaxed text-slate-100">
-                    {getErrorMessage(e) || "Evento del sistema registrado sin descripción."}
+            return (
+              <div
+                key={e.id}
+                className={`group relative overflow-hidden rounded-2xl border bg-slate-950/40 p-4 transition-all hover:bg-slate-900/80 animate-in fade-in slide-in-from-left-2 ${
+                  isCritical ? "border-rose-500/20 hover:border-rose-500/40" : 
+                  isWarn ? "border-amber-500/20 hover:border-amber-500/40" : 
+                  "border-white/5 hover:border-sky-500/20"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`mt-1 flex h-2 w-2 shrink-0 rounded-full shadow-[0_0_8px_currentColor] ${
+                    isCritical ? "bg-rose-500 text-rose-500" : 
+                    isWarn ? "bg-amber-500 text-amber-500" : 
+                    "bg-sky-500 text-sky-500"
+                  }`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[11px] font-black uppercase tracking-widest text-white">
+                        {e.type}
+                      </span>
+                      <span className="shrink-0 text-[9px] font-bold text-slate-500">
+                        {new Date(e.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
+
+                    <div className="mt-1 text-[12px] leading-relaxed text-slate-300">
+                      {e.message || "Evento registrado sin descripción."}
+                    </div>
+
+                    {e.data && Object.keys(e.data).length > 0 ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 hover:text-sky-400 transition-colors">
+                          Inspeccionar Matriz
+                        </summary>
+                        <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/80 shadow-inner">
+                          <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
+                            {JSON.stringify(e.data, null, 2)}
+                          </pre>
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
-
-                  {e.data && Object.keys(e.data).length > 0 ? (
-                    <details className="mt-3">
-                      <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.1em] text-slate-400">
-                        Inspeccionar matriz de datos
-                      </summary>
-                      <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-slate-950/70">
-                        <pre className="overflow-auto p-4 font-mono text-[12px] leading-relaxed text-emerald-200">
-                          {JSON.stringify(e.data, null, 2)}
-                        </pre>
-                      </div>
-                    </details>
-                  ) : null}
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </section>
