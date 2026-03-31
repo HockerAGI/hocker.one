@@ -14,7 +14,8 @@ export default defineConfig([
   ]),
   {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // Tolerancia Cero a vulnerabilidades de tipado y "amnesia digital"
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'react-hooks/set-state-in-effect': 'warn',
     },
