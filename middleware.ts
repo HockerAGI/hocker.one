@@ -2,13 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 const PROTECTED_PATHS = [
-  "/dashboard", 
-  "/chat", 
-  "/commands", 
-  "/nodes", 
-  "/agis", 
-  "/supply", 
-  "/governance"
+  "/dashboard",
+  "/chat",
+  "/commands",
+  "/nodes",
+  "/agis",
+  "/supply",
+  "/governance",
 ];
 
 function isProtected(pathname: string): boolean {
@@ -35,9 +35,15 @@ export async function middleware(req: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
 
-  // Barrera de contención táctica
+  if (error) {
+    if (isProtected(pathname)) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    return res;
+  }
+
   if (isProtected(pathname) && !data.user) {
     return NextResponse.redirect(new URL("/", req.url));
   }
@@ -46,5 +52,13 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/dashboard/:path*",
+    "/chat/:path*",
+    "/commands/:path*",
+    "/nodes/:path*",
+    "/agis/:path*",
+    "/supply/:path*",
+    "/governance/:path*",
+  ],
 };
