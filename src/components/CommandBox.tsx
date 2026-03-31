@@ -1,16 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { defaultNodeId, defaultProjectId, normalizeNodeId, normalizeProjectId } from "@/lib/project";
 import type { CommandStatus } from "@/lib/types";
-
-function pretty(value: any) {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
+import { getErrorMessage } from "@/lib/errors";
 
 export default function CommandBox() {
   const [projectId, setProjectId] = useState(defaultProjectId());
@@ -22,7 +15,6 @@ export default function CommandBox() {
   const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
   const nid = useMemo(() => normalizeNodeId(nodeId), [nodeId]);
 
-  const [last, setLast] = useState<any>(null);
   const [status, setStatus] = useState<CommandStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,11 +23,11 @@ export default function CommandBox() {
     setLoading(true);
 
     try {
-      let parsed: any = {};
+      let parsed: unknown = {};
       try {
         parsed = JSON.parse(payload || "{}");
       } catch {
-        throw new Error("Payload no es JSON válido.");
+        throw new Error("Payload no es un JSON válido. Verifica la sintaxis.");
       }
 
       const r = await fetch("/api/commands", {
@@ -44,137 +36,87 @@ export default function CommandBox() {
         body: JSON.stringify({
           project_id: pid,
           node_id: nid,
-          command: command.trim(),
+          command,
           payload: parsed,
         }),
       });
 
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j?.error ?? "Error creando comando.");
+      const data = await r.json();
+      if (!r.ok) {
+        throw new Error(data.error || "Falla en la transmisión del comando.");
+      }
 
-      setLast(j.item);
-      setStatus(j.item?.status ?? null);
-    } catch (e: any) {
-      setMsg(e?.message ?? "Error");
+      setMsg("Comando inyectado con éxito en la Matriz.");
+      setStatus("queued");
+      setCommand("");
+      setPayload("{}");
+    } catch (err: unknown) {
+      setMsg(getErrorMessage(err));
+      setStatus("error");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    if (!last?.id) return;
-
-    const t = setInterval(async () => {
-      try {
-        const r = await fetch(`/api/commands?project_id=${encodeURIComponent(pid)}&id=${encodeURIComponent(last.id)}`);
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok || !j?.ok) return;
-
-        const item = (j.items ?? [])[0];
-        if (item?.id) {
-          setLast(item);
-          setStatus(item.status);
-          if (["done", "cancelled", "error", "failed"].includes(String(item.status))) {
-            clearInterval(t);
-          }
-        }
-      } catch {
-        // sin-op
-      }
-    }, 2000);
-
-    return () => clearInterval(t);
-  }, [last?.id, pid]);
-
   return (
-    <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-xl shadow-black/30 backdrop-blur-2xl">
-      <div className="mb-5 border-b border-white/5 pb-4">
-        <h2 className="text-lg font-black tracking-tight text-white">Lanzador de AGIs</h2>
-        <p className="mt-1 text-sm text-slate-400">Inyección manual de comandos al ecosistema.</p>
+    <div className="hocker-panel-pro overflow-hidden">
+      <div className="p-5 border-b border-white/5 bg-sky-500/5 flex items-center justify-between">
+        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">Terminal de Inyección</h3>
+        <div className={`h-2 w-2 rounded-full ${status === 'running' ? 'bg-sky-400 animate-pulse' : status === 'error' ? 'bg-rose-500' : 'bg-slate-500'}`} />
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">Proyecto</label>
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Nodo Destino</label>
             <input
-              className="mt-1.5 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">Nodo</label>
-            <input
-              className="mt-1.5 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10"
               value={nodeId}
               onChange={(e) => setNodeId(e.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-xs font-mono text-sky-300 focus:border-sky-500/50 outline-none transition-all shadow-inner"
+              placeholder="hocker-fabric"
             />
           </div>
-
-          <div>
-            <label className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">Comando</label>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Instrucción</label>
             <input
-              className="mt-1.5 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10"
               value={command}
               onChange={(e) => setCommand(e.target.value)}
-              placeholder="Ej: meta.send_msg / stripe.charge"
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-xs font-mono text-white focus:border-sky-500/50 outline-none transition-all shadow-inner"
+              placeholder="status / deploy / restart"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="flex flex-col">
-            <label className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">
-              Payload (JSON)
-            </label>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Payload (JSON)</label>
+          <div className="relative rounded-2xl border border-white/10 bg-slate-950/80 shadow-inner focus-within:border-sky-500/50 transition-all overflow-hidden">
+            <div className="absolute top-0 left-0 bottom-0 w-8 bg-white/5 border-r border-white/5 flex flex-col items-center pt-4 text-[10px] font-mono text-slate-600 select-none">
+              1<br/>2<br/>3<br/>4
+            </div>
             <textarea
-              className="mt-1.5 h-[220px] w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-4 font-mono text-[13px] leading-relaxed text-sky-200 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10"
+              rows={4}
               value={payload}
               onChange={(e) => setPayload(e.target.value)}
-              spellCheck={false}
+              className="w-full bg-transparent pl-12 pr-4 py-4 text-xs font-mono text-emerald-300 outline-none custom-scrollbar resize-none"
+              placeholder="{}"
+              spellCheck="false"
             />
           </div>
-
-          <div className="flex flex-col">
-            <label className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">
-              Memoria de Salida
-            </label>
-            <div className="mt-1.5 h-[220px] overflow-auto rounded-2xl border border-white/10 bg-slate-950 px-4 py-4 font-mono text-[13px] leading-relaxed text-emerald-200 shadow-inner">
-              <pre>{last ? pretty(last) : "Esperando ejecución en la matriz..."}</pre>
-            </div>
-          </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/5 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  status === "running" ? "animate-pulse bg-sky-400" : status === "done" ? "bg-emerald-400" : "bg-slate-500"
-                }`}
-              />
-              <span className="text-[11px] font-semibold uppercase tracking-widest">
-                Estado: {status ?? "inactivo"}
-              </span>
-            </div>
-
-            {msg ? (
-              <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-200">
-                {msg}
-              </span>
-            ) : null}
+        {msg && (
+          <div className={`rounded-2xl border px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-center ${status === 'error' ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-amber-500/30 bg-amber-500/10 text-amber-300'}`}>
+            {msg}
           </div>
+        )}
 
-          <button
-            onClick={send}
-            disabled={loading}
-            className="inline-flex items-center justify-center rounded-2xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Inyectando..." : "Lanzar AGI"}
-          </button>
-        </div>
+        <button
+          onClick={send}
+          disabled={loading || !command.trim()}
+          className="w-full rounded-2xl bg-sky-500 py-4 text-sm font-black text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-400 active:scale-95 disabled:opacity-50"
+        >
+          {loading ? "INYECTANDO COMANDO..." : "EJECUTAR TRANSMISIÓN"}
+        </button>
       </div>
     </div>
   );
