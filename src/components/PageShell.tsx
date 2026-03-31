@@ -1,11 +1,10 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
 import AppNav from "@/components/AppNav";
-import BrandMark from "@/components/BrandMark";
 import InteractiveBackground from "@/components/InteractiveBackground";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import Image from "next/image";
 
 interface PageShellProps {
   title: string;
@@ -15,57 +14,74 @@ interface PageShellProps {
 }
 
 export default function PageShell({ title, subtitle, actions, children }: PageShellProps) {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute -left-[10%] -top-[10%] h-[50%] w-[50%] rounded-full bg-blue-600/10 blur-[120px]" />
-        <div className="absolute -right-[10%] -bottom-[10%] h-[50%] w-[50%] rounded-full bg-indigo-600/10 blur-[120px]" />
-      </div>
+    <div className="flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100 selection:bg-sky-500/30">
+      {/* INTRO CINEMATOGRÁFICA (VFX) */}
+      {loading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 animate-out fade-out duration-1000 fill-mode-forwards">
+          <div className="relative">
+            <div className="absolute inset-0 animate-ping rounded-full bg-sky-500/10 blur-2xl" />
+            <Image 
+              src="/brand/hocker-one-isotype.png" 
+              alt="Cargando..." 
+              width={80} 
+              height={80} 
+              className="relative animate-pulse" 
+            />
+          </div>
+        </div>
+      )}
 
       <InteractiveBackground />
-      <AppNav />
+      
+      {/* BARRA LATERAL TÁCTICA (SIDEBAR) */}
+      <aside className="relative z-30 hidden w-72 flex-col border-r border-white/5 bg-slate-950/40 backdrop-blur-3xl lg:flex">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <AppNav />
+        </div>
+      </aside>
 
-      <main className="hocker-dark-scope relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-[32px] border border-white/10 bg-slate-900/60 p-5 shadow-2xl shadow-black/50 backdrop-blur-2xl sm:p-6">
-          <div className="flex flex-col gap-5 border-b border-white/5 pb-6 md:flex-row md:items-end md:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="transition-all duration-500 hover:drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]">
-                  <BrandMark compact />
-                </div>
-
-                <div className="hocker-chip border-blue-400/30 bg-blue-500/10 text-blue-200">
-                  Omni-Sync 2025
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                <Link href="/dashboard" className="transition-colors hover:text-sky-400">
-                  Matriz
-                </Link>
-                <svg className="h-2.5 w-2.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-                <span className="truncate text-sky-300/90">{title}</span>
-              </div>
-
-              <h1 className="mt-3 truncate text-3xl font-black tracking-tighter text-white sm:text-4xl lg:text-5xl">
-                {title}
-              </h1>
-
-              {subtitle ? (
-                <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-slate-300">
-                  {subtitle}
-                </p>
-              ) : null}
-            </div>
-
-            {actions ? <div className="flex shrink-0 items-center gap-3">{actions}</div> : null}
+      {/* ÁREA DE OPERACIONES CENTRAL */}
+      <main className="relative z-10 flex flex-1 flex-col overflow-hidden bg-gradient-to-br from-transparent to-sky-950/5">
+        
+        {/* CABECERA DE MANDO (TOPBAR) */}
+        <header className="flex h-20 shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/20 px-6 backdrop-blur-md sm:px-8">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-black tracking-tighter text-white sm:text-2xl hocker-text-glow">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-400/80">
+                {subtitle}
+              </p>
+            )}
           </div>
+          
+          <div className="flex items-center gap-4">
+            {actions}
+            <div className="h-10 w-10 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-2 shadow-[0_0_15px_rgba(14,165,233,0.1)] lg:hidden">
+               <Image src="/brand/hocker-one-isotype.png" alt="H" width={40} height={40} className="object-contain" />
+            </div>
+          </div>
+        </header>
 
-          <div className="mt-8">
+        {/* LIENZO DE CONTENIDO SCROLLEABLE */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
+          <div className="mx-auto max-w-[1600px] animate-in fade-in slide-in-from-bottom-4 duration-700">
             <ErrorBoundary>{children}</ErrorBoundary>
           </div>
+        </div>
+
+        {/* NAVEGACIÓN MÓVIL (PWA READY) */}
+        <div className="border-t border-white/5 bg-slate-950/80 p-2 backdrop-blur-2xl lg:hidden">
+          <AppNav isMobile />
         </div>
       </main>
     </div>
