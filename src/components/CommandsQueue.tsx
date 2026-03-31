@@ -1,6 +1,6 @@
 "use client";
-import { getErrorMessage } from "@/lib/errors";
 
+import { getErrorMessage } from "@/lib/errors";
 import React, { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import type { CommandStatus } from "@/lib/types";
@@ -18,70 +18,58 @@ type Cmd = {
   executed_at: string | null;
   started_at: string | null;
   finished_at: string | null;
-  payload: any;
-  result: any;
+  payload: unknown;
+  result: unknown;
   error: string | null;
 };
 
 function statusPill(status: string) {
   const s = String(status || "").toLowerCase();
-  if (s === "needs_approval") return "border-amber-400/20 bg-amber-500/10 text-amber-200";
-  if (s === "queued") return "border-sky-400/20 bg-sky-500/10 text-sky-200";
-  if (s === "running") return "border-violet-400/20 bg-violet-500/10 text-violet-200";
-  if (s === "done") return "border-emerald-400/20 bg-emerald-500/10 text-emerald-200";
-  if (s === "error" || s === "failed") return "border-rose-400/20 bg-rose-500/10 text-rose-200";
-  if (s === "canceled" || s === "cancelled") return "border-slate-400/20 bg-white/5 text-slate-200";
-  return "border-slate-400/20 bg-white/5 text-slate-200";
-}
-
-function normalizeStatus(status: string): string {
-  const s = String(status || "").toLowerCase();
-  return s === "canceled" ? "cancelled" : s;
+  if (s === "needs_approval") return "border-amber-400/30 bg-amber-500/10 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]";
+  if (s === "queued") return "border-sky-400/30 bg-sky-500/10 text-sky-300 shadow-[0_0_10px_rgba(14,165,233,0.2)]";
+  if (s === "running") return "border-violet-400/30 bg-violet-500/10 text-violet-300 animate-pulse";
+  if (s === "done") return "border-emerald-400/30 bg-emerald-500/10 text-emerald-300";
+  if (s === "error" || s === "failed") return "border-rose-400/30 bg-rose-500/10 text-rose-300";
+  return "border-slate-500/30 bg-slate-500/10 text-slate-300";
 }
 
 export default function CommandsQueue() {
   const sb = useMemo(() => createBrowserSupabase(), []);
-  const [projectId, setProjectId] = useState<string>(defaultProjectId());
+  const [projectId] = useState(defaultProjectId());
   const pid = useMemo(() => normalizeProjectId(projectId), [projectId]);
 
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [items, setItems] = useState<Cmd[]>([]);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  async function refresh() {
-    setErr(null);
+  async function load() {
     setLoading(true);
+    setError(null);
     try {
-      let query = sb
+      const { data, error: err } = await sb
         .from("commands")
-        .select(
-          "id, project_id, node_id, command, status, needs_approval, payload, result, error, created_at, approved_at, executed_at, started_at, finished_at"
-        )
+        .select("*")
         .eq("project_id", pid)
         .order("created_at", { ascending: false })
-        .limit(80);
+        .limit(30);
 
-      if (filterStatus !== "all") query = query.eq("status", normalizeStatus(filterStatus));
-      const { data, error } = await query;
-      if (error) throw error;
+      if (err) throw err;
       setItems((data as Cmd[]) ?? []);
-    } catch (e: any) {
-      setErr(e?.message ?? "No se pudo cargar la cola.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    refresh();
+    load();
     const channel = sb
-      .channel("commands-live")
+      .channel("commands-live-queue")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "commands", filter: `project_id=eq.${pid}` },
-        () => refresh()
+        () => load()
       )
       .subscribe();
 
@@ -89,143 +77,98 @@ export default function CommandsQueue() {
       sb.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pid, filterStatus]);
+  }, [sb, pid]);
 
-  async function approve(id: string) {
-    setErr(null);
+  async function approve(id: string, approved: boolean) {
     try {
-      const res = await fetch("/api/commands/approve", {
+      const r = await fetch("/api/commands/approve", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: pid, id }),
+        body: JSON.stringify({ id, approved }),
       });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j?.error ?? "No se pudo aprobar.");
-      await refresh();
-    } catch (e: any) {
-      setErr(getErrorMessage(e));
+      if (!r.ok) {
+        const j = await r.json();
+        throw new Error(j.error || "Error al procesar la aprobación.");
+      }
+      load();
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   }
-
-  async function reject(id: string) {
-    setErr(null);
-    try {
-      const res = await fetch("/api/commands/reject", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: pid, id }),
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j?.error ?? "No se pudo rechazar.");
-      await refresh();
-    } catch (e: any) {
-      setErr(getErrorMessage(e));
-    }
-  }
-
-  const shown = items.filter((c) => {
-    const hay = `${c.command} ${c.node_id ?? ""} ${JSON.stringify(c.payload ?? {})}`.toLowerCase();
-    return hay.includes(q.toLowerCase());
-  });
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-xl shadow-black/30 backdrop-blur-2xl">
-      <div className="flex flex-col gap-4 border-b border-white/5 pb-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h2 className="text-lg font-black tracking-tight text-white">Cola de Ejecución</h2>
-          <p className="mt-1 text-sm text-slate-400">Aprobaciones, estados y despachos en tiempo real.</p>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-3">
-          <input className="hocker-input w-full sm:w-52" value={projectId} onChange={(e) => setProjectId(e.target.value)} />
-          <select
-            className="hocker-input w-full sm:w-44"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">Todos</option>
-            <option value="needs_approval">Pendientes</option>
-            <option value="queued">En cola</option>
-            <option value="running">En ejecución</option>
-            <option value="done">Completados</option>
-            <option value="error">Con error</option>
-            <option value="cancelled">Cancelados</option>
-          </select>
-          <input
-            className="hocker-input w-full sm:w-56"
-            placeholder="Buscar comando, nodo o payload..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+    <section className="hocker-panel-pro flex flex-col h-full overflow-hidden">
+      <div className="p-5 border-b border-white/5 bg-white/5 flex items-center justify-between">
+        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-400">Log de Operaciones</h3>
+        <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 border border-emerald-500/20">
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400">Live Sync</span>
         </div>
       </div>
 
-      {err ? <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{err}</div> : null}
-
-      <div className="mt-6 space-y-3">
-        {loading && items.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
-            Cargando cola...
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
+        {error ? (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300">{error}</div>
+        ) : loading ? (
+          <div className="p-8 text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 animate-pulse">
+            Sincronizando registros...
           </div>
-        ) : shown.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-sm text-slate-300">
-            No hay comandos para mostrar.
+        ) : items.length === 0 ? (
+          <div className="p-8 text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
+            No hay operaciones en cola.
           </div>
         ) : (
-          shown.map((c) => {
-            const s = normalizeStatus(c.status);
+          items.map((c) => {
+            const isPending = c.needs_approval && c.status === "needs_approval";
             return (
-              <article key={c.id} className="rounded-[22px] border border-white/10 bg-white/5 p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-black text-white">{c.command}</h3>
-                      <span
-                        className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] ${statusPill(s)}`}
-                      >
-                        {s}
+              <article key={c.id} className="group rounded-[20px] border border-white/5 bg-slate-950/40 p-4 transition-all hover:bg-slate-900/60 hover:border-sky-500/20">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-white group-hover:text-sky-300 transition-colors">
+                        {c.command}
                       </span>
-                      {c.needs_approval ? (
-                        <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
-                          approval
-                        </span>
-                      ) : null}
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${statusPill(c.status)}`}>
+                        {c.status}
+                      </span>
                     </div>
-                    <div className="mt-2 text-sm text-slate-400">
-                      Nodo: <span className="text-slate-200">{c.node_id || "—"}</span> · Creado:{" "}
-                      {new Date(c.created_at).toLocaleString()}
+                    <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                      <span>{c.node_id || "global"}</span>
+                      <span>•</span>
+                      <span>{new Date(c.created_at).toLocaleTimeString()}</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {c.status === "needs_approval" ? (
-                      <>
-                        <button onClick={() => approve(c.id)} className="hocker-button-primary">
-                          Aprobar
-                        </button>
-                        <button onClick={() => reject(c.id)} className="hocker-button-secondary">
-                          Rechazar
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
+                  {isPending && (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => approve(c.id, true)} className="rounded-xl bg-emerald-500/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all">
+                        Autorizar
+                      </button>
+                      <button onClick={() => approve(c.id, false)} className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-rose-400 hover:bg-rose-500 hover:text-white transition-all">
+                        Rechazar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <details className="mt-4">
-                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                    Inspeccionar datos
+                  <summary className="cursor-pointer list-none text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 hover:text-sky-400 transition-colors flex items-center gap-1.5">
+                    <svg className="h-3 w-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                    Inspeccionar Matriz de Datos
                   </summary>
                   <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Payload</div>
-                      <pre className="overflow-auto font-mono text-[12px] leading-relaxed text-sky-200">
-                        {JSON.stringify(c.payload ?? null, null, 2)}
+                    <div className="rounded-xl border border-white/10 bg-slate-950/80 p-4 shadow-inner">
+                      <div className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-sky-500/70">Payload</div>
+                      <pre className="overflow-x-auto font-mono text-[11px] text-sky-200 custom-scrollbar">
+                        {JSON.stringify(c.payload ?? {}, null, 2)}
                       </pre>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-                      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Resultado</div>
-                      <pre className="overflow-auto font-mono text-[12px] leading-relaxed text-emerald-200">
-                        {JSON.stringify(c.result ?? null, null, 2)}
+                    <div className="rounded-xl border border-white/10 bg-slate-950/80 p-4 shadow-inner">
+                      <div className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500/70">Resultado</div>
+                      <pre className="overflow-x-auto font-mono text-[11px] text-emerald-200 custom-scrollbar">
+                        {JSON.stringify(c.result ?? {}, null, 2)}
                       </pre>
                     </div>
                   </div>
