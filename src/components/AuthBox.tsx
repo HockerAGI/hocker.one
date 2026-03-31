@@ -8,33 +8,25 @@ import BrandMark from "@/components/BrandMark";
 export default function AuthBox() {
   const supabase = useMemo(() => createBrowserSupabase(), []);
   
-  // Estados de Identidad y Seguridad
-  const [identity, setIdentity] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState(""); // Código OTP
+  const [mode, setMode] = useState<"password" | "magic_link">("password");
   
-  // Estados de Operación
-  const [mode, setMode] = useState<"password" | "otp">("password");
-  const [step, setStep] = useState<"input" | "verify">("input");
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  // Inteligencia de detección: ¿Es teléfono o correo?
-  const isPhone = useMemo(() => {
-    return /^\+?[0-9\s\-]+$/.test(identity) && identity.trim().length > 5;
-  }, [identity]);
 
   useEffect(() => {
     let alive = true;
 
     supabase.auth.getUser().then(({ data }) => {
       if (!alive) return;
-      setUserEmail(data.user?.email || data.user?.phone || null);
+      setUserEmail(data.user?.email ?? null);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email || session?.user?.phone || null);
+      setUserEmail(session?.user?.email ?? null);
     });
 
     return () => {
@@ -43,20 +35,19 @@ export default function AuthBox() {
     };
   }, [supabase]);
 
-  // PROTOCOLO 1: Acceso con Contraseña
-  async function loginWithPassword(e: React.FormEvent) {
+  async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!identity.trim() || !password.trim() || loading) return;
+    if (!email.trim() || !password.trim() || loading) return;
 
     setError(null);
     setLoading(true);
 
     try {
-      const credentials = isPhone
-        ? { phone: identity, password }
-        : { email: identity, password };
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      const { error: authError } = await supabase.auth.signInWithPassword(credentials);
       if (authError) throw authError;
     } catch (err: unknown) {
       setError(getErrorMessage(err) || "Credenciales rechazadas por la Matriz.");
@@ -65,55 +56,26 @@ export default function AuthBox() {
     }
   }
 
-  // PROTOCOLO 2: Solicitar Código OTP / SMS / Magic Link
-  async function requestOtp(e: React.FormEvent) {
+  async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
-    if (!identity.trim() || loading) return;
+    if (!email.trim() || loading) return;
 
     setError(null);
     setLoading(true);
 
     try {
-      if (isPhone) {
-        const { error: authError } = await supabase.auth.signInWithOtp({ phone: identity });
-        if (authError) throw authError;
-      } else {
-        const origin = window.location.origin;
-        const { error: authError } = await supabase.auth.signInWithOtp({
-          email: identity,
-          options: { emailRedirectTo: `${origin}/auth/callback` },
-        });
-        if (authError) throw authError;
-      }
-      setStep("verify");
-    } catch (err: unknown) {
-      setError(getErrorMessage(err) || "Fallo al emitir la solicitud de código táctico.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // PROTOCOLO 3: Verificar Código OTP
-  async function verifyOtpCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (!token.trim() || loading) return;
-
-    setError(null);
-    setLoading(true);
-
-    try {
-      let authError;
-      if (isPhone) {
-        const res = await supabase.auth.verifyOtp({ phone: identity, token, type: "sms" });
-        authError = res.error;
-      } else {
-        const res = await supabase.auth.verifyOtp({ email: identity, token, type: "email" });
-        authError = res.error;
-      }
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+        },
+      });
 
       if (authError) throw authError;
+      setSent(true);
     } catch (err: unknown) {
-      setError(getErrorMessage(err) || "El código ingresado es inválido o ha expirado.");
+      setError(getErrorMessage(err) || "Fallo al emitir el enlace táctico.");
     } finally {
       setLoading(false);
     }
@@ -121,6 +83,7 @@ export default function AuthBox() {
 
   return (
     <div className="relative w-full max-w-md animate-in fade-in zoom-in duration-700">
+      {/* Resplandor VFX trasero */}
       <div className="absolute -inset-1 bg-sky-500/20 rounded-[40px] blur-3xl opacity-30 animate-pulse-slow" />
 
       <div className="hocker-panel-pro relative flex flex-col items-center p-8 sm:p-12 border border-sky-500/20 shadow-[0_0_40px_rgba(14,165,233,0.1)]">
@@ -130,7 +93,7 @@ export default function AuthBox() {
             Autorización de Mando
           </h2>
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-400 mt-2">
-            Protocolo de Identidad Activo
+            Identidad Requerida
           </p>
         </div>
 
@@ -150,111 +113,88 @@ export default function AuthBox() {
         ) : (
           <div className="w-full space-y-6">
             
-            {/* VISTA 1: INGRESO DE CREDENCIALES O SOLICITUD DE OTP */}
-            {step === "input" ? (
-              <form onSubmit={mode === "password" ? loginWithPassword : requestOtp} className="w-full space-y-4 animate-in fade-in">
-                <div className="relative">
-                  <input
-                    type="text"
-                    disabled={loading}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50"
-                    placeholder="Ej. director@hocker.one o +52 664 000 0000"
-                    value={identity}
-                    onChange={(e) => setIdentity(e.target.value)}
-                  />
-                  {identity.length > 3 && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      {isPhone ? (
-                        <svg className="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                      ) : (
-                        <svg className="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                      )}
-                    </div>
-                  )}
+            <form onSubmit={mode === "password" ? handlePasswordLogin : handleMagicLink} className="w-full space-y-4 animate-in fade-in">
+              <div className="relative">
+                <input
+                  type="email"
+                  autoComplete="email"
+                  disabled={loading || sent}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50"
+                  placeholder="director@hocker.one"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <svg className="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </div>
+              </div>
 
-                {mode === "password" && (
-                  <input
-                    type="password"
-                    disabled={loading}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50 animate-in slide-in-from-top-2"
-                    placeholder="Código de autorización (Contraseña)"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                )}
+              {mode === "password" && !sent && (
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  disabled={loading}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50 animate-in slide-in-from-top-2"
+                  placeholder="Código de autorización"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              )}
 
+              {error && (
+                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-rose-300 text-center animate-pulse">
+                  {error}
+                </div>
+              )}
+
+              {sent ? (
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-emerald-300 text-center shadow-[0_0_15px_rgba(16,185,129,0.1)] animate-in zoom-in">
+                  Protocolo iniciado. Revisa tu bandeja de entrada para acceder directamente.
+                </div>
+              ) : (
                 <button
                   type="submit"
-                  disabled={loading || !identity.trim() || (mode === "password" && !password.trim())}
+                  disabled={loading || !email.trim() || (mode === "password" && !password.trim())}
                   className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95 disabled:opacity-50"
                 >
                   {loading 
                     ? "PROCESANDO..." 
                     : mode === "password" 
                       ? "INICIAR CONEXIÓN" 
-                      : "SOLICITAR CÓDIGO TÁCTICO"}
+                      : "ENVIAR ENLACE MÁGICO"}
                 </button>
-              </form>
-            ) : (
-              /* VISTA 2: VERIFICACIÓN DE CÓDIGO OTP/SMS */
-              <form onSubmit={verifyOtpCode} className="w-full space-y-4 animate-in fade-in slide-in-from-right-4">
-                <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 text-center">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-sky-300">
-                    Código enviado a
-                  </p>
-                  <p className="text-white font-bold mt-1">{identity}</p>
-                </div>
+              )}
+            </form>
 
-                <input
-                  type="text"
-                  disabled={loading}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-center text-xl font-mono tracking-[0.5em] text-emerald-400 outline-none transition-all placeholder:text-slate-600 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 shadow-inner disabled:opacity-50"
-                  placeholder="000000"
-                  maxLength={6}
-                  value={token}
-                  onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))}
-                />
-
-                <button
-                  type="submit"
-                  disabled={loading || token.length < 6}
-                  className="w-full rounded-2xl bg-emerald-500 px-5 py-4 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 active:scale-95 disabled:opacity-50"
-                >
-                  {loading ? "VERIFICANDO MATRIZ..." : "CONFIRMAR CÓDIGO"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setStep("input"); setToken(""); setError(null); }}
-                  disabled={loading}
-                  className="w-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors pt-2"
-                >
-                  Cancelar Operación
-                </button>
-              </form>
-            )}
-
-            {error && (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-rose-300 text-center animate-pulse">
-                {error}
-              </div>
-            )}
-
-            {/* INTERRUPTOR TÁCTICO DE MODO (Oculto en paso de verificación) */}
-            {step === "input" && (
+            {/* INTERRUPTOR TÁCTICO DE MODO */}
+            {!sent && (
               <div className="pt-4 text-center border-t border-white/5">
                 <button
                   type="button"
                   onClick={() => {
-                    setMode(mode === "password" ? "otp" : "password");
+                    setMode(mode === "password" ? "magic_link" : "password");
                     setError(null);
                   }}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-sky-400 transition-colors"
                 >
                   {mode === "password" 
-                    ? "No tengo contraseña (Usar Código OTP)" 
-                    : "Ya tengo una contraseña"}
+                    ? "Acceder sin contraseña (Enlace Mágico)" 
+                    : "Acceder con Contraseña"}
+                </button>
+              </div>
+            )}
+            
+            {sent && (
+              <div className="pt-4 text-center border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSent(false);
+                    setMode("password");
+                  }}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
+                >
+                  Volver al inicio
                 </button>
               </div>
             )}
