@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo, type ReactElement } from "react";
 import BrandMark from "@/components/BrandMark";
 import NodeBadge from "@/components/NodeBadge";
@@ -33,6 +33,7 @@ const ITEMS: NavItem[] = [
 
 export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname() || "/";
+  const router = useRouter();
   const active = useMemo(() => ITEMS.find((i) => pathname === i.href || pathname.startsWith(i.href + "/"))?.href ?? "", [pathname]);
 
   if (isMobile) {
@@ -47,17 +48,21 @@ export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
             </Link>
           );
         })}
+        {/* BOTÓN VOLVER ORIGINAL LÓGICA */}
+        <button onClick={() => router.back()} className="p-4 text-slate-500 active:scale-90 transition-transform">
+           <svg {...svgProps} className="h-6 w-6"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
       </nav>
     );
   }
 
   return (
     <div className="flex flex-col h-full p-6">
-      <div className="mb-10 transition-transform hover:scale-105 active:scale-95">
+      <div className="mb-10 transition-transform hover:scale-105">
         <BrandMark compact showWordmark />
       </div>
 
-      <div className="space-y-8 flex-1">
+      <div className="space-y-8 flex-1 overflow-y-auto custom-scrollbar">
         <section>
           <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 mb-4">Sistemas Centrales</h3>
           <div className="space-y-1">
@@ -78,10 +83,15 @@ export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
         <NodeBadge />
       </div>
       
-      <div className="pt-6 border-t border-white/5">
-         <div className="flex items-center gap-3 rounded-2xl bg-emerald-500/5 p-3 border border-emerald-500/10">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Conexión Segura</span>
+      <div className="pt-6 border-t border-white/5 space-y-3">
+         <form action="/signout" method="post">
+           <button type="submit" className="w-full rounded-2xl bg-white px-4 py-3 text-xs font-black text-slate-950 hover:bg-slate-200 transition-all">
+             SALIR DE LA MATRIZ
+           </button>
+         </form>
+         <div className="flex items-center gap-2 px-3 text-[9px] font-black uppercase tracking-widest text-emerald-500">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Estatus: Seguro
          </div>
       </div>
     </div>
