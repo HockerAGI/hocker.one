@@ -4,121 +4,113 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
 import type { Role } from "@/lib/types";
 
+/**
+ * PROTOCOLO DE EXCEPCIONES TÁCTICAS
+ * Centraliza los fallos de la Matriz para respuestas rápidas y seguras.
+ */
 export class ApiError extends Error {
   status: number;
-  payload: any;
+  payload: { error: string; [key: string]: unknown };
 
-  constructor(status: number, payload: any) {
-    super(typeof payload?.error === "string" ? payload.error : "ApiError");
+  constructor(status: number, payload: { error: string; [key: string]: unknown }) {
+    super(payload.error || "Anomalía en el servidor.");
     this.status = status;
-    this.payload = payload ?? { error: "Anomalía no identificada en el servidor." };
+    this.payload = payload;
   }
 }
 
-export function json(payload: any, status = 200) {
+/**
+ * GENERADOR DE RESPUESTAS DINÁMICAS (JSON)
+ * Inyecta cabeceras de seguridad y control de caché para inmediatez absoluta.
+ */
+export function json(payload: unknown, status = 200) {
   return NextResponse.json(payload, {
     status,
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-      Pragma: "no-cache",
-      Expires: "0",
+      "Pragma": "no-cache",
+      "Expires": "0",
       "X-Content-Type-Options": "nosniff",
+      "X-Hocker-Status": "Nominal",
     },
   });
 }
 
-export function toApiError(e: any) {
+/**
+ * NORMALIZADOR DE ERRORES DE LA MATRIZ
+ * Transforma cualquier excepción en una respuesta estructurada de grado militar.
+ */
+export function toApiError(e: unknown): ApiError {
   if (e instanceof ApiError) return e;
-  const status = typeof e?.status === "number" ? e.status : 500;
-  const msg =
-    typeof e?.message === "string"
-      ? getErrorMessage(e)
-      : typeof e?.payload?.error === "string"
-        ? e.payload.error
-        : "Error interno en la matriz.";
+  
+  const status = (e as { status?: number })?.status || 500;
+  const msg = getErrorMessage(e) || "Error interno en el núcleo de datos.";
+  
   return new ApiError(status, { error: msg });
 }
 
-export async function parseBody(req: Request) {
+/**
+ * EXTRACCIÓN SEGURA DE DATOS (BODY)
+ */
+export async function parseBody(req: Request): Promise<Record<string, unknown>> {
   try {
     return await req.json();
   } catch {
-    throw new ApiError(400, { error: "El formato de los datos enviados es inválido. Se esperaba JSON." });
+    throw new ApiError(400, { error: "Payload ilegible o corrupto." });
   }
 }
 
-export function parseQuery(req: Request) {
+/**
+ * PARSEADOR DE CONSULTAS (QUERY)
+ */
+export function parseQuery(req: Request): URLSearchParams {
   return new URL(req.url).searchParams;
 }
 
-export type AuthCtx = {
-  sb: Awaited<ReturnType<typeof createServerSupabase>>;
-  user: { id: string; email?: string | null };
-  project_id: string;
-  role: Role;
-};
+/**
+ * VALIDACIÓN DE AUTORIDAD Y RANGO (RBAC)
+ * Verifica que el agente tenga el nivel de acceso requerido en el proyecto.
+ */
+export async function requireProjectRole(project_id: string, allowedRoles: Role[]) {
+  const supabase = await createServerSupabase();
+  const pid = normalizeProjectId(project_id);
 
-export async function requireProjectRole(project_id: string, allowed: Role[]): Promise<AuthCtx> {
-  const sb = await createServerSupabase();
-  const {
-    data: { user },
-    error: authErr,
-  } = await sb.auth.getUser();
-
-  if (authErr || !user) {
-    throw new ApiError(401, { error: "Acceso denegado. Protocolo de seguridad no superado." });
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !user) {
+    throw new ApiError(401, { error: "Identidad no verificada. Acceso denegado." });
   }
 
-  const normalizedProject = normalizeProjectId(project_id);
-
-  const { data: member, error } = await sb
+  // Consulta de rango en la Matriz
+  const { data: member, error: roleErr } = await supabase
     .from("project_members")
     .select("role")
-    .eq("project_id", normalizedProject)
+    .eq("project_id", pid)
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error) {
-    throw new ApiError(500, { error: "No se pudo validar la membresía del proyecto." });
+  if (roleErr || !member || !allowedRoles.includes(member.role as Role)) {
+    throw new ApiError(403, { 
+      error: "Autoridad insuficiente para ejecutar esta acción.",
+      required: allowedRoles,
+      current: member?.role || "none"
+    });
   }
 
-  const role = String(member?.role ?? "").toLowerCase() as Role | "";
-  if (!role) {
-    throw new ApiError(403, { error: "No perteneces a este proyecto." });
-  }
-
-  if (!allowed.includes(role)) {
-    throw new ApiError(403, { error: "Permisos insuficientes para ejecutar esta operación táctica." });
-  }
-
-  return {
-    sb,
-    user: { id: user.id, email: user.email },
-    project_id: normalizedProject,
-    role,
-  };
+  return { sb: supabase, user, project_id: pid, role: member.role as Role };
 }
 
-export async function ensureNode(sb: any, project_id: string, nid: string | null) {
-  const nodeId = normalizeNodeId(nid);
-  if (!nodeId) return;
+/**
+ * REGISTRO DE NODOS (ENSURE NODE)
+ * Sincroniza la existencia de un nodo en la red antes de procesar órdenes.
+ */
+export async function ensureNode(sb: any, project_id: string, node_id: string) {
+  const nid = normalizeNodeId(node_id);
+  const isCloudNode = nid.startsWith("cloud-") || nid === "hocker-fabric";
 
-  const { data: existing } = await sb
-    .from("nodes")
-    .select("id")
-    .eq("project_id", project_id)
-    .eq("id", nodeId)
-    .maybeSingle();
-
-  if (existing?.id) return;
-
-  const isCloudNode =
-    nodeId.startsWith("cloud-") || nodeId === "hocker-fabric" || nodeId.startsWith("trigger-");
-
-  const { error: insertErr } = await sb.from("nodes").insert({
-    id: nodeId,
+  const { error: insertErr } = await sb.from("nodes").upsert({
     project_id,
-    name: isCloudNode ? `Nube Central: ${nodeId}` : `Agente Físico: ${nodeId}`,
+    id: nid,
+    name: isCloudNode ? `Núcleo: ${nid}` : `Agente Físico: ${nid}`,
     type: isCloudNode ? "cloud" : "agent",
     status: isCloudNode ? "online" : "offline",
     last_seen_at: new Date().toISOString(),
@@ -128,41 +120,39 @@ export async function ensureNode(sb: any, project_id: string, nid: string | null
       engine: isCloudNode ? "automation-fabric" : "on-premise",
       trust_level: isCloudNode ? "high" : "pending",
     },
-  });
+  }, { onConflict: 'project_id,id' });
 
-  if (insertErr && !String(insertErr.message || "").toLowerCase().includes("duplicate")) {
-    throw new ApiError(500, { error: "Falla de red al intentar registrar el nuevo nodo en la matriz." });
+  if (insertErr) {
+    throw new ApiError(500, { error: "Falla de red al intentar registrar el nuevo nodo." });
   }
 }
 
+/**
+ * MONITOR DE SOBERANÍA (GET CONTROLS)
+ * Obtiene el estado actual de los interruptores de emergencia (Kill Switch).
+ */
 export async function getControls(sb: any, project_id: string) {
-  const normalizedProject = normalizeProjectId(project_id);
-
   const { data, error } = await sb
     .from("system_controls")
     .select("project_id,id,kill_switch,allow_write,updated_at")
-    .eq("project_id", normalizedProject)
+    .eq("project_id", project_id)
     .eq("id", "global")
     .maybeSingle();
 
   if (error) {
-    throw new ApiError(500, { error: "Falla crítica al leer los protocolos de seguridad del proyecto." });
+    throw new ApiError(500, { error: "Falla crítica al leer los protocolos de seguridad." });
   }
 
+  // Si no existe, inicializamos el control en estado seguro
   if (!data) {
-    const created = {
-      project_id: normalizedProject,
+    const fallback = {
+      project_id,
       id: "global",
       kill_switch: false,
       allow_write: false,
       updated_at: new Date().toISOString(),
     };
-
-    const { error: insertErr } = await sb.from("system_controls").insert(created);
-    if (insertErr) {
-      throw new ApiError(500, { error: "Error al inicializar el sistema de gobernanza." });
-    }
-    return created;
+    return fallback;
   }
 
   return data;
