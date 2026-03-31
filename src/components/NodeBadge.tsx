@@ -10,7 +10,7 @@ type NodeRow = {
   name: string | null;
   status: string;
   last_seen_at: string | null;
-  meta: any;
+  meta: Record<string, unknown> | null;
 };
 
 function relative(ts: string | null) {
@@ -62,8 +62,7 @@ export default function NodeBadge() {
   }
 
   const status = String(node.status || "").toLowerCase();
-  const isCloud =
-    node.id === "hocker-fabric" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
+  const isCloud = node.id === "hocker-fabric" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
   const ok = isCloud || status === "online";
 
   const classes = isCloud
