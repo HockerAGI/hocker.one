@@ -1,39 +1,45 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   onText: (t: string) => void;
   disabled?: boolean;
 };
 
-// Tipado estricto para evitar el uso de 'any'
-interface SpeechRecognitionEvent {
-  results: {
-    [index: number]: {
-      [index: number]: { transcript: string };
-    };
-  };
-}
+type SpeechResultItem = { transcript: string };
+type SpeechResultGroup = Array<SpeechResultItem>;
+type SpeechRecognitionResultEvent = { results: Array<SpeechResultGroup> };
 
-// Interfaz para extender Window sin usar 'any'
+type SpeechRecognitionInstance = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+};
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
+
 interface WindowWithSpeech extends Window {
-  SpeechRecognition?: new () => typeof globalThis.SpeechRecognition;
-  webkitSpeechRecognition?: new () => typeof globalThis.SpeechRecognition;
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
 }
 
 export default function VoiceInput({ onText, disabled }: Props) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [SpeechRec, setSpeechRec] = useState<any>(null);
+  const [SpeechRec, setSpeechRec] = useState<SpeechRecognitionCtor | null>(null);
   const [listening, setListening] = useState(false);
 
   useEffect(() => {
-    const win = window as unknown as WindowWithSpeech;
+    const win = window as WindowWithSpeech;
     const api = win.SpeechRecognition || win.webkitSpeechRecognition || null;
     setSpeechRec(() => api);
   }, []);
 
-  async function start() {
+  function start() {
     if (disabled || !SpeechRec) return;
 
     const rec = new SpeechRec();
@@ -45,10 +51,11 @@ export default function VoiceInput({ onText, disabled }: Props) {
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
 
-    rec.onresult = (e: unknown) => {
-      const event = e as SpeechRecognitionEvent;
-      const t = event?.results?.[0]?.[0]?.transcript;
-      if (t && typeof t === "string") onText(t);
+    rec.onresult = (e) => {
+      const transcript = e.results?.[0]?.[0]?.transcript;
+      if (typeof transcript === "string" && transcript.trim()) {
+        onText(transcript.trim());
+      }
     };
 
     rec.start();
@@ -82,9 +89,7 @@ export default function VoiceInput({ onText, disabled }: Props) {
       } disabled:opacity-50`}
       title="Iniciar enlace de voz con NOVA"
     >
-      {listening && (
-        <span className="absolute inset-0 rounded-2xl bg-rose-400 opacity-50 animate-ping" />
-      )}
+      {listening && <span className="absolute inset-0 rounded-2xl bg-rose-400 opacity-50 animate-ping" />}
       <svg className="relative z-10 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
       </svg>
