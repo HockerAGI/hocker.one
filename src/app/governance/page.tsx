@@ -1,22 +1,69 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 import GovernancePanel from "@/components/GovernancePanel";
+import BiometricEnroller from "@/components/BiometricEnroller";
 
 export const metadata: Metadata = {
   title: "Gobernanza",
+  description: "Gestión de políticas de seguridad, identidad biométrica y protocolos de emergencia.",
 };
 
 export default function GovernancePage() {
   return (
-    <PageShell title="Seguridad Soberana" subtitle="Gestión de políticas, kill-switches y protocolos de autoridad.">
-      <div className="max-w-4xl mx-auto flex flex-col gap-8 w-full">
-        <Hint title="Protocolo de Emergencia">
-          La activación del Kill Switch detendrá inmediatamente todas las transmisiones de los agentes y revocará los tokens de acceso de los nodos.
+    <PageShell
+      title="Núcleo de Seguridad"
+      subtitle="Gestión de identidades, estados de emergencia y protocolos de autoridad."
+      actions={
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95"
+        >
+          <svg className="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Volver
+        </Link>
+      }
+    >
+      <div className="flex flex-col gap-8">
+        <Hint title="Políticas de Grado Militar">
+          Las modificaciones en este sector alteran el comportamiento central de la Mente Colmena y las llaves de acceso al Búnker. Proceda con rigor.
         </Hint>
-        
-        <div className="animate-in fade-in zoom-in duration-500">
-          <GovernancePanel />
+
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+          {/* COLUMNA IZQUIERDA: GOBERNANZA CENTRAL (Kill Switches) */}
+          <div className="xl:col-span-7 animate-in fade-in slide-in-from-left-4 duration-700">
+            <div className="flex flex-col gap-4">
+              <h3 className="px-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+                Protocolos de Contención
+              </h3>
+              <GovernancePanel />
+            </div>
+          </div>
+
+          {/* COLUMNA DERECHA: SEGURIDAD DE IDENTIDAD (Biometría) */}
+          <div className="xl:col-span-5 animate-in fade-in slide-in-from-right-4 duration-700">
+            <div className="flex flex-col gap-4">
+              <h3 className="px-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+                Identidad Táctica
+              </h3>
+              <BiometricEnroller />
+              
+              <div className="mt-4 rounded-[24px] border border-sky-500/10 bg-sky-500/5 px-6 py-5 shadow-inner">
+                <div className="flex items-start gap-3">
+                  <svg className="h-5 w-5 text-sky-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-[11px] leading-relaxed text-sky-200/70 font-medium">
+                    <strong className="text-sky-400 font-bold uppercase tracking-widest block mb-1">Nota Operativa</strong>
+                    Al vincular este dispositivo, el protocolo Omni-Sync permitirá el acceso nativo mediante el hardware criptográfico de su terminal (Huella / FaceID).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </PageShell>
