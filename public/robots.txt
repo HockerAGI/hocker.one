@@ -1,2 +1,4 @@
 User-agent: *
-Disallow:
+Disallow: /
+
+# Soberanía confirmada: El búnker no es rastreable por motores públicos.
