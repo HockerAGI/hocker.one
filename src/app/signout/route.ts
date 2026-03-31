@@ -13,7 +13,8 @@ const langfuse = new Langfuse({
 });
 
 export async function POST(req: Request) {
-  // ... (Mantén tu lógica de trace y supabase)
+  const trace = langfuse.trace({ name: "Protocolo_Cierre_Sesion", metadata: { endpoint: "/api/auth/signout" } });
+
   
   try {
     const supabase = await createServerSupabase();
