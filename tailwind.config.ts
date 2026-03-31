@@ -11,6 +11,7 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // Paleta oficial de marca inyectada (Original preservada y expandida)
         hocker: {
           950: '#020617',
           900: '#0b0f13',
