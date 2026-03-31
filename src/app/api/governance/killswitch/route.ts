@@ -1,4 +1,5 @@
 import { Langfuse } from "langfuse-node";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
 import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 
@@ -11,7 +12,28 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-async function loadControls(sb: any, project_id: string) {
+type ControlRow = {
+  id: string;
+  project_id: string;
+  kill_switch: boolean;
+  allow_write: boolean;
+  meta: Record<string, unknown>;
+  created_at?: string;
+  updated_at: string;
+};
+
+function toBool(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const s = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(s)) return true;
+    if (["0", "false", "no", "off"].includes(s)) return false;
+  }
+  return fallback;
+}
+
+async function loadControls(sb: SupabaseClient, project_id: string): Promise<ControlRow> {
   const { data, error } = await sb
     .from("system_controls")
     .select("id,project_id,kill_switch,allow_write,meta,created_at,updated_at")
@@ -20,13 +42,12 @@ async function loadControls(sb: any, project_id: string) {
     .maybeSingle();
 
   if (error) {
-    throw new ApiError(500, { error: "Falla al leer la matriz de gobernanza." });
+    throw new ApiError(500, { error: `Falla al leer la matriz de gobernanza: ${getErrorMessage(error)}` });
   }
 
-  if (data) return data;
+  if (data) return data as ControlRow;
 
-  // Inicialización automática de soberanía si el nodo es nuevo
-  const created = {
+  const created: ControlRow = {
     id: "global",
     project_id,
     kill_switch: false,
@@ -42,8 +63,11 @@ async function loadControls(sb: any, project_id: string) {
     .select("*")
     .single();
 
-  if (insertErr) throw new ApiError(500, { error: "No se pudo inicializar la soberanía del proyecto." });
-  return inserted;
+  if (insertErr) {
+    throw new ApiError(500, { error: "No se pudo inicializar la soberanía del proyecto." });
+  }
+
+  return inserted as ControlRow;
 }
 
 export async function GET(req: Request) {
@@ -78,12 +102,14 @@ export async function POST(req: Request) {
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_write"] });
 
-    const next = {
+    const next: ControlRow = {
       id: "global",
       project_id: ctx.project_id,
-      kill_switch: Boolean(body.kill_switch),
-      allow_write: Boolean(body.allow_write),
+      kill_switch: toBool(body.kill_switch, false),
+      allow_write: toBool(body.allow_write, false),
+      meta: body.meta && typeof body.meta === "object" && !Array.isArray(body.meta) ? (body.meta as Record<string, unknown>) : {},
       updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     const { data, error } = await ctx.sb
@@ -92,7 +118,9 @@ export async function POST(req: Request) {
       .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: "Falla al actualizar protocolos de gobernanza." });
+    if (error) {
+      throw new ApiError(500, { error: `Falla al actualizar protocolos de gobernanza: ${getErrorMessage(error)}` });
+    }
 
     trace.event({ name: "SOBERANIA_ACTUALIZADA", input: next });
     return json({ ok: true, controls: data });
