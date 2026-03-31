@@ -1,5 +1,5 @@
-
 "use client";
+
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { defaultNodeId, defaultProjectId } from "@/lib/project";
 
@@ -33,15 +33,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = window.localStorage.getItem(KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<WorkspaceState>;
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
         setState({
-          projectId: parsed.projectId || DEFAULTS.projectId,
-          nodeId: parsed.nodeId || DEFAULTS.nodeId,
+          projectId: typeof parsed.projectId === "string" ? parsed.projectId : DEFAULTS.projectId,
+          nodeId: typeof parsed.nodeId === "string" ? parsed.nodeId : DEFAULTS.nodeId,
           tutorial: typeof parsed.tutorial === "boolean" ? parsed.tutorial : DEFAULTS.tutorial,
         });
       }
     } catch {
-      // Sincronización silenciosa
+      // Sincronización silenciosa en caso de memoria corrupta
     } finally {
       setReady(true);
     }
@@ -52,7 +52,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      // sin-op
+      // Prevención de cuellos de botella en el almacenamiento del navegador
     }
   }, [state, ready]);
 
@@ -72,6 +72,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
 export function useWorkspace() {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useWorkspace debe ser utilizado dentro de un WorkspaceProvider");
+  if (!ctx) throw new Error("useWorkspace debe operar dentro de un WorkspaceProvider táctico.");
   return ctx;
 }
