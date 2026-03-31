@@ -1,14 +1,14 @@
 self.addEventListener("install", (event) => {
-  // Fuerza la activación inmediata del nuevo ADN
+  // Fuerza la activación inmediata del nuevo ADN visual
   event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
-  // Limpia rastros de versiones anteriores
+  // Limpia el rastro de versiones anteriores para evitar conflictos
   event.waitUntil(self.clients.claim());
 });
 
-// Interceptor de transmisiones
+// Interceptor de transmisiones (Preparado para futuras notificaciones push)
 self.addEventListener("fetch", (event) => {
-  // En el futuro, aquí gestionaremos las Notificaciones Push de los 'Hijos' de Hocker
+  // El cacheo se mantiene al mínimo para garantizar datos en tiempo real
 });
