@@ -31,12 +31,11 @@ export async function GET(req: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      console.error("[NOVA Auth] Falla en el protocolo de acceso:", getErrorMessage(error));
       return NextResponse.redirect(
-        new URL(`/?error=${encodeURIComponent("Llave de acceso expirada o inválida.")}`, url)
+        new URL(`/?error=${encodeURIComponent("Llave de acceso inválida o expirada.")}`, url)
       );
     }
   }
 
-  return NextResponse.redirect(new URL(next, url));
+  return NextResponse.redirect(new URL(next, req.url));
 }
