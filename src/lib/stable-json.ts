@@ -1,11 +1,13 @@
+import { getErrorMessage } from "./errors";
+
 /**
- * Motor de Serialización Canónica Hocker
- * Garantiza que {a:1, b:2} y {b:2, a:1} generen el mismo string exacto.
+ * MOTOR DE SERIALIZACIÓN CANÓNICA HOCKER
+ * Garantiza que la estructura de datos sea inmutable y predecible para firmas HMAC.
  */
-export function stableStringify(obj: any): string {
+export function stableStringify(obj: unknown): string {
   const seen = new WeakSet();
 
-  const sorter = (v: any): any => {
+  const sorter = (v: unknown): unknown => {
     if (v === null || typeof v !== "object") return v;
     
     // Protección contra bucles infinitos en la memoria
@@ -15,13 +17,18 @@ export function stableStringify(obj: any): string {
     if (Array.isArray(v)) return v.map(sorter);
 
     // Ordenamiento alfabético de llaves de grado militar
-    const out: any = {};
-    const keys = Object.keys(v).sort();
+    const out: Record<string, unknown> = {};
+    const keys = Object.keys(v as Record<string, unknown>).sort();
+    
     for (const k of keys) {
-      out[k] = sorter(v[k]);
+      out[k] = sorter((v as Record<string, unknown>)[k]);
     }
     return out;
   };
 
-  return JSON.stringify(sorter(obj));
+  try {
+    return JSON.stringify(sorter(obj));
+  } catch (err: unknown) {
+    throw new Error(`Colapso en la serialización: ${getErrorMessage(err)}`);
+  }
 }
