@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { getErrorMessage } from "@/lib/errors";
 import BrandMark from "@/components/BrandMark";
 
 export default function AuthBox() {
@@ -36,107 +37,93 @@ export default function AuthBox() {
 
     try {
       const origin = window.location.origin;
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${origin}/auth/callback`,
         },
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
       setSent(true);
-    } catch (e: any) {
-      setError(e?.message ?? "No se pudo enviar el enlace.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || "Fallo en el protocolo de acceso.");
     } finally {
       setLoading(false);
     }
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    setSent(false);
-    setEmail("");
-  }
-
-  if (userEmail) {
-    return (
-      <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-black/30 backdrop-blur-2xl">
-        <div className="flex items-center gap-3">
-          <BrandMark compact showWordmark={false} />
-          <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">
-              Sesión activa
-            </div>
-            <div className="mt-1 text-sm font-semibold text-white">{userEmail}</div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
-          onClick={signOut}
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5 shadow-xl shadow-black/30 backdrop-blur-2xl">
-      <div className="flex items-center gap-3">
-        <BrandMark compact showWordmark={false} />
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-slate-400">
-            Acceso privado
-          </div>
-          <div className="mt-1 text-sm font-semibold text-white">Entrar con enlace</div>
+    <div className="relative w-full max-w-md animate-in fade-in zoom-in duration-700">
+      {/* Resplandor VFX trasero */}
+      <div className="absolute -inset-1 bg-sky-500/20 rounded-[40px] blur-3xl opacity-30 animate-pulse-slow" />
+      
+      <div className="hocker-panel-pro relative flex flex-col items-center p-8 sm:p-12 border border-sky-500/20 shadow-[0_0_40px_rgba(14,165,233,0.1)]">
+        <div className="mb-10 flex flex-col items-center w-full">
+          <BrandMark showWordmark={true} hero={false} className="mb-8 scale-110" />
+          <h2 className="text-xl font-black tracking-tighter text-white uppercase text-center drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+            Autorización de Mando
+          </h2>
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-400 mt-2">
+            Identidad Requerida
+          </p>
         </div>
-      </div>
 
-      <p className="mt-3 text-sm leading-6 text-slate-300">
-        Recibe un enlace en tu correo y entra de forma directa y segura.
-      </p>
-
-      <form
-        className="mt-4 space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (email.trim() && !loading) sendLink();
-        }}
-      >
-        <input
-          type="email"
-          autoComplete="email"
-          disabled={loading || sent}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 disabled:opacity-60 disabled:bg-slate-950/60"
-          placeholder="Ej. director@hocker.one"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        {error ? (
-          <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            {error}
+        {userEmail ? (
+          <div className="w-full text-center">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5 mb-6 shadow-inner">
+              <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">Sesión Activa</p>
+              <p className="text-sky-300 font-bold truncate mt-1">{userEmail}</p>
+            </div>
+            <a
+              href="/dashboard"
+              className="inline-flex w-full justify-center rounded-2xl bg-sky-500 px-6 py-4 text-sm font-black text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 active:scale-95"
+            >
+              ENTRAR A LA MATRIZ
+            </a>
           </div>
-        ) : null}
-
-        {sent ? (
-          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            Revisa tu correo. El enlace mágico ya fue enviado.
-          </div>
-        ) : null}
-
-        {!sent && (
-          <button
-            type="submit"
-            className="w-full rounded-2xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={loading || !email.trim()}
+        ) : (
+          <form
+            className="w-full space-y-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (email.trim() && !loading) sendLink();
+            }}
           >
-            {loading ? "Generando acceso seguro…" : "Enviar enlace mágico"}
-          </button>
+            <div className="relative">
+              <input
+                type="email"
+                autoComplete="email"
+                disabled={loading || sent}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50"
+                placeholder="director@hocker.one"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-rose-300 text-center">
+                {error}
+              </div>
+            )}
+
+            {sent ? (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-emerald-300 text-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                Enlace de acceso enviado a su terminal.
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading || !email.trim()}
+                className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95 disabled:opacity-50"
+              >
+                {loading ? "VERIFICANDO IDENTIDAD..." : "SOLICITAR ACCESO"}
+              </button>
+            )}
+          </form>
         )}
-      </form>
+      </div>
     </div>
   );
 }
