@@ -1,7 +1,7 @@
-import { getErrorMessage } from "@/lib/errors";
-import { createServerSupabase } from "@/lib/supabase-server";
 import { Langfuse } from "langfuse-node";
 import { NextResponse } from "next/server";
+import { getErrorMessage } from "@/lib/errors";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,9 @@ export async function POST(req: Request) {
 
   try {
     const supabase = await createServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (user) {
       await supabase.from("events").insert({
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
         node_id: "hocker-fabric",
         level: "info",
         type: "auth.signout",
-        message: `Desconexión segura: La identidad ${user.email ?? user.id} ha dejado el puente de mando.`,
+        message: `Desconexión segura: ${user.email ?? user.id} dejó el puente de mando.`,
         data: { user_id: user.id, email: user.email ?? null },
       });
     }
@@ -35,9 +37,10 @@ export async function POST(req: Request) {
     trace.event({ name: "OPERACION_EXITOSA" });
 
     return NextResponse.redirect(new URL("/", req.url), { status: 302 });
-  } catch (e: unknown) {
-    console.error("[NOVA Auth] Error durante el cierre de sesión:", getErrorMessage(e));
-    trace.event({ name: "ERROR_SIGNOUT", level: "ERROR", output: { error: getErrorMessage(e) } });
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    console.error("[NOVA Auth] Error durante el cierre de sesión:", message);
+    trace.event({ name: "ERROR_SIGNOUT", level: "ERROR", output: { error: message } });
     return NextResponse.redirect(new URL("/", req.url), { status: 302 });
   } finally {
     await langfuse.flushAsync();
