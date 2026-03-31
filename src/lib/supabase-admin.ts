@@ -1,16 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * createAdminSupabase: El martillo de Thor del ecosistema.
- * Se usa exclusivamente en el servidor para operaciones que ignoran las RLS.
+ * PROTOCOLO ADMINISTRATIVO (Service Role)
+ * Se utiliza exclusivamente en el servidor para operaciones que ignoran las RLS.
  */
-export function createAdminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+export function createAdminSupabase(): SupabaseClient {
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
   if (!url || !key) {
-    console.error("[MATRIZ CRÍTICA] Falla de configuración: Faltan credenciales administrativas (Service Role).");
-    throw new Error("Protocolo de Administración no configurado.");
+    console.error("[MATRIZ CRÍTICA] Falla de configuración: Credenciales administrativas ausentes.");
+    throw new Error("Protocolo de Administración no configurado en el entorno.");
   }
 
   return createClient(url, key, {
