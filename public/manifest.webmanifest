@@ -1,13 +1,16 @@
 {
-  "name": "Hocker ONE",
+  "name": "Hocker ONE,
   "short_name": "Hocker ONE",
-  "description": "Centro privado de control para dirigir tu ecosistema con claridad y una experiencia premium.",
+  "description": "Centro de control de Hocker AGI Technologies.",
+  "id": "hocker-one-v1",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#020617",
   "theme_color": "#020617",
-  "orientation": "portrait",
+  "orientation": "any",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
       "src": "/icon-192x192.svg",
@@ -24,16 +27,17 @@
   ],
   "shortcuts": [
     {
-      "name": "Panel",
+      "name": "Matriz Dashboard",
       "short_name": "Panel",
       "url": "/dashboard",
-      "description": "Entrar al centro de control"
+      "icons": [{ "src": "/icon-192x192.svg", "sizes": "192x192" }]
     },
     {
-      "name": "Asistente",
+      "name": "NOVA AGI",
       "short_name": "NOVA",
       "url": "/chat",
-      "description": "Abrir el asistente privado"
+      "icons": [{ "src": "/icon-192x192.svg", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }
