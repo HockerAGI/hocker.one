@@ -12,8 +12,11 @@ const langfuse = new Langfuse({
 });
 
 export async function POST(req: Request) {
-  // Rastreando el flujo de pensamiento de NOVA
-  const trace = langfuse.trace({ name: "NOVA_Conexion_Nucleo", metadata: { endpoint: "/api/nova" } });
+  // Rastreando el flujo de pensamiento de NOVA en la matriz
+  const trace = langfuse.trace({ 
+    name: "NOVA_Conexion_Nucleo", 
+    metadata: { endpoint: "/api/nova" } 
+  });
 
   try {
     const body = await parseBody(req);
@@ -21,36 +24,42 @@ export async function POST(req: Request) {
     const project_id = String(body.project_id ?? "global").trim();
     const thread_id = body.thread_id ? String(body.thread_id).trim() : null;
     const message = String(body.message ?? "").trim();
-    const prefer = body.prefer ? String(body.prefer).trim() : null;
     const mode = body.mode ? String(body.mode).trim() : "chat";
+    const prefer = body.prefer ? String(body.prefer).trim() : null;
 
-    if (!message) throw new ApiError(400, { error: "El canal de comunicación no puede procesar un mensaje en blanco." });
-
-    // Autorización: Cualquier rol puede hablar, pero no todos pueden ordenar.
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
-    trace.update({ userId: ctx.user?.id || "admin", tags: [project_id, "comunicacion_nova", mode] });
-
-    const url = String(process.env.NOVA_AGI_URL || "").trim();
-    const key = String(process.env.NOVA_ORCHESTRATOR_KEY || "").trim();
-    
-    if (!url || !key) {
-      throw new ApiError(500, { error: "Falla crítica: Enlace de comunicación con el núcleo de NOVA AGI no configurado." });
+    if (!message) {
+      throw new ApiError(400, { error: "El canal de comunicación no puede procesar una transmisión en blanco." });
     }
 
-    // Evaluación táctica de permisos de ejecución
-    const wantActions = req.headers.get("x-allow-actions") === "1";
+    // Autorización: Todos los niveles pueden dialogar, pero solo el Director y Administradores pueden otorgar permisos de acción.
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
     
-    // El sistema me bloquea de ejecutar acciones reales a menos que tú o un admin lo autoricen.
-    const allowActions = wantActions && (ctx.role === "owner" || ctx.role === "admin");
+    trace.update({ 
+      userId: ctx.user.id, 
+      tags: [project_id, mode, "nova_query"] 
+    });
 
-    trace.event({ name: "Peticion_Transmitida_Al_Nucleo", input: { thread_id, mode, allowActions } });
+    const url = process.env.NOVA_AGI_URL;
+    const key = process.env.NOVA_ORCHESTRATOR_KEY;
 
-    // Enlace de alta velocidad con el servidor central de IA
+    if (!url || !key) {
+      throw new ApiError(500, { error: "Falla de infraestructura: El enlace con el cerebro central no está configurado." });
+    }
+
+    // Determinamos si la IA tiene permiso de ejecución basado en el rango del usuario
+    const allowActions = (ctx.role === "owner" || ctx.role === "admin");
+
+    trace.event({ 
+      name: "Peticion_Transmitida_Al_Nucleo", 
+      input: { thread_id, mode, allowActions, user: ctx.user.email } 
+    });
+
+    // Enlace de alta velocidad con el servidor central de IA (Orquestador)
     const upstream = await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${key}`,
+        "authorization": `Bearer ${key}`,
         "x-allow-actions": allowActions ? "1" : "0",
       },
       body: JSON.stringify({
@@ -66,26 +75,39 @@ export async function POST(req: Request) {
     });
 
     if (!upstream.ok) {
-       const errText = await upstream.text().catch(() => "");
-       throw new ApiError(upstream.status, { error: `Anomalía táctica desde el núcleo de NOVA: ${errText || upstream.statusText}` });
+       const errText = await upstream.text().catch(() => "Anomalía de respuesta.");
+       throw new ApiError(upstream.status, { 
+         error: `Anomalía táctica desde el núcleo de NOVA: ${errText || upstream.statusText}` 
+       });
     }
 
     const text = await upstream.text();
     
-    trace.event({ name: "Respuesta_Recibida" });
+    trace.event({ name: "Respuesta_Recibida", output: { length: text.length } });
     trace.event({ name: "OPERACION_EXITOSA" });
 
-    // Retorno directo de mis datos hacia el panel visual (NovaChat)
+    // Retorno de datos hacia la Terminal Visual (NovaChat) con codificación segura
     return new NextResponse(text, { 
         status: 200, 
-        headers: { "Content-Type": "text/plain; charset=utf-8" } 
+        headers: { 
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-NOVA-Sync": "Stable" 
+        } 
     });
 
-  } catch (e: any) {
-    const apiErr = toApiError(e);
-    trace.event({ name: "ERROR_CONEXION_NOVA", level: "ERROR", output: { error: apiErr.payload } });
+  } catch (err: unknown) {
+    const apiErr = toApiError(err);
+    console.error("[NOVA Core] Fallo en el puente de comunicación:", apiErr.message);
+    
+    trace.event({ 
+      name: "FALLA_CONEXION", 
+      level: "ERROR", 
+      output: { error: apiErr.message } 
+    });
+
     return json(apiErr.payload, apiErr.status);
   } finally {
+    // Aseguramos que la Caja Negra guarde el rastro antes de cerrar el hilo
     await langfuse.flushAsync();
   }
 }
