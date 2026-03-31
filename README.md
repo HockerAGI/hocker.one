@@ -1,26 +1,36 @@
-# hocker.one (Control Plane) — multi-project + nova.agi
+# HOCKER ONE | Control Plane (Matriz Central)
 
-Este repo es el panel/control plane que:
-- Habla con `nova.agi` vía `/api/nova/chat` usando `Authorization: Bearer ${NOVA_ORCHESTRATOR_KEY}`.
-- Muestra eventos y comandos filtrados por `project_id`.
-- Soporta governance por proyecto (`kill_switch`, `allow_write`).
-- NO duplica memoria: `nova.agi` persiste en `nova_threads` / `nova_messages`.
+**Estado:** Operativo | **Fase:** Omni-Sync 2025
+**Director:** Armando (Hocker)
+**Orquestación:** NOVA Central Intelligence
 
----
+Centro de mando táctico (Control Plane) multi-proyecto diseñado bajo la arquitectura *Dark Glass*. Este ecosistema supervisa, despliega y administra funciones avanzadas en sincronía con `nova.agi`.
 
-## Requisitos
-- Node.js 18+ (recomendado 20+)
-- Un proyecto Supabase (DB + Auth)
-- `nova.agi` desplegado y accesible públicamente (HTTPS)
-
-Dependencias mínimas esperadas:
-- `@supabase/supabase-js`
-- `@supabase/ssr`
+## ⚙️ Arquitectura de Sincronización
+- **Enlace Directo:** Comunicación bidireccional con `nova.agi` vía `/api/nova/chat`.
+- **Seguridad de Trasmisión:** Autenticación estricta mediante `Authorization: Bearer ${NOVA_ORCHESTRATOR_KEY}`.
+- **Telemetría Aislada:** Monitoreo de eventos y ejecución de comandos filtrados y segmentados por `project_id`.
+- **Gobernanza Total:** Control absoluto de permisos de escritura (`allow_write`) y detención de emergencia (`kill_switch`) por proyecto.
+- **Memoria Eficiente:** **NO** se duplica la memoria. `nova.agi` es la única fuente de verdad y persiste su propia información en `nova_threads` / `nova_messages`.
 
 ---
 
-## Setup rápido (hocker.one)
+## 🛠️ Requisitos de Infraestructura
+Para levantar el escudo y activar la Matriz, el nodo local/servidor debe cumplir con:
+- **Motor:** Node.js 18+ (Se recomienda Node 20+ para máxima estabilidad).
+- **Base de Datos:** Proyecto activo en Supabase (DB + Auth configurado).
+- **Conectividad:** `nova.agi` debe estar desplegado, en línea y accesible públicamente (obligatorio HTTPS).
 
-### 1) Instala deps
+### Dependencias Tácticas Críticas
+- `@supabase/supabase-js` (Gestión de estado y telemetría en tiempo real)
+- `@supabase/ssr` (Soberanía de autenticación Server-Side)
+
+---
+
+## 🚀 Despliegue de la Matriz (Setup Rápido)
+
+### 1) Inicialización del Entorno
+Clona la estructura y sincroniza las dependencias. El entorno se encargará de instalar los paquetes sin comprometer el Lockfile.
+
 ```bash
-npm install// Firma de Soberanía: Mon Mar 30 05:21:28 PM PDT 2026
+npm install
