@@ -3,48 +3,51 @@ import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 
 export const metadata: Metadata = {
-  title: "Supply",
+  title: "Supply Chain | Hocker ONE",
 };
 
-const supplyItems = [
-  { title: "Catálogo Maestro", status: "READY", icon: "📦" },
-  { title: "Órdenes Activas", status: "SYNC", icon: "📋" },
-  { title: "Inventario Global", status: "NOMINAL", icon: "🌐" },
-  { title: "Trazabilidad", status: "ACTIVE", icon: "🔗" },
+const modules = [
+  { id: "cat", label: "Catálogo Maestro", icon: "📦", status: "Nominal" },
+  { id: "ord", label: "Órdenes Activas", icon: "📋", status: "Sincronizado" },
+  { id: "inv", label: "Inventario Global", icon: "🌐", status: "Activo" },
+  { id: "tra", label: "Trazabilidad", icon: "🔗", status: "Monitoreado" },
 ];
 
 export default function SupplyPage() {
   return (
-    <PageShell title="Supply Chain" subtitle="Supervisión de la cadena de suministro y cumplimiento operativo.">
+    <PageShell title="Logística Operativa" subtitle="Control de suministros y activos del ecosistema.">
       <div className="flex flex-col gap-8">
-        <Hint title="Logística HKR">
-          Este módulo conecta directamente con los activos de HKR SUPPLY. Asegúrate de que las órdenes tengan el ID de proyecto correcto.
+        <Hint title="Estructura HKR SUPPLY">
+          Este módulo está diseñado para la administración multi-proyecto. Los activos de clientes finales se segregan mediante identificadores de nodo únicos.
         </Hint>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {supplyItems.map((item) => (
-            <div key={item.title} className="hocker-panel-pro p-6 border-white/5 hover:border-sky-500/30 group">
-              <div className="text-3xl mb-4 group-hover:scale-110 transition-transform">{item.icon}</div>
-              <div className="text-sm font-black text-white uppercase tracking-tight">{item.title}</div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-[10px] font-black text-sky-400 bg-sky-500/10 px-2 py-1 rounded-lg border border-sky-500/20">{item.status}</span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase">Ver Detalle</span>
+          {modules.map((m) => (
+            <div key={m.id} className="hocker-panel-pro p-6 border-white/5 hover:border-sky-500/30 transition-all group">
+              <div className="text-3xl mb-4 group-hover:scale-110 transition-transform duration-500">{m.icon}</div>
+              <h3 className="text-sm font-black text-white uppercase tracking-tight">{m.label}</h3>
+              <div className="mt-6 flex items-center justify-between">
+                <span className="text-[9px] font-black uppercase text-sky-400 bg-sky-500/10 px-2 py-1 rounded-lg border border-sky-500/20">{m.status}</span>
+                <span className="text-[9px] font-bold text-slate-600 uppercase">Detalles →</span>
               </div>
             </div>
           ))}
         </div>
 
-        <section className="hocker-glass-vfx p-8 bg-gradient-to-r from-sky-500/5 to-transparent">
-           <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Próximos Despliegues</h3>
-           <div className="space-y-4">
-              {["Carga de activos reales", "Sincronización multi-proyecto", "Enlace logístico automático"].map(text => (
-                <div key={text} className="flex items-center gap-3 text-sm text-slate-300 font-medium">
-                   <div className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-                   {text}
+        <div className="hocker-glass-vfx p-8 bg-slate-950/40">
+           <div className="flex items-center gap-4 text-sky-400 mb-6">
+              <div className="h-1 w-8 bg-current rounded-full" />
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Próximas Integraciones</span>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {["Sincronización de pedidos automatizada", "Gestión de activos de clientes de terceros", "Optimización de rutas de suministro", "Auditoría de inventario por IA"].map(t => (
+                <div key={t} className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/5 text-sm text-slate-400 font-medium">
+                   <div className="h-1.5 w-1.5 rounded-full bg-sky-500/40" />
+                   {t}
                 </div>
               ))}
            </div>
-        </section>
+        </div>
       </div>
     </PageShell>
   );
