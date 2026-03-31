@@ -1,9 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * createBrowserSupabase: Enlace estándar para la interfaz de usuario.
+ * ENLACE SUPABASE (Nivel Navegador)
+ * Optimizado para persistencia de sesión en aplicaciones PWA y móviles.
  */
-export function createBrowserSupabase() {
+export function createBrowserSupabase(): SupabaseClient {
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
@@ -13,7 +14,7 @@ export function createBrowserSupabase() {
 
   return createClient(url, anon, {
     auth: {
-      persistSession: true, // Vital para la experiencia PWA
+      persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
