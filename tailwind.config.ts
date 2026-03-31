@@ -12,24 +12,22 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
         hocker: {
-          950: '#020617',
-          900: '#0b0f13',
-          800: '#0f1720',
           blue: '#0ea5ff',
           cyan: '#06b6d4',
-          gold: '#f6c85f'
+          gold: '#f6c85f',
+          red: '#f43f5e'
         }
       },
       animation: {
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'glow-pulse': 'glow 2s ease-in-out infinite alternate',
-        'scanline': 'scanline 8s linear infinite',
-        'float': 'float 6s ease-in-out infinite',
+        'hocker-pulse': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'hocker-glow': 'glow 2s ease-in-out infinite alternate',
+        'hocker-scan': 'scanline 10s linear infinite',
+        'hocker-float': 'float 6s ease-in-out infinite',
       },
       keyframes: {
         glow: {
-          '0%': { boxShadow: '0 0 5px rgba(14, 165, 233, 0.2), 0 0 10px rgba(14, 165, 233, 0.1)' },
-          '100%': { boxShadow: '0 0 20px rgba(14, 165, 233, 0.6), 0 0 40px rgba(14, 165, 233, 0.4)' },
+          '0%': { boxShadow: '0 0 5px rgba(14, 165, 233, 0.2)' },
+          '100%': { boxShadow: '0 0 20px rgba(14, 165, 233, 0.6)' },
         },
         scanline: {
           '0%': { transform: 'translateY(-100%)' },
@@ -37,7 +35,7 @@ const config: Config = {
         },
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+          '50%': { transform: 'translateY(-15px)' },
         }
       }
     },
