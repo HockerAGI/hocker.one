@@ -1,4 +1,4 @@
-import { defineConfig } from "@trigger.dev/sdk";
+import { defineConfig } from "@trigger.dev/sdk/v3";
 
 export default defineConfig({
   project: process.env.TRIGGER_PROJECT_ID || "hocker-core",
