@@ -5,41 +5,83 @@
 :root {
   --background: #020617;
   --foreground: #f8fafc;
+  --hocker-duration: 450ms;
+  --hocker-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html { 
-  color-scheme: dark; 
-  scroll-behavior: smooth; 
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: 
+  background:
     linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)),
     url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230ea5e9' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E"),
     var(--background);
   color: var(--foreground);
   overflow-x: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Efecto de Escaneo Cinematográfico de Fondo */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body::after {
   content: "";
   position: fixed;
-  top: 0; left: 0; width: 100%; height: 2px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
   background: linear-gradient(to right, transparent, rgba(14, 165, 233, 0.2), transparent);
   animation: scanline 8s linear infinite;
   pointer-events: none;
   z-index: 100;
 }
 
+@layer base {
+  html,
+  body,
+  #__next {
+    min-height: 100%;
+  }
+
+  ::selection {
+    background: rgba(14, 165, 233, 0.3);
+    color: #fff;
+  }
+
+  img,
+  svg {
+    display: block;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
+}
+
 @layer components {
-  /* Nuevo estándar de componentes Omni-Sync */
   .hocker-panel-pro {
     @apply rounded-[32px] border border-white/10 bg-slate-900/40 backdrop-blur-3xl shadow-2xl transition-all duration-500 hover:border-sky-500/30;
   }
-  
+
   .hocker-text-glow {
     @apply text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)];
   }
@@ -49,11 +91,240 @@ body::after {
   }
 }
 
-/* Scrollbar Táctica para inmersión total */
-*::-webkit-scrollbar { width: 4px; height: 4px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { 
-  background: #0ea5ff; 
-  border-radius: 10px; 
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5); 
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(14, 165, 233, 0.85) transparent;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #0ea5ff;
+    border-radius: 9999px;
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  .animate-float {
+    animation: hocker-float 7s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: hocker-pulse-slow 4.5s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: hocker-spin-slow 2.5s linear infinite;
+  }
+
+  .animate-in,
+  .animate-out {
+    animation-duration: var(--hocker-duration);
+    animation-timing-function: var(--hocker-ease);
+    animation-fill-mode: both;
+  }
+
+  .animate-in {
+    animation-name: hocker-enter;
+  }
+
+  .animate-out {
+    animation-name: hocker-exit;
+  }
+
+  .fade-in {
+    --hocker-from-opacity: 0;
+  }
+
+  .fade-out {
+    --hocker-to-opacity: 0;
+  }
+
+  .zoom-in {
+    --hocker-from-scale: 0.96;
+  }
+
+  .zoom-in-95 {
+    --hocker-from-scale: 0.95;
+  }
+
+  .zoom-out {
+    --hocker-to-scale: 0.96;
+  }
+
+  .slide-in-from-bottom-2 {
+    --hocker-from-y: 0.5rem;
+  }
+
+  .slide-in-from-bottom-4 {
+    --hocker-from-y: 1rem;
+  }
+
+  .slide-in-from-bottom-6 {
+    --hocker-from-y: 1.5rem;
+  }
+
+  .slide-in-from-bottom-8 {
+    --hocker-from-y: 2rem;
+  }
+
+  .slide-in-from-top-2 {
+    --hocker-from-y: -0.5rem;
+  }
+
+  .slide-in-from-top-4 {
+    --hocker-from-y: -1rem;
+  }
+
+  .slide-in-from-left-2 {
+    --hocker-from-x: -0.5rem;
+  }
+
+  .slide-in-from-left-4 {
+    --hocker-from-x: -1rem;
+  }
+
+  .slide-in-from-right-4 {
+    --hocker-from-x: 1rem;
+  }
+
+  .duration-300 {
+    --hocker-duration: 300ms;
+    transition-duration: 300ms;
+  }
+
+  .duration-500 {
+    --hocker-duration: 500ms;
+    transition-duration: 500ms;
+  }
+
+  .duration-700 {
+    --hocker-duration: 700ms;
+    transition-duration: 700ms;
+  }
+
+  .duration-1000 {
+    --hocker-duration: 1000ms;
+    transition-duration: 1000ms;
+  }
+
+  .fill-mode-forwards {
+    animation-fill-mode: forwards;
+  }
+}
+
+@keyframes hocker-enter {
+  from {
+    opacity: var(--hocker-from-opacity, 1);
+    transform:
+      translate3d(
+        var(--hocker-from-x, 0),
+        var(--hocker-from-y, 0),
+        0
+      )
+      scale(var(--hocker-from-scale, 1));
+    filter: blur(var(--hocker-from-blur, 0));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes hocker-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+
+  to {
+    opacity: var(--hocker-to-opacity, 0);
+    transform:
+      translate3d(
+        var(--hocker-to-x, 0),
+        var(--hocker-to-y, 0),
+        0
+      )
+      scale(var(--hocker-to-scale, 1));
+    filter: blur(var(--hocker-to-blur, 0));
+  }
+}
+
+@keyframes hocker-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes hocker-pulse-slow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes hocker-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  body::after {
+    animation: none !important;
+  }
 }
