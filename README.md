@@ -23,4 +23,4 @@ Dependencias mínimas esperadas:
 
 ### 1) Instala deps
 ```bash
-npm install
+npm install// Firma de Soberanía: Mon Mar 30 05:21:28 PM PDT 2026
