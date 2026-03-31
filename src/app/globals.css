@@ -7,7 +7,10 @@
   --foreground: #f8fafc;
 }
 
-html { color-scheme: dark; scroll-behavior: smooth; }
+html { 
+  color-scheme: dark; 
+  scroll-behavior: smooth; 
+}
 
 body {
   background: 
@@ -47,4 +50,8 @@ body::after {
 
 /* Scrollbar Táctica */
 *::-webkit-scrollbar { width: 4px; }
-*::-webkit-scrollbar-thumb { background: #0ea5ff; border-radius: 10px; box-shadow: 0 0 10px #0ea5ff; }
+*::-webkit-scrollbar-thumb { 
+  background: #0ea5ff; 
+  border-radius: 10px; 
+  box-shadow: 0 0 10px #0ea5ff; 
+}
