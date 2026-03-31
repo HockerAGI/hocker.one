@@ -1,24 +1,10 @@
-<!-- VERCEL BEST PRACTICES START -->
-## Best practices for developing on Vercel
+## Directrices Operativas para el Ecosistema Hocker ONE
 
-These defaults are optimized for AI coding agents (and humans) working on apps that deploy to Vercel.
+Estos protocolos están calibrados para asegurar el rendimiento, la soberanía de los datos y la ejecución quirúrgica de nuestros agentes sobre la infraestructura de Vercel.
 
-- Treat Vercel Functions as stateless + ephemeral (no durable RAM/FS, no background daemons), use Blob or marketplace integrations for preserving state
-- Edge Functions (standalone) are deprecated; prefer Vercel Functions
-- Don't start new projects on Vercel KV/Postgres (both discontinued); use Marketplace Redis/Postgres instead
-- Store secrets in Vercel Env Variables; not in git or `NEXT_PUBLIC_*`
-- Provision Marketplace native integrations with `vercel integration add` (CI/agent-friendly)
-- Sync env + project settings with `vercel env pull` / `vercel pull` when you need local/offline parity
-- Use `waitUntil` for post-response work; avoid the deprecated Function `context` parameter
-- Set Function regions near your primary data source; avoid cross-region DB/service roundtrips
-- Tune Fluid Compute knobs (e.g., `maxDuration`, memory/CPU) for long I/O-heavy calls (LLMs, APIs)
-- Use Runtime Cache for fast **regional** caching + tag invalidation (don't treat it as global KV)
-- Use Cron Jobs for schedules; cron runs in UTC and triggers your production URL via HTTP GET
-- Use Vercel Blob for uploads/media; Use Edge Config for small, globally-read config
-- If Enable Deployment Protection is enabled, use a bypass secret to directly access them
-- Add OpenTelemetry via `@vercel/otel` on Node; don't expect OTEL support on the Edge runtime
-- Enable Web Analytics + Speed Insights early
-- Use AI Gateway for model routing, set AI_GATEWAY_API_KEY, using a model string (e.g. 'anthropic/claude-sonnet-4.6'), Gateway is already default in AI SDK
-  needed. Always curl https://ai-gateway.vercel.sh/v1/models first; never trust model IDs from memory
-- For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access
-<!-- VERCEL BEST PRACTICES END -->
+- **Ausencia de Estado Local:** Las Vercel Functions son entidades efímeras. No confíes en su memoria interna. Cualquier dato vital debe ser persistido inmediatamente en nuestra matriz central de Supabase.
+- **Bóveda de Secretos:** NUNCA coloques credenciales tácticas en el código ni uses prefijos `NEXT_PUBLIC_` para llaves maestras. Utiliza el comando `vercel env pull` para sincronizar el entorno local con la bóveda segura.
+- **Aniquilación de Latencia:** Asegúrate de que la región de ejecución de tus funciones (`Serverless Region`) sea exactamente la misma donde reside el clúster de nuestra base de datos para evitar latencia transcontinental.
+- **Tareas de Fondo (I/O Pesado):** Para cálculos extensos de IA o llamadas de red largas, ajusta `maxDuration` de forma milimétrica. Utiliza `waitUntil` para procesar tareas secundarias sin hacer esperar al Director en la interfaz de mando.
+- **Comunicaciones Seguras de IA:** Utiliza AI Gateway para enrutar las llamadas a nuestros modelos de inteligencia. Centralizar este flujo elimina las dependencias a ciegas y nos permite auditar cada byte de conocimiento que procesamos.
+- **Sistemas de Cronometraje:** Todos los latidos programados (Cron Jobs) operan en UTC estricto e inyectan vida al sistema mediante solicitudes HTTP GET.
