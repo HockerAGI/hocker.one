@@ -14,12 +14,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
   title: { default: "Hocker ONE", template: "%s | Hocker ONE" },
-  description:
-    "Sistema de Conciencia Digital Unificada. Control total sobre el ecosistema AGI Technologies.",
+  description: "Sistema de Conciencia Digital Unificada. Control total Hocker AGI.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -28,15 +28,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="es" className="dark" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30`}
-      >
-        <WorkspaceProvider>{children}</WorkspaceProvider>
+    <html lang="es" className="dark scroll-smooth" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-hocker-950 text-slate-100 antialiased selection:bg-sky-500/30 overflow-hidden`}>
+        <WorkspaceProvider>
+          {children}
+        </WorkspaceProvider>
         <PwaRegister />
-        <Toaster position="bottom-right" theme="dark" closeButton richColors />
+        <Toaster 
+          position="top-center" 
+          theme="dark" 
+          expand={false} 
+          richColors 
+          toastOptions={{
+            style: { 
+              background: 'rgba(15, 23, 32, 0.8)', 
+              backdropFilter: 'blur(12px)', 
+              border: '1px solid rgba(255,255,255,0.1)', 
+              borderRadius: '20px' 
+            }
+          }} 
+        />
       </body>
     </html>
   );
