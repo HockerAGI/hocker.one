@@ -8,20 +8,24 @@ export default function Hint({ title, children }: { title: string; children: Rea
   if (!tutorial) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-sky-400/20 bg-gradient-to-br from-sky-500/10 to-slate-900/60 p-5 shadow-sm backdrop-blur-xl">
+    <div className="relative overflow-hidden rounded-[24px] border border-sky-400/20 bg-gradient-to-br from-sky-500/10 to-slate-900/80 p-6 shadow-lg backdrop-blur-2xl transition-all hover:border-sky-400/30">
       <div
-        className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-sky-400/10 blur-3xl"
+        className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-sky-400/10 blur-3xl animate-pulse-slow"
         aria-hidden="true"
       />
       <div className="relative flex items-start gap-4">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-400/20 bg-sky-500/10 text-sky-300">
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+        <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/10 text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)]">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <div>
-          <h4 className="text-[15px] font-extrabold tracking-tight text-white">{title}</h4>
-          <div className="mt-1.5 text-[14px] leading-relaxed text-slate-300">{children}</div>
+        <div className="flex-1">
+          <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-sky-400 mb-1">
+            {title}
+          </h4>
+          <div className="text-[13px] font-medium leading-relaxed text-slate-300">
+            {children}
+          </div>
         </div>
       </div>
     </div>
