@@ -32,12 +32,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className="dark scroll-smooth" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30 overflow-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30`}
       >
         <WorkspaceProvider>
           {children}
         </WorkspaceProvider>
+
         <PwaRegister />
+
         <Toaster 
           position="top-center" 
           theme="dark" 
