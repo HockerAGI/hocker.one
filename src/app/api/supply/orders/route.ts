@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "finance", "logistica"] });
 
-    const controls: any = await getControls(ctx.sb, ctx.project_id);
+    const controls: { kill_switch?: boolean; allow_write?: boolean; [key: string]: unknown } = await getControls(ctx.sb, ctx.project_id);
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "BLOQUEO GENERAL: Kill Switch Activo. Creación de órdenes suspendida." });
     }

@@ -11,7 +11,7 @@ type SpeechRecognitionResultEvent = {
   results: Array<Array<{ transcript: string }>>;
 };
 
-type SpeechRecognitionInstance = {
+interface SpeechRecognitionInstance {
   lang: string;
   interimResults: boolean;
   maxAlternatives: number;
@@ -20,7 +20,7 @@ type SpeechRecognitionInstance = {
   onend: (() => void) | null;
   onerror: ((event: Event) => void) | null;
   onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
-};
+}
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
 
@@ -30,17 +30,22 @@ interface WindowWithSpeech extends Window {
 }
 
 export default function VoiceInput({ onText, disabled }: Props) {
-  const [SpeechRec, setSpeechRec] = useState<SpeechRecognitionCtor | null>(null);
+  const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
 
   useEffect(() => {
-    const win = window as WindowWithSpeech;
-    const api = win.SpeechRecognition || win.webkitSpeechRecognition || null;
-    setSpeechRec(api);
+    if (typeof window !== "undefined") {
+      const win = window as unknown as WindowWithSpeech;
+      const api = win.SpeechRecognition || win.webkitSpeechRecognition;
+      if (api) setSupported(true);
+    }
   }, []);
 
   function start() {
-    if (disabled || !SpeechRec) return;
+    if (disabled || !supported) return;
+    const win = window as unknown as WindowWithSpeech;
+    const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (!SpeechRec) return;
 
     const rec = new SpeechRec();
     rec.lang = "es-MX";
@@ -51,7 +56,7 @@ export default function VoiceInput({ onText, disabled }: Props) {
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
 
-    rec.onresult = (e) => {
+    rec.onresult = (e: SpeechRecognitionResultEvent) => {
       const transcript = e.results?.[0]?.[0]?.transcript;
       if (typeof transcript === "string" && transcript.trim()) {
         onText(transcript.trim());
@@ -61,7 +66,7 @@ export default function VoiceInput({ onText, disabled }: Props) {
     rec.start();
   }
 
-  if (!SpeechRec) {
+  if (!supported) {
     return (
       <button
         type="button"
@@ -70,11 +75,7 @@ export default function VoiceInput({ onText, disabled }: Props) {
         title="Hardware no compatible con enlace de voz"
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           <line x1="4" y1="4" x2="20" y2="20" strokeWidth="2.5" />
         </svg>
       </button>
@@ -95,11 +96,7 @@ export default function VoiceInput({ onText, disabled }: Props) {
     >
       {listening && <span className="absolute inset-0 rounded-2xl bg-rose-400 opacity-50 animate-ping" />}
       <svg className="relative z-10 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
       </svg>
     </button>
   );

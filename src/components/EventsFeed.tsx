@@ -86,7 +86,7 @@ export default function EventsFeed() {
           items.map((e) => {
             const isCritical = e.level === "error" || e.level === "critical";
             const isWarn = e.level === "warn" || e.level === "warning";
-            const color = isCritical ? "rose" : isWarn ? "amber" : "sky";
+            const _color = isCritical ? "rose" : isWarn ? "amber" : "sky";
 
             return (
               <div

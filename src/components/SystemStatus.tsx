@@ -10,7 +10,7 @@ type Health = {
 
 export default function SystemStatus() {
   const [health, setHealth] = useState<Health | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const summary = useMemo(() => {

@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     const project_id = String(body.project_id ?? "global").trim();
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
-    const controls: any = await getControls(ctx.sb, ctx.project_id);
+    const controls: { kill_switch?: boolean; allow_write?: boolean; [key: string]: unknown } = await getControls(ctx.sb, ctx.project_id);
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "SISTEMA BLOQUEADO: Kill Switch Activo." });
     }

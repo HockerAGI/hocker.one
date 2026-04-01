@@ -1,4 +1,4 @@
-import { getErrorMessage } from "@/lib/errors";
+import { _getErrorMessage } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 

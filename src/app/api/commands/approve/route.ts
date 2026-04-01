@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (!id) throw new ApiError(400, { error: "Falta el ID del comando." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
-    const controls: any = await getControls(ctx.sb, ctx.project_id);
+    const controls: { kill_switch?: boolean; allow_write?: boolean; [key: string]: unknown } = await getControls(ctx.sb, ctx.project_id);
 
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "Kill Switch activo. No se puede aprobar nada." });

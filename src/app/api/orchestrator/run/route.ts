@@ -11,7 +11,7 @@ export async function POST() {
 
     const health = await healthRes.json();
 
-    const actions: any[] = [];
+    const actions: Record<string, unknown>[] = [];
 
     // 2. REGLAS INTELIGENTES
 
@@ -60,7 +60,7 @@ export async function POST() {
       actionsExecuted: actions.length,
       actions,
     });
-  } catch (err: any) {
+  } catch (err: Record<string, unknown>) {
     return NextResponse.json(
       { error: err.message || "Fallo en orquestador" },
       { status: 500 }

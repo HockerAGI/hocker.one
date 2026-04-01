@@ -84,7 +84,7 @@ export default function NovaChat() {
         });
       }
 
-    } catch (err) {
+    } catch (_err) {
       setMsgs((prev) => [
         ...prev,
         { role: "assistant", content: "⚠️ Error en canal NOVA" },

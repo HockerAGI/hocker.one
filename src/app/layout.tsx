@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   title: { default: "Hocker ONE", template: "%s | Hocker ONE" },
   description: "Centro de Mando Unificado de Hocker IA Technologies.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/brand/hocker-one-isotype.png",
+    shortcut: "/brand/hocker-one-isotype.png",
+    apple: "/brand/hocker-one-isotype.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -40,21 +45,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <PwaRegister />
 
-        <Toaster 
-          position="top-center" 
-          theme="dark" 
-          expand={false} 
-          richColors 
+        <Toaster
+          position="top-center"
+          theme="dark"
+          expand={false}
+          richColors
           toastOptions={{
-            style: { 
-              background: 'rgba(15, 23, 32, 0.85)', 
-              backdropFilter: 'blur(16px)', 
-              border: '1px solid rgba(14, 165, 233, 0.2)', 
+            style: {
+              background: 'rgba(15, 23, 32, 0.85)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(14, 165, 233, 0.2)',
               borderRadius: '24px',
               color: '#f8fafc',
               boxShadow: '0 10px 40px -10px rgba(14,165,233,0.15)'
             }
-          }} 
+          }}
         />
       </body>
     </html>

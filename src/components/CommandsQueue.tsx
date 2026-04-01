@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 
 export default function CommandsQueue() {
   const sb = useMemo(() => createBrowserSupabase(), []);
 
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await sb
@@ -19,46 +19,30 @@ export default function CommandsQueue() {
         .order("created_at", { ascending: false })
         .limit(20);
 
-      setItems(data || []);
+      setItems((data as Record<string, unknown>[]) || []);
     } catch (err) {
       console.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }
+  }, [sb]);
 
   useEffect(() => {
     load();
+  }, [load]);
 
-    const ch = sb.channel("live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "commands" }, load)
-      .subscribe();
-
-    return () => {
-      sb.removeChannel(ch);
-    };
-  }, []);
+  if (loading && items.length === 0) {
+    return <div className="p-4 text-xs text-slate-500 animate-pulse">Sincronizando cola de comandos...</div>;
+  }
 
   return (
-    <section className="hocker-panel-pro h-full flex flex-col">
-      <div className="p-5 border-b border-white/5">
-        <h3 className="text-xs font-black text-sky-400">COMMAND LOG</h3>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {loading ? (
-          <div className="text-xs text-slate-500">Loading...</div>
-        ) : (
-          items.map((c) => (
-            <div key={c.id} className="text-xs border p-3 rounded-xl">
-              <div className="flex justify-between">
-                <span>{c.command}</span>
-                <span>{c.status}</span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
+    <div className="flex flex-col gap-2">
+      {items.map((item, idx) => (
+        <div key={idx} className="rounded-xl border border-white/5 bg-white/5 p-3">
+          <p className="text-[10px] font-mono text-sky-400">{String(item.id || idx)}</p>
+          <p className="text-xs text-slate-300">{String(item.payload || "Sin contenido")}</p>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -1,0 +1,59 @@
+=== REPORTE DE AUDITORÍA NOVA ===
+
+--- 1. ESCANEO TYPESCRIPT (Lógica y Tipado) ---
+
+--- 2. ESCANEO LINTER (Estructura y UI) ---
+Invalid project directory provided, no such directory: /root/HOCKER_EMPIRE/hocker.one/lint
+
+--- 3. ESCANEO DE BUILD (Endpoints y Compilación) ---
+  Skipping creating a lockfile at /root/HOCKER_EMPIRE/hocker.one/.next/lock because we're using WASM bindings
+▲ Next.js 16.2.1 (webpack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 102s
+  Running TypeScript ...
+  Finished TypeScript in 28.6s ...
+  Collecting page data using 7 workers ...
+⚠ Using edge runtime on a page currently disables static generation for that page
+  Generating static pages using 7 workers (0/21) ...
+  Generating static pages using 7 workers (5/21) 
+  Generating static pages using 7 workers (10/21) 
+  Generating static pages using 7 workers (15/21) 
+✓ Generating static pages using 7 workers (21/21) in 3.5s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /agis
+├ ƒ /api/commands
+├ ƒ /api/commands/approve
+├ ƒ /api/commands/dispatch
+├ ƒ /api/commands/reject
+├ ƒ /api/events/manual
+├ ƒ /api/governance/killswitch
+├ ƒ /api/health
+├ ƒ /api/nova/chat
+├ ƒ /api/orchestrator/cron
+├ ƒ /api/orchestrator/run
+├ ƒ /api/supply/orders
+├ ƒ /api/supply/orders/[id]
+├ ƒ /api/supply/products
+├ ƒ /api/supply/products/[id]
+├ ƒ /apple-icon
+├ ƒ /auth/callback
+├ ○ /chat
+├ ○ /commands
+├ ○ /dashboard
+├ ○ /governance
+├ ƒ /icon
+├ ○ /nodes
+├ ƒ /signout
+└ ○ /supply
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
