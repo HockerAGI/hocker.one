@@ -1,64 +1,52 @@
 "use client";
 
-import { getErrorMessage } from "@/lib/errors";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import VoiceInput from "@/components/VoiceInput";
 
-type Msg = { role: "user" | "assistant"; content: string };
-
-const STORAGE_KEY = "nova_chat_history";
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 export default function NovaChat() {
   const { projectId: pid } = useWorkspace();
 
-  const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const [allowActions, setAllowActions] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 🔹 Load historial
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setMsgs(JSON.parse(saved));
-  }, []);
-
-  // 🔹 Save historial
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs));
-  }, [msgs]);
-
-  // 🔹 Auto scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [msgs, loading]);
+  }, [msgs]);
 
-  // 🔹 Auto focus
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  async function send(e?: FormEvent) {
-    if (e) e.preventDefault();
+  async function send() {
     if (!text.trim() || loading) return;
 
     const userMsg = text.trim();
 
-    setText("");
     setMsgs((prev) => [...prev, { role: "user", content: userMsg }]);
+    setText("");
     setLoading(true);
+    setThinking(true);
 
     try {
-      const res = await fetch("/api/nova/chat", {
+      const res = await fetch("/api/nova/chat/stream", {
         method: "POST",
         headers: {
-          "content-type": "application/json",
+          "Content-Type": "application/json",
           "x-allow-actions": allowActions ? "1" : "0",
         },
         body: JSON.stringify({
@@ -67,76 +55,71 @@ export default function NovaChat() {
         }),
       });
 
-      const data = await res.json();
+      if (!res.body) throw new Error("Sin stream");
 
-      if (!res.ok) throw new Error(data.error || "Falla en NOVA");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
 
+      let done = false;
+      let fullText = "";
+
+      // Mensaje vacío inicial
+      setMsgs((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+
+        const chunk = decoder.decode(value || new Uint8Array());
+
+        fullText += chunk;
+
+        setMsgs((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: fullText,
+          };
+          return updated;
+        });
+      }
+
+    } catch (err) {
       setMsgs((prev) => [
         ...prev,
-        { role: "assistant", content: data.reply || data.content },
-      ]);
-    } catch (err: unknown) {
-      setMsgs((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `⚠️ Error táctico: ${getErrorMessage(err)}`,
-        },
+        { role: "assistant", content: "⚠️ Error en canal NOVA" },
       ]);
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
+      setThinking(false);
     }
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-slate-950/40 backdrop-blur-2xl rounded-[32px] border border-white/5 shadow-2xl">
+    <div className="flex h-full flex-col overflow-hidden rounded-[32px] border border-white/5 bg-slate-950/40 backdrop-blur-2xl">
 
       {/* HEADER */}
-      <div className="flex items-center justify-between border-b border-white/5 bg-sky-500/5 px-5 py-4">
+      <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
-          </div>
-
-          <div>
-            <div className="text-[11px] font-black uppercase tracking-widest text-sky-400">
-              NOVA Core
-            </div>
-            <div className="text-[9px] text-slate-500">
-              Conciencia Operativa Activa
-            </div>
-          </div>
+          <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse" />
+          <span className="text-xs font-bold text-sky-400">NOVA CORE</span>
         </div>
 
         <button
           onClick={() => setAllowActions(!allowActions)}
-          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition-all ${
-            allowActions
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-              : "border-white/10 bg-white/5 text-slate-400"
+          className={`text-xs ${
+            allowActions ? "text-emerald-400" : "text-slate-400"
           }`}
         >
-          <span className="text-[9px] font-black uppercase tracking-widest">
-            {allowActions ? "Ejecución ON" : "Solo Lectura"}
-          </span>
+          {allowActions ? "EXEC ON" : "READ ONLY"}
         </button>
       </div>
 
       {/* CHAT */}
       <div
         ref={scrollRef}
-        className="flex-1 space-y-6 overflow-y-auto p-5 custom-scrollbar"
+        className="flex-1 space-y-4 overflow-y-auto p-4"
       >
-        {msgs.length === 0 && (
-          <div className="flex h-full flex-col items-center justify-center text-center opacity-70">
-            <p className="text-xs text-slate-500">
-              Canal seguro listo. Esperando instrucciones.
-            </p>
-          </div>
-        )}
-
         {msgs.map((m, i) => (
           <div
             key={i}
@@ -145,10 +128,10 @@ export default function NovaChat() {
             }`}
           >
             <div
-              className={`max-w-[75%] rounded-[24px] px-5 py-3 text-sm ${
+              className={`max-w-[75%] rounded-xl px-4 py-2 text-sm ${
                 m.role === "user"
                   ? "bg-sky-500 text-white"
-                  : "bg-slate-900/80 border border-white/10"
+                  : "bg-slate-900 border border-white/10"
               }`}
             >
               {m.content}
@@ -156,7 +139,7 @@ export default function NovaChat() {
           </div>
         ))}
 
-        {loading && (
+        {thinking && (
           <div className="text-sky-400 text-xs animate-pulse">
             NOVA está procesando…
           </div>
@@ -164,34 +147,26 @@ export default function NovaChat() {
       </div>
 
       {/* INPUT */}
-      <div className="border-t border-white/5 p-4">
-        <form
-          onSubmit={send}
-          className="flex items-center gap-2"
+      <div className="border-t border-white/5 p-3 flex gap-2">
+        <input
+          ref={inputRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="flex-1 bg-white/5 px-3 py-2 rounded-xl text-sm"
+          placeholder="Orden..."
+          onKeyDown={(e) => {
+            if (e.key === "Enter") send();
+          }}
+        />
+
+        <VoiceInput onText={setText} disabled={loading} />
+
+        <button
+          onClick={send}
+          className="px-4 py-2 bg-sky-500 rounded-xl text-white"
         >
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Instrucción de mando..."
-            disabled={loading}
-            className="flex-1 rounded-xl bg-white/5 px-4 py-3 text-sm outline-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-          />
-
-          <VoiceInput onText={setText} disabled={loading} />
-
-          <button
-            type="submit"
-            disabled={!text.trim() || loading}
-            className="h-10 w-10 rounded-xl bg-sky-500"
-          />
-        </form>
+          →
+        </button>
       </div>
     </div>
   );
