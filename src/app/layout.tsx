@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PwaRegister from "@/components/PwaRegister";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
+import InteractiveBackground from "@/components/InteractiveBackground";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -37,29 +38,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className="dark scroll-smooth" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30 overflow-y-auto`}
       >
+        <InteractiveBackground />
         <WorkspaceProvider>
           {children}
         </WorkspaceProvider>
-
         <PwaRegister />
-
         <Toaster
           position="top-center"
           theme="dark"
           expand={false}
           richColors
-          toastOptions={{
-            style: {
-              background: 'rgba(15, 23, 32, 0.85)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(14, 165, 233, 0.2)',
-              borderRadius: '24px',
-              color: '#f8fafc',
-              boxShadow: '0 10px 40px -10px rgba(14,165,233,0.15)'
-            }
-          }}
         />
       </body>
     </html>
