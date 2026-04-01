@@ -117,6 +117,7 @@ export async function ensureNode(sb: unknown, project_id: string, node_id: strin
   const nid = normalizeNodeId(node_id);
   const isCloudNode = nid.startsWith("cloud-") || nid === "hocker-fabric";
 
+    // @ts-expect-error - Alineación forzada de DB
   const { error: insertErr } = await db.from("nodes").upsert(
     {
       project_id,

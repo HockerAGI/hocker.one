@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     if (!id) throw new ApiError(400, { error: "Falta el ID del comando a rechazar." });
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
-    const controls = await getControls(ctx.sb, ctx.project_id);
+    const controls: any = await getControls(ctx.sb, ctx.project_id);
 
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "BLOQUEO: Kill Switch Activo." });

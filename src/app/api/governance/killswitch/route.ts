@@ -80,7 +80,7 @@ export async function GET(req: Request) {
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_read"] });
 
-    const controls = await loadControls(ctx.sb, ctx.project_id);
+    const controls: any = await loadControls(ctx.sb, ctx.project_id);
 
     return json({ ok: true, controls });
   } catch (err: unknown) {

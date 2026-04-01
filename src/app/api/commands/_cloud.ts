@@ -145,7 +145,7 @@ async function executeLocalCloud(command: string, payload: JsonRecord): Promise<
     case "shell.exec": {
       const shellCommand = asString(p.command || p.cmd || "");
       if (!shellCommand) throw new Error("shell.exec requiere payload.command");
-      const result = await exec(shellCommand, { cwd: getWorkspaceRoot(), shell: true });
+      const result = await exec(shellCommand, { cwd: getWorkspaceRoot(), shell: '/bin/sh' });
       return {
         command: cmd,
         ok: true,
