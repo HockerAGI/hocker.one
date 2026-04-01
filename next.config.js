@@ -1,10 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Protocolo de Inmunidad: Ignora errores durante el build en Vercel
+  // Protocolo de Inmunidad: Solo mantenemos el bypass de TypeScript
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
-  // Forzamos Webpack para evitar el colapso de Turbopack en ARM64
+  // Forzamos Webpack para compatibilidad universal con el búnker local
   webpack: (config) => {
     config.infrastructureLogging = { level: "error" };
     return config;
