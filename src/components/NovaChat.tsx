@@ -43,7 +43,7 @@ export default function NovaChat() {
     setThinking(true);
 
     try {
-      const res = await fetch("/api/nova/chat/stream", {
+      const res = await fetch("/api/nova/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

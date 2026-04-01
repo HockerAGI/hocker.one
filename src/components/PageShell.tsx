@@ -53,7 +53,7 @@ export default function PageShell({ title, subtitle, actions, children }: PageSh
       </aside>
 
       {/* MAIN */}
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-transparent to-sky-950/5">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col min-h-0 bg-gradient-to-br from-transparent to-sky-950/5">
 
         {/* HEADER */}
         <header className="flex min-h-[5rem] shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/20 px-4 backdrop-blur-md sm:px-8">

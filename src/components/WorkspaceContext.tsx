@@ -17,7 +17,7 @@ type WorkspaceCtx = WorkspaceState & {
 };
 
 const DEFAULTS: WorkspaceState = {
-  projectId: defaultProjectId(),
+  projectId: "hocker-one",
   nodeId: defaultNodeId(),
   tutorial: true,
 };
