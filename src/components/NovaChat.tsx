@@ -4,7 +4,12 @@ import { useWorkspace } from "@/components/WorkspaceContext";
 import VoiceInput from "@/components/VoiceInput";
 
 export default function NovaChat() {
-  const { projectId } = useWorkspace();
+  type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+const [msgs, setMsgs] = useState<Message[]>([]);
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,8 +31,8 @@ export default function NovaChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: projectId, message: userMsg }),
       });
-      const data = await res.text();
-      setMsgs(prev => [...prev, { role: "assistant", content: data }]);
+      const data: { ok: boolean; response: string } = await res.json();
+      setMsgs(prev => [...prev, { role: "assistant", content: data.response }]);
     } catch {
       setMsgs(prev => [...prev, { role: "assistant", content: "⚠️ Error de conexión con el Núcleo." }]);
     } finally { setLoading(false); }
