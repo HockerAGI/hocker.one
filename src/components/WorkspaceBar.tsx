@@ -27,7 +27,6 @@ export default function WorkspaceBar() {
           </span>
           <input
             value={nodeId}
-            onChange={(e) => setNodeId(e.target.value)}
             className="w-full bg-transparent text-xs font-mono font-bold text-emerald-100 outline-none placeholder:text-slate-600"
             placeholder="hocker-fabric"
           />
