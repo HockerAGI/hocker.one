@@ -63,4 +63,73 @@ export default function NodeBadge() {
         .select("id, project_id, name, status, last_seen_at, meta")
         .eq("project_id", projectId)
         .eq("id", nodeId)
-        .
+        .maybeSingle(); // ← aquí termina correctamente
+
+      if (error) {
+        setNode(null);
+        return;
+      }
+
+      if (isNodeRow(data)) {
+        setNode(data);
+      } else {
+        setNode(null);
+      }
+    } catch {
+      setNode(null);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+
+    const interval = setInterval(() => {
+      void load();
+    }, 10000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, nodeId]);
+
+  if (!node) {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-slate-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+        Nodo: Desconectado
+      </div>
+    );
+  }
+
+  const status = node.status.toLowerCase();
+
+  const isCloud =
+    node.id === "hocker-fabric" ||
+    node.id.startsWith("cloud-") ||
+    node.id.startsWith("trigger-");
+
+  const isOnline = isCloud || status === "online";
+
+  const containerClass = isCloud
+    ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
+    : isOnline
+    ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+    : "border-rose-400/20 bg-rose-500/10 text-rose-200";
+
+  const dotClass = isCloud
+    ? "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse"
+    : isOnline
+    ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
+    : "bg-rose-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]";
+
+  const label = isCloud ? "Nube Central" : node.name ?? "En línea";
+
+  return (
+    <div
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest shadow-sm ${containerClass}`}
+      title={`Última señal: ${relative(node.last_seen_at)}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      <span className="truncate max-w-[120px]">{label}</span>
+    </div>
+  );
+}
