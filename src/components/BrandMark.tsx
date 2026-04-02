@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -18,7 +19,7 @@ export default function BrandMark({
 }: BrandMarkProps) {
   return (
     <div
-      className={clsx(
+      className={cx(
         "flex items-center gap-3 select-none",
         hero ? "scale-110" : "scale-100",
         className,
