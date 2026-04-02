@@ -39,7 +39,15 @@ export default function NodeBadge() {
         .eq("id", nodeId)
         .maybeSingle();
 
-      setNode((data as NodeRow) ?? null);
+      if (
+  data &&
+  typeof data.id === "string" &&
+  typeof data.project_id === "string"
+) {
+  setNode(data as NodeRow);
+} else {
+  setNode(null);
+}
     } catch {
       setNode(null);
     }
