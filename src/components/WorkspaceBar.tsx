@@ -38,4 +38,30 @@ export default function WorkspaceBar() {
         {/* TOGGLE */}
         <label className="group flex cursor-pointer items-center gap-3">
           <button
-            type="button
+            type="button"
+            onClick={toggleTutorial}
+            className={`relative inline-flex h-6 w-10 items-center rounded-full transition-all ${
+              tutorial
+                ? "bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.4)]"
+                : "bg-slate-800"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all ${
+                tutorial ? "translate-x-5" : "translate-x-1"
+              }`}
+            />
+          </button>
+
+          <span
+            className={`text-[10px] font-black uppercase tracking-widest transition-colors ${
+              tutorial ? "text-sky-400" : "text-slate-500"
+            }`}
+          >
+            Guías
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+}
