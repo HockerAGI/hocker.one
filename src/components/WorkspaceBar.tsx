@@ -3,8 +3,7 @@
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function WorkspaceBar() {
-  const { projectId, nodeId, tutorial, setProjectId, setNodeId, setTutorial, reset } = useWorkspace();
-
+  const { projectId, nodeId, tutorial, setNodeId, toggleTutorial } = useWorkspace();
   return (
     <div className="flex flex-col gap-4 py-4">
       <div className="flex flex-col gap-3">
@@ -40,7 +39,7 @@ export default function WorkspaceBar() {
         <label className="group flex cursor-pointer items-center gap-3">
           <button
             type="button"
-            onClick={() => setTutorial(!tutorial)}
+            onClick={toggleTutorial}
             className={`relative inline-flex h-6 w-10 items-center rounded-full transition-all focus:outline-none ${
               tutorial ? "bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.4)]" : "bg-slate-800"
             }`}
