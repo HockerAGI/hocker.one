@@ -6,21 +6,32 @@ import GovernancePanel from "@/components/GovernancePanel";
 
 export const metadata: Metadata = {
   title: "Gobernanza",
-  description: "Gestión de políticas de seguridad, identidad biométrica y protocolos de emergencia.",
+  description:
+    "Gestión de políticas de seguridad, estados de emergencia y protocolos de autoridad.",
 };
 
 export default function GovernancePage() {
   return (
     <PageShell
       title="Núcleo de Seguridad"
-      subtitle="Gestión de identidades, estados de emergencia y protocolos de autoridad."
+      subtitle="Gestión de estados de emergencia y protocolos de autoridad."
       actions={
         <Link
           href="/dashboard"
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 sm:px-5 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95"
         >
-          <svg className="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          <svg
+            className="h-4 w-4 text-sky-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
           Volver
         </Link>
@@ -32,6 +43,8 @@ export default function GovernancePage() {
         </Hint>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 xl:gap-8">
+          
+          {/* PANEL IZQUIERDO */}
           <div className="xl:col-span-7 animate-in fade-in slide-in-from-left-4 duration-700">
             <div className="flex flex-col gap-4">
               <h3 className="px-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
@@ -41,17 +54,26 @@ export default function GovernancePage() {
             </div>
           </div>
 
+          {/* PANEL DERECHO (SIN BIOMETRÍA) */}
           <div className="xl:col-span-5 animate-in fade-in slide-in-from-right-4 duration-700">
             <div className="flex flex-col gap-4">
               <h3 className="px-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                Identidad táctica
+                Estado del sistema
               </h3>
 
-              <BiometricEnroller />
+              <div className="rounded-[24px] border border-white/10 bg-slate-900/40 px-5 py-5 text-xs text-slate-400">
+                Módulo biométrico desactivado.
+              </div>
 
               <div className="mt-4 rounded-[24px] border border-sky-500/10 bg-sky-500/5 px-5 sm:px-6 py-5 shadow-inner">
                 <div className="flex items-start gap-3">
-                  <svg className="mt-0.5 h-5 w-5 shrink-0 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="mt-0.5 h-5 w-5 shrink-0 text-sky-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -62,12 +84,14 @@ export default function GovernancePage() {
                     <strong className="mb-1 block font-bold uppercase tracking-widest text-sky-400">
                       Nota operativa
                     </strong>
-                    Al vincular este dispositivo, el protocolo Omni-Sync permitirá el acceso nativo mediante el hardware criptográfico de su terminal (huella / Face ID).
+                    El acceso se mantiene mediante credenciales seguras y sesión autenticada.
                   </p>
                 </div>
               </div>
+
             </div>
           </div>
+
         </div>
       </div>
     </PageShell>
