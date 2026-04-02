@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import clsx from "clsx";
+function cx(...classes: Array<string | false | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 type BrandMarkProps = {
   showWordmark?: boolean;
