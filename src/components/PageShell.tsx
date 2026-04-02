@@ -14,7 +14,12 @@ interface PageShellProps {
   children: React.ReactNode;
 }
 
-export default function PageShell({ title, subtitle, actions, children }: PageShellProps) {
+export default function PageShell({
+  title,
+  subtitle,
+  actions,
+  children,
+}: PageShellProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +28,9 @@ export default function PageShell({ title, subtitle, actions, children }: PageSh
   }, []);
 
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-slate-950 text-slate-100 selection:bg-sky-500/30 lg:flex-row">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-slate-950 text-slate-100 selection:bg-sky-500/30 lg:flex-row">
+      
+      {/* LOADER */}
       {loading ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 animate-out fade-out duration-700 fill-mode-forwards">
           <div className="relative">
@@ -40,22 +47,30 @@ export default function PageShell({ title, subtitle, actions, children }: PageSh
         </div>
       ) : null}
 
+      {/* BACKGROUND */}
       <InteractiveBackground />
 
+      {/* SIDEBAR DESKTOP */}
       <aside className="relative z-30 hidden min-h-0 w-72 flex-col border-r border-white/5 bg-slate-950/40 backdrop-blur-3xl lg:flex">
         <AppNav />
       </aside>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-transparent to-sky-950/5">
+      {/* MAIN */}
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-x-hidden bg-gradient-to-br from-transparent to-sky-950/5">
+        
+        {/* HEADER */}
         <header className="flex min-h-[5rem] shrink-0 items-center justify-between gap-4 border-b border-white/5 bg-slate-950/20 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+          
           <div className="flex min-w-0 flex-col justify-center py-3">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
               <Link href="/dashboard" className="transition-colors hover:text-sky-400">
                 MATRIZ
               </Link>
+
               <svg className="h-2.5 w-2.5 shrink-0 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
+
               <span className="truncate text-sky-400/90">{title}</span>
             </div>
 
@@ -77,6 +92,7 @@ export default function PageShell({ title, subtitle, actions, children }: PageSh
 
             {actions ? <div className="shrink-0">{actions}</div> : null}
 
+            {/* LOGO MOBILE */}
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-sky-500/20 bg-sky-500/5 p-2 shadow-[0_0_15px_rgba(14,165,233,0.1)] lg:hidden">
               <Image
                 src="/brand/hocker-one-isotype.png"
@@ -90,6 +106,7 @@ export default function PageShell({ title, subtitle, actions, children }: PageSh
           </div>
         </header>
 
+        {/* CONTENT SCROLLABLE */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain p-4 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="mx-auto max-w-[1600px] animate-in fade-in slide-in-from-bottom-4 duration-700">
             <ErrorBoundary>{children}</ErrorBoundary>
@@ -97,6 +114,7 @@ export default function PageShell({ title, subtitle, actions, children }: PageSh
         </div>
       </main>
 
+      {/* NAV MOBILE */}
       <nav
         className="relative z-30 border-t border-white/5 bg-slate-950/90 pb-safe pt-2 backdrop-blur-2xl lg:hidden"
         aria-label="Navegación principal"
