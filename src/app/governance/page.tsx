@@ -3,7 +3,6 @@ import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 import GovernancePanel from "@/components/GovernancePanel";
-import BiometricEnroller from "@/components/BiometricEnroller";
 
 export const metadata: Metadata = {
   title: "Gobernanza",
