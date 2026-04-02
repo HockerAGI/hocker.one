@@ -38,16 +38,38 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="es" className="dark scroll-smooth" suppressHydrationWarning>
+    <html
+      lang="es"
+      className="dark scroll-smooth h-full"
+      suppressHydrationWarning
+    >
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-[100dvh] bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30`}
+        className={`
+          ${geistSans.variable}
+          ${geistMono.variable}
+          min-h-screen
+          overflow-y-auto
+          bg-slate-950
+          text-slate-100
+          antialiased
+          selection:bg-sky-500/30
+        `}
       >
-        <WorkspaceProvider>{children}</WorkspaceProvider>
+        {/* CONTEXTO GLOBAL */}
+        <WorkspaceProvider>
+          {children}
+        </WorkspaceProvider>
 
+        {/* PWA SERVICE WORKER */}
         <PwaRegister />
 
+        {/* TOAST SYSTEM */}
         <Toaster
           position="top-center"
           theme="dark"
@@ -60,7 +82,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               border: "1px solid rgba(14, 165, 233, 0.2)",
               borderRadius: "24px",
               color: "#f8fafc",
-              boxShadow: "0 10px 40px -10px rgba(14,165,233,0.15)",
+              boxShadow:
+                "0 10px 40px -10px rgba(14,165,233,0.15)",
             },
           }}
         />
