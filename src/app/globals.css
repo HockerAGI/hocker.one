@@ -15,17 +15,26 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+  height: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 body {
   background:
     linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)),
     url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230ea5e9' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E"),
     var(--background);
+
   color: var(--foreground);
-  overflow-x: hidden;
 
-  /* 🔥 FIX REAL */
+  /* SCROLL CONTROL REAL */
   overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
 
+  /* RENDER */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
