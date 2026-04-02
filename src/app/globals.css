@@ -9,18 +9,26 @@
   --hocker-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* =========================
+   BASE ROOT FIX
+========================= */
+
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
-  height: 100%;
+/* 🔥 FIX CRÍTICO SCROLL */
+html,
+body {
   min-height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
 }
+
+/* =========================
+   BODY
+========================= */
 
 body {
   background:
@@ -30,7 +38,8 @@ body {
 
   color: var(--foreground);
 
-  /* SCROLL CONTROL REAL */
+  /* 🔥 SCROLL REAL (ANDROID FIX) */
+  overflow-y: auto;
   overscroll-behavior-y: auto;
   -webkit-overflow-scrolling: touch;
 
@@ -39,6 +48,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
+/* =========================
+   RESET
+========================= */
 
 *,
 *::before,
@@ -54,6 +67,10 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* =========================
+   FX SCANLINE
+========================= */
+
 body::after {
   content: "";
   position: fixed;
@@ -64,13 +81,16 @@ body::after {
   background: linear-gradient(to right, transparent, rgba(14, 165, 233, 0.2), transparent);
   animation: scanline 8s linear infinite;
   pointer-events: none;
-  z-index: 100;
+  z-index: 50;
 }
+
+/* =========================
+   BASE LAYER
+========================= */
 
 @layer base {
   html,
-  body,
-  #__next {
+  body {
     min-height: 100%;
   }
 
@@ -89,6 +109,10 @@ body::after {
   }
 }
 
+/* =========================
+   COMPONENTS
+========================= */
+
 @layer components {
   .hocker-panel-pro {
     @apply rounded-[32px] border border-white/10 bg-slate-900/40 backdrop-blur-3xl shadow-2xl transition-all duration-500 hover:border-sky-500/30;
@@ -103,17 +127,21 @@ body::after {
   }
 
   .hocker-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95 touch-manipulation;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95;
   }
 
   .hocker-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.15)] transition-all hover:bg-sky-500/20 active:scale-95 touch-manipulation;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.15)] transition-all hover:bg-sky-500/20 active:scale-95;
   }
 
   .hocker-button-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-100 transition-all hover:bg-white/10 active:scale-95 touch-manipulation;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-100 transition-all hover:bg-white/10 active:scale-95;
   }
 }
+
+/* =========================
+   UTILITIES
+========================= */
 
 @layer utilities {
   .pb-safe {
@@ -127,27 +155,19 @@ body::after {
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(14, 165, 233, 0.85) transparent;
+
+    /* 🔥 IMPORTANTE */
+    overscroll-behavior: auto;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
-    height: 4px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #0ea5ff;
     border-radius: 9999px;
-    box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-corner {
-    background: transparent;
   }
 
   .animate-float {
@@ -185,44 +205,12 @@ body::after {
     --hocker-to-opacity: 0;
   }
 
-  .zoom-in {
-    --hocker-from-scale: 0.96;
-  }
-
   .zoom-in-95 {
     --hocker-from-scale: 0.95;
   }
 
-  .zoom-out {
-    --hocker-to-scale: 0.96;
-  }
-
-  .slide-in-from-bottom-2 {
-    --hocker-from-y: 0.5rem;
-  }
-
   .slide-in-from-bottom-4 {
     --hocker-from-y: 1rem;
-  }
-
-  .slide-in-from-bottom-6 {
-    --hocker-from-y: 1.5rem;
-  }
-
-  .slide-in-from-bottom-8 {
-    --hocker-from-y: 2rem;
-  }
-
-  .slide-in-from-top-2 {
-    --hocker-from-y: -0.5rem;
-  }
-
-  .slide-in-from-top-4 {
-    --hocker-from-y: -1rem;
-  }
-
-  .slide-in-from-left-2 {
-    --hocker-from-x: -0.5rem;
   }
 
   .slide-in-from-left-4 {
@@ -232,90 +220,38 @@ body::after {
   .slide-in-from-right-4 {
     --hocker-from-x: 1rem;
   }
-
-  .duration-300 {
-    --hocker-duration: 300ms;
-    transition-duration: 300ms;
-  }
-
-  .duration-500 {
-    --hocker-duration: 500ms;
-    transition-duration: 500ms;
-  }
-
-  .duration-700 {
-    --hocker-duration: 700ms;
-    transition-duration: 700ms;
-  }
-
-  .duration-1000 {
-    --hocker-duration: 1000ms;
-    transition-duration: 1000ms;
-  }
-
-  .fill-mode-forwards {
-    animation-fill-mode: forwards;
-  }
 }
+
+/* =========================
+   KEYFRAMES
+========================= */
 
 @keyframes hocker-enter {
   from {
     opacity: var(--hocker-from-opacity, 1);
-    transform:
-      translate3d(
-        var(--hocker-from-x, 0),
-        var(--hocker-from-y, 0),
-        0
-      )
+    transform: translate3d(var(--hocker-from-x, 0), var(--hocker-from-y, 0), 0)
       scale(var(--hocker-from-scale, 1));
-    filter: blur(var(--hocker-from-blur, 0));
   }
-
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
   }
 }
 
 @keyframes hocker-exit {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
-  }
-
   to {
     opacity: var(--hocker-to-opacity, 0);
-    transform:
-      translate3d(
-        var(--hocker-to-x, 0),
-        var(--hocker-to-y, 0),
-        0
-      )
-      scale(var(--hocker-to-scale, 1));
-    filter: blur(var(--hocker-to-blur, 0));
+    transform: scale(var(--hocker-to-scale, 1));
   }
 }
 
 @keyframes hocker-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
   50% {
     transform: translateY(-14px);
   }
 }
 
 @keyframes hocker-pulse-slow {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-
   50% {
     opacity: 1;
     transform: scale(1.03);
@@ -332,23 +268,23 @@ body::after {
   0% {
     transform: translateY(-100%);
   }
-
   100% {
     transform: translateY(100vh);
   }
 }
 
+/* =========================
+   REDUCED MOTION
+========================= */
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  * {
+    animation: none !important;
+    transition: none !important;
     scroll-behavior: auto !important;
   }
 
   body::after {
-    animation: none !important;
+    display: none;
   }
 }
