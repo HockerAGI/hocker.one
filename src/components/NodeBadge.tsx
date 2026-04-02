@@ -36,7 +36,10 @@ export default function NodeBadge() {
         .from("nodes")
         .select("id,project_id,name,status,last_seen_at,meta")
         .eq("project_id", projectId)
-        .eq("id", nodeId)
+        if (!nodeId) {
+  setNode(null);
+  return;
+}
         .maybeSingle();
 
       if (
