@@ -24,19 +24,69 @@ const svgProps = {
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: (p) => <svg {...svgProps} {...p}><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></svg> },
-  { href: "/chat", label: "NOVA", icon: (p) => <svg {...svgProps} {...p}><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg> },
-  { href: "/commands", label: "Acciones", icon: (p) => <svg {...svgProps} {...p}><polyline points="4 17 10 11 4 5" /><line x1="12" x2="20" y1="19" y2="19" /></svg> },
-  { href: "/nodes", label: "Nodos", icon: (p) => <svg {...svgProps} {...p}><path d="M12 20v-6M6 20V10M18 20V4" /></svg> },
-  { href: "/agis", label: "Agentes", icon: (p) => <svg {...svgProps} {...p}><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" /><circle cx="12" cy="12" r="3" /></svg> },
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: (p) => (
+      <svg {...svgProps} {...p}>
+        <rect width="7" height="7" x="3" y="3" rx="1" />
+        <rect width="7" height="7" x="14" y="3" rx="1" />
+        <rect width="7" height="7" x="14" y="14" rx="1" />
+        <rect width="7" height="7" x="3" y="14" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    href: "/chat",
+    label: "NOVA",
+    icon: (p) => (
+      <svg {...svgProps} {...p}>
+        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/commands",
+    label: "Acciones",
+    icon: (p) => (
+      <svg {...svgProps} {...p}>
+        <polyline points="4 17 10 11 4 5" />
+        <line x1="12" x2="20" y1="19" y2="19" />
+      </svg>
+    ),
+  },
+  {
+    href: "/nodes",
+    label: "Nodos",
+    icon: (p) => (
+      <svg {...svgProps} {...p}>
+        <path d="M12 20v-6M6 20V10M18 20V4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/agis",
+    label: "Agentes",
+    icon: (p) => (
+      <svg {...svgProps} {...p}>
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    ),
+  },
 ];
 
-export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
+type AppNavProps = {
+  isMobile?: boolean;
+};
+
+export default function AppNav({ isMobile = false }: AppNavProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
+
   const active = useMemo(
     () => ITEMS.find((i) => pathname === i.href || pathname.startsWith(i.href + "/"))?.href ?? "",
-    [pathname]
+    [pathname],
   );
 
   if (isMobile) {
@@ -55,9 +105,10 @@ export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
                 isActive ? "text-sky-400" : "text-slate-500 hover:text-slate-300"
               }`}
             >
-              {isActive && (
+              {isActive ? (
                 <div className="absolute -top-1 h-1 w-6 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.8)]" />
-              )}
+              ) : null}
+
               <Icon className="h-5 w-5" />
               <span className="max-w-full truncate text-[9px] font-black uppercase tracking-widest">
                 {it.label}
@@ -97,11 +148,15 @@ export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
                       : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 transition-colors ${isActive ? "text-sky-400" : "text-slate-500 group-hover:text-slate-300"}`} />
+                  <Icon
+                    className={`h-5 w-5 transition-colors ${
+                      isActive ? "text-sky-400" : "text-slate-500 group-hover:text-slate-300"
+                    }`}
+                  />
                   {it.label}
-                  {isActive && (
+                  {isActive ? (
                     <div className="absolute right-4 h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(14,165,233,0.8)] animate-pulse" />
-                  )}
+                  ) : null}
                 </Link>
               );
             })}
@@ -114,6 +169,7 @@ export default function AppNav({ isMobile = false }: { isMobile?: boolean }) {
 
       <div className="mt-8 flex flex-col gap-3 border-t border-white/5 pt-6">
         <button
+          type="button"
           onClick={() => router.back()}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-300 transition-all hover:bg-white/10 active:scale-95 touch-manipulation"
         >
