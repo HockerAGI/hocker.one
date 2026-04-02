@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import { ReactNode } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 type HintProps = {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export default function Hint({ title, children }: HintProps) {
@@ -21,7 +21,13 @@ export default function Hint({ title, children }: HintProps) {
       />
       <div className="relative flex items-start gap-4">
         <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/10 text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)]">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
