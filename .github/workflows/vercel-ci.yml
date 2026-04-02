@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Notify Vercel
-        uses: vercel/repository-dispatch/actions/status@v1
-        with:
-          name: "hocker-one-check"
+      - name: 'notify vercel'
+  uses: 'vercel/repository-dispatch/actions/status@v1'
+  with:
+    name: Vercel - hocker-one: lint
