@@ -5,6 +5,7 @@ import { createAdminSupabase } from "@/lib/supabase-admin";
 import { ApiError, json, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -12,7 +13,7 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-export async function POST(req: Request) {
+export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({ name: "Dispatch_Tactico", metadata: { endpoint: "/api/commands/dispatch" } });
 
   try {
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
 
       try {
         await tasks.trigger("hocker-core-executor", { commandId: row.id });
-        count++;
+        count += 1;
       } catch (err: unknown) {
         console.error(`[NOVA] Falla en despacho ${row.id}:`, getErrorMessage(err));
       }
