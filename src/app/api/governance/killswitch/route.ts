@@ -18,7 +18,7 @@ type ControlRow = {
   kill_switch: boolean;
   allow_write: boolean;
   meta: Record<string, unknown>;
-  created_at?: string;
+  created_at: string;
   updated_at: string;
 };
 
@@ -33,6 +33,13 @@ function toBool(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
+function toMeta(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
 async function loadControls(sb: SupabaseClient, project_id: string): Promise<ControlRow> {
   const { data, error } = await sb
     .from("system_controls")
@@ -42,36 +49,62 @@ async function loadControls(sb: SupabaseClient, project_id: string): Promise<Con
     .maybeSingle();
 
   if (error) {
-    throw new ApiError(500, { error: `Falla al leer la matriz de gobernanza: ${getErrorMessage(error)}` });
+    throw new ApiError(500, {
+      error: `Falla al leer la matriz de gobernanza: ${getErrorMessage(error)}`,
+    });
   }
 
-  if (data) return data as ControlRow;
+  if (data) {
+    return {
+      id: String(data.id),
+      project_id: String(data.project_id),
+      kill_switch: Boolean(data.kill_switch),
+      allow_write: Boolean(data.allow_write),
+      meta: toMeta(data.meta),
+      created_at: String(data.created_at),
+      updated_at: String(data.updated_at),
+    };
+  }
 
+  const now = new Date().toISOString();
   const created: ControlRow = {
     id: "global",
     project_id,
     kill_switch: false,
     allow_write: false,
     meta: { source: "governance-route" },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now,
   };
 
   const { data: inserted, error: insertErr } = await sb
     .from("system_controls")
     .upsert(created, { onConflict: "project_id,id" })
-    .select("*")
+    .select("id,project_id,kill_switch,allow_write,meta,created_at,updated_at")
     .single();
 
   if (insertErr) {
-    throw new ApiError(500, { error: "No se pudo inicializar la soberanía del proyecto." });
+    throw new ApiError(500, {
+      error: "No se pudo inicializar la soberanía del proyecto.",
+    });
   }
 
-  return inserted as ControlRow;
+  return {
+    id: String(inserted.id),
+    project_id: String(inserted.project_id),
+    kill_switch: Boolean(inserted.kill_switch),
+    allow_write: Boolean(inserted.allow_write),
+    meta: toMeta(inserted.meta),
+    created_at: String(inserted.created_at),
+    updated_at: String(inserted.updated_at),
+  };
 }
 
-export async function GET(req: Request) {
-  const trace = langfuse.trace({ name: "Gobernanza_Lectura", metadata: { endpoint: "/api/governance/killswitch" } });
+export async function GET(req: Request): Promise<Response> {
+  const trace = langfuse.trace({
+    name: "Gobernanza_Lectura",
+    metadata: { endpoint: "/api/governance/killswitch" },
+  });
 
   try {
     const q = parseQuery(req);
@@ -80,7 +113,7 @@ export async function GET(req: Request) {
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_read"] });
 
-    const controls: { kill_switch?: boolean; allow_write?: boolean; [key: string]: unknown } = await loadControls(ctx.sb, ctx.project_id);
+    const controls = await loadControls(ctx.sb, ctx.project_id);
 
     return json({ ok: true, controls });
   } catch (err: unknown) {
@@ -92,8 +125,11 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
-  const trace = langfuse.trace({ name: "Gobernanza_Update", metadata: { endpoint: "/api/governance/killswitch" } });
+export async function POST(req: Request): Promise<Response> {
+  const trace = langfuse.trace({
+    name: "Gobernanza_Update",
+    metadata: { endpoint: "/api/governance/killswitch" },
+  });
 
   try {
     const body = await parseBody(req);
@@ -107,7 +143,7 @@ export async function POST(req: Request) {
       project_id: ctx.project_id,
       kill_switch: toBool(body.kill_switch, false),
       allow_write: toBool(body.allow_write, false),
-      meta: body.meta && typeof body.meta === "object" && !Array.isArray(body.meta) ? (body.meta as Record<string, unknown>) : {},
+      meta: toMeta(body.meta),
       updated_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     };
@@ -115,11 +151,13 @@ export async function POST(req: Request) {
     const { data, error } = await ctx.sb
       .from("system_controls")
       .upsert(next, { onConflict: "project_id,id" })
-      .select("*")
+      .select("id,project_id,kill_switch,allow_write,meta,created_at,updated_at")
       .single();
 
     if (error) {
-      throw new ApiError(500, { error: `Falla al actualizar protocolos de gobernanza: ${getErrorMessage(error)}` });
+      throw new ApiError(500, {
+        error: `Falla al actualizar protocolos de gobernanza: ${getErrorMessage(error)}`,
+      });
     }
 
     trace.event({ name: "SOBERANIA_ACTUALIZADA", input: next });
