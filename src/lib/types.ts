@@ -1,20 +1,29 @@
 export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+export type JsonArray = JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 
 export type Role = "owner" | "admin" | "operator" | "viewer";
 
 export type CommandStatus =
-  | "queued"
   | "needs_approval"
+  | "queued"
   | "running"
   | "done"
-  | "error"
   | "failed"
-  | "cancelled"
-  | "canceled";
+  | "cancelled";
 
 export type NodeStatus = "online" | "offline" | "degraded";
+
+export type ControlRow = {
+  id: string;
+  project_id: string;
+  kill_switch: boolean;
+  allow_write: boolean;
+  meta: JsonObject;
+  created_at: string;
+  updated_at: string;
+};
 
 export type CommandRow = {
   id: string;
@@ -34,11 +43,13 @@ export type CommandRow = {
   created_at: string;
 };
 
+export type EventLevel = "info" | "warn" | "error" | "critical";
+
 export type EventRow = {
   id: string;
   project_id: string;
   node_id: string | null;
-  level: "info" | "warn" | "error" | "critical";
+  level: EventLevel;
   type: string;
   message: string;
   data: JsonObject;
@@ -58,24 +69,13 @@ export type NodeRow = {
   updated_at: string;
 };
 
-export type ControlRow = {
-  id: string;
-  project_id: string;
-  kill_switch: boolean;
-  allow_write: boolean;
-  meta: JsonObject;
-  created_at: string;
-  updated_at: string;
-};
-
 export type SupplyOrderStatus =
   | "pending"
   | "paid"
   | "producing"
   | "shipped"
   | "delivered"
-  | "cancelled"
-  | "canceled";
+  | "cancelled";
 
 export type SupplyProductRow = {
   id: string;
@@ -103,18 +103,25 @@ export function normalizeCommandStatus(status: string | null | undefined): Comma
   if (!s) return "queued";
 
   if (
-    s === "queued" ||
     s === "needs_approval" ||
+    s === "queued" ||
     s === "running" ||
     s === "done" ||
-    s === "error" ||
     s === "failed" ||
     s === "cancelled"
   ) {
-    return s as CommandStatus;
+    return s;
   }
 
   return "queued";
+}
+
+export function normalizeEventLevel(level: string | null | undefined): EventLevel {
+  const s = String(level ?? "").toLowerCase().trim();
+  if (s === "warn" || s === "warning") return "warn";
+  if (s === "error") return "error";
+  if (s === "critical") return "critical";
+  return "info";
 }
 
 export function normalizeSupplyOrderStatus(status: string | null | undefined): SupplyOrderStatus {
@@ -129,7 +136,7 @@ export function normalizeSupplyOrderStatus(status: string | null | undefined): S
     s === "delivered" ||
     s === "cancelled"
   ) {
-    return s as SupplyOrderStatus;
+    return s;
   }
 
   return "pending";
