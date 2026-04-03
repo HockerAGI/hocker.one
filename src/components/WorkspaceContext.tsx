@@ -17,7 +17,7 @@ type WorkspaceCtx = WorkspaceState & {
 };
 
 const DEFAULTS: WorkspaceState = {
-  projectId: "hocker-one",
+  projectId: defaultProjectId(),
   nodeId: defaultNodeId(),
   tutorial: true,
 };
@@ -33,15 +33,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = window.localStorage.getItem(KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, unknown>;
-        setState({
-          projectId: typeof parsed.projectId === "string" ? parsed.projectId : DEFAULTS.projectId,
-          nodeId: typeof parsed.nodeId === "string" ? parsed.nodeId : DEFAULTS.nodeId,
-          tutorial: typeof parsed.tutorial === "boolean" ? parsed.tutorial : DEFAULTS.tutorial,
-        });
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          const p = parsed as Record<string, unknown>;
+          setState({
+            projectId: typeof p.projectId === "string" ? p.projectId : DEFAULTS.projectId,
+            nodeId: typeof p.nodeId === "string" ? p.nodeId : DEFAULTS.nodeId,
+            tutorial: typeof p.tutorial === "boolean" ? p.tutorial : DEFAULTS.tutorial,
+          });
+        }
       }
     } catch {
-      // Sincronización silenciosa en caso de memoria corrupta
+      // sin ruido
     } finally {
       setReady(true);
     }
@@ -52,26 +55,30 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      // Prevención de cuellos de botella en el almacenamiento del navegador
+      // sin bloqueo del UI
     }
   }, [state, ready]);
 
   const value = useMemo<WorkspaceCtx>(
     () => ({
       ...state,
-      setProjectId: (v) => setState((s) => ({ ...s, projectId: v || DEFAULTS.projectId })),
-      setNodeId: (v) => setState((s) => ({ ...s, nodeId: v || DEFAULTS.nodeId })),
+      setProjectId: (v) =>
+        setState((s) => ({ ...s, projectId: v.trim() || DEFAULTS.projectId })),
+      setNodeId: (v) =>
+        setState((s) => ({ ...s, nodeId: v.trim() || DEFAULTS.nodeId })),
       setTutorial: (v) => setState((s) => ({ ...s, tutorial: Boolean(v) })),
       reset: () => setState(DEFAULTS),
     }),
-    [state]
+    [state],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-export function useWorkspace() {
+export function useWorkspace(): WorkspaceCtx {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useWorkspace debe operar dentro de un WorkspaceProvider táctico.");
+  if (!ctx) {
+    throw new Error("useWorkspace debe usarse dentro de WorkspaceProvider.");
+  }
   return ctx;
 }
