@@ -1,65 +1,136 @@
 import crypto from "node:crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
+import { Langfuse } from "langfuse-node";
+import { defaultNodeId } from "@/lib/project";
 import { signCommand } from "@/lib/security";
-import { normalizeNodeId } from "@/lib/project";
-import type { JsonObject } from "@/lib/types";
-
+import type { JsonObject, CommandRow } from "@/lib/types";
 import {
   ApiError,
   ensureNode,
   getControls,
   json,
   parseBody,
+  parseQuery,
   requireProjectRole,
   toApiError,
 } from "../_lib";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type CommandInsert = {
-  id: string;
-  project_id: string;
-  node_id: string;
-  command: string;
-  payload: JsonObject;
-  status: "queued" | "needs_approval";
-  needs_approval: boolean;
-  signature: string;
-  created_at: string;
-};
+const langfuse = new Langfuse({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+});
+
+function asBool(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const s = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(s)) return true;
+    if (["0", "false", "no", "off"].includes(s)) return false;
+  }
+  return fallback;
+}
+
+function asJsonObject(value: unknown): JsonObject {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as JsonObject;
+  }
+  return {};
+}
+
+type CommandInsert = Pick<
+  CommandRow,
+  | "id"
+  | "project_id"
+  | "node_id"
+  | "command"
+  | "payload"
+  | "status"
+  | "needs_approval"
+  | "signature"
+  | "result"
+  | "error"
+  | "approved_at"
+  | "executed_at"
+  | "started_at"
+  | "finished_at"
+  | "created_at"
+>;
+
+export async function GET(req: Request): Promise<Response> {
+  try {
+    const q = parseQuery(req);
+    const project_id = String(q.get("project_id") ?? "").trim();
+
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
+
+    const { data, error } = await ctx.sb
+      .from("commands")
+      .select("*")
+      .eq("project_id", ctx.project_id)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      throw new ApiError(500, { error: "No se pudo leer la cola de comandos." });
+    }
+
+    return json({ ok: true, items: data ?? [] });
+  } catch (err: unknown) {
+    const apiErr = toApiError(err);
+    return json(apiErr.payload, apiErr.status);
+  }
+}
 
 export async function POST(req: Request): Promise<Response> {
+  const trace = langfuse.trace({
+    name: "Ingreso_Orden_Tactica",
+    metadata: { endpoint: "/api/commands" },
+  });
+
   try {
     const body = await parseBody(req);
-
     const project_id = String(body.project_id ?? "").trim();
     const command = String(body.command ?? "").trim();
 
-    if (!project_id || !command) {
-      throw new ApiError(400, { error: "Datos incompletos." });
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    if (!command) {
+      throw new ApiError(400, { error: "El comando no puede venir vacío." });
     }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
     const controls = await getControls(ctx.sb, ctx.project_id);
-
     if (controls.kill_switch) {
-      throw new ApiError(423, { error: "Sistema bloqueado." });
+      throw new ApiError(423, { error: "SISTEMA BLOQUEADO: Kill Switch activo." });
     }
 
     if (!controls.allow_write) {
-      throw new ApiError(403, { error: "Modo lectura." });
+      throw new ApiError(403, { error: "MODO SEGURO: el sistema está en solo lectura." });
     }
 
-    const node_id = normalizeNodeId(String(body.node_id ?? "hocker-fabric"));
-    const payload = (body.payload ?? {}) as JsonObject;
-    const needsApproval = Boolean(body.needs_approval);
+    const node_id = String(body.node_id ?? defaultNodeId()).trim() || defaultNodeId();
+    const payload = asJsonObject(body.payload);
+    const needsApproval = asBool(body.needs_approval, false);
+
+    const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
+    if (!secret) {
+      throw new ApiError(500, { error: "COMMAND_HMAC_SECRET no está configurado en el entorno." });
+    }
 
     const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
-
-    const secret = process.env.COMMAND_HMAC_SECRET;
-    if (!secret) throw new ApiError(500, { error: "Falta HMAC secret." });
 
     await ensureNode(ctx.sb, ctx.project_id, node_id);
 
@@ -70,7 +141,7 @@ export async function POST(req: Request): Promise<Response> {
       node_id,
       command,
       payload,
-      created_at
+      created_at,
     );
 
     const row: CommandInsert = {
@@ -82,6 +153,12 @@ export async function POST(req: Request): Promise<Response> {
       status: needsApproval ? "needs_approval" : "queued",
       needs_approval: needsApproval,
       signature,
+      result: null,
+      error: null,
+      approved_at: null,
+      executed_at: null,
+      started_at: null,
+      finished_at: null,
       created_at,
     };
 
@@ -91,15 +168,29 @@ export async function POST(req: Request): Promise<Response> {
       .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: "Insert failed." });
-
-    if (!needsApproval) {
-      await tasks.trigger("hocker-core-executor", { commandId: id });
+    if (error) {
+      throw new ApiError(500, { error: `Falla de sincronización en la matriz de órdenes: ${error.message}` });
     }
 
+    if (!needsApproval) {
+      await tasks.trigger("hocker-core-executor", { commandId: id, projectId: ctx.project_id });
+    }
+
+    trace.event({
+      name: "ORDEN_INGRESADA",
+      input: { commandId: id, node_id, needsApproval },
+    });
+
     return json({ ok: true, item: data }, 201);
-  } catch (err) {
-    const e = toApiError(err);
-    return json(e.payload, e.status);
+  } catch (err: unknown) {
+    const apiErr = toApiError(err);
+    trace.event({
+      name: "FALLA_INGRESO",
+      level: "ERROR",
+      output: { error: apiErr.payload },
+    });
+    return json(apiErr.payload, apiErr.status);
+  } finally {
+    await langfuse.flushAsync();
   }
 }
