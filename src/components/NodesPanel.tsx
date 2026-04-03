@@ -3,19 +3,17 @@
 import { getErrorMessage } from "@/lib/errors";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { NodeRow, JsonObject } from "@/lib/types";
+import type { JsonObject, NodeRow } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 function pill(status: NodeRow["status"]): string {
   if (status === "online") {
-    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.1)]";
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
   }
-
   if (status === "degraded") {
-    return "border-amber-500/30 bg-amber-500/10 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.1)]";
+    return "border-amber-500/30 bg-amber-500/10 text-amber-300";
   }
-
   return "border-slate-500/30 bg-white/5 text-slate-300";
 }
 
@@ -49,10 +47,7 @@ export default function NodesPanel() {
         .order("updated_at", { ascending: false })
         .limit(60);
 
-      if (queryError) {
-        throw queryError;
-      }
-
+      if (queryError) throw queryError;
       setItems(Array.isArray(data) ? (data as NodeRow[]) : []);
     } catch (err: unknown) {
       setItems([]);
@@ -87,17 +82,14 @@ export default function NodesPanel() {
       )
       .subscribe();
 
-    const refreshTimer = window.setInterval(() => {
+    const timer = window.setInterval(() => {
       void load();
     }, 30000);
 
     return () => {
-      window.clearInterval(refreshTimer);
-      if (channel) {
-        void sb.removeChannel(channel);
-      }
+      window.clearInterval(timer);
+      void sb.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, sb]);
 
   return (
@@ -126,8 +118,8 @@ export default function NodesPanel() {
       <div className="p-4">
         {loading && items.length === 0 ? (
           <div className="space-y-3 animate-pulse">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="h-28 rounded-[24px] bg-white/5" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-[24px] bg-white/5" />
             ))}
           </div>
         ) : error ? (
@@ -140,7 +132,7 @@ export default function NodesPanel() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {items.map((node, index) => {
+            {items.map((node) => {
               const meta = isJsonObject(node.meta) ? node.meta : {};
               const isCloud = node.id === "hocker-agi" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
               const isOnline = isCloud || node.status === "online";
@@ -149,7 +141,6 @@ export default function NodesPanel() {
                 <article
                   key={node.id}
                   className="group relative overflow-hidden rounded-[24px] border border-white/5 bg-slate-950/40 p-5 transition-all duration-300 hover:border-sky-500/30 hover:bg-slate-900/60"
-                  style={{ animationDelay: `${index * 35}ms` }}
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between gap-3">
@@ -179,9 +170,7 @@ export default function NodesPanel() {
                         <span className="text-slate-300">{safeTime(node.last_seen_at)}</span>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-4 border-t border-white/5 pt-4">
                     <div className="flex flex-wrap gap-2">
                       {node.tags?.length ? (
                         node.tags.map((tag) => (
@@ -196,20 +185,18 @@ export default function NodesPanel() {
                         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">—</span>
                       )}
                     </div>
-                  </div>
 
-                  {Object.keys(meta).length > 0 ? (
-                    <details className="mt-4">
-                      <summary className="cursor-pointer list-none text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
-                        Inspeccionar datos
-                      </summary>
-                      <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-slate-950/80 shadow-inner">
-                        <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
+                    {Object.keys(meta).length > 0 ? (
+                      <details>
+                        <summary className="cursor-pointer list-none text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
+                          Inspeccionar datos
+                        </summary>
+                        <pre className="mt-3 overflow-auto rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-[11px] leading-relaxed text-emerald-300">
                           {JSON.stringify(meta, null, 2)}
                         </pre>
-                      </div>
-                    </details>
-                  ) : null}
+                      </details>
+                    ) : null}
+                  </div>
                 </article>
               );
             })}
