@@ -12,9 +12,6 @@ function cleanId(input: string | null | undefined, fallback: string): string {
   return cleaned || fallback;
 }
 
-/**
- * Identificador de proyecto por defecto.
- */
 export function defaultProjectId(): string {
   return normalizeProjectId(
     process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID ??
@@ -23,9 +20,6 @@ export function defaultProjectId(): string {
   );
 }
 
-/**
- * Identificador de nodo por defecto.
- */
 export function defaultNodeId(): string {
   return normalizeNodeId(
     process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ??
@@ -34,16 +28,10 @@ export function defaultNodeId(): string {
   );
 }
 
-/**
- * Saneamiento táctico de IDs de nodos.
- */
 export function normalizeNodeId(input: string | null | undefined): string {
   return cleanId(input, CLOUD_NODE_ID);
 }
 
-/**
- * Normalizador soberano de IDs de proyecto.
- */
 export function normalizeProjectId(input: string | null | undefined): string {
   return cleanId(input, FALLBACK_PROJECT);
 }
