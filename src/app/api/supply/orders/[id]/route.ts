@@ -1,9 +1,17 @@
 import { Langfuse } from "langfuse-node";
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeSupplyOrderStatus } from "@/lib/types";
-import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
+import {
+  ApiError,
+  getControls,
+  json,
+  parseBody,
+  requireProjectRole,
+  toApiError,
+} from "../../../_lib";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -18,15 +26,37 @@ function asJsonObject(value: unknown): Record<string, unknown> {
   return {};
 }
 
-export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
-  const trace = langfuse.trace({ name: "Logistica_Lectura_Orden", metadata: { endpoint: "/api/supply/orders/[id]" } });
+function asInt(value: unknown, fallback = 0): number {
+  const n = Math.trunc(Number(value));
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function asNullableText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const trace = langfuse.trace({
+    name: "Logistica_Lectura_Orden",
+    metadata: { endpoint: "/api/supply/orders/[id]" },
+  });
 
   try {
     const { id } = await context.params;
     const url = new URL(req.url);
     const project_id = String(url.searchParams.get("project_id") || "global").trim();
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(project_id, [
+      "owner",
+      "admin",
+      "operator",
+      "viewer",
+    ]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "logistica", "auditoria"] });
 
     const { data, error } = await ctx.sb
@@ -36,49 +66,96 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       .eq("id", id)
       .maybeSingle();
 
-    if (error) throw new ApiError(500, { error: `Falla al consultar la matriz logística: ${getErrorMessage(error)}` });
-    if (!data) throw new ApiError(404, { error: "Orden logística no localizada en los registros." });
+    if (error) {
+      throw new ApiError(500, {
+        error: `Falla al consultar la matriz logística: ${getErrorMessage(error)}`,
+      });
+    }
 
-    trace.event({ name: "LECTURA_EXITOSA" });
+    if (!data) {
+      throw new ApiError(404, {
+        error: "Orden logística no localizada en los registros.",
+      });
+    }
+
+    trace.event({ name: "ORDEN_CARGADA", input: { id } });
     return json({ ok: true, item: data });
   } catch (err: unknown) {
     const ex = toApiError(err);
-    trace.event({ name: "ERROR_LECTURA_LOGISTICA", level: "ERROR", output: { error: ex.message } });
-    return json(ex.body, ex.status);
+    trace.event({
+      name: "ERROR_LECTURA_ORDEN",
+      level: "ERROR",
+      output: { error: ex.payload },
+    });
+    return json(ex.payload, ex.status);
   } finally {
     await langfuse.flushAsync();
   }
 }
 
-export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
   const { id } = await context.params;
-  const trace = langfuse.trace({ name: "Logistica_Actualizacion_Orden", metadata: { orderId: id } });
+  const trace = langfuse.trace({
+    name: "Logistica_Actualizacion_Orden",
+    metadata: { orderId: id },
+  });
 
   try {
     const body = await parseBody(req);
     const project_id = String(body.project_id ?? "global").trim();
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+    const ctx = await requireProjectRole(project_id, [
+      "owner",
+      "admin",
+      "operator",
+    ]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "finance", "logistica"] });
 
-    const controls: { kill_switch?: boolean; allow_write?: boolean; [key: string]: unknown } = await getControls(ctx.sb, ctx.project_id);
+    const controls = await getControls(ctx.sb, ctx.project_id);
     if (controls.kill_switch) {
-      throw new ApiError(423, { error: "BLOQUEO GENERAL: Kill Switch Activo. Operaciones congeladas." });
+      throw new ApiError(423, {
+        error: "BLOQUEO GENERAL: Kill Switch Activo. Operaciones congeladas.",
+      });
     }
+
     if (!controls.allow_write) {
-      throw new ApiError(403, { error: "MODO SEGURO: Modificación denegada." });
+      throw new ApiError(403, {
+        error: "MODO SEGURO: Modificación denegada.",
+      });
     }
 
-    const updates: Record<string, unknown> = { ...body };
-    delete updates.id;
-    delete updates.project_id;
+    const updates: Record<string, unknown> = {};
 
-    if (Object.prototype.hasOwnProperty.call(updates, "status")) {
-      updates.status = normalizeSupplyOrderStatus(String(updates.status ?? "pending"));
+    if (Object.prototype.hasOwnProperty.call(body, "customer_name")) {
+      updates.customer_name = asNullableText(body.customer_name);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "customer_phone")) {
+      updates.customer_phone = asNullableText(body.customer_phone);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "status")) {
+      updates.status = normalizeSupplyOrderStatus(
+        typeof body.status === "string" ? body.status : "pending",
+      );
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "currency")) {
+      updates.currency = String(body.currency ?? "MXN").trim().toUpperCase() || "MXN";
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "total_cents")) {
+      updates.total_cents = Math.max(0, asInt(body.total_cents, 0));
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "meta")) {
+      updates.meta = asJsonObject(body.meta);
     }
 
     updates.updated_at = new Date().toISOString();
-    updates.meta = asJsonObject(updates.meta);
 
     const { data, error } = await ctx.sb
       .from("supply_orders")
@@ -88,7 +165,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: `Falla crítica al actualizar la orden: ${getErrorMessage(error)}` });
+    if (error) {
+      throw new ApiError(500, {
+        error: `Falla crítica al actualizar la orden: ${getErrorMessage(error)}`,
+      });
+    }
 
     trace.event({ name: "ESTADO_ORDEN_ACTUALIZADO", input: { id, update: updates } });
     trace.event({ name: "OPERACION_EXITOSA" });
@@ -96,8 +177,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     return json({ ok: true, item: data });
   } catch (err: unknown) {
     const ex = toApiError(err);
-    trace.event({ name: "ERROR_ACTUALIZACION_LOGISTICA", level: "ERROR", output: { error: ex.message } });
-    return json(ex.body, ex.status);
+    trace.event({
+      name: "ERROR_ACTUALIZACION_LOGISTICA",
+      level: "ERROR",
+      output: { error: ex.payload },
+    });
+    return json(ex.payload, ex.status);
   } finally {
     await langfuse.flushAsync();
   }
