@@ -5,27 +5,24 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 async function runOrchestrator(req: Request): Promise<NextResponse> {
-  const CRON_SECRET = process.env.CRON_SECRET;
+  const cronSecret = String(process.env.CRON_SECRET ?? "").trim();
 
-  if (!CRON_SECRET) {
+  if (!cronSecret) {
     return NextResponse.json(
       { ok: false, error: "CRON_SECRET no configurado." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
-  const auth = req.headers.get("authorization");
-
-  if (auth !== `Bearer ${CRON_SECRET}`) {
+  const auth = req.headers.get("authorization") ?? "";
+  if (auth !== `Bearer ${cronSecret}`) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
-  const baseUrl = (process.env.ORCHESTRATOR_BASE_URL ??
-    new URL(req.url).origin).replace(/\/+$/, "");
-
+  const baseUrl = (process.env.ORCHESTRATOR_BASE_URL ?? new URL(req.url).origin).replace(/\/+$/, "");
   const target = new URL("/api/orchestrator/run", baseUrl);
 
   try {
@@ -34,27 +31,20 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
 
     const res = await fetch(target, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
+      headers: { "content-type": "application/json" },
       cache: "no-store",
       signal: controller.signal,
     });
 
     clearTimeout(timeout);
 
-    const payload = await res.json().catch(() => ({
-      ok: res.ok,
-    }));
-
+    const payload = await res.json().catch(() => ({ ok: res.ok }));
     return NextResponse.json(payload, { status: res.status });
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Fallo al ejecutar cron.";
-
+    const message = err instanceof Error ? err.message : "Fallo al ejecutar cron.";
     return NextResponse.json(
       { ok: false, error: message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
