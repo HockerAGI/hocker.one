@@ -30,13 +30,20 @@ function asBool(value: unknown, fallback = true): boolean {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const trace = langfuse.trace({ name: "Aprobación_Manual", metadata: { endpoint: "/api/commands/approve" } });
+  const trace = langfuse.trace({
+    name: "Aprobación_Manual",
+    metadata: { endpoint: "/api/commands/approve" },
+  });
 
   try {
     const body = await parseBody(req);
     const id = String(body.id ?? "").trim();
-    const project_id = String(body.project_id ?? "hocker-one").trim();
+    const project_id = String(body.project_id ?? "").trim();
     const approved = asBool(body.approved, true);
+
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
 
     if (!id) {
       throw new ApiError(400, { error: "Falta el ID del comando." });
@@ -68,7 +75,7 @@ export async function POST(req: Request): Promise<Response> {
       const { data, error } = await ctx.sb
         .from("commands")
         .update({
-          status: "cancelled",
+          status: "canceled",
           needs_approval: false,
           error: "Orden rechazada manualmente.",
           finished_at: new Date().toISOString(),
@@ -79,7 +86,7 @@ export async function POST(req: Request): Promise<Response> {
         .single();
 
       if (error) {
-        throw new ApiError(500, { error: "No se pudo registrar el rechazo." });
+        throw new ApiError(500, { error: `No se pudo registrar el rechazo: ${error.message}` });
       }
 
       trace.event({ name: "ORDEN_RECHAZADA", input: { commandId: id } });
@@ -100,17 +107,21 @@ export async function POST(req: Request): Promise<Response> {
       .single();
 
     if (error) {
-      throw new ApiError(500, { error: "No se pudo autorizar la orden." });
+      throw new ApiError(500, { error: `No se pudo autorizar la orden: ${error.message}` });
     }
 
-    await tasks.trigger("hocker-core-executor", { commandId: id });
+    await tasks.trigger("hocker-core-executor", { commandId: id, projectId: ctx.project_id });
 
     trace.event({ name: "ORDEN_AUTORIZADA", input: { commandId: id } });
     return json({ ok: true, item: data, dispatched: true });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    trace.event({ name: "FALLA_APROBACION", level: "ERROR", output: { error: apiErr.message } });
-    return json(apiErr.body, apiErr.status);
+    trace.event({
+      name: "FALLA_APROBACION",
+      level: "ERROR",
+      output: { error: apiErr.payload },
+    });
+    return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
