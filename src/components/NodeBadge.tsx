@@ -20,13 +20,18 @@ function isNodeRow(data: unknown): data is NodeRow {
 
 function relative(ts: string | null): string {
   if (!ts) return "—";
+
   const diff = Math.max(0, Date.now() - new Date(ts).getTime());
   const s = Math.floor(diff / 1000);
+
   if (s < 60) return `${s}s`;
+
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
+
   const h = Math.floor(m / 60);
   if (h < 48) return `${h}h`;
+
   return `${Math.floor(h / 24)}d`;
 }
 
@@ -50,12 +55,12 @@ export default function NodeBadge() {
         .eq("id", nodeId)
         .maybeSingle();
 
-      if (error) {
+      if (error || !isNodeRow(data)) {
         setNode(null);
         return;
       }
 
-      setNode(isNodeRow(data) ? data : null);
+      setNode(data);
     } catch {
       setNode(null);
     }
@@ -63,6 +68,7 @@ export default function NodeBadge() {
 
   useEffect(() => {
     void load();
+
     const interval = window.setInterval(() => {
       void load();
     }, 10000);
@@ -81,7 +87,11 @@ export default function NodeBadge() {
   }
 
   const status = node.status.toLowerCase();
-  const isCloud = node.id === "hocker-agi" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
+  const isCloud =
+    node.id === "hocker-agi" ||
+    node.id.startsWith("cloud-") ||
+    node.id.startsWith("trigger-");
+
   const isOnline = isCloud || status === "online";
 
   const containerClass = isCloud
