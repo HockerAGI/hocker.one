@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import { defaultProjectId } from "@/lib/project";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { getErrorMessage } from "@/lib/errors";
 import { signCommand } from "@/lib/security";
@@ -40,22 +41,33 @@ type CommandInsertRow = {
 };
 
 function resolveBaseUrl(req: Request): string {
-  return (process.env.ORCHESTRATOR_BASE_URL ?? new URL(req.url).origin).replace(/\/+$/, "");
+  return (
+    process.env.ORCHESTRATOR_BASE_URL ??
+    new URL(req.url).origin
+  ).replace(/\/+$/, "");
 }
 
 function buildActions(health: HealthSnapshot): PlannedAction[] {
   const actions: PlannedAction[] = [];
 
-  if (!health.checks?.db) actions.push({ command: "restart_db", priority: "critical" });
-  if (!health.checks?.novaAgi) actions.push({ command: "restart_nova", priority: "critical" });
-  if (!health.checks?.langfuse) actions.push({ command: "restart_telemetry", priority: "medium" });
+  if (health.checks?.db === false) {
+    actions.push({ command: "restart_db", priority: "critical" });
+  }
+
+  if (health.checks?.novaAgi === false) {
+    actions.push({ command: "restart_nova", priority: "critical" });
+  }
+
+  if (health.checks?.langfuse === false) {
+    actions.push({ command: "restart_telemetry", priority: "medium" });
+  }
 
   return actions;
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
   const baseUrl = resolveBaseUrl(req);
-  const projectId = String(process.env.DEFAULT_PROJECT_ID ?? "hocker-core").trim();
+  const projectId = defaultProjectId();
   const nodeId = "orchestrator";
   const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
 
@@ -67,10 +79,16 @@ export async function POST(req: Request): Promise<NextResponse> {
       );
     }
 
-    const healthRes = await fetch(new URL("/api/health", baseUrl), { cache: "no-store" });
+    const healthRes = await fetch(new URL("/api/health", baseUrl), {
+      cache: "no-store",
+    });
+
     if (!healthRes.ok) {
       return NextResponse.json(
-        { ok: false, error: `Health check falló con status ${healthRes.status}.` },
+        {
+          ok: false,
+          error: `Health check falló con status ${healthRes.status}.`,
+        },
         { status: 502 },
       );
     }
@@ -117,7 +135,15 @@ export async function POST(req: Request): Promise<NextResponse> {
         payload,
         status: "queued",
         needs_approval: false,
-        signature: signCommand(secret, id, projectId, nodeId, action.command, payload, createdAt),
+        signature: signCommand(
+          secret,
+          id,
+          projectId,
+          nodeId,
+          action.command,
+          payload,
+          createdAt,
+        ),
         result: null,
         error: null,
         approved_at: null,
@@ -162,10 +188,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
   } catch (err: unknown) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: getErrorMessage(err),
-      },
+      { ok: false, error: getErrorMessage(err) },
       { status: 500 },
     );
   }
