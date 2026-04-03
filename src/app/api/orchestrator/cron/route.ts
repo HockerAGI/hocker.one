@@ -22,16 +22,20 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
     );
   }
 
-  const baseUrl = (process.env.ORCHESTRATOR_BASE_URL ?? new URL(req.url).origin).replace(/\/+$/, "");
-  const target = new URL("/api/orchestrator/run", baseUrl);
+  const baseUrl = (
+    process.env.ORCHESTRATOR_BASE_URL ??
+    new URL(req.url).origin
+  ).replace(/\/+$/, "");
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const res = await fetch(target, {
+    const res = await fetch(new URL("/api/orchestrator/run", baseUrl), {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+      },
       cache: "no-store",
       signal: controller.signal,
     });
