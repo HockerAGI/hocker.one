@@ -1,5 +1,6 @@
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
+import { getErrorMessage } from "@/lib/errors";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { ApiError, json, toApiError } from "../../_lib";
 
@@ -13,20 +14,29 @@ const langfuse = new Langfuse({
 });
 
 export async function POST(req: Request): Promise<Response> {
-  const trace = langfuse.trace({ name: "Dispatch_Tactico", metadata: { endpoint: "/api/commands/dispatch" } });
+  const trace = langfuse.trace({
+    name: "Dispatch_Tactico",
+    metadata: { endpoint: "/api/commands/dispatch" },
+  });
 
   try {
     const body: Record<string, unknown> = await req.json().catch(() => ({}));
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    const expectedKey = String(process.env.COMMAND_HMAC_SECRET || "").trim();
+    const expectedKey = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
 
     if (!expectedKey || token !== expectedKey) {
       throw new ApiError(401, { error: "Firma de delegación inválida." });
     }
 
-    const project_id = typeof body.project_id === "string" && body.project_id.trim() ? body.project_id.trim() : null;
-    const command_id = typeof body.command_id === "string" && body.command_id.trim() ? body.command_id.trim() : null;
+    const project_id =
+      typeof body.project_id === "string" && body.project_id.trim()
+        ? body.project_id.trim()
+        : null;
+    const command_id =
+      typeof body.command_id === "string" && body.command_id.trim()
+        ? body.command_id.trim()
+        : null;
 
     if (!project_id && !command_id) {
       throw new ApiError(400, { error: "Se requiere project_id o command_id." });
@@ -46,7 +56,7 @@ export async function POST(req: Request): Promise<Response> {
     const { data, error } = await query.order("created_at", { ascending: true }).limit(100);
 
     if (error) {
-      throw new ApiError(500, { error: "Falla al leer la cola de comandos." });
+      throw new ApiError(500, { error: `Falla al leer la cola de comandos: ${error.message}` });
     }
 
     const cloudCommands = Array.isArray(data) ? data : [];
@@ -56,18 +66,11 @@ export async function POST(req: Request): Promise<Response> {
         const row = cmd as { id?: string };
         if (!row.id) return false;
 
-        const { error: lockError } = await sb
-          .from("commands")
-          .update({
-            status: "executing",
-            started_at: new Date().toISOString(),
-          })
-          .eq("id", row.id)
-          .eq("status", "queued");
+        await tasks.trigger("hocker-core-executor", {
+          commandId: row.id,
+          projectId: typeof row.project_id === "string" ? row.project_id : undefined,
+        });
 
-        if (lockError) return false;
-
-        await tasks.trigger("hocker-core-executor", { commandId: row.id });
         return true;
       }),
     );
@@ -76,7 +79,11 @@ export async function POST(req: Request): Promise<Response> {
       (r): r is PromiseFulfilledResult<boolean> => r.status === "fulfilled" && r.value === true,
     ).length;
 
-    trace.event({ name: "DESPACHO_COMPLETADO", input: { count, project_id, command_id } });
+    trace.event({
+      name: "DESPACHO_COMPLETADO",
+      input: { count, project_id, command_id },
+    });
+
     return json({ ok: true, dispatched: count });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
