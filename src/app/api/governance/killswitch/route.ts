@@ -1,7 +1,7 @@
 import { Langfuse } from "langfuse-node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
-import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
+import { CONTROL_ROW_ID, ApiError, getControls, json, parseBody, parseQuery, requireProjectRole, toApiError, upsertControls } from "../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ type ControlRow = {
   project_id: string;
   kill_switch: boolean;
   allow_write: boolean;
-  meta: Record<string, unknown>;
+  meta: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };
@@ -33,72 +33,18 @@ function toBool(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
-function toMeta(value: unknown): Record<string, unknown> {
+function asMeta(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
   return {};
 }
 
-async function readControls(sb: SupabaseClient, project_id: string): Promise<ControlRow> {
-  const { data, error } = await sb
-    .from("system_controls")
-    .select("id,project_id,kill_switch,allow_write,meta,created_at,updated_at")
-    .eq("project_id", project_id)
-    .eq("id", "global")
-    .maybeSingle();
-
-  if (error) {
-    throw new ApiError(500, {
-      error: `Falla al leer la matriz de gobernanza: ${getErrorMessage(error)}`,
-    });
-  }
-
-  if (data) {
-    return {
-      id: String(data.id),
-      project_id: String(data.project_id),
-      kill_switch: Boolean(data.kill_switch),
-      allow_write: Boolean(data.allow_write),
-      meta: toMeta(data.meta),
-      created_at: String(data.created_at),
-      updated_at: String(data.updated_at),
-    };
-  }
-
-  const now = new Date().toISOString();
+async function loadControls(sb: SupabaseClient, project_id: string): Promise<ControlRow> {
+  const row = await getControls(sb, project_id);
   return {
-    id: "global",
-    project_id,
-    kill_switch: false,
-    allow_write: false,
-    meta: { source: "default-read" },
-    created_at: now,
-    updated_at: now,
-  };
-}
-
-async function writeControls(sb: SupabaseClient, next: ControlRow): Promise<ControlRow> {
-  const { data, error } = await sb
-    .from("system_controls")
-    .upsert(next, { onConflict: "project_id,id" })
-    .select("id,project_id,kill_switch,allow_write,meta,created_at,updated_at")
-    .single();
-
-  if (error || !data) {
-    throw new ApiError(500, {
-      error: "Falla al actualizar protocolos de gobernanza.",
-    });
-  }
-
-  return {
-    id: String(data.id),
-    project_id: String(data.project_id),
-    kill_switch: Boolean(data.kill_switch),
-    allow_write: Boolean(data.allow_write),
-    meta: toMeta(data.meta),
-    created_at: String(data.created_at),
-    updated_at: String(data.updated_at),
+    ...row,
+    meta: row.meta && typeof row.meta === "object" && !Array.isArray(row.meta) ? (row.meta as Record<string, unknown>) : {},
   };
 }
 
@@ -110,12 +56,16 @@ export async function GET(req: Request): Promise<Response> {
 
   try {
     const q = parseQuery(req);
-    const project_id = String(q.get("project_id") || "global").trim();
+    const project_id = String(q.get("project_id") ?? "").trim();
+
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_read"] });
 
-    const controls = await readControls(ctx.sb, ctx.project_id);
+    const controls = await loadControls(ctx.sb, ctx.project_id);
     return json({ ok: true, controls });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
@@ -134,22 +84,26 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "global").trim();
+    const project_id = String(body.project_id ?? "").trim();
+
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_write"] });
 
     const next: ControlRow = {
-      id: "global",
+      id: CONTROL_ROW_ID,
       project_id: ctx.project_id,
       kill_switch: toBool(body.kill_switch, false),
       allow_write: toBool(body.allow_write, false),
-      meta: toMeta(body.meta),
-      updated_at: new Date().toISOString(),
+      meta: asMeta(body.meta),
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    const controls = await writeControls(ctx.sb, next);
+    const controls = await upsertControls(ctx.sb, next);
 
     trace.event({ name: "SOBERANIA_ACTUALIZADA", input: next });
     return json({ ok: true, controls });
