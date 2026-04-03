@@ -3,45 +3,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
-
-type NodeRow = {
-  id: string;
-  project_id: string;
-  name: string | null;
-  status: string;
-  last_seen_at: string | null;
-  meta: Record<string, unknown> | null;
-};
+import type { NodeRow } from "@/lib/types";
 
 function isNodeRow(data: unknown): data is NodeRow {
-  if (typeof data !== "object" || data === null) return false;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
 
   const obj = data as Record<string, unknown>;
-
   return (
     typeof obj.id === "string" &&
     typeof obj.project_id === "string" &&
     (typeof obj.name === "string" || obj.name === null) &&
     typeof obj.status === "string" &&
-    (typeof obj.last_seen_at === "string" || obj.last_seen_at === null) &&
-    (typeof obj.meta === "object" || obj.meta === null)
+    (typeof obj.last_seen_at === "string" || obj.last_seen_at === null)
   );
 }
 
 function relative(ts: string | null): string {
   if (!ts) return "—";
-
   const diff = Math.max(0, Date.now() - new Date(ts).getTime());
   const s = Math.floor(diff / 1000);
-
   if (s < 60) return `${s}s`;
-
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
-
   const h = Math.floor(m / 60);
   if (h < 48) return `${h}h`;
-
   return `${Math.floor(h / 24)}d`;
 }
 
@@ -63,18 +48,14 @@ export default function NodeBadge() {
         .select("id, project_id, name, status, last_seen_at, meta")
         .eq("project_id", projectId)
         .eq("id", nodeId)
-        .maybeSingle(); // ← aquí termina correctamente
+        .maybeSingle();
 
       if (error) {
         setNode(null);
         return;
       }
 
-      if (isNodeRow(data)) {
-        setNode(data);
-      } else {
-        setNode(null);
-      }
+      setNode(isNodeRow(data) ? data : null);
     } catch {
       setNode(null);
     }
@@ -82,14 +63,13 @@ export default function NodeBadge() {
 
   useEffect(() => {
     void load();
-
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       void load();
     }, 10000);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, nodeId]);
+  }, [projectId, nodeId, supabase]);
 
   if (!node) {
     return (
@@ -101,27 +81,22 @@ export default function NodeBadge() {
   }
 
   const status = node.status.toLowerCase();
-
-  const isCloud =
-    node.id === "hocker-fabric" ||
-    node.id.startsWith("cloud-") ||
-    node.id.startsWith("trigger-");
-
+  const isCloud = node.id === "hocker-agi" || node.id.startsWith("cloud-") || node.id.startsWith("trigger-");
   const isOnline = isCloud || status === "online";
 
   const containerClass = isCloud
     ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
     : isOnline
-    ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
-    : "border-rose-400/20 bg-rose-500/10 text-rose-200";
+      ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+      : "border-rose-400/20 bg-rose-500/10 text-rose-200";
 
   const dotClass = isCloud
     ? "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)] animate-pulse"
     : isOnline
-    ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
-    : "bg-rose-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]";
+      ? "bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
+      : "bg-rose-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]";
 
-  const label = isCloud ? "Nube Central" : node.name ?? "En línea";
+  const label = isCloud ? "Núcleo AGI" : node.name ?? "En línea";
 
   return (
     <div
