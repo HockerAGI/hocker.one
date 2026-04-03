@@ -43,7 +43,6 @@ function buildPayload(
   details?: string,
 ): HealthPayload {
   const online = Object.values(checks).every(Boolean);
-
   return {
     status: online ? "online" : "degraded",
     infrastructure: "Hocker ONE Control Plane",
@@ -69,21 +68,15 @@ export async function GET(): Promise<NextResponse<HealthPayload>> {
         "Pérdida de sincronía con el núcleo de datos.",
         getErrorMessage(error),
       );
-
       return NextResponse.json(payload, { status: 503 });
     }
 
-    const checks: HealthChecks = {
-      ...envChecks,
-      db: true,
-    };
-
     const payload = buildPayload(
-      checks,
+      { ...envChecks, db: true },
       "Sistemas operativos bajo parámetros nominales.",
     );
 
-    return NextResponse.json(payload, { status: payload.status === "online" ? 200 : 503 });
+    return NextResponse.json(payload, { status: 200 });
   } catch (err: unknown) {
     const payload = buildPayload(
       { ...envChecks, db: false },
@@ -91,7 +84,6 @@ export async function GET(): Promise<NextResponse<HealthPayload>> {
       "Fallo crítico en el monitoreo.",
       getErrorMessage(err),
     );
-
     return NextResponse.json(payload, { status: 503 });
   }
 }
