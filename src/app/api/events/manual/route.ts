@@ -35,14 +35,18 @@ export async function GET(req: Request): Promise<Response> {
 
   try {
     const q = parseQuery(req);
-    const project_id = String(q.get("project_id") || "global").trim();
+    const project_id = String(q.get("project_id") ?? "").trim();
+
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "radar_read"] });
 
     const { data, error } = await ctx.sb
       .from("events")
-      .select("*")
+      .select("id, project_id, node_id, level, type, message, data, created_at")
       .eq("project_id", ctx.project_id)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -56,8 +60,8 @@ export async function GET(req: Request): Promise<Response> {
     return json({ ok: true, items: data ?? [] });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    trace.event({ name: "FALLA_LECTURA", level: "ERROR", output: { error: apiErr.message } });
-    return json(apiErr.body, apiErr.status);
+    trace.event({ name: "FALLA_LECTURA", level: "ERROR", output: { error: apiErr.payload } });
+    return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
@@ -71,7 +75,7 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "global").trim();
+    const project_id = String(body.project_id ?? "").trim();
     const node_id = String(body.node_id ?? "").trim();
     const message = String(body.message ?? "").trim();
 
@@ -100,7 +104,7 @@ export async function POST(req: Request): Promise<Response> {
         message,
         data: asJsonObject(body.data),
       })
-      .select("*")
+      .select("id, project_id, node_id, level, type, message, data, created_at")
       .single();
 
     if (error) {
@@ -113,7 +117,7 @@ export async function POST(req: Request): Promise<Response> {
     return json({ ok: true, item: data }, 201);
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    return json(apiErr.body, apiErr.status);
+    return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
