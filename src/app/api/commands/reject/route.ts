@@ -68,12 +68,12 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(500, { error: "Falla al registrar el rechazo en la matriz de datos." });
     }
 
-    trace.event({ name: "Orden_Anulada", input: { commandId: id } });
+    trace.event({ name: "ORDEN_ANULADA", input: { commandId: id } });
     return json({ ok: true, item: data });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
     trace.event({ name: "FALLA_RECHAZO", level: "ERROR", output: { error: apiErr.message } });
-    return json(apiErr.body, apiErr.status);
+    return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
