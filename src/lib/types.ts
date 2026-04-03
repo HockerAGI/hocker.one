@@ -6,6 +6,7 @@ export type JsonObject = { [key: string]: JsonValue };
 export type Role = "owner" | "admin" | "operator" | "viewer";
 
 export type CommandStatus =
+  | "pending" // ← FIX REAL (alineado con DB)
   | "queued"
   | "needs_approval"
   | "running"
@@ -141,9 +142,11 @@ export function normalizeCommandStatus(
   status: string | null | undefined,
 ): CommandStatus {
   const s = normalizeAlias(String(status ?? "").toLowerCase().trim());
-  if (!s) return "queued";
+
+  if (!s) return "pending";
 
   if (
+    s === "pending" ||
     s === "queued" ||
     s === "needs_approval" ||
     s === "running" ||
@@ -154,7 +157,7 @@ export function normalizeCommandStatus(
     return s;
   }
 
-  return "queued";
+  return "pending";
 }
 
 export function normalizeEventLevel(
