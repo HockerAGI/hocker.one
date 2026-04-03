@@ -1,14 +1,7 @@
 import { Langfuse } from "langfuse-node";
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeSupplyOrderStatus } from "@/lib/types";
-import {
-  ApiError,
-  getControls,
-  json,
-  parseBody,
-  requireProjectRole,
-  toApiError,
-} from "../../../_lib";
+import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +24,10 @@ function asInt(value: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function asNullableText(value: unknown): string | null {
+function asText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
-  const text = String(value).trim();
-  return text ? text : null;
+  const s = String(value).trim();
+  return s || null;
 }
 
 export async function GET(
@@ -49,14 +42,13 @@ export async function GET(
   try {
     const { id } = await context.params;
     const url = new URL(req.url);
-    const project_id = String(url.searchParams.get("project_id") || "global").trim();
+    const project_id = String(url.searchParams.get("project_id") ?? "").trim();
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-      "viewer",
-    ]);
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "logistica", "auditoria"] });
 
     const { data, error } = await ctx.sb
@@ -105,19 +97,19 @@ export async function PATCH(
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "global").trim();
+    const project_id = String(body.project_id ?? "").trim();
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-    ]);
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "finance", "logistica"] });
 
     const controls = await getControls(ctx.sb, ctx.project_id);
     if (controls.kill_switch) {
       throw new ApiError(423, {
-        error: "BLOQUEO GENERAL: Kill Switch Activo. Operaciones congeladas.",
+        error: "BLOQUEO GENERAL: Kill Switch activo. Operaciones congeladas.",
       });
     }
 
@@ -130,11 +122,11 @@ export async function PATCH(
     const updates: Record<string, unknown> = {};
 
     if (Object.prototype.hasOwnProperty.call(body, "customer_name")) {
-      updates.customer_name = asNullableText(body.customer_name);
+      updates.customer_name = asText(body.customer_name);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "customer_phone")) {
-      updates.customer_phone = asNullableText(body.customer_phone);
+      updates.customer_phone = asText(body.customer_phone);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "status")) {
