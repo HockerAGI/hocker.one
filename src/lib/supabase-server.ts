@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-function getSupabaseConfig(): { url: string; anon: string } {
+function getConfig(): { url: string; anon: string } {
   const url = (
     process.env.SUPABASE_URL ??
     process.env.NEXT_PUBLIC_SUPABASE_URL ??
@@ -15,20 +15,15 @@ function getSupabaseConfig(): { url: string; anon: string } {
     ""
   ).trim();
 
-  if (!url) {
-    throw new Error("SUPABASE_URL no está configurado.");
-  }
-
-  if (!anon) {
-    throw new Error("SUPABASE_ANON_KEY no está configurado.");
-  }
+  if (!url) throw new Error("SUPABASE_URL no está configurado.");
+  if (!anon) throw new Error("SUPABASE_ANON_KEY no está configurado.");
 
   return { url, anon };
 }
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
-function createCookieAdapter(cookieStore: CookieStore) {
+function cookieAdapter(cookieStore: CookieStore) {
   return {
     get(name: string): string | undefined {
       return cookieStore.get(name)?.value;
@@ -37,24 +32,24 @@ function createCookieAdapter(cookieStore: CookieStore) {
       try {
         cookieStore.set({ name, value, ...options });
       } catch {
-        // Server Components pueden ser read-only; aquí no forzamos escritura.
+        // lectura sin escritura: válido en Server Components
       }
     },
     remove(name: string, options: CookieOptions): void {
       try {
         cookieStore.set({ name, value: "", ...options, maxAge: 0 });
       } catch {
-        // Sin ruido en entornos read-only.
+        // noop
       }
     },
   };
 }
 
 export async function createServerSupabase(): Promise<SupabaseClient> {
-  const { url, anon } = getSupabaseConfig();
+  const { url, anon } = getConfig();
   const cookieStore = await cookies();
 
   return createServerClient(url, anon, {
-    cookies: createCookieAdapter(cookieStore),
+    cookies: cookieAdapter(cookieStore),
   });
 }
