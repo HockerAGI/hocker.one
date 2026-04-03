@@ -3,13 +3,7 @@
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function WorkspaceBar() {
-  const { projectId, nodeId, tutorial, setNodeId, toggleTutorial } = useWorkspace() as {
-    projectId: string;
-    nodeId: string;
-    tutorial: boolean;
-    setNodeId: (v: string) => void;
-    toggleTutorial: () => void;
-  };
+  const { projectId, nodeId, tutorial, setNodeId, toggleTutorial } = useWorkspace();
 
   return (
     <div className="flex flex-col gap-4 py-4">
