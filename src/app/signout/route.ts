@@ -28,7 +28,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     if (user) {
       const { error: logError } = await supabase.from("events").insert({
         project_id: "global",
-        node_id: "hocker-fabric",
+        node_id: "hocker-agi",
         level: "info",
         type: "auth.signout",
         message: `Desconexión segura: ${user.email ?? user.id} dejó el puente de mando.`,
