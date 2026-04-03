@@ -1,8 +1,16 @@
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
-import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
+import {
+  ApiError,
+  getControls,
+  json,
+  parseBody,
+  requireProjectRole,
+  toApiError,
+} from "../../_lib";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -10,7 +18,7 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-function toBool(value: unknown, fallback = true): boolean {
+function asBool(value: unknown, fallback = true): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
   if (typeof value === "string") {
@@ -21,19 +29,21 @@ function toBool(value: unknown, fallback = true): boolean {
   return fallback;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({ name: "Aprobación_Manual", metadata: { endpoint: "/api/commands/approve" } });
 
   try {
     const body = await parseBody(req);
     const id = String(body.id ?? "").trim();
-    const project_id = String(body.project_id ?? "global").trim();
-    const approved = toBool(body.approved, true);
+    const project_id = String(body.project_id ?? "hocker-one").trim();
+    const approved = asBool(body.approved, true);
 
-    if (!id) throw new ApiError(400, { error: "Falta el ID del comando." });
+    if (!id) {
+      throw new ApiError(400, { error: "Falta el ID del comando." });
+    }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
-    const controls: { kill_switch?: boolean; allow_write?: boolean; [key: string]: unknown } = await getControls(ctx.sb, ctx.project_id);
+    const controls = await getControls(ctx.sb, ctx.project_id);
 
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "Kill Switch activo. No se puede aprobar nada." });
@@ -68,7 +78,9 @@ export async function POST(req: Request) {
         .select("*")
         .single();
 
-      if (error) throw new ApiError(500, { error: "No se pudo registrar el rechazo." });
+      if (error) {
+        throw new ApiError(500, { error: "No se pudo registrar el rechazo." });
+      }
 
       trace.event({ name: "ORDEN_RECHAZADA", input: { commandId: id } });
       return json({ ok: true, item: data });
@@ -87,7 +99,9 @@ export async function POST(req: Request) {
       .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: "No se pudo autorizar la orden." });
+    if (error) {
+      throw new ApiError(500, { error: "No se pudo autorizar la orden." });
+    }
 
     await tasks.trigger("hocker-core-executor", { commandId: id });
 
@@ -95,6 +109,7 @@ export async function POST(req: Request) {
     return json({ ok: true, item: data, dispatched: true });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
+    trace.event({ name: "FALLA_APROBACION", level: "ERROR", output: { error: apiErr.message } });
     return json(apiErr.body, apiErr.status);
   } finally {
     await langfuse.flushAsync();
