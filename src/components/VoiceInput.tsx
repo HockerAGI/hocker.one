@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type SpeechRecognitionType = typeof window extends undefined
+type SpeechRecognitionType = Window;
   ? never
   : typeof window & {
       SpeechRecognition?: new () => SpeechRecognition;
