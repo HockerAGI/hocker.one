@@ -36,50 +36,62 @@ function buildEnvChecks(): Omit<HealthChecks, "db"> {
   };
 }
 
+function buildPayload(
+  checks: HealthChecks,
+  message?: string,
+  error?: string,
+  details?: string,
+): HealthPayload {
+  const online = Object.values(checks).every(Boolean);
+
+  return {
+    status: online ? "online" : "degraded",
+    infrastructure: "Hocker ONE Control Plane",
+    checks,
+    ...(message ? { message } : {}),
+    ...(error ? { error } : {}),
+    ...(details ? { details } : {}),
+    timestamp: new Date().toISOString(),
+  };
+}
+
 export async function GET(): Promise<NextResponse<HealthPayload>> {
-  const baseChecks = buildEnvChecks();
-  const timestamp = new Date().toISOString();
+  const envChecks = buildEnvChecks();
 
   try {
     const sb = createAdminSupabase();
-
-    const { error } = await sb
-      .from("nodes")
-      .select("id")
-      .limit(1);
+    const { error } = await sb.from("nodes").select("id").limit(1);
 
     if (error) {
-      const payload: HealthPayload = {
-        status: "degraded",
-        infrastructure: "Hocker ONE Automation Fabric",
-        checks: { ...baseChecks, db: false },
-        error: "Pérdida de sincronía con el núcleo de datos.",
-        details: getErrorMessage(error),
-        timestamp,
-      };
+      const payload = buildPayload(
+        { ...envChecks, db: false },
+        undefined,
+        "Pérdida de sincronía con el núcleo de datos.",
+        getErrorMessage(error),
+      );
 
-      return NextResponse.json(payload, { status: 500 });
+      return NextResponse.json(payload, { status: 503 });
     }
 
-    const payload: HealthPayload = {
-      status: "online",
-      infrastructure: "Hocker ONE Automation Fabric",
-      checks: { ...baseChecks, db: true },
-      message: "Sistemas operativos bajo parámetros nominales.",
-      timestamp,
+    const checks: HealthChecks = {
+      ...envChecks,
+      db: true,
     };
 
-    return NextResponse.json(payload, { status: 200 });
+    const payload = buildPayload(
+      checks,
+      "Sistemas operativos bajo parámetros nominales.",
+    );
+
+    return NextResponse.json(payload, { status: payload.status === "online" ? 200 : 503 });
   } catch (err: unknown) {
-    const payload: HealthPayload = {
-      status: "degraded",
-      infrastructure: "Hocker ONE Automation Fabric",
-      checks: { ...baseChecks, db: false },
-      error: "Fallo crítico en el monitoreo.",
-      details: getErrorMessage(err),
-      timestamp,
-    };
+    const payload = buildPayload(
+      { ...envChecks, db: false },
+      undefined,
+      "Fallo crítico en el monitoreo.",
+      getErrorMessage(err),
+    );
 
-    return NextResponse.json(payload, { status: 500 });
+    return NextResponse.json(payload, { status: 503 });
   }
 }
