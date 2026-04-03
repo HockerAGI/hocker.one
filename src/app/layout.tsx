@@ -15,6 +15,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = new URL("https://hockerone.vercel.app");
+
 export const viewport: Viewport = {
   themeColor: "#020617",
   width: "device-width",
@@ -25,11 +27,39 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: siteUrl,
   title: {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
   },
-  description: "Centro de Mando Unificado de Hocker IA Technologies.",
+  description: "Control de Hocker IA Technologies.",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "Hocker ONE",
+    locale: "es_MX",
+    title: "Hocker ONE",
+    description: "Centro de Mando Unificado de Hocker IA Technologies.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Hocker ONE",
+    description: "Centro de Mando Unificado de Hocker IA Technologies.",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -61,15 +91,10 @@ export default function RootLayout({
           selection:bg-sky-500/30
         `}
       >
-        {/* CONTEXTO GLOBAL */}
-        <WorkspaceProvider>
-          {children}
-        </WorkspaceProvider>
+        <WorkspaceProvider>{children}</WorkspaceProvider>
 
-        {/* PWA SERVICE WORKER */}
         <PwaRegister />
 
-        {/* TOAST SYSTEM */}
         <Toaster
           position="top-center"
           theme="dark"
@@ -82,8 +107,7 @@ export default function RootLayout({
               border: "1px solid rgba(14, 165, 233, 0.2)",
               borderRadius: "24px",
               color: "#f8fafc",
-              boxShadow:
-                "0 10px 40px -10px rgba(14,165,233,0.15)",
+              boxShadow: "0 10px 40px -10px rgba(14,165,233,0.15)",
             },
           }}
         />
