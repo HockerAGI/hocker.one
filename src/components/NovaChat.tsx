@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { AGILevel } from '@/types/hocker';
 
 interface Message {
   id: string;
