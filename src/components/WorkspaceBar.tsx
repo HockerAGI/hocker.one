@@ -3,12 +3,17 @@
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function WorkspaceBar() {
-  const { projectId, nodeId, tutorial, setNodeId, toggleTutorial } = useWorkspace();
+  const { projectId, nodeId, tutorial, setNodeId, toggleTutorial } = useWorkspace() as {
+    projectId: string;
+    nodeId: string;
+    tutorial: boolean;
+    setNodeId: (v: string) => void;
+    toggleTutorial: () => void;
+  };
 
   return (
     <div className="flex flex-col gap-4 py-4">
       <div className="flex flex-col gap-3">
-        {/* PROYECTO (READ ONLY) */}
         <div className="group relative flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/60 p-2 pl-4 shadow-inner">
           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
             Sector
@@ -16,26 +21,24 @@ export default function WorkspaceBar() {
           <input
             value={projectId}
             readOnly
-            className="w-full bg-transparent text-xs font-mono font-bold text-sky-100 outline-none cursor-not-allowed"
+            className="w-full cursor-not-allowed bg-transparent text-xs font-mono font-bold text-sky-100 outline-none"
           />
         </div>
 
-        {/* NODO (EDITABLE REAL) */}
         <div className="group relative flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/60 p-2 pl-4 shadow-inner transition-colors focus-within:border-emerald-500/40 focus-within:bg-slate-900/80">
           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-focus-within:text-emerald-400">
             Enlace
           </span>
           <input
-            value={nodeId ?? ""}
+            value={nodeId}
             onChange={(e) => setNodeId(e.target.value)}
             className="w-full bg-transparent text-xs font-mono font-bold text-emerald-100 outline-none placeholder:text-slate-600"
-            placeholder="hocker-fabric"
+            placeholder="hocker-agi"
           />
         </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-white/5 pt-4">
-        {/* TOGGLE */}
         <label className="group flex cursor-pointer items-center gap-3">
           <button
             type="button"
