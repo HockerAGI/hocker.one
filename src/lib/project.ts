@@ -19,7 +19,7 @@ export function defaultProjectId(): string {
   return normalizeProjectId(
     process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID ??
       process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID ??
-      FALLBACK_PROJECT
+      FALLBACK_PROJECT,
   );
 }
 
@@ -30,7 +30,7 @@ export function defaultNodeId(): string {
   return normalizeNodeId(
     process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ??
       process.env.HOCKER_DEFAULT_NODE_ID ??
-      CLOUD_NODE_ID
+      CLOUD_NODE_ID,
   );
 }
 
