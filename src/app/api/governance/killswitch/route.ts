@@ -1,7 +1,18 @@
 import { Langfuse } from "langfuse-node";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
-import { CONTROL_ROW_ID, ApiError, getControls, json, parseBody, parseQuery, requireProjectRole, toApiError, upsertControls } from "../../_lib";
+import type { ControlRow, JsonObject } from "@/lib/types";
+import {
+  ApiError,
+  CONTROL_ROW_ID,
+  getControls,
+  json,
+  parseBody,
+  parseQuery,
+  requireProjectRole,
+  toApiError,
+  upsertControls,
+} from "../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,16 +22,6 @@ const langfuse = new Langfuse({
   secretKey: process.env.LANGFUSE_SECRET_KEY,
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
-
-type ControlRow = {
-  id: string;
-  project_id: string;
-  kill_switch: boolean;
-  allow_write: boolean;
-  meta: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
-};
 
 function toBool(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
@@ -33,9 +34,9 @@ function toBool(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
-function asMeta(value: unknown): Record<string, unknown> {
+function asMeta(value: unknown): JsonObject {
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
+    return value as JsonObject;
   }
   return {};
 }
@@ -44,7 +45,10 @@ async function loadControls(sb: SupabaseClient, project_id: string): Promise<Con
   const row = await getControls(sb, project_id);
   return {
     ...row,
-    meta: row.meta && typeof row.meta === "object" && !Array.isArray(row.meta) ? (row.meta as Record<string, unknown>) : {},
+    meta:
+      row.meta && typeof row.meta === "object" && !Array.isArray(row.meta)
+        ? (row.meta as JsonObject)
+        : {},
   };
 }
 
@@ -62,14 +66,24 @@ export async function GET(req: Request): Promise<Response> {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(project_id, [
+      "owner",
+      "admin",
+      "operator",
+      "viewer",
+    ]);
+
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_read"] });
 
     const controls = await loadControls(ctx.sb, ctx.project_id);
     return json({ ok: true, controls });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    trace.event({ name: "FALLA_LECTURA", level: "ERROR", output: { error: apiErr.message } });
+    trace.event({
+      name: "FALLA_LECTURA",
+      level: "ERROR",
+      output: { error: apiErr.message },
+    });
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
@@ -109,7 +123,11 @@ export async function POST(req: Request): Promise<Response> {
     return json({ ok: true, controls });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    trace.event({ name: "FALLA_POST", level: "ERROR", output: { error: apiErr.message } });
+    trace.event({
+      name: "FALLA_POST",
+      level: "ERROR",
+      output: { error: apiErr.message },
+    });
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
