@@ -1,9 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * Cliente administrativo del servidor.
- * Solo debe usarse en rutas server-side, jobs, crons y workers.
- */
 let adminClient: SupabaseClient | null = null;
 
 export function createAdminSupabase(): SupabaseClient {
