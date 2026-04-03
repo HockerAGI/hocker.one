@@ -1,21 +1,8 @@
-import { Langfuse } from "langfuse-node";
 import { getErrorMessage } from "@/lib/errors";
-import {
-  ApiError,
-  json,
-  parseBody,
-  requireProjectRole,
-  toApiError,
-} from "../../../_lib";
+import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
-});
 
 function asInt(value: unknown, fallback = 0): number {
   const n = Math.trunc(Number(value));
@@ -47,14 +34,13 @@ export async function GET(
   try {
     const { id } = await context.params;
     const url = new URL(req.url);
-    const project_id = String(url.searchParams.get("project_id") || "global").trim();
+    const project_id = String(url.searchParams.get("project_id") ?? "").trim();
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-      "viewer",
-    ]);
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
     const { data, error } = await ctx.sb
       .from("supply_products")
@@ -64,13 +50,11 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
-      throw new ApiError(500, {
-        error: `Error al leer el producto: ${getErrorMessage(error)}`,
-      });
+      throw new ApiError(500, { error: `Error al leer el producto: ${getErrorMessage(error)}` });
     }
 
     if (!data) {
-      throw new ApiError(404, { error: "Producto no encontrado" });
+      throw new ApiError(404, { error: "Producto no encontrado." });
     }
 
     return json({ ok: true, item: data });
@@ -84,57 +68,55 @@ export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const { id } = await context.params;
-  const trace = langfuse.trace({
-    name: "Supply_Product_Update",
-    metadata: { productId: id },
-  });
-
   try {
+    const { id } = await context.params;
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "global").trim();
+    const project_id = String(body.project_id ?? "").trim();
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-    ]);
-    trace.update({ userId: ctx.user.id, tags: [project_id, "inventory"] });
-
-    const updates: Record<string, unknown> = { ...body };
-    delete updates.id;
-    delete updates.project_id;
-
-    if (Object.prototype.hasOwnProperty.call(updates, "price_cents")) {
-      updates.price_cents = Math.max(0, asInt(updates.price_cents, 0));
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    if (Object.prototype.hasOwnProperty.call(updates, "cost_cents")) {
-      updates.cost_cents = Math.max(0, asInt(updates.cost_cents, 0));
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+
+    const updates: Record<string, unknown> = {};
+
+    if (Object.prototype.hasOwnProperty.call(body, "sku")) {
+      updates.sku = typeof body.sku === "string" ? body.sku.trim() || null : null;
     }
 
-    if (Object.prototype.hasOwnProperty.call(updates, "stock")) {
-      updates.stock = Math.max(0, asInt(updates.stock, 0));
+    if (Object.prototype.hasOwnProperty.call(body, "name")) {
+      updates.name = String(body.name ?? "").trim();
     }
 
-    if (Object.prototype.hasOwnProperty.call(updates, "active")) {
-      updates.active = toBool(updates.active, true);
+    if (Object.prototype.hasOwnProperty.call(body, "description")) {
+      updates.description = typeof body.description === "string" ? body.description.trim() || null : null;
     }
 
-    if (Object.prototype.hasOwnProperty.call(updates, "currency")) {
-      updates.currency =
-        String(updates.currency ?? "MXN").trim().toUpperCase() || "MXN";
+    if (Object.prototype.hasOwnProperty.call(body, "price_cents")) {
+      updates.price_cents = Math.max(0, asInt(body.price_cents, 0));
     }
 
-    updates.description = Object.prototype.hasOwnProperty.call(updates, "description")
-      ? (updates.description ? String(updates.description).trim() : null)
-      : undefined;
+    if (Object.prototype.hasOwnProperty.call(body, "cost_cents")) {
+      updates.cost_cents = Math.max(0, asInt(body.cost_cents, 0));
+    }
 
-    updates.sku = Object.prototype.hasOwnProperty.call(updates, "sku")
-      ? (updates.sku ? String(updates.sku).trim() : null)
-      : undefined;
+    if (Object.prototype.hasOwnProperty.call(body, "currency")) {
+      updates.currency = String(body.currency ?? "MXN").trim().toUpperCase() || "MXN";
+    }
 
-    updates.meta = asJsonObject(updates.meta);
+    if (Object.prototype.hasOwnProperty.call(body, "stock")) {
+      updates.stock = Math.max(0, asInt(body.stock, 0));
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "active")) {
+      updates.active = toBool(body.active, true);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "meta")) {
+      updates.meta = asJsonObject(body.meta);
+    }
+
     updates.updated_at = new Date().toISOString();
 
     const { data, error } = await ctx.sb
@@ -146,21 +128,12 @@ export async function PATCH(
       .single();
 
     if (error) {
-      throw new ApiError(500, {
-        error: `Error al actualizar el producto: ${getErrorMessage(error)}`,
-      });
+      throw new ApiError(500, { error: `Error al actualizar el producto: ${getErrorMessage(error)}` });
     }
 
-    trace.event({ name: "Product_Updated", input: updates });
     return json({ ok: true, item: data });
   } catch (err: unknown) {
-    trace.event({
-      name: "ERROR",
-      input: { error: getErrorMessage(err) },
-    });
     const ex = toApiError(err);
     return json(ex.payload, ex.status);
-  } finally {
-    await langfuse.flushAsync();
   }
 }
