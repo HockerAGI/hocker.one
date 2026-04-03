@@ -1,165 +1,142 @@
-"use client";
+'use client';
 
-import { getErrorMessage } from "@/lib/errors";
-import { useWorkspace } from "@/components/WorkspaceContext";
-import { useMemo, useState } from "react";
+import { useState } from 'react';
 
+// Tipos estrictos para evitar fugas o inyecciones
 type CommandPayload = Record<string, unknown>;
 
-type CommandResponse = {
+interface CommandResponse {
   ok?: boolean;
-  item?: {
-    id?: string;
-    status?: string;
-  };
+  success?: boolean;
+  data?: { id: string; status: string };
   error?: string;
   message?: string;
-};
+}
 
+// Parseo seguro sin 'any'
 function parseJsonSafe(value: string): { ok: true; data: CommandPayload } | { ok: false; error: string } {
   const raw = value.trim();
   if (!raw) return { ok: true, data: {} };
-
+  
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { ok: false, error: "El JSON debe ser un objeto." };
+      return { ok: false, error: "CRÍTICO: El payload debe ser un objeto JSON válido." };
     }
     return { ok: true, data: parsed as CommandPayload };
   } catch {
-    return { ok: false, error: "JSON inválido." };
+    return { ok: false, error: "CRÍTICO: Sintaxis JSON inválida." };
   }
 }
 
-export default function CommandBox() {
-  const { projectId, nodeId } = useWorkspace();
-  const [command, setCommand] = useState("");
-  const [payload, setPayload] = useState("{\n  \n}");
-  const [needsApproval, setNeedsApproval] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function CommandBox({ projectId, nodeId }: { projectId: string; nodeId: string }) {
+  const [command, setCommand] = useState<string>("");
+  const [payloadStr, setPayloadStr] = useState<string>("{\n  \n}");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [feedback, setFeedback] = useState<string | null>(null);
 
-  const canSend = useMemo(() => command.trim().length > 0 && !loading, [command, loading]);
-
-  async function send() {
-    const text = command.trim();
-    if (!text || loading) return;
-
-    const parsed = parseJsonSafe(payload);
-    if (!parsed.ok) {
-      setError(parsed.error);
+  const handleDispatch = async () => {
+    if (!command.trim()) {
+      setStatus("error");
+      setFeedback("Se requiere un identificador de comando.");
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setNotice(null);
+    const parsed = parseJsonSafe(payloadStr);
+    if (!parsed.ok) {
+      setStatus("error");
+      setFeedback(parsed.error);
+      return;
+    }
+
+    setStatus("loading");
+    setFeedback("Orquestando comando...");
 
     try {
-      const res = await fetch("/api/commands", {
+      const res = await fetch("/api/commands/dispatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          project_id: projectId,
-          node_id: nodeId,
-          command: text,
+          projectId,
+          nodeId,
+          command: command.trim(),
           payload: parsed.data,
-          needs_approval: needsApproval,
         }),
       });
 
-      const data: unknown = await res.json();
-      const body = data && typeof data === "object" ? (data as CommandResponse) : null;
+      const data = (await res.json()) as CommandResponse;
 
-      if (!res.ok) {
-        throw new Error(body?.error || body?.message || "No se pudo enviar la orden.");
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Fallo en la comunicación con el orquestador.");
       }
 
+      setStatus("success");
+      setFeedback(`Comando encolado con éxito. ID: ${data.data?.id}`);
       setCommand("");
-      setPayload("{\n  \n}");
-      setNeedsApproval(false);
-      setNotice(
-        typeof body?.item?.id === "string"
-          ? `Orden enviada: ${body.item.id}`
-          : "Orden enviada.",
-      );
+      setPayloadStr("{\n  \n}");
+
+      setTimeout(() => {
+        setStatus("idle");
+        setFeedback(null);
+      }, 4000);
+
     } catch (err: unknown) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
+      setStatus("error");
+      setFeedback(err instanceof Error ? err.message : "Error desconocido en el despliegue.");
     }
-  }
+  };
 
   return (
-    <section className="hocker-panel-pro space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-sky-400">
-          Inyector táctico
-        </h3>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
-          {projectId}
-        </span>
+    <div className="bg-hocker-panel border border-white/10 rounded-xl p-5 backdrop-blur-md relative overflow-hidden group hover:border-hocker-accent/50 transition-colors">
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-hocker-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+      
+      <h3 className="text-sm font-mono text-hocker-accent mb-4 uppercase tracking-widest flex items-center gap-2">
+        <span className="w-2 h-2 bg-hocker-accent rounded-full animate-pulse"></span>
+        Terminal de Enlace
+      </h3>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs text-gray-500 font-mono mb-1">Directiva (Comando)</label>
+          <input
+            type="text"
+            className="w-full bg-[#0a0a0c] border border-white/5 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:border-hocker-accent/50 focus:ring-1 focus:ring-hocker-accent/50 transition-all placeholder:text-gray-700"
+            placeholder="ej. sync_biometrics"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            disabled={status === "loading"}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-500 font-mono mb-1">Carga Útil (JSON Payload)</label>
+          <textarea
+            className="w-full bg-[#0a0a0c] border border-white/5 rounded-lg px-4 py-2 text-hocker-success font-mono text-sm focus:outline-none focus:border-hocker-success/50 focus:ring-1 focus:ring-hocker-success/50 transition-all h-32 resize-none"
+            value={payloadStr}
+            onChange={(e) => setPayloadStr(e.target.value)}
+            disabled={status === "loading"}
+            spellCheck={false}
+          />
+        </div>
+
+        <button
+          onClick={handleDispatch}
+          disabled={status === "loading"}
+          className="w-full bg-hocker-accent/10 hover:bg-hocker-accent text-hocker-accent hover:text-black border border-hocker-accent/30 font-bold font-mono text-sm py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+        >
+          {status === "loading" ? "Procesando..." : "Ejecutar Directiva"}
+        </button>
+
+        {feedback && (
+          <div className={`p-3 rounded-md text-xs font-mono border ${
+            status === "success" ? "bg-hocker-success/10 border-hocker-success/30 text-hocker-success" : 
+            status === "error" ? "bg-hocker-alert/10 border-hocker-alert/30 text-hocker-alert" : 
+            "bg-white/5 border-white/10 text-gray-400"
+          }`}>
+            {feedback}
+          </div>
+        )}
       </div>
-
-      <label className="block space-y-2">
-        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-500">
-          Orden
-        </span>
-        <input
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          className="w-full rounded-2xl border border-white/5 bg-black/40 p-4 text-sm text-white outline-none transition focus:border-sky-500/40"
-          placeholder="deploy / scan / status"
-          autoComplete="off"
-        />
-      </label>
-
-      <label className="block space-y-2">
-        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-500">
-          Datos JSON
-        </span>
-        <textarea
-          value={payload}
-          onChange={(e) => setPayload(e.target.value)}
-          className="min-h-32 w-full rounded-2xl border border-white/5 bg-black/40 p-4 font-mono text-[11px] text-slate-200 outline-none transition focus:border-sky-500/40"
-          spellCheck={false}
-          placeholder='{"key":"value"}'
-        />
-      </label>
-
-      <label className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 px-4 py-3">
-        <input
-          type="checkbox"
-          checked={needsApproval}
-          onChange={(e) => setNeedsApproval(e.target.checked)}
-          className="h-4 w-4 rounded border-white/20 bg-black/30 text-sky-500 focus:ring-sky-500/30"
-        />
-        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-300">
-          Requiere aprobación
-        </span>
-      </label>
-
-      {notice ? (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-[11px] font-bold uppercase tracking-wide text-emerald-300">
-          {notice}
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-[11px] font-bold uppercase tracking-wide text-rose-300">
-          {error}
-        </div>
-      ) : null}
-
-      <button
-        type="button"
-        onClick={() => void send()}
-        disabled={!canSend}
-        className="w-full rounded-2xl bg-sky-500 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-sky-400 active:scale-[0.99] disabled:opacity-50"
-      >
-        {loading ? "Procesando..." : "Ejecutar orden"}
-      </button>
-    </section>
+    </div>
   );
 }
