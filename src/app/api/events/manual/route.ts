@@ -1,8 +1,18 @@
 import { Langfuse } from "langfuse-node";
 import { getErrorMessage } from "@/lib/errors";
-import { ApiError, ensureNode, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
+import { normalizeEventLevel, type JsonObject } from "@/lib/types";
+import {
+  ApiError,
+  ensureNode,
+  json,
+  parseBody,
+  parseQuery,
+  requireProjectRole,
+  toApiError,
+} from "../../_lib";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const langfuse = new Langfuse({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -10,23 +20,18 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-function normalizeLevel(input: unknown): "info" | "warn" | "error" | "critical" {
-  const s = String(input ?? "info").trim().toLowerCase();
-  if (s === "warn" || s === "warning") return "warn";
-  if (s === "error") return "error";
-  if (s === "critical") return "critical";
-  return "info";
-}
-
-function asJsonObject(value: unknown): Record<string, unknown> {
+function asJsonObject(value: unknown): JsonObject {
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
+    return value as JsonObject;
   }
   return {};
 }
 
-export async function GET(req: Request) {
-  const trace = langfuse.trace({ name: "Radar_Lectura", metadata: { endpoint: "/api/events/manual" } });
+export async function GET(req: Request): Promise<Response> {
+  const trace = langfuse.trace({
+    name: "Radar_Lectura",
+    metadata: { endpoint: "/api/events/manual" },
+  });
 
   try {
     const q = parseQuery(req);
@@ -42,19 +47,27 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (error) throw new ApiError(500, { error: `Falla al extraer datos de la memoria operativa: ${getErrorMessage(error)}` });
+    if (error) {
+      throw new ApiError(500, {
+        error: `Falla al extraer datos de la memoria operativa: ${getErrorMessage(error)}`,
+      });
+    }
 
     return json({ ok: true, items: data ?? [] });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
+    trace.event({ name: "FALLA_LECTURA", level: "ERROR", output: { error: apiErr.message } });
     return json(apiErr.body, apiErr.status);
   } finally {
     await langfuse.flushAsync();
   }
 }
 
-export async function POST(req: Request) {
-  const trace = langfuse.trace({ name: "Registro_Evento", metadata: { endpoint: "/api/events/manual" } });
+export async function POST(req: Request): Promise<Response> {
+  const trace = langfuse.trace({
+    name: "Registro_Evento",
+    metadata: { endpoint: "/api/events/manual" },
+  });
 
   try {
     const body = await parseBody(req);
@@ -62,20 +75,27 @@ export async function POST(req: Request) {
     const node_id = String(body.node_id ?? "").trim();
     const message = String(body.message ?? "").trim();
 
-    if (!project_id) throw new ApiError(400, { error: "Project_ID ausente en instrucción." });
-    if (!message) throw new ApiError(400, { error: "No se permiten eventos vacíos en la bitácora." });
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    if (!message) {
+      throw new ApiError(400, { error: "No se permiten eventos vacíos en la bitácora." });
+    }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "manual_event"] });
 
-    if (node_id) await ensureNode(ctx.sb, project_id, node_id);
+    if (node_id) {
+      await ensureNode(ctx.sb, ctx.project_id, node_id);
+    }
 
-    const { data: row, error } = await ctx.sb
+    const { data, error } = await ctx.sb
       .from("events")
       .insert({
-        project_id,
+        project_id: ctx.project_id,
         node_id: node_id || null,
-        level: normalizeLevel(body.level),
+        level: normalizeEventLevel(body.level),
         type: String(body.type ?? "system.manual").trim(),
         message,
         data: asJsonObject(body.data),
@@ -83,10 +103,14 @@ export async function POST(req: Request) {
       .select("*")
       .single();
 
-    if (error) throw new ApiError(500, { error: `Falla interna al grabar en la bitácora táctica: ${getErrorMessage(error)}` });
+    if (error) {
+      throw new ApiError(500, {
+        error: `Falla interna al grabar en la bitácora táctica: ${getErrorMessage(error)}`,
+      });
+    }
 
-    trace.event({ name: "EVENTO_REGISTRADO", input: { id: row.id } });
-    return json({ ok: true, item: row });
+    trace.event({ name: "EVENTO_REGISTRADO", input: { id: data.id } });
+    return json({ ok: true, item: data }, 201);
   } catch (err: unknown) {
     const apiErr = toApiError(err);
     return json(apiErr.body, apiErr.status);
