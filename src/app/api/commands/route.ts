@@ -1,102 +1,105 @@
-import { getErrorMessage } from "@/lib/errors";
-import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
+import crypto from "node:crypto";
+import { tasks } from "@trigger.dev/sdk/v3";
+import { signCommand } from "@/lib/security";
+import { normalizeNodeId } from "@/lib/project";
+import type { JsonObject } from "@/lib/types";
+
 import {
   ApiError,
+  ensureNode,
+  getControls,
   json,
   parseBody,
-  parseQuery,
   requireProjectRole,
-  getControls,
+  toApiError,
 } from "../_lib";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
-type CreateCommandBody = {
+type CommandInsert = {
+  id: string;
   project_id: string;
   node_id: string;
   command: string;
-  payload?: Record<string, unknown>;
+  payload: JsonObject;
+  status: "queued" | "needs_approval";
+  needs_approval: boolean;
+  signature: string;
+  created_at: string;
 };
-
-export async function GET(req: Request): Promise<Response> {
-  try {
-    const q = parseQuery(req);
-    const project_id = normalizeProjectId(q.get("project_id"));
-
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-      "viewer",
-    ]);
-
-    const { data, error } = await ctx.sb
-      .from("commands")
-      .select("*")
-      .eq("project_id", ctx.project_id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    if (error) {
-      throw new ApiError(500, {
-        error: `No se pudo leer la cola de comandos: ${getErrorMessage(error)}`,
-      });
-    }
-
-    return json({ ok: true, items: data ?? [] });
-  } catch (err: unknown) {
-    return json({ ok: false, error: getErrorMessage(err) }, 500);
-  }
-}
 
 export async function POST(req: Request): Promise<Response> {
   try {
-    const body = (await parseBody(req)) as CreateCommandBody;
+    const body = await parseBody(req);
 
-    if (!body.project_id || !body.node_id || !body.command) {
-      throw new ApiError(400, {
-        error: "project_id, node_id y command son obligatorios.",
-      });
+    const project_id = String(body.project_id ?? "").trim();
+    const command = String(body.command ?? "").trim();
+
+    if (!project_id || !command) {
+      throw new ApiError(400, { error: "Datos incompletos." });
     }
 
-    const ctx = await requireProjectRole(body.project_id, [
-      "owner",
-      "admin",
-      "operator",
-    ]);
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
     const controls = await getControls(ctx.sb, ctx.project_id);
 
     if (controls.kill_switch) {
-      throw new ApiError(403, {
-        error: "Sistema bloqueado por kill_switch.",
-      });
+      throw new ApiError(423, { error: "Sistema bloqueado." });
     }
 
-    const needsApproval = ctx.role !== "owner";
+    if (!controls.allow_write) {
+      throw new ApiError(403, { error: "Modo lectura." });
+    }
+
+    const node_id = normalizeNodeId(String(body.node_id ?? "hocker-fabric"));
+    const payload = (body.payload ?? {}) as JsonObject;
+    const needsApproval = Boolean(body.needs_approval);
+
+    const id = crypto.randomUUID();
+    const created_at = new Date().toISOString();
+
+    const secret = process.env.COMMAND_HMAC_SECRET;
+    if (!secret) throw new ApiError(500, { error: "Falta HMAC secret." });
+
+    await ensureNode(ctx.sb, ctx.project_id, node_id);
+
+    const signature = signCommand(
+      secret,
+      id,
+      ctx.project_id,
+      node_id,
+      command,
+      payload,
+      created_at
+    );
+
+    const row: CommandInsert = {
+      id,
+      project_id: ctx.project_id,
+      node_id,
+      command,
+      payload,
+      status: needsApproval ? "needs_approval" : "queued",
+      needs_approval: needsApproval,
+      signature,
+      created_at,
+    };
 
     const { data, error } = await ctx.sb
       .from("commands")
-      .insert({
-        project_id: ctx.project_id,
-        node_id: normalizeNodeId(body.node_id),
-        command: body.command,
-        payload: body.payload ?? {},
-        status: needsApproval ? "needs_approval" : "queued",
-        needs_approval: needsApproval,
-      })
+      .insert(row)
       .select("*")
       .single();
 
-    if (error) {
-      throw new ApiError(500, {
-        error: `No se pudo crear el comando: ${getErrorMessage(error)}`,
-      });
+    if (error) throw new ApiError(500, { error: "Insert failed." });
+
+    if (!needsApproval) {
+      await tasks.trigger("hocker-core-executor", { commandId: id });
     }
 
     return json({ ok: true, item: data }, 201);
-  } catch (err: unknown) {
-    return json({ ok: false, error: getErrorMessage(err) }, 500);
+  } catch (err) {
+    const e = toApiError(err);
+    return json(e.payload, e.status);
   }
 }
