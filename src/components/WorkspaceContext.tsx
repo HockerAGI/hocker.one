@@ -13,20 +13,23 @@ type WorkspaceCtx = WorkspaceState & {
   setProjectId: (v: string) => void;
   setNodeId: (v: string) => void;
   setTutorial: (v: boolean) => void;
+  toggleTutorial: () => void;
   reset: () => void;
 };
 
-const DEFAULTS: WorkspaceState = {
-  projectId: defaultProjectId(),
-  nodeId: defaultNodeId(),
-  tutorial: true,
-};
+function createDefaults(): WorkspaceState {
+  return {
+    projectId: defaultProjectId(),
+    nodeId: defaultNodeId(),
+    tutorial: true,
+  };
+}
 
 const KEY = "hocker.workspace.v1";
 const Ctx = createContext<WorkspaceCtx | null>(null);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<WorkspaceState>(DEFAULTS);
+  const [state, setState] = useState<WorkspaceState>(() => createDefaults());
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -37,14 +40,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           const p = parsed as Record<string, unknown>;
           setState({
-            projectId: typeof p.projectId === "string" ? p.projectId : DEFAULTS.projectId,
-            nodeId: typeof p.nodeId === "string" ? p.nodeId : DEFAULTS.nodeId,
-            tutorial: typeof p.tutorial === "boolean" ? p.tutorial : DEFAULTS.tutorial,
+            projectId: typeof p.projectId === "string" && p.projectId.trim() ? p.projectId.trim() : defaultProjectId(),
+            nodeId: typeof p.nodeId === "string" && p.nodeId.trim() ? p.nodeId.trim() : defaultNodeId(),
+            tutorial: typeof p.tutorial === "boolean" ? p.tutorial : true,
           });
         }
       }
     } catch {
-      // sin ruido
+      // Sin ruido.
     } finally {
       setReady(true);
     }
@@ -52,10 +55,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
+
     try {
       window.localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      // sin bloqueo del UI
+      // No bloquear UI.
     }
   }, [state, ready]);
 
@@ -63,11 +67,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...state,
       setProjectId: (v) =>
-        setState((s) => ({ ...s, projectId: v.trim() || DEFAULTS.projectId })),
+        setState((s) => ({ ...s, projectId: v.trim() || defaultProjectId() })),
       setNodeId: (v) =>
-        setState((s) => ({ ...s, nodeId: v.trim() || DEFAULTS.nodeId })),
+        setState((s) => ({ ...s, nodeId: v.trim() || defaultNodeId() })),
       setTutorial: (v) => setState((s) => ({ ...s, tutorial: Boolean(v) })),
-      reset: () => setState(DEFAULTS),
+      toggleTutorial: () => setState((s) => ({ ...s, tutorial: !s.tutorial })),
+      reset: () => setState(createDefaults()),
     }),
     [state],
   );
