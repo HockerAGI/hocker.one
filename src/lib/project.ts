@@ -1,54 +1,49 @@
 const FALLBACK_PROJECT = "hocker-one";
-const CLOUD_NODE_ID = "hocker-fabric";
+const CLOUD_NODE_ID = "hocker-agi";
+
+function cleanId(input: string | null | undefined, fallback: string): string {
+  const raw = String(input ?? "").trim().toLowerCase();
+  if (!raw) return fallback;
+
+  const cleaned = raw
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9._-]/g, "");
+
+  return cleaned || fallback;
+}
 
 /**
- * IDENTIFICADOR DE PROYECTO POR DEFECTO
+ * Identificador de proyecto por defecto.
  */
 export function defaultProjectId(): string {
   return normalizeProjectId(
     process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID ??
-    process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID ??
-    FALLBACK_PROJECT
+      process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID ??
+      FALLBACK_PROJECT
   );
 }
 
 /**
- * IDENTIFICADOR DE NODO POR DEFECTO
+ * Identificador de nodo por defecto.
  */
 export function defaultNodeId(): string {
-  const v =
-    process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ||
-    process.env.HOCKER_DEFAULT_NODE_ID ||
-    CLOUD_NODE_ID;
-
-  return normalizeNodeId(v);
+  return normalizeNodeId(
+    process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ??
+      process.env.HOCKER_DEFAULT_NODE_ID ??
+      CLOUD_NODE_ID
+  );
 }
 
 /**
- * SANEAMIENTO TÁCTICO DE IDs (NODOS)
- * Erradica caracteres especiales y estandariza para rutas URL seguras.
+ * Saneamiento táctico de IDs de nodos.
  */
 export function normalizeNodeId(input: string | null | undefined): string {
-  const raw = String(input ?? "").trim().toLowerCase();
-  if (!raw) return CLOUD_NODE_ID;
-  
-  const cleaned = raw
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9._-]/g, "");
-    
-  return cleaned || CLOUD_NODE_ID;
+  return cleanId(input, CLOUD_NODE_ID);
 }
 
 /**
- * NORMALIZADOR DE SOBERANÍA (PROYECTOS)
+ * Normalizador soberano de IDs de proyecto.
  */
 export function normalizeProjectId(input: string | null | undefined): string {
-  const raw = String(input ?? "").trim().toLowerCase();
-  if (!raw) return FALLBACK_PROJECT;
-  
-  const cleaned = raw
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9._-]/g, "");
-    
-  return cleaned || FALLBACK_PROJECT;
+  return cleanId(input, FALLBACK_PROJECT);
 }
