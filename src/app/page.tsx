@@ -1,74 +1,67 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import PageShell from "@/components/PageShell";
-import NovaChat from "@/components/NovaChat";
-import AgisRegistry from "@/components/AgisRegistry";
-import SystemStatus from "@/components/SystemStatus";
-import CommandsQueue from "@/components/CommandsQueue";
+import Hint from "@/components/Hint";
+import NovaChatClient from "@/components/NovaChatClient";
 
 export const metadata: Metadata = {
-  title: "Sala de Mando NOVA",
-  description: "Interfaz de orquestación central de la Mente Colmena.",
+  title: "Sala de Mando",
+  description: "Centro de mando visual y operativo del ecosistema HOCKER ONE.",
 };
 
 export default function HomePage() {
   return (
     <PageShell
       title="Sala de Mando"
-      subtitle="Supervisión activa del ecosistema y ejecución de protocolos Omni-Sync."
+      subtitle="Vista principal del núcleo, la conversación NOVA y la operación en tiempo real."
       actions={
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.15)] transition-all hover:bg-sky-500/20 active:scale-95"
-        >
+        <Link href="/dashboard" className="hocker-button-primary">
+          <svg
+            className="h-4 w-4 text-sky-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
           Dashboard
         </Link>
       }
     >
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 min-h-0">
-        <div className="flex flex-col gap-6 lg:col-span-4">
-          <div className="hocker-panel-pro flex flex-1 flex-col overflow-hidden border-sky-500/20">
-            <NovaChat />
-          </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="lg:col-span-8">
+          <Hint title="Acceso activo">
+            Desde aquí se supervisa la conversación con NOVA, el estado del sistema y las acciones críticas del ecosistema.
+          </Hint>
         </div>
 
-        <div className="flex flex-col gap-6 lg:col-span-5">
-          <div className="hocker-glass-vfx group flex min-h-[220px] flex-col items-center justify-center p-8">
-            <Image
-              src="/brand/hocker-one-logo.png"
-              alt="Hocker One"
-              width={320}
-              height={112}
-              className="animate-float drop-shadow-[0_0_30px_rgba(14,165,233,0.4)]"
-              priority
-            />
-            <div className="mt-8 grid w-full grid-cols-3 gap-8 border-t border-white/5 pt-6 relative z-10">
-              <div className="text-center">
-                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Núcleo</div>
-                <div className="text-sky-400 font-black text-sm">ONLINE</div>
+        <div className="lg:col-span-4">
+          <div className="hocker-panel-pro flex flex-1 flex-col overflow-hidden border-sky-500/30 shadow-[0_0_40px_rgba(14,165,233,0.1)] animate-in fade-in zoom-in-95 duration-700">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/50 px-4 py-3 sm:px-6">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400 drop-shadow-[0_0_5px_rgba(14,165,233,0.5)]">
+                  Conexión segura establecida
+                </span>
               </div>
-              <div className="text-center">
-                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Sync</div>
-                <div className="text-white font-black text-sm">100%</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Amenazas</div>
-                <div className="text-emerald-400 font-black text-sm">CERO</div>
-              </div>
+              <span className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500">
+                AES-256 E2E
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-hidden bg-slate-950/20 p-2 sm:p-3">
+              <NovaChatClient />
             </div>
           </div>
-          <div className="flex-1">
-            <CommandsQueue />
-          </div>
         </div>
-
-        <aside className="flex flex-col gap-6 lg:col-span-3">
-          <SystemStatus />
-          <div className="hocker-panel-pro min-h-[300px] flex-1 overflow-hidden">
-            <AgisRegistry title="Células Operativas" />
-          </div>
-        </aside>
       </div>
     </PageShell>
   );
