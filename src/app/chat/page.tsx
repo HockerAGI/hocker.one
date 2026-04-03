@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
-import NovaChat from "@/components/NovaChat";
+import NovaChatClient from "@/components/NovaChatClient";
 
 export const metadata: Metadata = {
   title: "Terminal NOVA",
@@ -16,8 +16,18 @@ export default function ChatPage() {
       subtitle="Canal cifrado para dialogar, auditar la matriz y orquestar el plan Omni-Sync."
       actions={
         <Link href="/dashboard" className="hocker-button-primary">
-          <svg className="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          <svg
+            className="h-4 w-4 text-sky-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
           Búnker
         </Link>
@@ -47,7 +57,7 @@ export default function ChatPage() {
           </div>
 
           <div className="flex-1 overflow-hidden bg-slate-950/20 p-2 sm:p-3">
-            <NovaChat />
+            <NovaChatClient />
           </div>
         </div>
       </div>
