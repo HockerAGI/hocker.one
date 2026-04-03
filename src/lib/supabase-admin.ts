@@ -1,22 +1,36 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * PROTOCOLO ADMINISTRATIVO (Service Role)
- * Se utiliza exclusivamente en el servidor para operaciones que ignoran las RLS.
+ * Cliente administrativo del servidor.
+ * Solo debe usarse en rutas server-side, jobs, crons y workers.
  */
-export function createAdminSupabase(): SupabaseClient {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+let adminClient: SupabaseClient | null = null;
 
-  if (!url || !key) {
-    console.error("[MATRIZ CRÍTICA] Falla de configuración: Credenciales administrativas ausentes.");
-    throw new Error("Protocolo de Administración no configurado en el entorno.");
+export function createAdminSupabase(): SupabaseClient {
+  if (adminClient) return adminClient;
+
+  const url = (
+    process.env.SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    ""
+  ).trim();
+
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+
+  if (!url) {
+    throw new Error("SUPABASE_URL no está configurado.");
   }
 
-  return createClient(url, key, {
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY no está configurado.");
+  }
+
+  adminClient = createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+
+  return adminClient;
 }
