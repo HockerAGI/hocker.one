@@ -1,71 +1,46 @@
 import { tasks } from "@trigger.dev/sdk/v3";
-import { Langfuse } from "langfuse-node";
-import { getErrorMessage } from "@/lib/errors";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { ApiError, json, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
-});
 
 export async function POST(req: Request): Promise<Response> {
-  const trace = langfuse.trace({ name: "Dispatch_Tactico", metadata: { endpoint: "/api/commands/dispatch" } });
-
   try {
-    const body: Record<string, unknown> = await req.json().catch(() => ({}));
-    const authHeader = req.headers.get("authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    const expectedKey = String(process.env.COMMAND_HMAC_SECRET || "").trim();
+    const body = await req.json().catch(() => ({}));
 
-    if (!expectedKey || token !== expectedKey) {
-      throw new ApiError(401, { error: "Firma de delegación inválida." });
+    const token = (req.headers.get("authorization") || "").replace("Bearer ", "");
+    const secret = process.env.COMMAND_HMAC_SECRET;
+
+    if (!secret || token !== secret) {
+      throw new ApiError(401, { error: "Unauthorized." });
     }
 
     const sb = createAdminSupabase();
-    const project_id = typeof body.project_id === "string" && body.project_id.trim() ? body.project_id.trim() : null;
-    const command_id = typeof body.command_id === "string" && body.command_id.trim() ? body.command_id.trim() : null;
 
-    let query = sb
+    const { data, error } = await sb
       .from("commands")
-      .select("id,project_id,node_id,command,payload,status,needs_approval,signature,created_at")
+      .select("id")
       .eq("status", "queued")
-      .eq("needs_approval", false);
+      .eq("needs_approval", false)
+      .limit(50);
 
-    if (project_id) query = query.eq("project_id", project_id);
-    if (command_id) query = query.eq("id", command_id);
+    if (error) throw new ApiError(500, { error: "Query failed." });
 
-    const { data, error } = await query.order("created_at", { ascending: true }).limit(100);
-
-    if (error) {
-      throw new ApiError(500, { error: "Falla al leer la cola de comandos." });
-    }
-
-    const cloudCommands = Array.isArray(data) ? data : [];
     let count = 0;
 
-    for (const cmd of cloudCommands) {
-      const row = cmd as { id?: string };
+    for (const row of data ?? []) {
       if (!row.id) continue;
 
-      try {
-        await tasks.trigger("hocker-core-executor", { commandId: row.id });
-        count += 1;
-      } catch (err: unknown) {
-        console.error(`[NOVA] Falla en despacho ${row.id}:`, getErrorMessage(err));
-      }
+      await tasks.trigger("hocker-core-executor", {
+        commandId: row.id,
+      });
+
+      count++;
     }
 
-    trace.event({ name: "DESPACHO_COMPLETADO", input: { count, project_id, command_id } });
     return json({ ok: true, dispatched: count });
-  } catch (err: unknown) {
-    const apiErr = toApiError(err);
-    return json(apiErr.body, apiErr.status);
-  } finally {
-    await langfuse.flushAsync();
+  } catch (err) {
+    const e = toApiError(err);
+    return json(e.payload, e.status);
   }
 }
