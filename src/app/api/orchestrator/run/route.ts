@@ -40,33 +40,22 @@ type CommandInsertRow = {
 };
 
 function resolveBaseUrl(req: Request): string {
-  return (process.env.ORCHESTRATOR_BASE_URL ??
-    new URL(req.url).origin).replace(/\/+$/, "");
+  return (process.env.ORCHESTRATOR_BASE_URL ?? new URL(req.url).origin).replace(/\/+$/, "");
 }
 
 function buildActions(health: HealthSnapshot): PlannedAction[] {
   const actions: PlannedAction[] = [];
 
-  if (!health.checks?.db) {
-    actions.push({ command: "restart_db", priority: "critical" });
-  }
-
-  if (!health.checks?.novaAgi) {
-    actions.push({ command: "restart_nova", priority: "critical" });
-  }
-
-  if (!health.checks?.langfuse) {
-    actions.push({ command: "restart_telemetry", priority: "medium" });
-  }
+  if (!health.checks?.db) actions.push({ command: "restart_db", priority: "critical" });
+  if (!health.checks?.novaAgi) actions.push({ command: "restart_nova", priority: "critical" });
+  if (!health.checks?.langfuse) actions.push({ command: "restart_telemetry", priority: "medium" });
 
   return actions;
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
   const baseUrl = resolveBaseUrl(req);
-  const projectId =
-    process.env.DEFAULT_PROJECT_ID ?? "hocker-core";
-
+  const projectId = String(process.env.DEFAULT_PROJECT_ID ?? "hocker-core").trim();
   const nodeId = "orchestrator";
   const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
 
@@ -74,21 +63,15 @@ export async function POST(req: Request): Promise<NextResponse> {
     if (!secret) {
       return NextResponse.json(
         { ok: false, error: "COMMAND_HMAC_SECRET no configurado." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    const healthRes = await fetch(new URL("/api/health", baseUrl), {
-      cache: "no-store",
-    });
-
+    const healthRes = await fetch(new URL("/api/health", baseUrl), { cache: "no-store" });
     if (!healthRes.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: `Health check falló con status ${healthRes.status}.`,
-        },
-        { status: 502 }
+        { ok: false, error: `Health check falló con status ${healthRes.status}.` },
+        { status: 502 },
       );
     }
 
@@ -107,7 +90,6 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const sb = createAdminSupabase();
 
-    // 🔴 Validación de schema (CRÍTICO)
     const { error: schemaError } = await sb
       .from("commands")
       .select("needs_approval, signature, approved_at")
@@ -121,7 +103,6 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const rows: CommandInsertRow[] = actions.map((action) => {
       const id = crypto.randomUUID();
-
       const payload: Record<string, unknown> = {
         auto: true,
         source: "orchestrator",
@@ -136,15 +117,7 @@ export async function POST(req: Request): Promise<NextResponse> {
         payload,
         status: "queued",
         needs_approval: false,
-        signature: signCommand(
-          secret,
-          id,
-          projectId,
-          nodeId,
-          action.command,
-          payload,
-          createdAt
-        ),
+        signature: signCommand(secret, id, projectId, nodeId, action.command, payload, createdAt),
         result: null,
         error: null,
         approved_at: null,
@@ -156,12 +129,10 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
 
     const { error: insertError } = await sb.from("commands").insert(rows);
-
     if (insertError) {
       throw insertError;
     }
 
-    // 🚀 Dispatch paralelo
     const results = await Promise.allSettled(
       rows.map((row) =>
         fetch(new URL("/api/commands/dispatch", baseUrl), {
@@ -174,12 +145,12 @@ export async function POST(req: Request): Promise<NextResponse> {
             project_id: projectId,
             command_id: row.id,
           }),
-        })
-      )
+        }),
+      ),
     );
 
     const dispatched = results.filter(
-      (r) => r.status === "fulfilled" && r.value.ok
+      (r): r is PromiseFulfilledResult<Response> => r.status === "fulfilled" && r.value.ok,
     ).length;
 
     return NextResponse.json({
@@ -195,7 +166,7 @@ export async function POST(req: Request): Promise<NextResponse> {
         ok: false,
         error: getErrorMessage(err),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
