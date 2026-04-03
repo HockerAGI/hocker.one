@@ -9,33 +9,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
         hocker: {
-          blue: '#0ea5ff',
-          cyan: '#06b6d4',
-          gold: '#f6c85f',
-          red: '#f43f5e'
-        }
+          dark: "#080A0F", // Fondo base ultra oscuro
+          surface: "#121622", // Paneles y tarjetas
+          primary: "#00FF88", // Neón principal (Ajustar al verde/cian de tu logo)
+          secondary: "#7000FF", // Acento disruptivo
+          alert: "#FF0044", // Killswitch / Errores
+        },
+      },
+      backgroundImage: {
+        'nova-gradient': 'linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(8,10,15,1) 100%)',
+        'glass-panel': 'linear-gradient(180deg, rgba(18, 22, 34, 0.7) 0%, rgba(18, 22, 34, 0.4) 100%)',
+      },
+      boxShadow: {
+        'neon-glow': '0 0 20px rgba(0, 255, 136, 0.3)',
+        'neon-alert': '0 0 20px rgba(255, 0, 68, 0.4)',
       },
       animation: {
-        'hocker-pulse': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'hocker-glow': 'glow 2s ease-in-out infinite alternate',
-        'hocker-scan': 'scanline 10s linear infinite',
-        'hocker-float': 'float 6s ease-in-out infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'scanline': 'scanline 8s linear infinite',
       },
       keyframes: {
-        glow: {
-          '0%': { boxShadow: '0 0 5px rgba(14, 165, 233, 0.2)' },
-          '100%': { boxShadow: '0 0 20px rgba(14, 165, 233, 0.6)' },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
         },
         scanline: {
           '0%': { transform: 'translateY(-100%)' },
           '100%': { transform: 'translateY(100%)' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-15px)' },
         }
       }
     },
