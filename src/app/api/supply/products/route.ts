@@ -1,12 +1,5 @@
 import { getErrorMessage } from "@/lib/errors";
-import {
-  ApiError,
-  json,
-  parseBody,
-  parseQuery,
-  requireProjectRole,
-  toApiError,
-} from "../../_lib";
+import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,25 +30,22 @@ function asJsonObject(value: unknown): Record<string, unknown> {
 export async function GET(req: Request): Promise<Response> {
   try {
     const q = parseQuery(req);
-    const project_id = String(q.get("project_id") || "global").trim();
+    const project_id = String(q.get("project_id") ?? "").trim();
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-      "viewer",
-    ]);
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
+
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
     const { data, error } = await ctx.sb
       .from("supply_products")
-      .select("*")
+      .select("id, project_id, sku, name, description, price_cents, cost_cents, currency, stock, active, meta, created_at, updated_at")
       .eq("project_id", ctx.project_id)
       .order("created_at", { ascending: false });
 
     if (error) {
-      throw new ApiError(500, {
-        error: `Error al cargar el catálogo: ${getErrorMessage(error)}`,
-      });
+      throw new ApiError(500, { error: `Error al cargar el catálogo: ${getErrorMessage(error)}` });
     }
 
     return json({ ok: true, items: data ?? [] });
@@ -71,28 +61,24 @@ export async function POST(req: Request): Promise<Response> {
     const project_id = String(body.project_id ?? "").trim();
 
     if (!project_id) {
-      throw new ApiError(400, { error: "project_id es requerido." });
+      throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-    ]);
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
-    const name = String(body.name || "").trim();
-    const price_cents = Math.max(0, asInt(body.price_cents, 0));
-    const cost_cents = Math.max(0, asInt(body.cost_cents, 0));
-    const stock = Math.max(0, asInt(body.stock, 0));
-    const currency = String(body.currency || "MXN").trim().toUpperCase() || "MXN";
-    const active = toBool(body.active, true);
-    const sku = body.sku ? String(body.sku).trim() : null;
-    const description = body.description ? String(body.description).trim() : null;
-    const meta = asJsonObject(body.meta);
-
+    const name = String(body.name ?? "").trim();
     if (!name) {
       throw new ApiError(400, { error: "El nombre del producto es obligatorio." });
     }
+
+    const sku = typeof body.sku === "string" ? body.sku.trim() || null : null;
+    const description = typeof body.description === "string" ? body.description.trim() || null : null;
+    const price_cents = Math.max(0, asInt(body.price_cents, 0));
+    const cost_cents = Math.max(0, asInt(body.cost_cents, 0));
+    const currency = String(body.currency ?? "MXN").trim().toUpperCase() || "MXN";
+    const stock = Math.max(0, asInt(body.stock, 0));
+    const active = toBool(body.active, true);
+    const meta = asJsonObject(body.meta);
 
     const { data, error } = await ctx.sb
       .from("supply_products")
@@ -112,9 +98,7 @@ export async function POST(req: Request): Promise<Response> {
       .single();
 
     if (error) {
-      throw new ApiError(500, {
-        error: `No se pudo crear el producto: ${getErrorMessage(error)}`,
-      });
+      throw new ApiError(500, { error: `No se pudo crear el producto: ${getErrorMessage(error)}` });
     }
 
     return json({ ok: true, item: data }, 201);
