@@ -40,7 +40,8 @@ type CommandInsertRow = {
 };
 
 function resolveBaseUrl(req: Request): string {
-  return (process.env.ORCHESTRATOR_BASE_URL ?? new URL(req.url).origin).replace(/\/+$/, "");
+  return (process.env.ORCHESTRATOR_BASE_URL ??
+    new URL(req.url).origin).replace(/\/+$/, "");
 }
 
 function buildActions(health: HealthSnapshot): PlannedAction[] {
@@ -63,14 +64,16 @@ function buildActions(health: HealthSnapshot): PlannedAction[] {
 
 export async function POST(req: Request): Promise<NextResponse> {
   const baseUrl = resolveBaseUrl(req);
-  const projectId = "hocker-core";
+  const projectId =
+    process.env.DEFAULT_PROJECT_ID ?? "hocker-core";
+
   const nodeId = "orchestrator";
   const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
 
   try {
     if (!secret) {
       return NextResponse.json(
-        { ok: false, error: "COMMAND_HMAC_SECRET no está configurado." },
+        { ok: false, error: "COMMAND_HMAC_SECRET no configurado." },
         { status: 500 }
       );
     }
@@ -103,10 +106,22 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 
     const sb = createAdminSupabase();
+
+    // 🔴 Validación de schema (CRÍTICO)
+    const { error: schemaError } = await sb
+      .from("commands")
+      .select("needs_approval, signature, approved_at")
+      .limit(1);
+
+    if (schemaError) {
+      throw new Error("Schema de commands desalineado.");
+    }
+
     const createdAt = new Date().toISOString();
 
     const rows: CommandInsertRow[] = actions.map((action) => {
       const id = crypto.randomUUID();
+
       const payload: Record<string, unknown> = {
         auto: true,
         source: "orchestrator",
@@ -121,7 +136,15 @@ export async function POST(req: Request): Promise<NextResponse> {
         payload,
         status: "queued",
         needs_approval: false,
-        signature: signCommand(secret, id, projectId, nodeId, action.command, payload, createdAt),
+        signature: signCommand(
+          secret,
+          id,
+          projectId,
+          nodeId,
+          action.command,
+          payload,
+          createdAt
+        ),
         result: null,
         error: null,
         approved_at: null,
@@ -133,29 +156,31 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
 
     const { error: insertError } = await sb.from("commands").insert(rows);
+
     if (insertError) {
       throw insertError;
     }
 
-    let dispatched = 0;
+    // 🚀 Dispatch paralelo
+    const results = await Promise.allSettled(
+      rows.map((row) =>
+        fetch(new URL("/api/commands/dispatch", baseUrl), {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${secret}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            project_id: projectId,
+            command_id: row.id,
+          }),
+        })
+      )
+    );
 
-    for (const row of rows) {
-      const dispatchRes = await fetch(new URL("/api/commands/dispatch", baseUrl), {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${secret}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          project_id: projectId,
-          command_id: row.id,
-        }),
-      });
-
-      if (dispatchRes.ok) {
-        dispatched += 1;
-      }
-    }
+    const dispatched = results.filter(
+      (r) => r.status === "fulfilled" && r.value.ok
+    ).length;
 
     return NextResponse.json({
       ok: true,
