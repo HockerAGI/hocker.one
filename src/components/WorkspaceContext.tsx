@@ -40,8 +40,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           const p = parsed as Record<string, unknown>;
           setState({
-            projectId: typeof p.projectId === "string" && p.projectId.trim() ? p.projectId.trim() : defaultProjectId(),
-            nodeId: typeof p.nodeId === "string" && p.nodeId.trim() ? p.nodeId.trim() : defaultNodeId(),
+            projectId:
+              typeof p.projectId === "string" && p.projectId.trim()
+                ? p.projectId.trim()
+                : defaultProjectId(),
+            nodeId:
+              typeof p.nodeId === "string" && p.nodeId.trim()
+                ? p.nodeId.trim()
+                : defaultNodeId(),
             tutorial: typeof p.tutorial === "boolean" ? p.tutorial : true,
           });
         }
