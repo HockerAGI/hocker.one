@@ -18,12 +18,19 @@ const langfuse = new Langfuse({
 });
 
 export async function POST(req: Request): Promise<Response> {
-  const trace = langfuse.trace({ name: "Rechazo_Tactico", metadata: { endpoint: "/api/commands/reject" } });
+  const trace = langfuse.trace({
+    name: "Rechazo_Tactico",
+    metadata: { endpoint: "/api/commands/reject" },
+  });
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "hocker-one").trim();
+    const project_id = String(body.project_id ?? "").trim();
     const id = String(body.id ?? "").trim();
+
+    if (!project_id) {
+      throw new ApiError(400, { error: "project_id es obligatorio." });
+    }
 
     if (!id) {
       throw new ApiError(400, { error: "Falta el ID del comando a rechazar." });
@@ -54,7 +61,7 @@ export async function POST(req: Request): Promise<Response> {
     const { data, error } = await ctx.sb
       .from("commands")
       .update({
-        status: "cancelled",
+        status: "canceled",
         needs_approval: false,
         error: "Orden denegada manualmente por el Director.",
         finished_at: new Date().toISOString(),
@@ -65,14 +72,18 @@ export async function POST(req: Request): Promise<Response> {
       .single();
 
     if (error) {
-      throw new ApiError(500, { error: "Falla al registrar el rechazo en la matriz de datos." });
+      throw new ApiError(500, { error: `Falla al registrar el rechazo: ${error.message}` });
     }
 
     trace.event({ name: "ORDEN_ANULADA", input: { commandId: id } });
     return json({ ok: true, item: data });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    trace.event({ name: "FALLA_RECHAZO", level: "ERROR", output: { error: apiErr.message } });
+    trace.event({
+      name: "FALLA_RECHAZO",
+      level: "ERROR",
+      output: { error: apiErr.payload },
+    });
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
