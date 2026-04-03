@@ -27,6 +27,15 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
+function asEventLevel(value: unknown): "info" | "warn" | "error" {
+  const raw = typeof value === "string" ? value : "";
+  const normalized = normalizeEventLevel(raw);
+
+  if (normalized === "warn") return "warn";
+  if (normalized === "error") return "error";
+  return "info";
+}
+
 export async function GET(req: Request): Promise<Response> {
   const trace = langfuse.trace({
     name: "Radar_Lectura",
@@ -41,7 +50,13 @@ export async function GET(req: Request): Promise<Response> {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(project_id, [
+      "owner",
+      "admin",
+      "operator",
+      "viewer",
+    ]);
+
     trace.update({ userId: ctx.user.id, tags: [project_id, "radar_read"] });
 
     const { data, error } = await ctx.sb
@@ -60,7 +75,11 @@ export async function GET(req: Request): Promise<Response> {
     return json({ ok: true, items: data ?? [] });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-    trace.event({ name: "FALLA_LECTURA", level: "ERROR", output: { error: apiErr.payload } });
+    trace.event({
+      name: "FALLA_LECTURA",
+      level: "ERROR",
+      output: { error: apiErr.message },
+    });
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
@@ -84,7 +103,9 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     if (!message) {
-      throw new ApiError(400, { error: "No se permiten eventos vacíos en la bitácora." });
+      throw new ApiError(400, {
+        error: "No se permiten eventos vacíos en la bitácora.",
+      });
     }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
@@ -99,7 +120,7 @@ export async function POST(req: Request): Promise<Response> {
       .insert({
         project_id: ctx.project_id,
         node_id: node_id || null,
-        level: normalizeEventLevel(body.level),
+        level: asEventLevel(body.level),
         type: String(body.type ?? "system.manual").trim(),
         message,
         data: asJsonObject(body.data),
@@ -117,6 +138,11 @@ export async function POST(req: Request): Promise<Response> {
     return json({ ok: true, item: data }, 201);
   } catch (err: unknown) {
     const apiErr = toApiError(err);
+    trace.event({
+      name: "FALLA_REGISTRO",
+      level: "ERROR",
+      output: { error: apiErr.message },
+    });
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
