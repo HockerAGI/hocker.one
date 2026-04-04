@@ -1,44 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type SpeechAlternativeLike = {
-  transcript: string;
-  confidence?: number;
-};
-
-type SpeechResultLike = {
-  0?: SpeechAlternativeLike;
-  length: number;
-  isFinal?: boolean;
-};
-
-type SpeechResultsLike = {
-  0?: SpeechResultLike;
-  length: number;
-};
-
-type SpeechRecognitionEventLike = {
-  results: SpeechResultsLike;
-};
-
-type SpeechRecognitionInstanceLike = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: unknown) => void) | null;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  start(): void;
-  stop(): void;
-};
-
-type SpeechRecognitionCtorLike = new () => SpeechRecognitionInstanceLike;
+type SpeechRecognitionCtor = new () => SpeechRecognition;
 
 type BrowserWindowWithSpeech = Window & {
-  SpeechRecognition?: SpeechRecognitionCtorLike;
-  webkitSpeechRecognition?: SpeechRecognitionCtorLike;
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
 };
 
 type VoiceInputProps = {
@@ -46,24 +14,22 @@ type VoiceInputProps = {
 };
 
 export default function VoiceInput({ onResult }: VoiceInputProps) {
-  const recognitionRef = useRef<SpeechRecognitionInstanceLike | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [active, setActive] = useState(false);
   const [supported, setSupported] = useState(false);
-
-  const buttonLabel = useMemo(() => (active ? "Escuchando..." : "Voz"), [active]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const w = window as BrowserWindowWithSpeech;
-    const Impl = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    const SpeechRecognitionImpl = w.SpeechRecognition ?? w.webkitSpeechRecognition;
 
-    if (!Impl) {
+    if (!SpeechRecognitionImpl) {
       setSupported(false);
       return;
     }
 
-    const recognition = new Impl();
+    const recognition = new SpeechRecognitionImpl();
     recognition.lang = "es-MX";
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -71,7 +37,8 @@ export default function VoiceInput({ onResult }: VoiceInputProps) {
     recognition.onstart = () => setActive(true);
     recognition.onend = () => setActive(false);
     recognition.onerror = () => setActive(false);
-    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const result = event.results[0];
       const transcript = result?.[0]?.transcript;
 
@@ -95,7 +62,7 @@ export default function VoiceInput({ onResult }: VoiceInputProps) {
     try {
       recognitionRef.current.start();
     } catch {
-      // evita crash si el navegador ya está grabando
+      // evita crash si ya está activo
     }
   }
 
@@ -116,7 +83,7 @@ export default function VoiceInput({ onResult }: VoiceInputProps) {
       }`}
       aria-pressed={active}
     >
-      {buttonLabel}
+      {active ? "Escuchando..." : "Voz"}
     </button>
   );
 }
