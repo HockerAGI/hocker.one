@@ -1,195 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useMemo, type ReactElement } from "react";
+import { useMemo } from "react";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  MessageSquareText,
+  Workflow,
+  Bot,
+  Network,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 import BrandMark from "@/components/BrandMark";
-import NodeBadge from "@/components/NodeBadge";
 import WorkspaceBar from "@/components/WorkspaceBar";
+import NodeBadge from "@/components/NodeBadge";
 
 type NavItem = {
   href: string;
   label: string;
-  icon: (props: { className?: string }) => ReactElement;
+  icon: typeof LayoutDashboard;
+  hint: string;
 };
 
-const svgProps = {
-  xmlns: "http://www.w3.org/2000/svg",
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: "2.5",
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-};
-
-const ITEMS: NavItem[] = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: (p) => (
-      <svg {...svgProps} {...p}>
-        <rect width="7" height="7" x="3" y="3" rx="1" />
-        <rect width="7" height="7" x="14" y="3" rx="1" />
-        <rect width="7" height="7" x="14" y="14" rx="1" />
-        <rect width="7" height="7" x="3" y="14" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    href: "/chat",
-    label: "NOVA",
-    icon: (p) => (
-      <svg {...svgProps} {...p}>
-        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/commands",
-    label: "Acciones",
-    icon: (p) => (
-      <svg {...svgProps} {...p}>
-        <polyline points="4 17 10 11 4 5" />
-        <line x1="12" x2="20" y1="19" y2="19" />
-      </svg>
-    ),
-  },
-  {
-    href: "/nodes",
-    label: "Nodos",
-    icon: (p) => (
-      <svg {...svgProps} {...p}>
-        <path d="M12 20v-6M6 20V10M18 20V4" />
-      </svg>
-    ),
-  },
-  {
-    href: "/agis",
-    label: "Agentes",
-    icon: (p) => (
-      <svg {...svgProps} {...p}>
-        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    ),
-  },
+const NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Inicio", icon: Sparkles, hint: "Entrada" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, hint: "Resumen" },
+  { href: "/chat", label: "NOVA", icon: MessageSquareText, hint: "Chat" },
+  { href: "/commands", label: "Acciones", icon: Workflow, hint: "Órdenes" },
+  { href: "/nodes", label: "Nodos", icon: Network, hint: "Red" },
+  { href: "/agis", label: "Células", icon: Bot, hint: "Agentes" },
+  { href: "/governance", label: "Seguridad", icon: Shield, hint: "Control" },
 ];
 
 type AppNavProps = {
   isMobile?: boolean;
 };
 
-export default function AppNav({ isMobile = false }: AppNavProps) {
-  const pathname = usePathname() || "/";
-  const router = useRouter();
+function isActivePath(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
-  const active = useMemo(
-    () =>
-      ITEMS.find(
-        (i) => pathname === i.href || pathname.startsWith(i.href + "/"),
-      )?.href ?? "",
-    [pathname],
+function MobileNav({ pathname }: { pathname: string }) {
+  return (
+    <div className="grid grid-cols-7 gap-1 px-2 pb-2">
+      {NAV_ITEMS.map((item) => {
+        const active = isActivePath(pathname, item.href);
+        const Icon = item.icon;
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-all active:scale-95 ${
+              active ? "text-sky-400" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {active ? (
+              <span className="absolute -top-1 h-1 w-7 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.45)]" />
+            ) : null}
+
+            <Icon className="h-5 w-5" />
+            <span className="max-w-full truncate text-[9px] font-black uppercase tracking-widest">
+              {item.label}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
   );
+}
 
-  // ✅ MOBILE (NO SCROLL PROBLEMS)
-  if (isMobile) {
-    return (
-      <div className="grid grid-cols-5 gap-1 px-2 pb-2">
-        {ITEMS.map((it) => {
-          const isActive = active === it.href;
-          const Icon = it.icon;
-
-          return (
-            <Link
-              key={it.href}
-              href={it.href}
-              aria-current={isActive ? "page" : undefined}
-              className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl p-2 ${
-                isActive ? "text-sky-400" : "text-slate-500"
-              }`}
-            >
-              {isActive && (
-                <div className="absolute -top-1 h-1 w-6 rounded-full bg-sky-400" />
-              )}
-
-              <Icon className="h-5 w-5" />
-              <span className="text-[9px] font-black uppercase tracking-widest">
-                {it.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ✅ DESKTOP (FIX REAL)
+function DesktopNav({ pathname }: { pathname: string }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden p-6">
-      
-      {/* HEADER */}
-      <div className="mb-8 shrink-0">
-        <BrandMark showWordmark hero={false} className="scale-110" />
+      <div className="shrink-0">
+        <BrandMark className="w-full" />
       </div>
 
-      {/* 🔥 SCROLL INTERNO CONTROLADO */}
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="mb-4 rounded-[28px] border border-white/5 bg-white/[0.03] p-4">
+          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
+            Control plane
+          </p>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+            Navegación simple. Todo a un toque.
+          </p>
+        </div>
 
-        <section>
-          <h3 className="mb-4 px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
-            Sistemas Centrales
-          </h3>
+        <section className="space-y-2">
+          <p className="px-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
+            Sistemas
+          </p>
 
           <div className="space-y-1.5">
-            {ITEMS.map((it) => {
-              const isActive = active === it.href;
-              const Icon = it.icon;
+            {NAV_ITEMS.map((item) => {
+              const active = isActivePath(pathname, item.href);
+              const Icon = item.icon;
 
               return (
                 <Link
-                  key={it.href}
-                  href={it.href}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[13px] font-bold ${
-                    isActive
-                      ? "bg-sky-500/10 text-sky-400"
-                      : "text-slate-400 hover:bg-white/5"
+                  key={item.href}
+                  href={item.href}
+                  className={`group flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
+                    active
+                      ? "border border-sky-500/20 bg-sky-500/10 text-sky-300 shadow-[0_0_18px_rgba(14,165,233,0.08)]"
+                      : "border border-transparent text-slate-400 hover:border-white/5 hover:bg-white/[0.04] hover:text-slate-100"
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  {it.label}
+                  <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-2xl border transition-all ${
+                      active
+                        ? "border-sky-400/20 bg-sky-500/10"
+                        : "border-white/5 bg-white/[0.03] group-hover:border-sky-500/20"
+                    }`}
+                  >
+                    <Icon className={`h-4.5 w-4.5 ${active ? "text-sky-300" : "text-slate-400"}`} />
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] font-black uppercase tracking-widest">
+                      {item.label}
+                    </span>
+                    <span className="block text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                      {item.hint}
+                    </span>
+                  </span>
                 </Link>
               );
             })}
           </div>
         </section>
 
-        <div className="mt-6">
+        <div className="mt-6 space-y-4">
           <WorkspaceBar />
-        </div>
-
-        <div className="mt-6">
           <NodeBadge />
-        </div>
-
-        <div className="mt-8 border-t border-white/5 pt-6 space-y-3">
-          <button
-            onClick={() => router.back()}
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-black text-slate-300"
-          >
-            Retroceder
-          </button>
-
-          <form action="/signout" method="post">
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-white px-4 py-3 text-xs font-black text-slate-950"
-            >
-              Desconectar
-            </button>
-          </form>
         </div>
       </div>
     </div>
   );
+}
+
+export default function AppNav({ isMobile = false }: AppNavProps) {
+  const pathname = usePathname() || "/";
+
+  const nav = useMemo(() => {
+    return isMobile ? <MobileNav pathname={pathname} /> : <DesktopNav pathname={pathname} />;
+  }, [isMobile, pathname]);
+
+  return nav;
 }
