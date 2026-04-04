@@ -42,24 +42,7 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
-type CommandInsert = Pick<
-  CommandRow,
-  | "id"
-  | "project_id"
-  | "node_id"
-  | "command"
-  | "payload"
-  | "status"
-  | "needs_approval"
-  | "signature"
-  | "result"
-  | "error"
-  | "approved_at"
-  | "executed_at"
-  | "started_at"
-  | "finished_at"
-  | "created_at"
->;
+type CommandInsert = CommandRow;
 
 export async function GET(req: Request): Promise<Response> {
   try {
@@ -112,12 +95,13 @@ export async function POST(req: Request): Promise<Response> {
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
     const controls = await getControls(ctx.sb, ctx.project_id);
+
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "SISTEMA BLOQUEADO: Kill Switch activo." });
     }
 
     if (!controls.allow_write) {
-      throw new ApiError(403, { error: "MODO SEGURO: el sistema está en solo lectura." });
+      throw new ApiError(403, { error: "MODO SEGURO: solo lectura." });
     }
 
     const node_id = String(body.node_id ?? defaultNodeId()).trim() || defaultNodeId();
@@ -126,7 +110,7 @@ export async function POST(req: Request): Promise<Response> {
 
     const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
     if (!secret) {
-      throw new ApiError(500, { error: "COMMAND_HMAC_SECRET no está configurado en el entorno." });
+      throw new ApiError(500, { error: "COMMAND_HMAC_SECRET no configurado." });
     }
 
     const id = crypto.randomUUID();
@@ -169,26 +153,31 @@ export async function POST(req: Request): Promise<Response> {
       .single();
 
     if (error) {
-      throw new ApiError(500, { error: `Falla de sincronización en la matriz de órdenes: ${error.message}` });
+      throw new ApiError(500, { error: error.message });
     }
 
     if (!needsApproval) {
-      await tasks.trigger("hocker-core-executor", { commandId: id, projectId: ctx.project_id });
+      await tasks.trigger("hocker-core-executor", {
+        commandId: id,
+        projectId: ctx.project_id,
+      });
     }
 
     trace.event({
       name: "ORDEN_INGRESADA",
-      input: { commandId: id, node_id, needsApproval },
+      input: { commandId: id },
     });
 
     return json({ ok: true, item: data }, 201);
   } catch (err: unknown) {
     const apiErr = toApiError(err);
+
     trace.event({
       name: "FALLA_INGRESO",
       level: "ERROR",
       output: { error: apiErr.payload },
     });
+
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
