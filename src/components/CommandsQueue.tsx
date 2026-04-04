@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { CommandRow, CommandStatus } from "@/lib/types";
+import type { CommandRow, CommandStatus, JsonObject } from "@/lib/types";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { useEffect, useMemo, useState } from "react";
 
 type QueueItem = CommandRow;
 
@@ -23,6 +23,10 @@ function statusClasses(status: CommandStatus): string {
     default:
       return "border-sky-500/20 bg-sky-500/10 text-sky-300";
   }
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function safeDate(input: string | null): string {
@@ -47,7 +51,7 @@ export default function CommandsQueue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (): Promise<void> => {
+  async function load(): Promise<void> {
     setLoading(true);
     setError(null);
 
@@ -72,39 +76,16 @@ export default function CommandsQueue() {
     } finally {
       setLoading(false);
     }
-  }, [projectId, sb]);
+  }
 
   useEffect(() => {
     void load();
-
-    const channel = sb
-      .channel(`commands-live-${projectId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "commands",
-          filter: `project_id=eq.${projectId}`,
-        },
-        (payload) => {
-          const next = payload.new as QueueItem;
-          setItems((prev) => {
-            const filtered = prev.filter((item) => item.id !== next.id);
-            return [next, ...filtered].slice(0, 24);
-          });
-        },
-      )
-      .subscribe();
 
     const timer = window.setInterval(() => {
       void load();
     }, 20000);
 
-    return () => {
-      window.clearInterval(timer);
-      void sb.removeChannel(channel);
-    };
+    return () => window.clearInterval(timer);
   }, [load, projectId, sb]);
 
   if (loading && items.length === 0) {
@@ -133,7 +114,11 @@ export default function CommandsQueue() {
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-mono text-cyan-400">{item.command}</p>
-              <span className={`rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-widest ${statusClasses(item.status)}`}>
+              <span
+                className={`rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-widest ${statusClasses(
+                  item.status,
+                )}`}
+              >
                 {item.status}
               </span>
             </div>
@@ -142,9 +127,7 @@ export default function CommandsQueue() {
               Nodo: <span className="text-slate-200">{item.node_id}</span>
             </p>
 
-            <p className="mt-2 text-[11px] text-slate-400">
-              {safeDate(item.created_at)}
-            </p>
+            <p className="mt-2 text-[11px] text-slate-400">{safeDate(item.created_at)}</p>
 
             <details className="mt-3">
               <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
