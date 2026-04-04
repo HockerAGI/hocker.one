@@ -75,11 +75,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="es"
-      className="dark scroll-smooth h-full"
-      suppressHydrationWarning
-    >
+    <html lang="es" className="dark scroll-smooth h-full" suppressHydrationWarning>
       <body
         className={`
           ${geistSans.variable}
@@ -98,9 +94,7 @@ export default function RootLayout({
             <div className="pointer-events-none fixed -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-sky-500/10 blur-3xl animate-[pulse_10s_ease-in-out_infinite]" />
             <div className="pointer-events-none fixed bottom-0 right-0 h-96 w-96 rounded-full bg-fuchsia-500/10 blur-3xl animate-[pulse_12s_ease-in-out_infinite]" />
 
-            <div className="relative z-10 min-h-screen">
-              {children}
-            </div>
+            <div className="relative z-10 min-h-screen">{children}</div>
 
             <BottomDock />
           </div>
