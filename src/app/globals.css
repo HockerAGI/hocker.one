@@ -288,3 +288,92 @@ body::after {
     display: none;
   }
 }
+
+/* =========================
+   HOCKER PRO VISUAL POLISH
+========================= */
+
+@layer components {
+  .hocker-surface-soft {
+    @apply rounded-[28px] border border-white/5 bg-white/[0.03] shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl;
+  }
+
+  .hocker-surface-strong {
+    @apply rounded-[32px] border border-white/10 bg-slate-900/45 shadow-[0_28px_100px_rgba(2,6,23,0.35)] backdrop-blur-3xl;
+  }
+
+  .hocker-card-pro {
+    @apply rounded-[26px] border border-white/5 bg-slate-950/45 p-4 shadow-[0_10px_50px_rgba(2,6,23,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-500/20 hover:bg-slate-900/55;
+  }
+
+  .hocker-chip {
+    @apply inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all duration-300 hover:border-sky-500/20 hover:bg-sky-500/10 hover:text-sky-300;
+  }
+
+  .hocker-button-brand {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-sky-300 shadow-[0_0_18px_rgba(14,165,233,0.12)] transition-all duration-300 hover:bg-sky-500/20 hover:shadow-[0_0_24px_rgba(14,165,233,0.18)] active:scale-95;
+  }
+
+  .hocker-button-clean {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-200 transition-all duration-300 hover:border-white/15 hover:bg-white/10 active:scale-95;
+  }
+
+  .hocker-title-line {
+    @apply text-[10px] font-black uppercase tracking-[0.35em] text-sky-400;
+  }
+
+  .hocker-kicker {
+    @apply text-[11px] font-bold leading-relaxed text-slate-400;
+  }
+
+  .hocker-icon-badge {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_0_18px_rgba(14,165,233,0.10)] backdrop-blur-xl;
+  }
+
+  .hocker-divider-soft {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
+  }
+}
+
+@layer utilities {
+  .hocker-grid-soft {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: center;
+  }
+
+  .hocker-page-enter {
+    animation: hocker-enter 600ms ease both;
+  }
+
+  .hocker-fade-up {
+    animation: hocker-enter 520ms ease both;
+    --hocker-from-y: 0.75rem;
+    --hocker-from-opacity: 0;
+  }
+
+  .hocker-pop {
+    animation: hocker-enter 420ms ease both;
+    --hocker-from-scale: 0.97;
+    --hocker-from-opacity: 0;
+  }
+
+  .hocker-hover-lift {
+    transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .hocker-hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hocker-safe-pad {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .hocker-mobile-gap {
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+  }
+}
