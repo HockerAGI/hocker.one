@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
-import { defaultNodeId } from "@/lib/project";
+import { defaultNodeId, normalizeNodeId } from "@/lib/project";
 import { signCommand } from "@/lib/security";
 import type { JsonObject, CommandRow } from "@/lib/types";
 import {
@@ -10,7 +10,6 @@ import {
   getControls,
   json,
   parseBody,
-  parseQuery,
   requireProjectRole,
   toApiError,
 } from "../_lib";
@@ -42,12 +41,29 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
-type CommandInsert = CommandRow;
+type CommandInsert = Pick<
+  CommandRow,
+  | "id"
+  | "project_id"
+  | "node_id"
+  | "command"
+  | "payload"
+  | "status"
+  | "needs_approval"
+  | "signature"
+  | "result"
+  | "error"
+  | "approved_at"
+  | "executed_at"
+  | "started_at"
+  | "finished_at"
+  | "created_at"
+>;
 
 export async function GET(req: Request): Promise<Response> {
   try {
-    const q = parseQuery(req);
-    const project_id = String(q.get("project_id") ?? "").trim();
+    const url = new URL(req.url);
+    const project_id = String(url.searchParams.get("project_id") ?? url.searchParams.get("projectId") ?? "").trim();
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
@@ -81,13 +97,13 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "").trim();
-    const command = String(body.command ?? "").trim();
+    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
+    const command = String(body.command ?? "").trim();
     if (!command) {
       throw new ApiError(400, { error: "El comando no puede venir vacío." });
     }
@@ -95,7 +111,6 @@ export async function POST(req: Request): Promise<Response> {
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
     const controls = await getControls(ctx.sb, ctx.project_id);
-
     if (controls.kill_switch) {
       throw new ApiError(423, { error: "SISTEMA BLOQUEADO: Kill Switch activo." });
     }
@@ -104,13 +119,15 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(403, { error: "MODO SEGURO: solo lectura." });
     }
 
-    const node_id = String(body.node_id ?? defaultNodeId()).trim() || defaultNodeId();
+    const node_id = normalizeNodeId(
+      String(body.node_id ?? body.nodeId ?? defaultNodeId()).trim() || defaultNodeId(),
+    );
     const payload = asJsonObject(body.payload);
-    const needsApproval = asBool(body.needs_approval, false);
+    const needsApproval = asBool(body.needs_approval ?? body.needsApproval, false);
 
     const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
     if (!secret) {
-      throw new ApiError(500, { error: "COMMAND_HMAC_SECRET no configurado." });
+      throw new ApiError(500, { error: "COMMAND_HMAC_SECRET no está configurado en el entorno." });
     }
 
     const id = crypto.randomUUID();
@@ -165,19 +182,17 @@ export async function POST(req: Request): Promise<Response> {
 
     trace.event({
       name: "ORDEN_INGRESADA",
-      input: { commandId: id },
+      input: { commandId: id, node_id, needsApproval },
     });
 
     return json({ ok: true, item: data }, 201);
   } catch (err: unknown) {
     const apiErr = toApiError(err);
-
     trace.event({
       name: "FALLA_INGRESO",
       level: "ERROR",
       output: { error: apiErr.payload },
     });
-
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
