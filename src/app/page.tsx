@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import PageShell from "@/components/PageShell";
+import SystemStatus from "@/components/SystemStatus";
+import CommandsQueue from "@/components/CommandsQueue";
+import AgisRegistry from "@/components/AgisRegistry";
+import NovaChatClient from "@/components/NovaChatClient";
 
 export const metadata: Metadata = {
   title: "Inicio",
@@ -39,30 +42,25 @@ export default function HomePage() {
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-stretch">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="relative overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6">
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-sky-500/10 blur-3xl" />
+
           <div className="relative flex flex-col gap-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="relative flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_0_40px_rgba(14,165,233,0.12)]">
                 <span className="absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.20),transparent_60%)]" />
-                <Image
+                <img
                   src="/brand/hocker-one-isotype.png"
                   alt="Hocker"
-                  width={72}
-                  height={72}
-                  priority
                   className="relative h-14 w-14 object-contain drop-shadow-[0_0_16px_rgba(14,165,233,0.35)]"
                 />
               </div>
 
               <div className="min-w-0">
-                <Image
+                <img
                   src="/brand/hocker-one-horizontal.png"
                   alt="Hocker One"
-                  width={340}
-                  height={72}
-                  priority
                   className="h-12 w-auto object-contain sm:h-14"
                 />
                 <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
@@ -107,42 +105,44 @@ export default function HomePage() {
         <aside className="grid gap-4">
           <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5 sm:p-6">
             <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-              Ruta limpia
+              Estado
             </p>
             <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">
               Menos ruido. Más acción.
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              Navega sin perderte. Todo está a un toque, con texto corto y fácil.
+              Navega sin perderte. Todo está a un toque, con texto corto y claro.
             </p>
           </div>
 
           <div className="rounded-[28px] border border-white/5 bg-slate-950/60 p-5 sm:p-6">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-              Acceso rápido
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                href="/chat"
-                className="rounded-2xl border border-sky-400/20 bg-sky-500/12 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-sky-300 transition hover:bg-sky-500/20"
-              >
-                Chat
-              </Link>
-              <Link
-                href="/commands"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-200 transition hover:bg-white/10"
-              >
-                Acciones
-              </Link>
-              <Link
-                href="/governance"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-200 transition hover:bg-white/10"
-              >
-                Seguridad
-              </Link>
-            </div>
+            <SystemStatus />
           </div>
         </aside>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-7">
+          <div className="hocker-panel-pro p-4 sm:p-5">
+            <CommandsQueue />
+          </div>
+        </div>
+        <div className="xl:col-span-5">
+          <div className="hocker-panel-pro p-4 sm:p-5">
+            <AgisRegistry title="Células activas" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 hocker-panel-pro overflow-hidden border-sky-500/15">
+        <div className="border-b border-white/5 px-4 py-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+            NOVA
+          </p>
+        </div>
+        <div className="p-2 sm:p-3">
+          <NovaChatClient />
+        </div>
       </div>
     </PageShell>
   );
