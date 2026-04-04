@@ -1,67 +1,148 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import PageShell from "@/components/PageShell";
-import Hint from "@/components/Hint";
-import NovaChatClient from "@/components/NovaChatClient";
 
 export const metadata: Metadata = {
-  title: "Sala de Mando",
-  description: "Centro de mando visual y operativo del ecosistema HOCKER ONE.",
+  title: "Inicio",
+  description: "Entrada principal de Hocker ONE.",
 };
+
+const quickLinks = [
+  { href: "/chat", title: "NOVA", desc: "Habla con el núcleo." },
+  { href: "/commands", title: "Acciones", desc: "Crea y aprueba." },
+  { href: "/nodes", title: "Nodos", desc: "Mira el estado." },
+  { href: "/agis", title: "Células", desc: "Ver inteligencias." },
+  { href: "/governance", title: "Seguridad", desc: "Control total." },
+  { href: "/dashboard", title: "Vista", desc: "Resumen rápido." },
+];
 
 export default function HomePage() {
   return (
     <PageShell
-      title="Sala de Mando"
-      subtitle="Vista principal del núcleo, la conversación NOVA y la operación en tiempo real."
+      title="Inicio"
+      subtitle="Todo el ecosistema en una sola pantalla. Claro, rápido y listo para usar."
       actions={
-        <Link href="/dashboard" className="hocker-button-primary">
-          <svg
-            className="h-4 w-4 text-sky-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2.5"
+        <>
+          <Link
+            href="/chat"
+            className="inline-flex items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/12 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-sky-300 transition-all hover:bg-sky-500/20 active:scale-95"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Dashboard
-        </Link>
+            Abrir NOVA
+          </Link>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-200 transition-all hover:bg-white/10 active:scale-95"
+          >
+            Vista rápida
+          </Link>
+        </>
       }
     >
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
-        <div className="lg:col-span-8">
-          <Hint title="Acceso activo">
-            Desde aquí se supervisa la conversación con NOVA, el estado del sistema y las acciones críticas del ecosistema.
-          </Hint>
-        </div>
-
-        <div className="lg:col-span-4">
-          <div className="hocker-panel-pro flex flex-1 flex-col overflow-hidden border-sky-500/30 shadow-[0_0_40px_rgba(14,165,233,0.1)] animate-in fade-in zoom-in-95 duration-700">
-            <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/50 px-4 py-3 sm:px-6">
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
-                </span>
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400 drop-shadow-[0_0_5px_rgba(14,165,233,0.5)]">
-                  Conexión segura establecida
-                </span>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr] xl:items-stretch">
+        <section className="relative overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6">
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-sky-500/10 blur-3xl" />
+          <div className="relative flex flex-col gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_0_40px_rgba(14,165,233,0.12)]">
+                <span className="absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.20),transparent_60%)]" />
+                <Image
+                  src="/brand/hocker-one-isotype.png"
+                  alt="Hocker"
+                  width={72}
+                  height={72}
+                  priority
+                  className="relative h-14 w-14 object-contain drop-shadow-[0_0_16px_rgba(14,165,233,0.35)]"
+                />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500">
-                AES-256 E2E
-              </span>
+
+              <div className="min-w-0">
+                <Image
+                  src="/brand/hocker-one-horizontal.png"
+                  alt="Hocker One"
+                  width={340}
+                  height={72}
+                  priority
+                  className="h-12 w-auto object-contain sm:h-14"
+                />
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                  Un centro limpio. Una marca fuerte. Una navegación simple.
+                </p>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-hidden bg-slate-950/20 p-2 sm:p-3">
-              <NovaChatClient />
+            <div className="flex flex-wrap gap-2">
+              {["Listo", "Vivo", "Seguro", "Rápido"].map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {quickLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group rounded-[22px] border border-white/5 bg-white/[0.03] p-4 transition-all hover:-translate-y-0.5 hover:border-sky-500/20 hover:bg-white/[0.06]"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-sm font-black uppercase tracking-widest text-white">
+                      {item.title}
+                    </h2>
+                    <span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.5)]" />
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                    {item.desc}
+                  </p>
+                </Link>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
+
+        <aside className="grid gap-4">
+          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5 sm:p-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+              Ruta limpia
+            </p>
+            <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">
+              Menos ruido. Más acción.
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              Navega sin perderte. Todo está a un toque, con texto corto y fácil.
+            </p>
+          </div>
+
+          <div className="rounded-[28px] border border-white/5 bg-slate-950/60 p-5 sm:p-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+              Acceso rápido
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href="/chat"
+                className="rounded-2xl border border-sky-400/20 bg-sky-500/12 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-sky-300 transition hover:bg-sky-500/20"
+              >
+                Chat
+              </Link>
+              <Link
+                href="/commands"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-200 transition hover:bg-white/10"
+              >
+                Acciones
+              </Link>
+              <Link
+                href="/governance"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-200 transition hover:bg-white/10"
+              >
+                Seguridad
+              </Link>
+            </div>
+          </div>
+        </aside>
       </div>
     </PageShell>
   );
