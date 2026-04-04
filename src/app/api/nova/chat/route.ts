@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Langfuse } from "langfuse-node";
 import { getErrorMessage } from "@/lib/errors";
+import { NOVA_PROFILE } from "@/lib/novaPersona";
 import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../_lib";
 
 export const runtime = "nodejs";
@@ -12,6 +13,17 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
+type NovaUpstreamResponse = {
+  reply?: string;
+  response?: string;
+  ok?: boolean;
+  error?: string;
+};
+
+function readText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({
     name: "NOVA_Conexion_Nucleo",
@@ -21,11 +33,11 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const body = await parseBody(req);
 
-    const project_id = String(body.project_id ?? "").trim();
+    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
     const thread_id = typeof body.thread_id === "string" ? body.thread_id.trim() : null;
     const message = String(body.message ?? "").trim();
     const mode = typeof body.mode === "string" ? body.mode.trim() : "chat";
-    const prefer = typeof body.prefer === "string" ? body.prefer.trim() : null;
+    const prefer = typeof body.prefer === "string" ? body.prefer.trim() : "human";
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
@@ -55,11 +67,6 @@ export async function POST(req: Request): Promise<Response> {
 
     const allowActions = ctx.role === "owner" || ctx.role === "admin";
 
-    trace.event({
-      name: "Peticion_Transmitida_Al_Nucleo",
-      input: { thread_id, mode, allowActions, user: ctx.user.email },
-    });
-
     const upstream = await fetch(url, {
       method: "POST",
       headers: {
@@ -68,36 +75,44 @@ export async function POST(req: Request): Promise<Response> {
         "x-allow-actions": allowActions ? "1" : "0",
       },
       body: JSON.stringify({
-        project_id: ctx.project_id,
+        project_id,
         thread_id,
         message,
         prefer,
         mode,
         allow_actions: allowActions,
+        persona: NOVA_PROFILE.name,
+        style: NOVA_PROFILE.styleHint,
+        system_prompt: NOVA_PROFILE.systemPrompt,
+        voice_profile: {
+          locale: NOVA_PROFILE.locale,
+          label: NOVA_PROFILE.voiceLabel,
+        },
         user_id: ctx.user.id,
         user_email: ctx.user.email ?? null,
       }),
     });
 
-    if (!upstream.ok) {
-      const errText = await upstream.text().catch(() => "Anomalía de respuesta.");
-      throw new ApiError(upstream.status, {
-        error: `Anomalía táctica desde el núcleo de NOVA: ${errText || upstream.statusText}`,
-      });
+    const raw = await upstream.text();
+    let reply = raw;
+
+    try {
+      const parsed = JSON.parse(raw) as NovaUpstreamResponse;
+      reply = readText(parsed.reply) || readText(parsed.response) || raw;
+    } catch {
+      // upstream puede responder texto plano; lo dejamos así
     }
 
-    const text = await upstream.text();
-
-    trace.event({ name: "Respuesta_Recibida", output: { length: text.length } });
+    trace.event({ name: "Respuesta_Recibida", output: { length: reply.length } });
     trace.event({ name: "OPERACION_EXITOSA" });
 
-    return new NextResponse(text, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "X-NOVA-Sync": "Stable",
+    return json(
+      {
+        ok: true,
+        reply,
       },
-    });
+      upstream.ok ? 200 : upstream.status,
+    );
   } catch (err: unknown) {
     const apiErr = toApiError(err);
     console.error("[NOVA Core] Fallo en el puente de comunicación:", apiErr.message);
