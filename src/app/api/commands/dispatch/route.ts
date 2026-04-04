@@ -18,7 +18,7 @@ type DispatchCommandRow = {
   node_id: string;
   command: string;
   payload: Record<string, unknown>;
-  status: "queued" | "needs_approval" | "pending" | "running";
+  status: "pending" | "queued" | "needs_approval" | "running";
   needs_approval: boolean;
   signature: string | null;
   created_at: string;
@@ -36,15 +36,36 @@ function isDispatchCommandRow(value: unknown): value is DispatchCommandRow {
     typeof row.project_id === "string" &&
     typeof row.node_id === "string" &&
     typeof row.command === "string" &&
-    typeof row.created_at === "string"
+    typeof row.created_at === "string" &&
+    typeof row.needs_approval === "boolean"
   );
 }
 
-function asJsonObject(value: unknown): Record<string, unknown> {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
+async function dispatchCommandById(commandId: string): Promise<boolean> {
+  const appUrl = String(
+    process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "",
+  ).trim();
+
+  if (!appUrl) {
+    throw new ApiError(500, {
+      error: "NEXT_PUBLIC_APP_URL no está configurado.",
+    });
   }
-  return {};
+
+  const res = await fetch(`${appUrl}/api/execute`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ commandId }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Execution error");
+    throw new Error(text || `Fallo al despachar comando ${commandId}.`);
+  }
+
+  return true;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -85,11 +106,16 @@ export async function POST(req: Request): Promise<Response> {
       .select(
         "id,project_id,node_id,command,payload,status,needs_approval,signature,created_at",
       )
-      .eq("status", "queued")
+      .in("status", ["pending", "queued"])
       .eq("needs_approval", false);
 
-    if (project_id) query = query.eq("project_id", project_id);
-    if (command_id) query = query.eq("id", command_id);
+    if (project_id) {
+      query = query.eq("project_id", project_id);
+    }
+
+    if (command_id) {
+      query = query.eq("id", command_id);
+    }
 
     const { data, error } = await query
       .order("created_at", { ascending: true })
@@ -101,75 +127,55 @@ export async function POST(req: Request): Promise<Response> {
       });
     }
 
-    const rows = Array.isArray(data)
-      ? data.filter(isDispatchCommandRow)
-      : [];
+    const rows = Array.isArray(data) ? data.filter(isDispatchCommandRow) : [];
 
-    let count = 0;
     const results = await Promise.allSettled(
       rows.map(async (row) => {
-        const lockNow = new Date().toISOString();
+        const lockedAt = new Date().toISOString();
 
-        const { error: lockError, data: locked } = await sb
+        const { data: lockData, error: lockError } = await sb
           .from("commands")
           .update({
             status: "running",
-            started_at: lockNow,
+            started_at: lockedAt,
           })
           .eq("id", row.id)
           .eq("project_id", row.project_id)
-          .eq("status", "queued")
+          .eq("status", row.status)
           .select("id")
           .maybeSingle();
 
-        if (lockError || !locked) {
+        if (lockError || !lockData) {
           return false;
         }
 
-        const executeRes = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL}/api/execute`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              commandId: row.id,
-            }),
-          },
-        );
-
-        if (!executeRes.ok) {
-          const message = await executeRes.text().catch(() => "Execution error");
-          await sb
-            .from("commands")
-            .update({
-              status: "error",
-              error: message,
-              finished_at: new Date().toISOString(),
-            })
-            .eq("id", row.id)
-            .eq("project_id", row.project_id);
-
-          return false;
-        }
-
-        return true;
+        return dispatchCommandById(row.id);
       }),
     );
 
-    count = results.filter(
+    const dispatched = results.filter(
       (r): r is PromiseFulfilledResult<boolean> => r.status === "fulfilled" && r.value === true,
     ).length;
 
     trace.event({
       name: "DESPACHO_COMPLETADO",
-      input: { count, project_id, command_id },
+      input: { dispatched, project_id, command_id },
     });
 
-    return json({ ok: true, dispatched: count });
+    return json({
+      ok: true,
+      dispatched,
+      items: rows.map((row) => row.id),
+    });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
+
+    trace.event({
+      name: "FALLA_DESPACHO",
+      level: "ERROR",
+      output: { error: apiErr.payload },
+    });
+
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
