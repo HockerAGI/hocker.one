@@ -38,7 +38,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const body = await parseBody(req);
     const id = String(body.id ?? "").trim();
-    const project_id = String(body.project_id ?? "").trim();
+    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
     const approved = asBool(body.approved, true);
 
     if (!project_id) {
@@ -86,7 +86,7 @@ export async function POST(req: Request): Promise<Response> {
         .single();
 
       if (error) {
-        throw new ApiError(500, { error: `No se pudo registrar el rechazo: ${error.message}` });
+        throw new ApiError(500, { error: "No se pudo registrar el rechazo." });
       }
 
       trace.event({ name: "ORDEN_RECHAZADA", input: { commandId: id } });
@@ -107,10 +107,13 @@ export async function POST(req: Request): Promise<Response> {
       .single();
 
     if (error) {
-      throw new ApiError(500, { error: `No se pudo autorizar la orden: ${error.message}` });
+      throw new ApiError(500, { error: "No se pudo autorizar la orden." });
     }
 
-    await tasks.trigger("hocker-core-executor", { commandId: id, projectId: ctx.project_id });
+    await tasks.trigger("hocker-core-executor", {
+      commandId: id,
+      projectId: ctx.project_id,
+    });
 
     trace.event({ name: "ORDEN_AUTORIZADA", input: { commandId: id } });
     return json({ ok: true, item: data, dispatched: true });
