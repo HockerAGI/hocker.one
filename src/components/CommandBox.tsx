@@ -3,14 +3,8 @@
 import { useState } from 'react';
 import { useWorkspace } from '@/components/WorkspaceContext';
 
-export default function CommandBox({
-  projectId,
-  nodeId,
-}: {
-  projectId: string;
-  nodeId: string;
-}) {
-  const { refresh } = useWorkspace();
+export default function CommandBox() {
+  const { projectId, nodeId, refresh } = useWorkspace();
 
   const [command, setCommand] = useState('');
   const [payload, setPayload] = useState('{}');
@@ -37,7 +31,10 @@ export default function CommandBox({
 
       setCommand('');
       setPayload('{}');
-      refresh?.();
+
+      // 🔥 Neural sync
+      refresh();
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -49,7 +46,7 @@ export default function CommandBox({
     <div className="hocker-surface-soft p-5 space-y-4 hocker-fade-up">
       <div>
         <p className="hocker-title-line">Emitir acción</p>
-        <p className="hocker-kicker">Envía órdenes al sistema</p>
+        <p className="hocker-kicker">Control directo del sistema</p>
       </div>
 
       <input
@@ -71,7 +68,7 @@ export default function CommandBox({
         disabled={loading}
         className="hocker-button-brand w-full"
       >
-        {loading ? 'Enviando...' : 'Ejecutar'}
+        {loading ? 'Ejecutando...' : 'Ejecutar'}
       </button>
     </div>
   );
