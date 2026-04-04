@@ -13,30 +13,17 @@ export default function ChatPage() {
   return (
     <PageShell
       title="Terminal NOVA"
-      subtitle="Canal cifrado para dialogar, auditar la matriz y orquestar el plan Omni-Sync."
+      subtitle="Habla con NOVA. Claro, corto y directo."
       actions={
         <Link href="/dashboard" className="hocker-button-primary">
-          <svg
-            className="h-4 w-4 text-sky-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
           Búnker
         </Link>
       }
     >
       <div className="flex min-h-[calc(100dvh-220px)] flex-col gap-4 sm:min-h-[calc(100dvh-200px)] sm:gap-6">
         <div className="shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <Hint title="Enlace de alta velocidad">
-            Esta terminal está conectada directamente al núcleo central. Las órdenes operativas y estratégicas que apruebes aquí tienen prioridad absoluta.
+          <Hint title="Enlace seguro">
+            Esta terminal está lista para voz y texto.
           </Hint>
         </div>
 
@@ -47,12 +34,12 @@ export default function ChatPage() {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
               </span>
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400 drop-shadow-[0_0_5px_rgba(14,165,233,0.5)]">
-                Conexión segura establecida
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">
+                Conexión estable
               </span>
             </div>
             <span className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500">
-              AES-256 E2E
+              E2E
             </span>
           </div>
 
