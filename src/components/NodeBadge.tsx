@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { NodeRow } from "@/lib/types";
+import type { JsonObject, NodeRow } from "@/lib/types";
 
 function isNodeRow(data: unknown): data is NodeRow {
   if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
 
   const obj = data as Record<string, unknown>;
+
   return (
     typeof obj.id === "string" &&
     typeof obj.project_id === "string" &&
@@ -20,18 +21,13 @@ function isNodeRow(data: unknown): data is NodeRow {
 
 function relative(ts: string | null): string {
   if (!ts) return "—";
-
   const diff = Math.max(0, Date.now() - new Date(ts).getTime());
   const s = Math.floor(diff / 1000);
-
   if (s < 60) return `${s}s`;
-
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
-
   const h = Math.floor(m / 60);
   if (h < 48) return `${h}h`;
-
   return `${Math.floor(h / 24)}d`;
 }
 
