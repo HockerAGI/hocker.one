@@ -1,52 +1,47 @@
-"use client";
-
 import Image from "next/image";
-
-function cx(...classes: Array<string | false | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
+import Link from "next/link";
 
 type BrandMarkProps = {
-  showWordmark?: boolean;
-  hero?: boolean;
+  href?: string;
+  compact?: boolean;
   className?: string;
 };
 
 export default function BrandMark({
-  showWordmark = true,
-  hero = false,
-  className,
+  href = "/",
+  compact = false,
+  className = "",
 }: BrandMarkProps) {
   return (
-    <div
-      className={cx(
-        "flex items-center gap-3 select-none",
-        hero ? "scale-110" : "scale-100",
-        className,
-      )}
+    <Link
+      href={href}
+      className={`group inline-flex items-center gap-3 rounded-3xl border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_10px_40px_rgba(2,6,23,0.25)] backdrop-blur-xl transition-all hover:border-sky-500/20 hover:bg-white/[0.06] ${className}`}
+      aria-label="Ir al inicio"
     >
-      <div className="relative flex items-center justify-center">
-        <div className="absolute inset-0 rounded-full bg-sky-500/20 blur-xl opacity-70 animate-pulse" />
+      <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80">
+        <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.28),transparent_60%)]" />
         <Image
           src="/brand/hocker-one-isotype.png"
-          alt="Hocker One"
-          width={hero ? 64 : 40}
-          height={hero ? 64 : 40}
-          className="relative object-contain"
+          alt="Hocker"
+          width={40}
+          height={40}
           priority
+          className="relative h-8 w-8 object-contain drop-shadow-[0_0_14px_rgba(14,165,233,0.35)]"
         />
-      </div>
+      </span>
 
-      {showWordmark ? (
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-black tracking-tight text-white">
-            HOCKER
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-sky-400">
-            ONE
-          </span>
-        </div>
+      {!compact ? (
+        <span className="hidden min-w-0 sm:block">
+          <Image
+            src="/brand/hocker-one-horizontal.png"
+            alt="Hocker One"
+            width={240}
+            height={52}
+            priority
+            className="h-9 w-auto object-contain sm:h-10"
+          />
+        </span>
       ) : null}
-    </div>
+    </Link>
   );
 }
