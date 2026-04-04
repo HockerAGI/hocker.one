@@ -1,12 +1,22 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/errors";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import { normalizeEventLevel, type EventLevel, type EventRow } from "@/lib/types";
+import type { EventRow, EventLevel, JsonObject } from "@/lib/types";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useEffect, useMemo, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
-function levelClass(level: EventLevel): string {
+type FeedItem = EventRow;
+
+function normalizeLevel(level: EventLevel | string | null | undefined): EventLevel {
+  const s = String(level ?? "").toLowerCase().trim();
+  if (s === "warn" || s === "warning") return "warn";
+  if (s === "error" || s === "critical") return "error";
+  return "info";
+}
+
+function levelClasses(level: EventLevel): string {
   switch (level) {
     case "warn":
       return "border-amber-500/20 bg-amber-500/10 text-amber-300";
@@ -17,28 +27,19 @@ function levelClass(level: EventLevel): string {
   }
 }
 
-function safeDate(input: string): string {
-  const d = new Date(input);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
-}
-
-function safeData(value: EventRow["data"]): string {
-  try {
-    return JSON.stringify(value ?? {}, null, 2);
-  } catch {
-    return "{}";
-  }
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export default function EventsFeed() {
   const sb = useMemo(() => createBrowserSupabase(), []);
   const { projectId } = useWorkspace();
 
-  const [items, setItems] = useState<EventRow[]>([]);
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async (): Promise<void> => {
+  async function load(): Promise<void> {
     setLoading(true);
     setError(null);
 
@@ -50,12 +51,16 @@ export default function EventsFeed() {
         .order("created_at", { ascending: false })
         .limit(50);
 
-      if (queryError) throw queryError;
+      if (queryError) {
+        throw queryError;
+      }
 
-      const rows = (Array.isArray(data) ? data : []).map((row) => ({
-        ...(row as EventRow),
-        level: normalizeEventLevel((row as EventRow).level),
-      }));
+      const rows = Array.isArray(data)
+        ? (data as FeedItem[]).map((row) => ({
+            ...row,
+            level: normalizeLevel(row.level),
+          }))
+        : [];
 
       setItems(rows);
     } catch (err: unknown) {
@@ -64,12 +69,14 @@ export default function EventsFeed() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     void load();
 
-    const channel = sb
+    let channel: RealtimeChannel | null = null;
+
+    channel = sb
       .channel(`events-live-${projectId}`)
       .on(
         "postgres_changes",
@@ -80,9 +87,9 @@ export default function EventsFeed() {
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
-          const next = payload.new as EventRow;
+          const next = payload.new as FeedItem;
           setItems((prev) => [
-            { ...next, level: normalizeEventLevel(next.level) },
+            { ...next, level: normalizeLevel(next.level) },
             ...prev,
           ].slice(0, 50));
         },
@@ -106,9 +113,7 @@ export default function EventsFeed() {
           <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-400">
             Telemetría en Vivo
           </h3>
-          <p className="mt-1 text-[10px] text-slate-500">
-            Radar operativo del proyecto.
-          </p>
+          <p className="mt-1 text-[10px] text-slate-500">Radar operativo del proyecto.</p>
         </div>
 
         <button
@@ -149,7 +154,7 @@ export default function EventsFeed() {
                         {e.type}
                       </span>
                       <span className="shrink-0 text-[9px] font-bold text-slate-500">
-                        {safeDate(e.created_at)}
+                        {new Date(e.created_at).toLocaleString("es-MX")}
                       </span>
                     </div>
 
@@ -159,7 +164,7 @@ export default function EventsFeed() {
                   </div>
 
                   <span
-                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${levelClass(
+                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${levelClasses(
                       e.level,
                     )}`}
                   >
@@ -172,7 +177,7 @@ export default function EventsFeed() {
                     Inspeccionar matriz
                   </summary>
                   <pre className="mt-2 overflow-auto rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-[11px] leading-relaxed text-emerald-300">
-                    {safeData(e.data)}
+                    {JSON.stringify(isJsonObject(e.data) ? e.data : {}, null, 2)}
                   </pre>
                 </details>
               </article>
