@@ -25,7 +25,7 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "").trim();
+    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
     const id = String(body.id ?? "").trim();
 
     if (!project_id) {
@@ -72,15 +72,17 @@ export async function POST(req: Request): Promise<Response> {
       .single();
 
     if (error) {
-      throw new ApiError(500, { error: `Falla al registrar el rechazo: ${error.message}` });
+      throw new ApiError(500, { error: "Falla al registrar el rechazo en la matriz de datos." });
     }
 
     trace.event({ name: "ORDEN_ANULADA", input: { commandId: id } });
+    trace.event({ name: "OPERACION_EXITOSA" });
+
     return json({ ok: true, item: data });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
     trace.event({
-      name: "FALLA_RECHAZO",
+      name: "ERROR_OPERATIVO",
       level: "ERROR",
       output: { error: apiErr.payload },
     });
