@@ -24,20 +24,20 @@ export default function ChatPage() {
       }
     >
       <div className="flex min-h-[calc(100dvh-220px)] flex-col gap-4 sm:min-h-[calc(100dvh-200px)] sm:gap-6">
-        <div className="shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="hocker-fade-up">
           <Hint title="Enlace seguro">
             Esta terminal está lista para voz y texto.
           </Hint>
         </div>
 
-        <div className="hocker-panel-pro flex min-h-[68dvh] flex-1 flex-col overflow-hidden border-sky-500/30 shadow-[0_0_40px_rgba(14,165,233,0.1)] animate-in fade-in zoom-in-95 duration-700 lg:min-h-0">
+        <div className="hocker-panel-pro flex min-h-[68dvh] flex-1 flex-col overflow-hidden border-sky-500/30 shadow-[0_0_40px_rgba(14,165,233,0.1)] hocker-page-enter lg:min-h-0">
           <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/50 px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
               <span className="relative flex h-3 w-3">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
               </span>
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400 drop-shadow-[0_0_5px_rgba(14,165,233,0.5)]">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">
                 Conexión segura establecida
               </span>
             </div>
