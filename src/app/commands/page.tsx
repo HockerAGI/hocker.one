@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
-import CommandBoxClient from "@/components/CommandBoxClient";
+import CommandBox from "@/components/CommandBox";
 import CommandsQueue from "@/components/CommandsQueue";
 
 export const metadata: Metadata = {
   title: "Acciones",
-  description: "Centro de órdenes y seguimiento.",
+  description: "Centro de inyección, aprobación y seguimiento de comandos.",
 };
 
 export default function CommandsPage() {
   return (
     <PageShell
       title="Acciones"
-      subtitle="Crea, revisa y sigue órdenes sin ruido."
+      subtitle="Gestión de órdenes operativas con trazabilidad completa."
     >
       <div className="flex flex-col gap-6">
-        <Hint title="Centro de comando">
-          Aquí se generan y revisan órdenes.
+        <Hint title="Validación de seguridad">
+          Toda instrucción emitida desde esta terminal requiere firma HMAC y validación de nodo. Los comandos críticos pasan por cola de aprobación.
         </Hint>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 xl:gap-8">
           <div className="xl:col-span-5">
-            <CommandBoxClient />
+            <CommandBox />
           </div>
 
           <div className="xl:col-span-7">
