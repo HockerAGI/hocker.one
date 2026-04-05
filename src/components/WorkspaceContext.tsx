@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  useCallback,
 } from "react";
 import { defaultNodeId, defaultProjectId } from "@/lib/project";
 
@@ -22,8 +22,6 @@ type WorkspaceCtx = WorkspaceState & {
   setTutorial: (v: boolean) => void;
   toggleTutorial: () => void;
   reset: () => void;
-
-  // 🔥 NUEVO → neural refresh engine
   refresh: () => void;
   version: number;
 };
@@ -36,14 +34,12 @@ function createDefaults(): WorkspaceState {
   };
 }
 
-const KEY = "hocker.workspace.v2"; // ⚠️ versionado
+const KEY = "hocker.workspace.v3";
 const Ctx = createContext<WorkspaceCtx | null>(null);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WorkspaceState>(() => createDefaults());
   const [ready, setReady] = useState(false);
-
-  // 🔥 Neural re-render trigger
   const [version, setVersion] = useState(0);
 
   const refresh = useCallback(() => {
@@ -83,7 +79,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      // no bloquear UI
+      // no-op
     }
   }, [state, ready]);
 
@@ -91,39 +87,31 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...state,
       version,
-
       setProjectId: (v) =>
-        setState((s) => ({ ...s, projectId: v.trim() || defaultProjectId() })),
-
+        setState((s) => ({
+          ...s,
+          projectId: v.trim() || defaultProjectId(),
+        })),
       setNodeId: (v) =>
-        setState((s) => ({ ...s, nodeId: v.trim() || defaultNodeId() })),
-
+        setState((s) => ({
+          ...s,
+          nodeId: v.trim() || defaultNodeId(),
+        })),
       setTutorial: (v) => setState((s) => ({ ...s, tutorial: Boolean(v) })),
-
-      toggleTutorial: () =>
-        setState((s) => ({ ...s, tutorial: !s.tutorial })),
-
+      toggleTutorial: () => setState((s) => ({ ...s, tutorial: !s.tutorial })),
       reset: () => setState(createDefaults()),
-
       refresh,
     }),
-    [state, version, refresh],
+    [refresh, state, version],
   );
 
-  return (
-    <Ctx.Provider value={value}>
-      {/* 🔥 fuerza re-render global tipo OS */}
-      <div key={version}>{children}</div>
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useWorkspace(): WorkspaceCtx {
   const ctx = useContext(Ctx);
-
   if (!ctx) {
     throw new Error("useWorkspace debe usarse dentro de WorkspaceProvider.");
   }
-
   return ctx;
 }
