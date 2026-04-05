@@ -3,61 +3,56 @@
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function WorkspaceBar() {
-  const { projectId, nodeId, tutorial, setNodeId, toggleTutorial } = useWorkspace();
+  const {
+    projectId,
+    nodeId,
+    tutorial,
+    setNodeId,
+    toggleTutorial,
+  } = useWorkspace();
 
   return (
-    <div className="flex flex-col gap-4 py-4">
-      <div className="flex flex-col gap-3">
-        <div className="group relative flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/60 p-2 pl-4 shadow-inner">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-            Sector
-          </span>
-          <input
-            value={projectId}
-            readOnly
-            className="w-full cursor-not-allowed bg-transparent text-xs font-mono font-bold text-sky-100 outline-none"
-          />
+    <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4 shadow-[0_12px_50px_rgba(2,6,23,0.18)]">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
+            Workspace
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">Contexto vivo</p>
         </div>
 
-        <div className="group relative flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/60 p-2 pl-4 shadow-inner transition-colors focus-within:border-emerald-500/40 focus-within:bg-slate-900/80">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-focus-within:text-emerald-400">
-            Enlace
-          </span>
+        <button
+          type="button"
+          onClick={toggleTutorial}
+          className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
+            tutorial
+              ? "border-sky-400/20 bg-sky-500/10 text-sky-300"
+              : "border-white/10 bg-white/[0.04] text-slate-400"
+          }`}
+        >
+          {tutorial ? "Guía ON" : "Guía OFF"}
+        </button>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
+          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+            Proyecto
+          </label>
+          <div className="mt-1 truncate text-xs font-mono text-slate-100">{projectId}</div>
+        </div>
+
+        <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
+          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+            Nodo
+          </label>
           <input
             value={nodeId}
             onChange={(e) => setNodeId(e.target.value)}
-            className="w-full bg-transparent text-xs font-mono font-bold text-emerald-100 outline-none placeholder:text-slate-600"
+            className="mt-1 w-full bg-transparent text-xs font-mono text-slate-100 outline-none placeholder:text-slate-600"
             placeholder="hocker-agi"
           />
         </div>
-      </div>
-
-      <div className="flex items-center justify-between border-t border-white/5 pt-4">
-        <label className="group flex cursor-pointer items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleTutorial}
-            className={`relative inline-flex h-6 w-10 items-center rounded-full transition-all ${
-              tutorial
-                ? "bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.4)]"
-                : "bg-slate-800"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all ${
-                tutorial ? "translate-x-5" : "translate-x-1"
-              }`}
-            />
-          </button>
-
-          <span
-            className={`text-[10px] font-black uppercase tracking-widest transition-colors ${
-              tutorial ? "text-sky-400" : "text-slate-500"
-            }`}
-          >
-            Guías
-          </span>
-        </label>
       </div>
     </div>
   );
