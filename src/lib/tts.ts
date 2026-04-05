@@ -3,8 +3,11 @@ import { NOVA_PROFILE } from "@/lib/novaPersona";
 function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
 
+  const esVoices = voices.filter(
+    (voice) => voice.lang.toLowerCase().startsWith("es") || voice.lang.toLowerCase().includes("es-"),
+  );
+
   const femaleHints = ["female", "mujer", "sabina", "luciana", "helena", "monica", "paulina"];
-  const esVoices = voices.filter((voice) => /^es(-|_)?/i.test(voice.lang) || voice.lang.toLowerCase().includes("es"));
 
   const preferred =
     esVoices.find((voice) =>
@@ -29,8 +32,7 @@ export function speak(text: string): void {
   utterance.pitch = NOVA_PROFILE.voicePitch;
   utterance.volume = NOVA_PROFILE.voiceVolume;
 
-  const voices = synth.getVoices();
-  const selected = pickVoice(voices);
+  const selected = pickVoice(synth.getVoices());
   if (selected) {
     utterance.voice = selected;
   }
