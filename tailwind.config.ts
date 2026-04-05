@@ -10,36 +10,60 @@ const config: Config = {
     extend: {
       colors: {
         hocker: {
-          dark: "#080A0F", // Fondo base ultra oscuro
-          surface: "#121622", // Paneles y tarjetas
-          primary: "#00FF88", // Neón principal (Ajustar al verde/cian de tu logo)
-          secondary: "#7000FF", // Acento disruptivo
-          alert: "#FF0044", // Killswitch / Errores
+          bg: "#020617",
+          surface: "#0B1220",
+          panel: "#0F172A",
+          cyan: "#0EA5E9",
+          blue: "#38BDF8",
+          white: "#F8FAFC",
+          line: "rgba(148, 163, 184, 0.18)",
+          alert: "#FB7185",
+          success: "#34D399",
         },
       },
       backgroundImage: {
-        'nova-gradient': 'linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(8,10,15,1) 100%)',
-        'glass-panel': 'linear-gradient(180deg, rgba(18, 22, 34, 0.7) 0%, rgba(18, 22, 34, 0.4) 100%)',
+        "hocker-aurora":
+          "radial-gradient(circle at 20% 20%, rgba(14,165,233,0.18), transparent 28%), radial-gradient(circle at 80% 0%, rgba(56,189,248,0.14), transparent 22%), radial-gradient(circle at 80% 80%, rgba(59,130,246,0.12), transparent 25%), linear-gradient(180deg, #020617 0%, #020617 100%)",
+        "hocker-glass":
+          "linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.42) 100%)",
+        "hocker-grid":
+          "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+        "hocker-scan":
+          "linear-gradient(180deg, rgba(14,165,233,0) 0%, rgba(14,165,233,0.10) 50%, rgba(14,165,233,0) 100%)",
       },
       boxShadow: {
-        'neon-glow': '0 0 20px rgba(0, 255, 136, 0.3)',
-        'neon-alert': '0 0 20px rgba(255, 0, 68, 0.4)',
+        "hocker-glow": "0 0 0 1px rgba(14,165,233,0.12), 0 18px 60px rgba(2,6,23,0.45)",
+        "hocker-glow-strong":
+          "0 0 0 1px rgba(14,165,233,0.18), 0 0 30px rgba(14,165,233,0.20), 0 24px 100px rgba(2,6,23,0.55)",
       },
       animation: {
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'float': 'float 6s ease-in-out infinite',
-        'scanline': 'scanline 8s linear infinite',
+        "hocker-enter": "hocker-enter 520ms ease both",
+        "hocker-float": "hocker-float 7s ease-in-out infinite",
+        "hocker-pulse": "hocker-pulse 5s ease-in-out infinite",
+        "hocker-scan": "hocker-scan 8s linear infinite",
       },
       keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+        "hocker-enter": {
+          from: {
+            opacity: "0",
+            transform: "translate3d(0, 16px, 0) scale(0.98)",
+          },
+          to: {
+            opacity: "1",
+            transform: "translate3d(0, 0, 0) scale(1)",
+          },
         },
-        scanline: {
-          '0%': { transform: 'translateY(-100%)' },
-          '100%': { transform: 'translateY(100%)' },
-        }
-      }
+        "hocker-float": {
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "hocker-pulse": {
+          "50%": { opacity: "0.8", transform: "scale(1.02)" },
+        },
+        "hocker-scan": {
+          "0%": { transform: "translateY(-110%)" },
+          "100%": { transform: "translateY(110%)" },
+        },
+      },
     },
   },
   plugins: [],
