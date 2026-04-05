@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell from "@/components/PageShell";
+import Hint from "@/components/Hint";
+import BrandMark from "@/components/BrandMark";
 import SystemStatus from "@/components/SystemStatus";
 import CommandsQueue from "@/components/CommandsQueue";
 import AgisRegistry from "@/components/AgisRegistry";
-import NovaChatClient from "@/components/NovaChatClient";
+import NovaChat from "@/components/NovaChat";
 
 export const metadata: Metadata = {
   title: "Inicio",
@@ -45,26 +47,21 @@ export default function HomePage() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="relative overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6">
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-sky-500/10 blur-3xl" />
+          <div className="absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
           <div className="relative flex flex-col gap-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_0_40px_rgba(14,165,233,0.12)]">
-                <span className="absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.20),transparent_60%)]" />
-                <img
-                  src="/brand/hocker-one-isotype.png"
-                  alt="Hocker"
-                  className="relative h-14 w-14 object-contain drop-shadow-[0_0_16px_rgba(14,165,233,0.35)]"
-                />
-              </div>
+              <BrandMark hero className="scale-[1.02]" />
 
               <div className="min-w-0">
-                <img
-                  src="/brand/hocker-one-horizontal.png"
-                  alt="Hocker One"
-                  className="h-12 w-auto object-contain sm:h-14"
-                />
-                <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
-                  Un centro limpio. Una marca fuerte. Una navegación simple.
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+                  Centro de mando
+                </p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                  Vista limpia. Marca fuerte. Acción directa.
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                  Aquí navegas rápido, ves salud real del sistema y entras a NOVA sin ruido.
                 </p>
               </div>
             </div>
@@ -88,9 +85,9 @@ export default function HomePage() {
                   className="group rounded-[22px] border border-white/5 bg-white/[0.03] p-4 transition-all hover:-translate-y-0.5 hover:border-sky-500/20 hover:bg-white/[0.06]"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-sm font-black uppercase tracking-widest text-white">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-white">
                       {item.title}
-                    </h2>
+                    </h3>
                     <span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.5)]" />
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
@@ -127,6 +124,7 @@ export default function HomePage() {
             <CommandsQueue />
           </div>
         </div>
+
         <div className="xl:col-span-5">
           <div className="hocker-panel-pro p-4 sm:p-5">
             <AgisRegistry title="Células activas" />
@@ -141,8 +139,14 @@ export default function HomePage() {
           </p>
         </div>
         <div className="p-2 sm:p-3">
-          <NovaChatClient />
+          <NovaChat />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <Hint title="Diseño premium">
+          El sistema visual del snapshot nuevo ya trae la línea fuerte de marca; esta pantalla solo la unifica y quita el import roto.
+        </Hint>
       </div>
     </PageShell>
   );
