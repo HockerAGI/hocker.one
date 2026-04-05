@@ -1,379 +1,125 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --hocker-duration: 450ms;
-  --hocker-ease: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* =========================
-   BASE ROOT FIX
-========================= */
-
-html {
-  color-scheme: dark;
-  scroll-behavior: smooth;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* 🔥 FIX CRÍTICO SCROLL */
-html,
-body {
-  min-height: 100%;
-  overflow-x: hidden;
-}
-
-/* =========================
-   BODY
-========================= */
-
-body {
-  background:
-    linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)),
-    url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230ea5e9' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E"),
-    var(--background);
-
-  color: var(--foreground);
-
-  /* 🔥 SCROLL REAL (ANDROID FIX) */
-  overflow-y: auto;
-  overscroll-behavior-y: auto;
-  -webkit-overflow-scrolling: touch;
-
-  /* RENDER */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-/* =========================
-   RESET
-========================= */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-button,
-a,
-input,
-textarea,
-select {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* =========================
-   FX SCANLINE
-========================= */
-
-body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(14, 165, 233, 0.2), transparent);
-  animation: scanline 8s linear infinite;
-  pointer-events: none;
-  z-index: 50;
-}
-
-/* =========================
-   BASE LAYER
-========================= */
-
-@layer base {
-  html,
-  body {
-    min-height: 100%;
-  }
-
-  ::selection {
-    background: rgba(14, 165, 233, 0.3);
-    color: #fff;
-  }
-
-  img,
-  svg {
-    display: block;
-  }
-
-  button {
-    touch-action: manipulation;
-  }
-}
-
-/* =========================
-   COMPONENTS
-========================= */
-
-@layer components {
-  .hocker-panel-pro {
-    @apply rounded-[32px] border border-white/10 bg-slate-900/40 backdrop-blur-3xl shadow-2xl transition-all duration-500 hover:border-sky-500/30;
-  }
-
-  .hocker-text-glow {
-    @apply text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)];
-  }
-
-  .hocker-glass-vfx {
-    @apply relative overflow-hidden rounded-[24px] border border-white/5 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-xl;
-  }
-
-  .hocker-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95;
-  }
-
-  .hocker-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.15)] transition-all hover:bg-sky-500/20 active:scale-95;
-  }
-
-  .hocker-button-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-100 transition-all hover:bg-white/10 active:scale-95;
-  }
-}
-
-/* =========================
-   UTILITIES
-========================= */
-
-@layer utilities {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(14, 165, 233, 0.85) transparent;
-
-    /* 🔥 IMPORTANTE */
-    overscroll-behavior: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #0ea5ff;
-    border-radius: 9999px;
-  }
-
-  .animate-float {
-    animation: hocker-float 7s ease-in-out infinite;
-  }
-
-  .animate-pulse-slow {
-    animation: hocker-pulse-slow 4.5s ease-in-out infinite;
-  }
-
-  .animate-spin-slow {
-    animation: hocker-spin-slow 2.5s linear infinite;
-  }
-
-  .animate-in,
-  .animate-out {
-    animation-duration: var(--hocker-duration);
-    animation-timing-function: var(--hocker-ease);
-    animation-fill-mode: both;
-  }
-
-  .animate-in {
-    animation-name: hocker-enter;
-  }
-
-  .animate-out {
-    animation-name: hocker-exit;
-  }
-
-  .fade-in {
-    --hocker-from-opacity: 0;
-  }
-
-  .fade-out {
-    --hocker-to-opacity: 0;
-  }
-
-  .zoom-in-95 {
-    --hocker-from-scale: 0.95;
-  }
-
-  .slide-in-from-bottom-4 {
-    --hocker-from-y: 1rem;
-  }
-
-  .slide-in-from-left-4 {
-    --hocker-from-x: -1rem;
-  }
-
-  .slide-in-from-right-4 {
-    --hocker-from-x: 1rem;
-  }
-}
-
-/* =========================
-   KEYFRAMES
-========================= */
-
-@keyframes hocker-enter {
-  from {
-    opacity: var(--hocker-from-opacity, 1);
-    transform: translate3d(var(--hocker-from-x, 0), var(--hocker-from-y, 0), 0)
-      scale(var(--hocker-from-scale, 1));
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes hocker-exit {
-  to {
-    opacity: var(--hocker-to-opacity, 0);
-    transform: scale(var(--hocker-to-scale, 1));
-  }
-}
-
-@keyframes hocker-float {
-  50% {
-    transform: translateY(-14px);
-  }
-}
-
-@keyframes hocker-pulse-slow {
-  50% {
-    opacity: 1;
-    transform: scale(1.03);
-  }
-}
-
-@keyframes hocker-spin-slow {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes scanline {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100vh);
-  }
-}
-
-/* =========================
-   REDUCED MOTION
-========================= */
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
-
-  body::after {
-    display: none;
-  }
-}
-
-/* =========================
-   HOCKER PRO VISUAL POLISH
-========================= */
-
-@layer components {
-  .hocker-surface-soft {
-    @apply rounded-[28px] border border-white/5 bg-white/[0.03] shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl;
-  }
-
-  .hocker-surface-strong {
-    @apply rounded-[32px] border border-white/10 bg-slate-900/45 shadow-[0_28px_100px_rgba(2,6,23,0.35)] backdrop-blur-3xl;
-  }
-
-  .hocker-card-pro {
-    @apply rounded-[26px] border border-white/5 bg-slate-950/45 p-4 shadow-[0_10px_50px_rgba(2,6,23,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-500/20 hover:bg-slate-900/55;
-  }
-
-  .hocker-chip {
-    @apply inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all duration-300 hover:border-sky-500/20 hover:bg-sky-500/10 hover:text-sky-300;
-  }
-
-  .hocker-button-brand {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-sky-300 shadow-[0_0_18px_rgba(14,165,233,0.12)] transition-all duration-300 hover:bg-sky-500/20 hover:shadow-[0_0_24px_rgba(14,165,233,0.18)] active:scale-95;
-  }
-
-  .hocker-button-clean {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-200 transition-all duration-300 hover:border-white/15 hover:bg-white/10 active:scale-95;
-  }
-
-  .hocker-title-line {
-    @apply text-[10px] font-black uppercase tracking-[0.35em] text-sky-400;
-  }
-
-  .hocker-kicker {
-    @apply text-[11px] font-bold leading-relaxed text-slate-400;
-  }
-
-  .hocker-icon-badge {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_0_18px_rgba(14,165,233,0.10)] backdrop-blur-xl;
-  }
-
-  .hocker-divider-soft {
-    @apply h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
-  }
-}
-
-@layer utilities {
-  .hocker-grid-soft {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: center;
-  }
-
-  .hocker-page-enter {
-    animation: hocker-enter 600ms ease both;
-  }
-
-  .hocker-fade-up {
-    animation: hocker-enter 520ms ease both;
-    --hocker-from-y: 0.75rem;
-    --hocker-from-opacity: 0;
-  }
-
-  .hocker-pop {
-    animation: hocker-enter 420ms ease both;
-    --hocker-from-scale: 0.97;
-    --hocker-from-opacity: 0;
-  }
-
-  .hocker-hover-lift {
-    transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
-  }
-
-  .hocker-hover-lift:hover {
-    transform: translateY(-2px);
-  }
-
-  .hocker-safe-pad {
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
-  }
-
-  .hocker-mobile-gap {
-    gap: clamp(0.75rem, 2vw, 1.5rem);
-  }
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
+import BottomDock from "@/components/BottomDock";
+import PwaRegister from "@/components/PwaRegister";
+import { WorkspaceProvider } from "@/components/WorkspaceContext";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const siteUrl = new URL("https://hockerone.vercel.app");
+
+export const viewport: Viewport = {
+  themeColor: "#020617",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
+export const metadata: Metadata = {
+  metadataBase: siteUrl,
+  title: {
+    default: "Hocker ONE",
+    template: "%s | Hocker ONE",
+  },
+  description: "Centro de mando unificado de Hocker IA Technologies.",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "Hocker ONE",
+    locale: "es_MX",
+    title: "Hocker ONE",
+    description: "Centro de mando unificado de Hocker IA Technologies.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hocker ONE",
+    description: "Centro de mando unificado de Hocker IA Technologies.",
+  },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Hocker ONE",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="es" className="dark h-full scroll-smooth" suppressHydrationWarning>
+      <body
+        className={`
+          ${geistSans.variable}
+          ${geistMono.variable}
+          min-h-screen
+          overflow-x-hidden
+          bg-slate-950
+          text-slate-100
+          antialiased
+          selection:bg-sky-500/30
+        `}
+      >
+        <WorkspaceProvider>
+          <div className="relative min-h-screen overflow-hidden bg-hocker-aurora">
+            <div className="pointer-events-none fixed inset-0 hocker-grid-soft opacity-[0.18]" />
+            <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-gradient-to-b from-sky-500/10 to-transparent blur-3xl" />
+            <div className="pointer-events-none fixed bottom-0 right-0 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+            <div className="pointer-events-none fixed left-0 top-1/3 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
+
+            <div className="relative z-10 min-h-screen">{children}</div>
+
+            <BottomDock />
+          </div>
+
+          <PwaRegister />
+
+          <Toaster
+            position="top-center"
+            theme="dark"
+            expand={false}
+            richColors
+            toastOptions={{
+              style: {
+                background: "rgba(15, 23, 42, 0.88)",
+                backdropFilter: "blur(16px)",
+                border: "1px solid rgba(14, 165, 233, 0.18)",
+                borderRadius: "24px",
+                color: "#f8fafc",
+                boxShadow: "0 10px 40px -10px rgba(14,165,233,0.18)",
+              },
+            }}
+          />
+        </WorkspaceProvider>
+      </body>
+    </html>
+  );
 }
