@@ -31,13 +31,13 @@ export default function HomePage() {
         <>
           <Link
             href="/chat"
-            className="inline-flex items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/12 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-sky-300 transition-all hover:bg-sky-500/20 active:scale-95"
+            className="hocker-button-brand"
           >
             Abrir NOVA
           </Link>
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-200 transition-all hover:bg-white/10 active:scale-95"
+            className="hocker-button-primary"
           >
             Vista rápida
           </Link>
@@ -45,9 +45,10 @@ export default function HomePage() {
       }
     >
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="relative overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-sky-500/10 blur-3xl" />
-          <div className="absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        <section className="relative overflow-hidden rounded-[30px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6 hocker-page-enter">
+          <div className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-sky-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 hocker-grid-soft opacity-[0.08]" />
 
           <div className="relative flex flex-col gap-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -100,7 +101,7 @@ export default function HomePage() {
         </section>
 
         <aside className="grid gap-4">
-          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5 sm:p-6">
+          <div className="rounded-[30px] border border-white/5 bg-white/[0.03] p-5 sm:p-6">
             <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
               Estado
             </p>
@@ -112,7 +113,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-white/5 bg-slate-950/60 p-5 sm:p-6">
+          <div className="rounded-[30px] border border-white/5 bg-slate-950/60 p-5 sm:p-6">
             <SystemStatus />
           </div>
         </aside>
@@ -132,8 +133,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="mt-6 hocker-panel-pro overflow-hidden border-sky-500/15">
-        <div className="border-b border-white/5 px-4 py-3">
+      <div className="mt-6 hocker-glass-vfx overflow-hidden border-sky-500/15">
+        <div className="border-b border-white/5 px-4 py-3 sm:px-6">
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
             NOVA
           </p>
@@ -145,7 +146,7 @@ export default function HomePage() {
 
       <div className="mt-6">
         <Hint title="Diseño premium">
-          El sistema visual del snapshot nuevo ya trae la línea fuerte de marca; esta pantalla solo la unifica y quita el import roto.
+          El sistema visual del snapshot nuevo ya trae la línea fuerte de marca; esta pantalla la unifica y quita el import roto.
         </Hint>
       </div>
     </PageShell>
