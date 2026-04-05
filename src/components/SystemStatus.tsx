@@ -1,7 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/lib/errors";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type HealthCheckMap = {
   db: boolean;
@@ -33,10 +33,17 @@ function CheckDot({ ok }: { ok: boolean }) {
     <span
       className={[
         "inline-flex h-2.5 w-2.5 rounded-full",
-        ok ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.55)]" : "bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.45)]",
+        ok
+          ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.55)]"
+          : "bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.45)]",
       ].join(" ")}
     />
   );
+}
+
+function formatDate(input: string): string {
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
 }
 
 export default function SystemStatus() {
@@ -55,7 +62,7 @@ export default function SystemStatus() {
     ];
   }, [health]);
 
-  async function load(): Promise<void> {
+  const load = useCallback(async (): Promise<void> => {
     try {
       setError(null);
       const res = await fetch("/api/health", { cache: "no-store" });
@@ -77,7 +84,7 @@ export default function SystemStatus() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
@@ -87,125 +94,106 @@ export default function SystemStatus() {
     }, 30000);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [load]);
 
-  const isOnline = health?.status === "online";
-  const statusLabel = isOnline ? "Activo" : "Alerta";
-  const statusClass = isOnline
-    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-    : "border-rose-500/20 bg-rose-500/10 text-rose-300";
+  const online = health?.status === "online";
+  const statusLabel = online ? "Sistema estable" : health ? "Sistema degradado" : "Sin lectura";
+  const statusTone = online
+    ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
+    : health
+      ? "border-amber-400/20 bg-amber-500/10 text-amber-300"
+      : "border-white/10 bg-white/[0.04] text-slate-300";
 
   return (
-    <section className="hocker-panel-pro overflow-hidden">
-      <div className="border-b border-white/5 bg-sky-500/5 px-5 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <span className="absolute inset-0 rounded-full bg-sky-400/30 blur-md animate-pulse" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-400" />
-            </div>
-            <div>
-              <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-400">
-                Estado del sistema
-              </h3>
-              <p className="mt-1 text-[10px] text-slate-500">
-                Lectura continua del núcleo.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-300 transition hover:border-sky-500/30 hover:text-sky-300 active:scale-95"
-          >
-            Refrescar
-          </button>
+    <section className="flex h-full flex-col gap-4">
+      <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+            Salud
+          </p>
+          <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
+            Estado del sistema
+          </h3>
         </div>
+
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-200 transition-all hover:bg-white/[0.08] active:scale-95"
+        >
+          Refrescar
+        </button>
       </div>
 
-      <div className="p-5">
-        {loading && !health ? (
-          <div className="animate-pulse space-y-3">
-            <div className="h-6 w-36 rounded-full bg-white/5" />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="h-16 rounded-2xl bg-white/5" />
-              ))}
+      {loading && !health ? (
+        <div className="grid gap-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="animate-pulse rounded-[24px] border border-white/5 bg-slate-950/50 p-4"
+            >
+              <div className="h-3 w-24 rounded-full bg-slate-800" />
+              <div className="mt-3 h-4 w-full rounded-full bg-slate-800/80" />
             </div>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-black uppercase tracking-[0.25em] text-white">
-                    {statusLabel}
-                  </span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.22em] ${statusClass}`}>
-                    {health?.status ?? "degraded"}
-                  </span>
-                </div>
-
-                <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                  {health?.message ?? health?.error ?? "Sin lectura disponible."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="rounded-2xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-sky-300 transition hover:bg-sky-500/15 active:scale-95"
-              >
-                Ping
-              </button>
-            </div>
-
-            {error ? (
-              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-[11px] text-rose-200">
-                {error}
-              </div>
-            ) : null}
-
-            {health?.details ? (
-              <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-[11px] text-slate-400">
-                {health.details}
-              </div>
-            ) : null}
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {summary.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                      {item.label}
-                    </span>
-                    <CheckDot ok={item.ok} />
-                  </div>
-                  <p className={`mt-3 text-[11px] font-black uppercase tracking-[0.2em] ${item.ok ? "text-emerald-300" : "text-rose-300"}`}>
-                    {item.ok ? "OK" : "FAIL"}
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CheckDot ok={online} />
+                <div>
+                  <p className="text-sm font-black text-white">{statusLabel}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    {health?.infrastructure ?? "Infraestructura no disponible"}
                   </p>
                 </div>
-              ))}
+              </div>
+
+              <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${statusTone}`}>
+                {health?.timestamp ? formatDate(health.timestamp) : "—"}
+              </span>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-4">
-              <div className="text-[10px] text-slate-500">
-                Núcleo: <span className="text-slate-300">{health?.infrastructure ?? "Hocker ONE Control Plane"}</span>
-              </div>
-              <div className="text-[10px] text-slate-500">
-                Última lectura:{" "}
-                <span className="text-slate-300">
-                  {health?.timestamp ? new Date(health.timestamp).toLocaleString("es-MX") : "n/a"}
-                </span>
-              </div>
-            </div>
+            <p className="mt-4 text-[12px] leading-relaxed text-slate-300">
+              {error
+                ? error
+                : health?.message || health?.error || "Lectura completa del núcleo y las dependencias críticas."}
+            </p>
+
+            {health?.details ? (
+              <details className="mt-4">
+                <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
+                  Ver detalle
+                </summary>
+                <pre className="mt-2 overflow-auto rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
+                  {health.details}
+                </pre>
+              </details>
+            ) : null}
           </div>
-        )}
-      </div>
+
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+            {summary.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[24px] border border-white/5 bg-slate-950/50 p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                    {item.label}
+                  </p>
+                  <CheckDot ok={item.ok} />
+                </div>
+                <p className={`mt-2 text-sm font-black ${item.ok ? "text-emerald-300" : "text-rose-300"}`}>
+                  {item.ok ? "OK" : "OFF"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
