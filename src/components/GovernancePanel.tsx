@@ -2,8 +2,20 @@
 
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { ControlRow } from "@/lib/types";
-import { useEffect, useState } from "react";
+import type { ControlRow, JsonObject } from "@/lib/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+function asMeta(value: unknown): JsonObject {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonObject)
+    : {};
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
+}
 
 export default function GovernancePanel() {
   const { projectId } = useWorkspace();
@@ -12,14 +24,15 @@ export default function GovernancePanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/governance/killswitch?project_id=${encodeURIComponent(projectId)}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/governance/killswitch?project_id=${encodeURIComponent(projectId)}`,
+        { cache: "no-store" },
+      );
       const data: unknown = await res.json();
 
       if (!res.ok) {
@@ -37,13 +50,13 @@ export default function GovernancePanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [projectId]);
 
   useEffect(() => {
     void load();
-  }, [projectId]);
+  }, [load]);
 
-  async function toggle(field: "kill_switch" | "allow_write") {
+  async function toggle(field: "kill_switch" | "allow_write"): Promise<void> {
     if (!controls) return;
 
     setSaving(true);
@@ -79,65 +92,54 @@ export default function GovernancePanel() {
     }
   }
 
-  const lastUpdate =
-    controls?.updated_at && !Number.isNaN(new Date(controls.updated_at).getTime())
-      ? new Date(controls.updated_at).toLocaleString()
-      : "—";
+  const lastUpdate = formatDate(controls?.updated_at);
+  const meta = asMeta(controls?.meta);
 
   return (
-    <section className="hocker-panel-pro overflow-hidden border-rose-500/20 shadow-[0_0_40px_rgba(225,29,72,0.05)]">
-      <div className="flex items-center justify-between border-b border-rose-500/10 bg-gradient-to-r from-rose-500/10 to-transparent p-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-500">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
+    <section className="hocker-panel-pro overflow-hidden border-rose-500/20 shadow-[0_0_40px_rgba(225,29,72,0.08)]">
+      <div className="border-b border-white/5 bg-slate-950/45 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-rose-300">
+              Gobernanza
+            </p>
+            <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
+              Control del núcleo
+            </h3>
           </div>
-          <h3 className="text-[12px] font-black uppercase tracking-[0.3em] text-rose-500">
-            Control de autoridad
-          </h3>
-        </div>
 
-        {saving ? (
-          <div className="flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1">
-            <span className="h-1.5 w-1.5 rounded-full animate-pulse bg-rose-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-rose-400">
-              Guardando
-            </span>
+          <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-300">
+            {lastUpdate}
           </div>
-        ) : null}
+        </div>
       </div>
 
-      <div className="p-6 sm:p-8">
+      <div className="p-4 sm:p-6">
         {error ? (
-          <div className="mb-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-[11px] font-bold uppercase tracking-wide text-rose-300">
+          <div className="mb-4 rounded-[24px] border border-rose-500/20 bg-rose-500/10 p-4 text-[11px] leading-relaxed text-rose-200">
             {error}
           </div>
         ) : null}
 
         {loading && !controls ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {[0, 1].map((i) => (
+          <div className="grid gap-4 md:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, index) => (
               <div
-                key={i}
-                className="flex h-32 flex-col justify-between rounded-3xl border border-white/5 bg-slate-950/40 p-6 animate-pulse"
+                key={index}
+                className="animate-pulse rounded-[28px] border border-white/5 bg-slate-950/50 p-6"
               >
-                <div className="h-4 w-24 rounded bg-slate-800" />
-                <div className="h-10 w-20 self-end rounded-full bg-slate-800" />
+                <div className="h-4 w-28 rounded-full bg-slate-800" />
+                <div className="mt-4 h-10 w-20 rounded-full bg-slate-800" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <div
-              className={`relative overflow-hidden rounded-3xl border p-6 transition-all duration-500 ${
+              className={`relative overflow-hidden rounded-[28px] border p-6 transition-all duration-500 ${
                 controls?.kill_switch
-                  ? "border-rose-500/50 bg-rose-950/20"
-                  : "border-rose-500/20 bg-slate-950/60 hover:border-rose-500/40"
+                  ? "border-rose-500/40 bg-rose-950/20 shadow-[0_0_40px_rgba(225,29,72,0.08)]"
+                  : "border-white/5 bg-slate-950/60 hover:border-rose-500/20"
               }`}
             >
               {controls?.kill_switch ? (
@@ -150,7 +152,7 @@ export default function GovernancePanel() {
                 />
               ) : null}
 
-              <div className="relative z-10 flex items-center justify-between">
+              <div className="relative z-10 flex items-center justify-between gap-4">
                 <div>
                   <h4 className="text-[14px] font-black uppercase tracking-wide text-white">
                     Kill switch
@@ -190,17 +192,17 @@ export default function GovernancePanel() {
             </div>
 
             <div
-              className={`relative overflow-hidden rounded-3xl border p-6 transition-all duration-500 ${
+              className={`relative overflow-hidden rounded-[28px] border p-6 transition-all duration-500 ${
                 controls?.allow_write
-                  ? "border-emerald-500/30 bg-emerald-950/10"
-                  : "border-white/5 bg-slate-950/60 hover:border-emerald-500/30"
+                  ? "border-emerald-500/30 bg-emerald-950/10 shadow-[0_0_40px_rgba(16,185,129,0.08)]"
+                  : "border-white/5 bg-slate-950/60 hover:border-emerald-500/20"
               }`}
             >
               {controls?.allow_write ? (
                 <div className="pointer-events-none absolute inset-0 animate-pulse bg-emerald-500/5" />
               ) : null}
 
-              <div className="relative z-10 flex items-center justify-between">
+              <div className="relative z-10 flex items-center justify-between gap-4">
                 <div>
                   <h4 className="text-[14px] font-black uppercase tracking-wide text-white">
                     Escritura
@@ -235,32 +237,33 @@ export default function GovernancePanel() {
                     : "border-white/10 bg-white/5 text-slate-500"
                 }`}
               >
-                {controls?.allow_write ? "Escritura habilitada" : "Solo lectura"}
+                {controls?.allow_write ? "Escritura activa" : "Solo lectura"}
               </div>
             </div>
           </div>
         )}
 
-        {controls?.updated_at && !loading ? (
-          <div className="mt-8 flex items-center justify-between border-t border-white/5 pt-5">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-              <svg className="h-4 w-4 text-rose-500/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 8v4l3 3m0-4l-3 3m-5 9a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6z"
-                />
-              </svg>
-              Última modificación: {lastUpdate}
+        <div className="mt-5 rounded-[24px] border border-white/5 bg-white/[0.03] p-4">
+          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
+            Matriz
+          </p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                Project
+              </p>
+              <p className="mt-1 truncate text-xs text-slate-100">{projectId}</p>
             </div>
-
-            <div className="hidden sm:block">
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-rose-500/30">
-                Hocker Core Security
-              </span>
+            <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                Meta
+              </p>
+              <p className="mt-1 text-xs text-slate-100">
+                {Object.keys(meta).length > 0 ? "Presente" : "Vacía"}
+              </p>
             </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </section>
   );
