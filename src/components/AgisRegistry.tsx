@@ -1,40 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { useWorkspace } from "@/components/WorkspaceContext";
 import type { AgiRow, JsonObject } from "@/lib/types";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import { getErrorMessage } from "@/lib/errors";
 
-function isAgiRow(value: unknown): value is AgiRow {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+type Props = {
+  title?: string;
+};
 
-  const row = value as Record<string, unknown>;
-
-  return (
-    typeof row.id === "string" &&
-    (typeof row.name === "string" || row.name === null) &&
-    (typeof row.description === "string" || row.description === null) &&
-    (typeof row.version === "string" || row.version === null) &&
-    Array.isArray(row.tags) &&
-    (typeof row.meta === "object" || row.meta === null) &&
-    typeof row.created_at === "string"
-  );
+function asMeta(value: unknown): JsonObject {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonObject)
+    : {};
 }
 
-function asMeta(value: unknown): JsonObject | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as JsonObject;
+function loadPercent(meta: JsonObject): string {
+  const raw = meta.load;
+  if (typeof raw === "string" && raw.trim()) {
+    return raw.trim();
   }
-  return null;
+
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return `${Math.max(0, Math.min(100, raw))}%`;
+  }
+
+  return "0%";
 }
 
-export default function AgisRegistry({ title = "Células Operativas" }: { title?: string }) {
+function safeDate(input: string): string {
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
+}
+
+export default function AgisRegistry({ title = "Células operativas" }: Props) {
   const sb = useMemo(() => createBrowserSupabase(), []);
+  const { projectId } = useWorkspace();
+
   const [agents, setAgents] = useState<AgiRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (): Promise<void> => {
+  async function load(): Promise<void> {
     setLoading(true);
     setError(null);
 
@@ -49,51 +57,34 @@ export default function AgisRegistry({ title = "Células Operativas" }: { title?
         throw queryError;
       }
 
-      const rows = Array.isArray(data) ? data.filter(isAgiRow) : [];
-      setAgents(rows);
+      setAgents((data ?? []) as AgiRow[]);
     } catch (err: unknown) {
       setAgents([]);
-      setError(err instanceof Error ? err.message : "No se pudo cargar el registro.");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [sb]);
+  }
 
   useEffect(() => {
     void load();
-
-    const channel: RealtimeChannel = sb
-      .channel("agis-live")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "agis",
-        },
-        () => {
-          void load();
-        },
-      )
-      .subscribe();
-
-    const timer = window.setInterval(() => {
-      void load();
-    }, 30000);
-
-    return () => {
-      window.clearInterval(timer);
-      void sb.removeChannel(channel);
-    };
-  }, [load, sb]);
+  }, [projectId, sb]);
 
   return (
     <section className="flex h-full flex-col">
-      <div className="mb-6 flex items-center justify-between px-2">
-        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-sky-400">
-          {title}
-        </h3>
-        <div className="h-1.5 w-1.5 rounded-full bg-sky-400 animate-pulse" />
+      <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+            AGIs
+          </p>
+          <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
+            {title}
+          </h3>
+        </div>
+
+        <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-300">
+          {agents.length} activas
+        </div>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -108,17 +99,16 @@ export default function AgisRegistry({ title = "Células Operativas" }: { title?
         ) : (
           agents.map((agi) => {
             const meta = asMeta(agi.meta);
-            const loadPercent =
-              meta && typeof meta.load === "string" && meta.load.trim() ? meta.load.trim() : "0%";
+            const percent = loadPercent(meta);
 
             return (
               <article
                 key={agi.id}
-                className="hocker-panel-pro border-white/5 p-4 transition-all hover:border-sky-500/30"
+                className="group hocker-panel-pro border-white/5 p-4 transition-all hover:border-sky-500/30"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="block truncate text-sm font-black text-white">
+                    <span className="block truncate text-sm font-black text-white group-hover:text-sky-300">
                       {agi.name ?? agi.id}
                     </span>
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
@@ -133,15 +123,30 @@ export default function AgisRegistry({ title = "Células Operativas" }: { title?
 
                 <div className="mt-4 space-y-4">
                   <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-slate-500">CARGA COGNITIVA</span>
-                    <span className="text-sky-400">{loadPercent}</span>
+                    <span className="text-slate-500">Carga cognitiva</span>
+                    <span className="text-sky-400">{percent}</span>
                   </div>
 
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/50">
                     <div
-                      className="h-full bg-sky-500 shadow-[0_0_10px_#0ea5ff]"
-                      style={{ width: loadPercent }}
+                      className="h-full rounded-full bg-sky-500 shadow-[0_0_10px_#0ea5ff]"
+                      style={{ width: percent }}
                     />
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Versión
+                      </p>
+                      <p className="mt-1 text-xs text-slate-100">{agi.version ?? "—"}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Creada
+                      </p>
+                      <p className="mt-1 text-xs text-slate-100">{safeDate(agi.created_at)}</p>
+                    </div>
                   </div>
 
                   {agi.tags.length > 0 ? (
@@ -155,6 +160,17 @@ export default function AgisRegistry({ title = "Células Operativas" }: { title?
                         </span>
                       ))}
                     </div>
+                  ) : null}
+
+                  {Object.keys(meta).length > 0 ? (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
+                        Inspeccionar datos
+                      </summary>
+                      <pre className="mt-2 overflow-auto rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
+                        {JSON.stringify(meta, null, 2)}
+                      </pre>
+                    </details>
                   ) : null}
                 </div>
               </article>
