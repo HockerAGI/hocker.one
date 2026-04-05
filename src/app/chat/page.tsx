@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
-import NovaChatClient from "@/components/NovaChatClient";
+import NovaChat from "@/components/NovaChat";
 
 export const metadata: Metadata = {
   title: "Terminal NOVA",
@@ -15,7 +15,10 @@ export default function ChatPage() {
       title="Terminal NOVA"
       subtitle="Habla con NOVA. Claro, corto y directo."
       actions={
-        <Link href="/dashboard" className="hocker-button-primary">
+        <Link
+          href="/dashboard"
+          className="hocker-button-primary"
+        >
           Búnker
         </Link>
       }
@@ -34,17 +37,17 @@ export default function ChatPage() {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
               </span>
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">
-                Conexión estable
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400 drop-shadow-[0_0_5px_rgba(14,165,233,0.5)]">
+                Conexión segura establecida
               </span>
             </div>
             <span className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500">
-              E2E
+              AES-256 E2E
             </span>
           </div>
 
           <div className="flex-1 overflow-hidden bg-slate-950/20 p-2 sm:p-3">
-            <NovaChatClient />
+            <NovaChat />
           </div>
         </div>
       </div>
