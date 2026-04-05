@@ -6,65 +6,57 @@ type VoiceInputProps = {
   onResult: (text: string) => void;
 };
 
-type SpeechRecognitionInstance = {
-  start: () => void;
-  stop: () => void;
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onresult: ((event: any) => void) | null;
-  onerror: (() => void) | null;
-};
-
 export default function VoiceInput({ onResult }: VoiceInputProps) {
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [active, setActive] = useState(false);
   const [supported, setSupported] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const SpeechRecognitionImpl =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
 
-    if (!SpeechRecognitionImpl) {
+    if (!Recognition) {
       setSupported(false);
       return;
     }
 
-    const recognition: SpeechRecognitionInstance =
-      new SpeechRecognitionImpl();
-
+    const recognition = new Recognition();
     recognition.lang = "es-MX";
     recognition.continuous = false;
     recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => setActive(true);
     recognition.onend = () => setActive(false);
-
-    recognition.onresult = (event: any) => {
-      const result = event?.results?.[0]?.[0]?.transcript;
-      if (typeof result === "string" && result.trim()) {
-        onResult(result.trim());
+    recognition.onerror = () => setActive(false);
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim?.() ?? "";
+      if (transcript) {
+        onResult(transcript);
       }
     };
 
-    recognition.onerror = () => setActive(false);
-
     recognitionRef.current = recognition;
     setSupported(true);
+
+    return () => {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+    };
   }, [onResult]);
 
-  function start() {
+  function start(): void {
+    if (!recognitionRef.current) return;
+
     try {
-      recognitionRef.current?.start();
-    } catch {}
+      recognitionRef.current.start();
+    } catch {
+      // noop
+    }
   }
 
-  function stop() {
+  function stop(): void {
     recognitionRef.current?.stop();
   }
 
@@ -72,12 +64,14 @@ export default function VoiceInput({ onResult }: VoiceInputProps) {
 
   return (
     <button
+      type="button"
       onClick={active ? stop : start}
-      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+      className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-all active:scale-95 ${
         active
-          ? "bg-red-500 text-white"
-          : "bg-sky-500 text-black hover:bg-sky-400"
+          ? "border border-rose-400/20 bg-rose-500/10 text-rose-300 shadow-[0_0_20px_rgba(244,63,94,0.5)]"
+          : "border border-sky-400/20 bg-sky-500/10 text-sky-300 shadow-[0_0_20px_rgba(14,165,233,0.15)] hover:bg-sky-500/20"
       }`}
+      aria-pressed={active}
     >
       {active ? "Escuchando..." : "Voz"}
     </button>
