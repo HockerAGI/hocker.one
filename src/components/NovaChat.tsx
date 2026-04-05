@@ -78,7 +78,7 @@ export default function NovaChat() {
         project_id: projectId,
         projectId,
         node_id: nodeId,
-        nodeId: nodeId,
+        nodeId,
         message: text,
         mode: "chat",
         prefer: "human",
@@ -91,15 +91,13 @@ export default function NovaChat() {
     const raw: unknown = await res.json().catch(() => ({}));
     const payload = raw as NovaResponse;
 
-    const reply = asText(payload.reply) || asText(payload.response);
-    const message = reply || "Silencio en la red.";
-
     if (!res.ok) {
       throw new Error(asText(payload.error) || "Fallo en la matriz de transmisión.");
     }
 
-    append("nova", message);
-    speak(message);
+    const reply = asText(payload.reply) || asText(payload.response) || "Silencio en la red.";
+    append("nova", reply);
+    speak(reply);
   }
 
   async function createCommand(
@@ -116,7 +114,7 @@ export default function NovaChat() {
         project_id: projectId,
         projectId,
         node_id: nodeId,
-        nodeId: nodeId,
+        nodeId,
         command,
         payload: {
           ...payload,
