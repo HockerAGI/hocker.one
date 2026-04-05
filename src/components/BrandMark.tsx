@@ -23,7 +23,7 @@ export default function BrandMark({
   return (
     <Link
       href={href}
-      className={`group inline-flex items-center gap-3 rounded-3xl border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_10px_40px_rgba(2,6,23,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-sky-500/20 hover:bg-white/[0.06] active:scale-95 ${className}`}
+      className={`group inline-flex items-center gap-3 rounded-[28px] border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_10px_40px_rgba(2,6,23,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-sky-500/20 hover:bg-white/[0.06] active:scale-95 ${className}`}
       aria-label="Ir al inicio"
     >
       <span
