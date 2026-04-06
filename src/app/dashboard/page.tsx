@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BrandMark from "@/components/BrandMark";
 import PageShell from "@/components/PageShell";
-import Hint from "@/components/Hint";
 import SystemStatus from "@/components/SystemStatus";
 import EventsFeed from "@/components/EventsFeed";
 import NodesPanel from "@/components/NodesPanel";
@@ -26,6 +26,16 @@ export default function DashboardPage() {
         </Link>
       }
     >
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-[28px] border border-white/5 bg-slate-950/40 p-4 sm:p-5">
+        <BrandMark compact />
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Sistema activo
+          </span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <div className="xl:col-span-4">
           <div className="space-y-6">
@@ -48,12 +58,6 @@ export default function DashboardPage() {
             <NodesPanel />
           </div>
         </div>
-      </div>
-
-      <div className="mt-6">
-        <Hint title="Panel unificado">
-          Este dashboard ya funciona como capa visual central: salud, eventos, nodos y células con el mismo lenguaje.
-        </Hint>
       </div>
     </PageShell>
   );
