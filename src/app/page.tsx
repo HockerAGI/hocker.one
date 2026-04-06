@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageShell from "@/components/PageShell";
-import Hint from "@/components/Hint";
 import BrandMark from "@/components/BrandMark";
+import PageShell from "@/components/PageShell";
 import SystemStatus from "@/components/SystemStatus";
 import CommandsQueue from "@/components/CommandsQueue";
 import AgisRegistry from "@/components/AgisRegistry";
@@ -29,16 +28,10 @@ export default function HomePage() {
       subtitle="Todo el ecosistema en una sola pantalla. Claro, rápido y listo para usar."
       actions={
         <>
-          <Link
-            href="/chat"
-            className="hocker-button-brand"
-          >
+          <Link href="/chat" className="hocker-button-brand">
             Abrir NOVA
           </Link>
-          <Link
-            href="/dashboard"
-            className="hocker-button-primary"
-          >
+          <Link href="/dashboard" className="hocker-button-primary">
             Vista rápida
           </Link>
         </>
@@ -142,12 +135,6 @@ export default function HomePage() {
         <div className="p-2 sm:p-3">
           <NovaChat />
         </div>
-      </div>
-
-      <div className="mt-6">
-        <Hint title="Diseño premium">
-          El sistema visual del snapshot nuevo ya trae la línea fuerte de marca; esta pantalla la unifica y quita el import roto.
-        </Hint>
       </div>
     </PageShell>
   );
