@@ -71,9 +71,7 @@ export default function NovaChat() {
   async function postChat(text: string): Promise<void> {
     const res = await fetch("/api/nova/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         project_id: projectId,
         projectId,
@@ -107,9 +105,7 @@ export default function NovaChat() {
   ): Promise<void> {
     const res = await fetch("/api/commands", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         project_id: projectId,
         projectId,
@@ -127,13 +123,13 @@ export default function NovaChat() {
     });
 
     const raw: unknown = await res.json().catch(() => ({}));
-    const payloadOut = raw as { ok?: boolean; error?: string; item?: { command?: string } };
+    const output = raw as { ok?: boolean; error?: string; item?: { command?: string } };
 
     if (!res.ok) {
-      throw new Error(asText(payloadOut.error) || "No se pudo encolar el comando.");
+      throw new Error(asText(output.error) || "No se pudo encolar el comando.");
     }
 
-    const label = asText(payloadOut.item?.command) || command;
+    const label = asText(output.item?.command) || command;
     const ack = `Orden encolada: ${label}.`;
     append("system", ack);
     speak(ack);
@@ -202,9 +198,7 @@ export default function NovaChat() {
         </div>
       </div>
 
-      <div
-        className="relative flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.06),transparent_26%)] p-4 sm:p-5 custom-scrollbar"
-      >
+      <div className="relative flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.06),transparent_26%)] p-4 sm:p-5 custom-scrollbar">
         <div className="space-y-4">
           {messages.map((msg) => (
             <div
