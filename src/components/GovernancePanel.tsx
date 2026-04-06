@@ -3,7 +3,7 @@
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import type { ControlRow, JsonObject } from "@/lib/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function asMeta(value: unknown): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value)
