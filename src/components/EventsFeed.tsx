@@ -1,11 +1,11 @@
 "use client";
 
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { EventRow, EventLevel, JsonObject } from "@/lib/types";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { EventLevel, EventRow, JsonObject } from "@/lib/types";
 
 type FeedItem = EventRow;
 
