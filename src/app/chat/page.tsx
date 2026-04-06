@@ -15,10 +15,7 @@ export default function ChatPage() {
       title="Terminal NOVA"
       subtitle="Habla con NOVA. Claro, corto y directo."
       actions={
-        <Link
-          href="/dashboard"
-          className="hocker-button-primary"
-        >
+        <Link href="/dashboard" className="hocker-button-primary">
           Búnker
         </Link>
       }
