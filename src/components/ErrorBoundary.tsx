@@ -1,78 +1,111 @@
 "use client";
 
-import { getErrorMessage } from "@/lib/errors";
-import React, { Component, type ReactNode } from "react";
+import type { ErrorInfo, ReactNode } from "react";
+import { Component } from "react";
 
-type Props = {
-  children?: ReactNode;
+type ErrorBoundaryProps = {
+  children: ReactNode;
+  fallback?: ReactNode;
 };
 
-type State = {
+type ErrorBoundaryState = {
   hasError: boolean;
-  errorMsg: string;
+  error: Error | null;
 };
 
-export default class ErrorBoundary extends Component<Props, State> {
-  state: State = {
-    hasError: false,
-    errorMsg: "",
-  };
-
-  static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      errorMsg: getErrorMessage(error),
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[NOVA INFRA] Anomalía de contención:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-[32px] border border-rose-500/30 bg-slate-950/80 p-8 text-center shadow-[0_0_40px_rgba(225,29,72,0.1)] backdrop-blur-3xl animate-in zoom-in duration-500">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zz48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxIiBmaWxsPSJyZ2JhKDIyNSwgMjksIDcyLCAwLjIpIi8+PC9zdmc+')] opacity-50" />
-
-          <div className="relative z-10 mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-rose-500/40 bg-rose-500/10 text-rose-500 shadow-[0_0_20px_rgba(225,29,72,0.4)] animate-pulse">
-            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-          </div>
-
-          <h2 className="relative z-10 text-2xl font-black tracking-tighter text-white uppercase drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-            Anomalía Detectada
-          </h2>
-
-          <p className="relative z-10 mt-3 max-w-lg text-[11px] font-bold uppercase tracking-widest text-rose-300/80">
-            El escudo de contención aisló un fallo para proteger la integridad del ecosistema.
+function DefaultFallback({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  return (
+    <div className="hocker-panel-pro overflow-hidden border-rose-500/20 p-5 sm:p-6">
+      <div className="flex flex-col gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-rose-300">
+            Error visual
           </p>
+          <h2 className="mt-2 text-lg font-black text-white">
+            Algo se salió del flujo
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-400">
+            La interfaz siguió viva, pero esta sección no pudo renderizarse.
+          </p>
+        </div>
 
-          <div className="relative z-10 mt-6 w-full max-w-xl rounded-2xl border border-rose-500/20 bg-slate-950/90 p-5 text-left shadow-inner">
-            <div className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500">
-              Traza de Error:
-            </div>
-            <pre className="overflow-x-auto font-mono text-[11px] leading-relaxed text-rose-200 custom-scrollbar">
-              {this.state.errorMsg}
-            </pre>
-          </div>
+        <div className="rounded-[22px] border border-white/5 bg-slate-950/60 p-4">
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+            Detalle
+          </p>
+          <p className="mt-2 break-words font-mono text-xs leading-relaxed text-rose-200">
+            {error.message || "Error no identificado."}
+          </p>
+        </div>
 
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-sky-300 transition-all hover:bg-sky-500/20 active:scale-95"
+          >
+            Reintentar
+          </button>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="relative z-10 mt-8 rounded-2xl bg-rose-600 px-8 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-500 active:scale-95"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-200 transition-all hover:bg-white/10 active:scale-95"
           >
-            Reiniciar Nodo
+            Recargar
           </button>
         </div>
-      );
+      </div>
+    </div>
+  );
+}
+
+export default class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+    };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return {
+      hasError: true,
+      error,
+    };
+  }
+
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error("[ErrorBoundary]", error, errorInfo);
+  }
+
+  reset = (): void => {
+    this.setState({
+      hasError: false,
+      error: null,
+    });
+  };
+
+  override render(): ReactNode {
+    const { hasError, error } = this.state;
+
+    if (hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return <DefaultFallback error={error ?? new Error("Error desconocido")} reset={this.reset} />;
     }
 
-    return this.props.children ?? null;
+    return this.props.children;
   }
 }
