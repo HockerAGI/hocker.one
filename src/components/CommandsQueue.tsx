@@ -1,12 +1,12 @@
 "use client";
 
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import type { CommandRow, CommandStatus, JsonObject } from "@/lib/types";
 import { normalizeCommandStatus } from "@/lib/types";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type QueueItem = CommandRow;
 
