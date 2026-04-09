@@ -2,89 +2,88 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BrandMark from "@/components/BrandMark";
 import PageShell from "@/components/PageShell";
-import AuthBox from "@/components/AuthBox";
+import Hint from "@/components/Hint";
 import SystemStatus from "@/components/SystemStatus";
+import CommandsQueue from "@/components/CommandsQueue";
+import AgisRegistry from "@/components/AgisRegistry";
+import NovaChat from "@/components/NovaChat";
 
 export const metadata: Metadata = {
   title: "Inicio",
-  description: "Entrada principal de Hocker ONE.",
+  description: "Entrada principal de Hocker One.",
 };
 
-const entryPoints = [
-  { href: "/chat", title: "NOVA", desc: "Conversación y decisiones." },
-  { href: "/commands", title: "Acciones", desc: "Órdenes y aprobaciones." },
-  { href: "/nodes", title: "Nodos", desc: "Estado en vivo." },
-  { href: "/agis", title: "AGIs", desc: "Registro activo." },
+const quickLinks = [
+  { href: "/login", title: "Entrar", desc: "Acceso privado." },
+  { href: "/dashboard", title: "Panel", desc: "Vista rápida." },
+  { href: "/chat", title: "Hablar", desc: "Conversación directa." },
+  { href: "/commands", title: "Tareas", desc: "Movimientos en curso." },
+  { href: "/nodes", title: "Equipo", desc: "Estado en vivo." },
   { href: "/governance", title: "Seguridad", desc: "Control total." },
-  { href: "/dashboard", title: "Dashboard", desc: "Vista rápida." },
 ];
 
 export default function HomePage() {
   return (
     <PageShell
       title="Inicio"
-      subtitle="Acceso limpio al panel, a NOVA y al estado del sistema."
+      subtitle="Todo el ecosistema en una sola pantalla. Claro, premium y fácil de navegar."
       actions={
         <>
-          <Link href="#auth" className="hocker-button-brand">
-            Iniciar sesión
+          <Link href="/login" className="hocker-button-brand">
+            Entrar
           </Link>
-          <Link href="/chat" className="hocker-button-primary">
-            Abrir NOVA
+          <Link href="/dashboard" className="hocker-button-primary">
+            Panel
           </Link>
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <section className="relative overflow-hidden rounded-[32px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6 hocker-page-enter">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className="relative overflow-hidden rounded-[30px] border border-white/5 bg-slate-950/60 p-5 shadow-[0_18px_90px_rgba(2,6,23,0.25)] sm:p-6 hocker-page-enter">
           <div className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-sky-500/10 blur-3xl" />
           <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 hocker-grid-soft opacity-[0.06]" />
+          <div className="pointer-events-none absolute inset-0 hocker-grid-soft opacity-[0.08]" />
 
-          <div className="relative flex flex-col gap-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <BrandMark hero className="scale-[1.01]" />
+          <div className="relative flex flex-col gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <BrandMark hero className="scale-[1.02]" />
 
-              <div className="flex flex-wrap gap-2">
-                <span className="hocker-chip">Seguro</span>
-                <span className="hocker-chip">Rápido</span>
-                <span className="hocker-chip">Listo</span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+                  Centro de mando
+                </p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                  Limpio. Claro. Listo para operar.
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                  Entra, revisa el estado y sigue con tu flujo sin perder tiempo.
+                </p>
               </div>
             </div>
 
-            <div className="max-w-3xl">
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-sky-300">
-                Control plane
-              </p>
-              <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
-                Un panel claro para mover todo el ecosistema.
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
-                Acceso directo a NOVA, comandos, nodos y seguridad. Sin ruido. Sin curvas raras. Listo para operar.
-              </p>
+            <div className="flex flex-wrap gap-2">
+              {["Listo", "Vivo", "Seguro", "Rápido"].map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300"
+                >
+                  {label}
+                </span>
+              ))}
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="#auth" className="hocker-button-brand">
-                Iniciar sesión
-              </Link>
-              <Link href="/dashboard" className="hocker-button-primary">
-                Ver dashboard
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {entryPoints.map((item) => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {quickLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group rounded-[24px] border border-white/5 bg-white/[0.03] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.05]"
+                  className="group rounded-[22px] border border-white/5 bg-white/[0.03] p-4 transition-all hover:-translate-y-0.5 hover:border-sky-500/20 hover:bg-white/[0.06]"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-black text-white">{item.title}</p>
-                    <span className="text-[9px] font-black uppercase tracking-[0.28em] text-sky-300">
-                      Open
-                    </span>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-white">
+                      {item.title}
+                    </h3>
+                    <span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.5)]" />
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
                     {item.desc}
@@ -95,26 +94,54 @@ export default function HomePage() {
           </div>
         </section>
 
-        <aside className="flex flex-col gap-6">
-          <div id="auth" className="hocker-page-enter">
-            <AuthBox />
+        <aside className="grid gap-4">
+          <div className="rounded-[30px] border border-white/5 bg-white/[0.03] p-5 sm:p-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+              Estado
+            </p>
+            <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">
+              Menos ruido. Más acción.
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              Todo está a un toque y con texto corto.
+            </p>
           </div>
 
-          <section className="hocker-panel-pro p-5 sm:p-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-                  Estado ahora
-                </p>
-                <h2 className="mt-2 text-xl font-black tracking-tight text-white">
-                  Salud del sistema
-                </h2>
-              </div>
-              <BrandMark compact showWordmark={false} />
-            </div>
+          <div className="rounded-[30px] border border-white/5 bg-slate-950/60 p-5 sm:p-6">
             <SystemStatus />
-          </section>
+          </div>
         </aside>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-7">
+          <div className="hocker-panel-pro p-4 sm:p-5">
+            <CommandsQueue />
+          </div>
+        </div>
+
+        <div className="xl:col-span-5">
+          <div className="hocker-panel-pro p-4 sm:p-5">
+            <AgisRegistry title="Equipo activo" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 hocker-glass-vfx overflow-hidden border-sky-500/15">
+        <div className="border-b border-white/5 px-4 py-3 sm:px-6">
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
+            Hablar
+          </p>
+        </div>
+        <div className="p-2 sm:p-3">
+          <NovaChat />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Hint title="Diseño premium">
+          Vidrio, profundidad y aire. Sin saturar.
+        </Hint>
       </div>
     </PageShell>
   );
