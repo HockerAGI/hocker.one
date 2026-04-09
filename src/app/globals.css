@@ -5,6 +5,18 @@
 :root {
   --background: #020617;
   --foreground: #f8fafc;
+
+  --hocker-bg: #020617;
+  --hocker-surface: #0b1220;
+  --hocker-panel: #0f172a;
+  --hocker-cyan: #0ea5e9;
+  --hocker-blue: #38bdf8;
+  --hocker-text: #f8fafc;
+  --hocker-muted: #94a3b8;
+  --hocker-line: rgba(148, 163, 184, 0.18);
+  --hocker-alert: #fb7185;
+  --hocker-success: #34d399;
+
   --hocker-duration: 450ms;
   --hocker-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -26,7 +38,6 @@ body {
     linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)),
     url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230ea5e9' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E"),
     var(--background);
-
   color: var(--foreground);
   overflow-y: auto;
   overscroll-behavior-y: auto;
@@ -83,36 +94,24 @@ body::after {
     @apply rounded-[28px] border border-white/5 bg-white/[0.03] shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl;
   }
 
-  .hocker-surface-strong {
-    @apply rounded-[32px] border border-white/10 bg-slate-900/45 shadow-[0_28px_100px_rgba(2,6,23,0.35)] backdrop-blur-3xl;
-  }
-
-  .hocker-chip {
-    @apply inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all duration-300 hover:border-sky-500/20 hover:bg-sky-500/10 hover:text-sky-300;
-  }
-
   .hocker-button-brand {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-sky-300 shadow-[0_0_18px_rgba(14,165,233,0.12)] transition-all duration-300 hover:bg-sky-500/20 hover:shadow-[0_0_24px_rgba(14,165,233,0.18)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] text-slate-950 shadow-[0_0_20px_rgba(14,165,233,0.25)] transition-all hover:translate-y-[-1px] hover:bg-sky-400 active:scale-[0.98];
   }
 
   .hocker-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-200 transition-all duration-300 hover:border-white/15 hover:bg-white/10 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] text-slate-100 transition-all hover:bg-white/[0.07] active:scale-[0.98];
   }
 
   .hocker-title-line {
-    @apply text-[10px] font-black uppercase tracking-[0.35em] text-sky-400;
+    @apply text-[10px] font-black uppercase tracking-[0.35em] text-sky-300;
   }
 
   .hocker-kicker {
     @apply text-[11px] font-medium leading-relaxed text-slate-400;
   }
 
-  .hocker-grid-soft {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: center;
+  .hocker-text-glow {
+    text-shadow: 0 0 24px rgba(14, 165, 233, 0.18);
   }
 
   .hocker-page-enter {
@@ -129,6 +128,14 @@ body::after {
     animation: hocker-enter 420ms var(--hocker-ease) both;
     --hocker-from-scale: 0.97;
     --hocker-from-opacity: 0;
+  }
+
+  .hocker-grid-soft {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: center;
   }
 
   .custom-scrollbar {
@@ -152,20 +159,16 @@ body::after {
 }
 
 @layer utilities {
-  .hocker-grid-soft {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 32px 32px;
-    background-position: center;
-  }
-
   .safe-x {
     padding-left: max(1rem, env(safe-area-inset-left));
     padding-right: max(1rem, env(safe-area-inset-right));
   }
 
   .safe-b {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .pb-safe {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
