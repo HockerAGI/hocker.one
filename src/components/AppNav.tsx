@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   Bot,
+  Boxes,
   Database,
   LayoutDashboard,
   MessageCircle,
@@ -28,13 +29,14 @@ type AppNavProps = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Inicio", icon: Sparkles, hint: "Entrada" },
-  { href: "/dashboard", label: "Panel", icon: LayoutDashboard, hint: "Resumen" },
-  { href: "/chat", label: "Hablar", icon: MessageCircle, hint: "Mensajes" },
-  { href: "/commands", label: "Tareas", icon: Workflow, hint: "Órdenes" },
-  { href: "/nodes", label: "Equipo", icon: Database, hint: "Estado" },
-  { href: "/agis", label: "Módulos", icon: Bot, hint: "IA" },
-  { href: "/governance", label: "Seguridad", icon: Shield, hint: "Protección" },
+  { href: "/", label: "Inicio", icon: Sparkles, hint: "Base" },
+  { href: "/dashboard", label: "Panel", icon: LayoutDashboard, hint: "Vista" },
+  { href: "/chat", label: "Nova AGI", icon: MessageCircle, hint: "Chat" },
+  { href: "/agis", label: "AGIs", icon: Bot, hint: "Todas" },
+  { href: "/commands", label: "Órdenes", icon: Workflow, hint: "Acciones" },
+  { href: "/nodes", label: "Nodos", icon: Database, hint: "Estado" },
+  { href: "/supply", label: "Suministros", icon: Boxes, hint: "Ruta" },
+  { href: "/governance", label: "Guardia", icon: Shield, hint: "Control" },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -136,19 +138,15 @@ function MobileNav() {
                 }`}
               />
 
-              <div
-                className={`relative flex items-center justify-center rounded-xl transition-all duration-300 ${
+              <span
+                className={`relative flex items-center justify-center rounded-2xl transition-all duration-300 ${
                   isHub
-                    ? "h-11 w-11 bg-sky-500 text-black shadow-[0_0_25px_rgba(14,165,233,0.55)] group-hover:scale-110"
-                    : "h-9 w-9"
+                    ? "h-12 w-12 bg-sky-500 text-black shadow-[0_0_25px_rgba(14,165,233,0.55)] group-hover:scale-110"
+                    : "h-10 w-10"
                 } ${active && !isHub ? "bg-sky-500/10" : ""}`}
               >
-                <Icon
-                  className={`h-5 w-5 transition-transform duration-300 ${
-                    isHub ? "text-black" : "group-hover:-translate-y-0.5"
-                  }`}
-                />
-              </div>
+                <Icon className={`h-5 w-5 ${isHub ? "text-black" : ""}`} />
+              </span>
 
               <span
                 className={`text-[9px] font-black uppercase tracking-widest leading-none ${
