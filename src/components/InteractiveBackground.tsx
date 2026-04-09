@@ -9,9 +9,10 @@ export default function InteractiveBackground() {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] opacity-40" />
       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-sky-500/10 to-transparent" />
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-sky-400/60 to-transparent opacity-70" />
-      <div className="absolute left-1/2 top-1/3 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-cyan-500/5 blur-3xl" />
-      <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-white/8 to-transparent" />
-      <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/8 to-transparent" />
+
+      <div className="absolute left-[7%] top-[18%] hidden h-28 w-40 rounded-[30px] border border-white/8 bg-white/[0.04] shadow-[0_18px_80px_rgba(2,6,23,0.35)] backdrop-blur-2xl lg:block" />
+      <div className="absolute right-[9%] top-[30%] hidden h-24 w-52 rounded-[30px] border border-sky-400/12 bg-sky-500/[0.05] shadow-[0_18px_80px_rgba(2,6,23,0.28)] backdrop-blur-2xl lg:block" />
+      <div className="absolute bottom-[14%] left-[15%] hidden h-20 w-36 rounded-[26px] border border-white/8 bg-white/[0.03] shadow-[0_18px_80px_rgba(2,6,23,0.28)] backdrop-blur-2xl xl:block" />
     </div>
   );
 }
