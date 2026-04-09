@@ -35,26 +35,17 @@ export type CommandName =
   | "restart_nova"
   | "restart_telemetry";
 
-// ✅ FIX: normalizador que faltaba
 export function normalizeCommandStatus(input?: string): CommandStatus {
-  switch ((input ?? "").toLowerCase()) {
-    case "queued":
-      return "queued";
-    case "needs_approval":
-      return "needs_approval";
-    case "running":
-      return "running";
-    case "done":
-      return "done";
-    case "error":
-    case "failed":
-      return "error";
-    case "canceled":
-    case "cancelled":
-      return "canceled";
-    default:
-      return "queued";
-  }
+  const value = (input ?? "").toLowerCase();
+
+  if (value === "queued") return "queued";
+  if (value === "needs_approval") return "needs_approval";
+  if (value === "running") return "running";
+  if (value === "done") return "done";
+  if (value === "error" || value === "failed") return "error";
+  if (value === "canceled" || value === "cancelled") return "canceled";
+
+  return "queued";
 }
 
 // ==========================
@@ -62,17 +53,13 @@ export function normalizeCommandStatus(input?: string): CommandStatus {
 // ==========================
 export type EventLevel = "info" | "warn" | "error";
 
-// ✅ FIX
 export function normalizeEventLevel(input?: string): EventLevel {
-  switch ((input ?? "").toLowerCase()) {
-    case "warn":
-    case "warning":
-      return "warn";
-    case "error":
-      return "error";
-    default:
-      return "info";
-  }
+  const value = (input ?? "").toLowerCase();
+
+  if (value === "warn" || value === "warning") return "warn";
+  if (value === "error") return "error";
+
+  return "info";
 }
 
 // ==========================
@@ -97,8 +84,65 @@ export type SupplyOrderStatus =
   | "delivered"
   | "canceled";
 
-// ✅ FIX
 export function normalizeSupplyOrderStatus(input?: string): SupplyOrderStatus {
-  switch ((input ?? "").toLowerCase()) {
-    case "paid":
-      return "paid";
+  const value = (input ?? "").toLowerCase();
+
+  if (value === "paid") return "paid";
+  if (value === "producing") return "producing";
+  if (value === "shipped") return "shipped";
+  if (value === "delivered") return "delivered";
+  if (value === "canceled" || value === "cancelled") return "canceled";
+
+  return "pending";
+}
+
+// ==========================
+// DATABASE ROWS
+// ==========================
+export interface CommandRow {
+  id: string;
+  project_id: ProjectId;
+  node_id: NodeId;
+  command: CommandName;
+  payload: JsonObject;
+  status: CommandStatus;
+  needs_approval: boolean;
+  signature: string;
+  result: JsonObject | null;
+  error: string | null;
+  created_at: string;
+  executed_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  approved_at: string | null;
+}
+
+export interface NodeRow {
+  id: NodeId;
+  project_id: ProjectId;
+  name: string | null;
+  type: string;
+  status: NodeStatus;
+  last_seen_at: string | null;
+  meta: JsonObject;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectRow {
+  id: ProjectId;
+  name: string | null;
+  meta: JsonObject;
+  created_at: string;
+}
+
+export interface AgiRow {
+  id: string;
+  name: string | null;
+  description: string | null;
+  version: string | null;
+  tags: string[];
+  meta: JsonObject | null;
+  created_at: string;
+}
