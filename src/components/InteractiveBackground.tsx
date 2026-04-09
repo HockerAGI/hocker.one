@@ -1,5 +1,3 @@
-"use client";
-
 export default function InteractiveBackground() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -10,9 +8,9 @@ export default function InteractiveBackground() {
       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-sky-500/10 to-transparent" />
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-sky-400/60 to-transparent opacity-70" />
 
-      <div className="absolute left-[7%] top-[18%] hidden h-28 w-40 rounded-[30px] border border-white/8 bg-white/[0.04] shadow-[0_18px_80px_rgba(2,6,23,0.35)] backdrop-blur-2xl lg:block" />
-      <div className="absolute right-[9%] top-[30%] hidden h-24 w-52 rounded-[30px] border border-sky-400/12 bg-sky-500/[0.05] shadow-[0_18px_80px_rgba(2,6,23,0.28)] backdrop-blur-2xl lg:block" />
-      <div className="absolute bottom-[14%] left-[15%] hidden h-20 w-36 rounded-[26px] border border-white/8 bg-white/[0.03] shadow-[0_18px_80px_rgba(2,6,23,0.28)] backdrop-blur-2xl xl:block" />
+      <div className="absolute left-[7%] top-[18%] hidden h-28 w-40 rounded-[30px] border border-white/8 bg-white/[0.04] shadow-[0_18px_80px_rgba(2,6,23,0.35)] backdrop-blur-2xl lg:block animate-[float-soft_8s_ease-in-out_infinite]" />
+      <div className="absolute right-[9%] top-[30%] hidden h-24 w-52 rounded-[30px] border border-sky-400/12 bg-sky-500/[0.05] shadow-[0_18px_80px_rgba(2,6,23,0.28)] backdrop-blur-2xl lg:block animate-[drift_12s_ease-in-out_infinite]" />
+      <div className="absolute bottom-[14%] left-[15%] hidden h-20 w-36 rounded-[26px] border border-white/8 bg-white/[0.03] shadow-[0_18px_80px_rgba(2,6,23,0.28)] backdrop-blur-2xl xl:block animate-[float-soft_10s_ease-in-out_infinite]" />
     </div>
   );
 }
