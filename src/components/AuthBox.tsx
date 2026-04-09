@@ -8,33 +8,41 @@ import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 
 type AuthBoxProps = {
-  defaultEmail?: string;
-  defaultPassword?: string;
+  fixedEmail?: string;
+  fixedPassword?: string;
 };
 
 export default function AuthBox({
-  defaultEmail = "",
-  defaultPassword = "",
+  fixedEmail = "",
+  fixedPassword = "",
 }: AuthBoxProps) {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabase(), []);
 
-  const [email, setEmail] = useState(defaultEmail);
-  const [password, setPassword] = useState(defaultPassword);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!email.trim() || !password.trim() || loading) return;
+    if (loading) return;
+
+    const loginEmail = email.trim() || fixedEmail.trim();
+    const loginPassword = password || fixedPassword;
+
+    if (!loginEmail || !loginPassword) {
+      setError("Faltan credenciales.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+        email: loginEmail,
+        password: loginPassword,
       });
 
       if (authError) throw authError;
