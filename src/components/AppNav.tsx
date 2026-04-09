@@ -59,7 +59,7 @@ function AppNavRail() {
       </div>
 
       <div className="mt-5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-        <div className="space-y-1.5">
+        <nav className="space-y-2" aria-label="Navegación lateral">
           {NAV_ITEMS.map((item) => {
             const active = isActivePath(pathname, item.href);
             const Icon = item.icon;
@@ -68,34 +68,39 @@ function AppNavRail() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-300 ${
+                aria-current={active ? "page" : undefined}
+                className={[
+                  "group flex items-center gap-3 rounded-[22px] border px-4 py-3 transition-all duration-300",
                   active
-                    ? "border border-sky-500/20 bg-sky-500/10 text-sky-300 shadow-[0_0_18px_rgba(14,165,233,0.08)]"
-                    : "border border-transparent text-slate-400 hover:border-white/5 hover:bg-white/[0.04] hover:text-slate-100"
-                }`}
+                    ? "border-sky-400/20 bg-sky-500/10 text-sky-300 shadow-[0_0_25px_rgba(14,165,233,0.08)]"
+                    : "border-white/5 bg-white/[0.02] text-slate-400 hover:border-white/10 hover:bg-white/[0.04] hover:text-white",
+                ].join(" ")}
               >
                 <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-2xl border transition-all ${
-                    active
-                      ? "border-sky-400/20 bg-sky-500/10"
-                      : "border-white/5 bg-white/[0.03] group-hover:border-sky-500/20"
-                  }`}
+                  className={[
+                    "flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300",
+                    active ? "bg-sky-500 text-black shadow-[0_0_25px_rgba(14,165,233,0.35)]" : "bg-white/[0.03]",
+                  ].join(" ")}
                 >
-                  <Icon className={`h-4.5 w-4.5 ${active ? "text-sky-300" : "text-slate-400"}`} />
+                  <Icon className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5" />
                 </span>
 
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[12px] font-black uppercase tracking-widest">
+                  <span className="block text-[10px] font-black uppercase tracking-[0.3em]">
                     {item.label}
                   </span>
-                  <span className="block text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                  <span className="mt-1 block text-[11px] text-slate-500">
                     {item.hint}
                   </span>
+                </span>
+
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 group-hover:text-sky-300">
+                  Abrir
                 </span>
               </Link>
             );
           })}
-        </div>
+        </nav>
 
         <div className="mt-6 space-y-4">
           <WorkspaceBar />
@@ -122,38 +127,45 @@ function MobileNav() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`group relative flex min-w-[74px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-center transition-all duration-300 active:scale-90 ${
-                active ? "text-sky-300" : "text-slate-400 hover:text-white"
-              }`}
+              className={[
+                "group relative flex min-w-[74px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-center",
+                "transition-all duration-300 active:scale-90",
+                active ? "text-sky-300" : "text-slate-400 hover:text-white",
+              ].join(" ")}
             >
               <span
-                className={`absolute inset-0 rounded-2xl blur-xl opacity-0 transition-all duration-500 ${
+                className={[
+                  "absolute inset-0 rounded-2xl blur-xl opacity-0 transition-all duration-500",
                   active
                     ? "bg-sky-500/20 opacity-100"
                     : isNova
                       ? "bg-sky-500/10 group-hover:opacity-60"
-                      : "group-hover:bg-white/5 group-hover:opacity-40"
-                }`}
+                      : "group-hover:bg-white/5 group-hover:opacity-40",
+                ].join(" ")}
               />
 
               <div
-                className={`relative flex items-center justify-center rounded-xl transition-all duration-300 ${
+                className={[
+                  "relative flex items-center justify-center rounded-xl transition-all duration-300",
                   isNova
                     ? "h-11 w-11 bg-sky-500 text-black shadow-[0_0_25px_rgba(14,165,233,0.55)] group-hover:scale-110"
-                    : "h-9 w-9"
-                } ${active && !isNova ? "bg-sky-500/10" : ""}`}
+                    : "h-9 w-9",
+                  active && !isNova ? "bg-sky-500/10" : "",
+                ].join(" ")}
               >
                 <Icon
-                  className={`h-5 w-5 transition-transform duration-300 ${
-                    isNova ? "text-black" : "group-hover:-translate-y-0.5"
-                  }`}
+                  className={[
+                    "h-5 w-5 transition-transform duration-300",
+                    isNova ? "text-black" : "group-hover:-translate-y-0.5",
+                  ].join(" ")}
                 />
               </div>
 
               <span
-                className={`text-[9px] font-black uppercase tracking-widest leading-none ${
-                  isNova ? "text-sky-300" : ""
-                }`}
+                className={[
+                  "text-[9px] font-black uppercase tracking-widest leading-none",
+                  isNova ? "text-sky-300" : "",
+                ].join(" ")}
               >
                 {item.label}
               </span>
@@ -170,9 +182,6 @@ function MobileNav() {
 }
 
 export default function AppNav({ isMobile = false }: AppNavProps) {
-  if (isMobile) {
-    return <MobileNav />;
-  }
-
+  if (isMobile) return <MobileNav />;
   return <AppNavRail />;
 }
