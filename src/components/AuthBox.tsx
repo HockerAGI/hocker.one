@@ -1,206 +1,148 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
-import { getErrorMessage } from "@/lib/errors";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import BrandMark from "@/components/BrandMark";
+import { getErrorMessage } from "@/lib/errors";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
+
+type AuthMode = "signIn" | "signUp";
 
 export default function AuthBox() {
-  const supabase = useMemo(() => createBrowserSupabase(), []);
-  
+  const router = useRouter();
+  const [mode, setMode] = useState<AuthMode>("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"password" | "magic_link">("password");
-  
+  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
+  const canSubmit = useMemo(() => {
+    return email.trim().length > 3 && password.length >= 6;
+  }, [email, password]);
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (!alive) return;
-      setUserEmail(data.user?.email ?? null);
-    });
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit || loading) return;
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
-    });
-
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
-  }, [supabase]);
-
-  async function handlePasswordLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || !password.trim() || loading) return;
-
-    setError(null);
     setLoading(true);
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
+      const supabase = createBrowserSupabase();
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?next=/dashboard`
+          : undefined;
+
+      if (mode === "signIn") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) throw error;
+
+        toast.success("Sesión iniciada.");
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
-      });
-
-      if (authError) throw authError;
-    } catch (err: unknown) {
-      setError(getErrorMessage(err) || "Credenciales rechazadas por la Matriz.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleMagicLink(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || loading) return;
-
-    setError(null);
-    setLoading(true);
-
-    try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email,
         options: {
-          emailRedirectTo: `${origin}/auth/callback`,
+          emailRedirectTo: redirectTo,
+          data: displayName.trim() ? { name: displayName.trim() } : undefined,
         },
       });
 
-      if (authError) throw authError;
-      setSent(true);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err) || "Fallo al emitir el enlace táctico.");
+      if (error) throw error;
+
+      toast.success("Cuenta creada. Revisa tu correo si la confirmación está activa.");
+      setMode("signIn");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="relative w-full max-w-md animate-in fade-in zoom-in duration-700">
-      {/* Resplandor VFX trasero */}
-      <div className="absolute -inset-1 bg-sky-500/20 rounded-[40px] blur-3xl opacity-30 animate-pulse-slow" />
+    <section className="mx-auto w-full max-w-md rounded-[30px] border border-white/5 bg-slate-950/80 p-5 shadow-[0_24px_120px_rgba(2,6,23,0.45)] backdrop-blur-3xl sm:p-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <BrandMark compact />
+        <button
+          type="button"
+          aria-pressed={mode === "signUp"}
+          onClick={() => setMode((current) => (current === "signIn" ? "signUp" : "signIn"))}
+          className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 transition-all hover:bg-white/[0.06]"
+        >
+          {mode === "signIn" ? "Registro" : "Login"}
+        </button>
+      </div>
 
-      <div className="hocker-panel-pro relative flex flex-col items-center p-8 sm:p-12 border border-sky-500/20 shadow-[0_0_40px_rgba(14,165,233,0.1)]">
-        <div className="mb-8 flex flex-col items-center w-full">
-          <BrandMark showWordmark={true} hero={false} className="mb-8 scale-110" />
-          <h2 className="text-xl font-black tracking-tighter text-white uppercase text-center drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-            Autorización de Mando
-          </h2>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-400 mt-2">
-            Identidad Requerida
-          </p>
+      <div className="mb-5">
+        <h2 className="text-xl font-black tracking-tight text-white">
+          {mode === "signIn" ? "Entrar" : "Crear cuenta"}
+        </h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Acceso al control central del ecosistema.
+        </p>
+      </div>
+
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        {mode === "signUp" ? (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+              Nombre
+            </label>
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Armando / Equipo"
+              className="w-full rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-400/30"
+              autoComplete="name"
+            />
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+            Correo
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="contacto@hockerads.com"
+            className="w-full rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-400/30"
+            autoComplete="email"
+          />
         </div>
 
-        {userEmail ? (
-          <div className="w-full text-center animate-in fade-in">
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 mb-6 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-              <p className="text-[10px] uppercase font-black tracking-widest text-emerald-400">Enlace Establecido</p>
-              <p className="text-white font-bold truncate mt-1">{userEmail}</p>
-            </div>
-            <a
-              href="/dashboard"
-              className="inline-flex w-full justify-center rounded-2xl bg-sky-500 px-6 py-4 text-sm font-black text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 active:scale-95"
-            >
-              ENTRAR A LA MATRIZ
-            </a>
-          </div>
-        ) : (
-          <div className="w-full space-y-6">
-            
-            <form onSubmit={mode === "password" ? handlePasswordLogin : handleMagicLink} className="w-full space-y-4 animate-in fade-in">
-              <div className="relative">
-                <input
-                  type="email"
-                  autoComplete="email"
-                  disabled={loading || sent}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50"
-                  placeholder="director@hocker.one"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <svg className="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                </div>
-              </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+            Contraseña
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mínimo 6 caracteres"
+            className="w-full rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-400/30"
+            autoComplete={mode === "signIn" ? "current-password" : "new-password"}
+          />
+        </div>
 
-              {mode === "password" && !sent && (
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  disabled={loading}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-5 py-4 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 shadow-inner disabled:opacity-50 animate-in slide-in-from-top-2"
-                  placeholder="Código de autorización"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              )}
-
-              {error && (
-                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-rose-300 text-center animate-pulse">
-                  {error}
-                </div>
-              )}
-
-              {sent ? (
-                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-[11px] font-bold uppercase tracking-wide text-emerald-300 text-center shadow-[0_0_15px_rgba(16,185,129,0.1)] animate-in zoom-in">
-                  Protocolo iniciado. Revisa tu bandeja de entrada para acceder directamente.
-                </div>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={loading || !email.trim() || (mode === "password" && !password.trim())}
-                  className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 shadow-lg transition-all hover:bg-slate-200 active:scale-95 disabled:opacity-50"
-                >
-                  {loading 
-                    ? "PROCESANDO..." 
-                    : mode === "password" 
-                      ? "INICIAR CONEXIÓN" 
-                      : "ENVIAR ENLACE MÁGICO"}
-                </button>
-              )}
-            </form>
-
-            {/* INTERRUPTOR TÁCTICO DE MODO */}
-            {!sent && (
-              <div className="pt-4 text-center border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode(mode === "password" ? "magic_link" : "password");
-                    setError(null);
-                  }}
-                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-sky-400 transition-colors"
-                >
-                  {mode === "password" 
-                    ? "Acceder sin contraseña (Enlace Mágico)" 
-                    : "Acceder con Contraseña"}
-                </button>
-              </div>
-            )}
-            
-            {sent && (
-              <div className="pt-4 text-center border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSent(false);
-                    setMode("password");
-                  }}
-                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
-                >
-                  Volver al inicio
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+        <button
+          type="submit"
+          disabled={!canSubmit || loading}
+          className="hocker-button-brand w-full disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Procesando..." : mode === "signIn" ? "Entrar" : "Crear cuenta"}
+        </button>
+      </form>
+    </section>
   );
 }
