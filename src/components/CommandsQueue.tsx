@@ -85,9 +85,7 @@ export default function CommandsQueue() {
         .order("created_at", { ascending: false })
         .limit(24);
 
-      if (queryError) {
-        throw queryError;
-      }
+      if (queryError) throw queryError;
 
       const rows = Array.isArray(data)
         ? (data as QueueItem[]).map((row) => ({
@@ -159,10 +157,10 @@ export default function CommandsQueue() {
       <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Cola operativa
+            Actividad
           </p>
           <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
-            Comandos recientes
+            Movimientos recientes
           </h3>
         </div>
 
@@ -174,7 +172,7 @@ export default function CommandsQueue() {
       <div className="flex flex-col gap-3">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-xs text-slate-400">
-            Sin comandos pendientes.
+            Sin movimientos por ahora.
           </div>
         ) : (
           items.map((item) => (
@@ -190,13 +188,13 @@ export default function CommandsQueue() {
                     </p>
                     {item.needs_approval ? (
                       <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-300">
-                        Aprobación
+                        Revisión
                       </span>
                     ) : null}
                   </div>
 
                   <p className="mt-2 text-[11px] text-slate-400">
-                    Nodo: <span className="text-slate-200">{item.node_id}</span>
+                    Equipo: <span className="text-slate-200">{item.node_id}</span>
                   </p>
 
                   <p className="mt-1 text-[11px] text-slate-500">
@@ -224,7 +222,9 @@ export default function CommandsQueue() {
                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
                     Aprobado
                   </p>
-                  <p className="mt-1 text-xs text-slate-200">{item.approved_at ? safeDate(item.approved_at) : "—"}</p>
+                  <p className="mt-1 text-xs text-slate-200">
+                    {item.approved_at ? safeDate(item.approved_at) : "—"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
@@ -238,7 +238,7 @@ export default function CommandsQueue() {
 
               <details className="mt-4">
                 <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
-                  Inspeccionar carga
+                  Ver detalles
                 </summary>
                 <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/80 shadow-inner">
                   <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
