@@ -9,7 +9,7 @@ function isCommandRow(data: unknown): data is CommandRow {
 
   return (
     typeof row.id === "string" &&
-    typeof row.project_id === "string" &&
+    row.project_id === "hocker-one" &&
     typeof row.node_id === "string" &&
     typeof row.command === "string" &&
     typeof row.created_at === "string"
@@ -31,7 +31,7 @@ async function logEvent(
   data?: JsonObject,
 ): Promise<void> {
   await sb.from("events").insert({
-    project_id: command.project_id,
+    project_id: "hocker-one",
     node_id: command.node_id,
     level,
     type,
@@ -45,10 +45,7 @@ async function resolveExecution(command: CommandRow): Promise<JsonObject> {
 
   switch (command.command) {
     case "ping":
-      return {
-        ok: true,
-        ts: new Date().toISOString(),
-      };
+      return { ok: true, ts: new Date().toISOString() };
 
     case "node.sync":
       return {
@@ -59,10 +56,7 @@ async function resolveExecution(command: CommandRow): Promise<JsonObject> {
       };
 
     case "system.echo":
-      return {
-        ok: true,
-        echo: payload,
-      };
+      return { ok: true, echo: payload };
 
     case "supply.create_order":
       return {
