@@ -5,15 +5,15 @@ import PageShell from "@/components/PageShell";
 import NodesPanel from "@/components/NodesPanel";
 
 export const metadata: Metadata = {
-  title: "Equipo",
+  title: "Nodos",
   description: "Supervisión de activos en vivo.",
 };
 
 export default function NodesPage() {
   return (
     <PageShell
-      title="Equipo"
-      subtitle="Todo lo que está conectado y activo."
+      title="Nodos"
+      subtitle="Todo lo conectado y activo."
       actions={
         <Link href="/dashboard" className="hocker-button-primary">
           Volver
