@@ -1,11 +1,11 @@
 "use client";
 
-import { getErrorMessage } from "@/lib/errors";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
-import { useWorkspace } from "@/components/WorkspaceContext";
-import type { NodeRow, JsonObject } from "@/lib/types";
-import { useEffect, useMemo, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useEffect, useMemo, useState } from "react";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { getErrorMessage } from "@/lib/errors";
+import { useWorkspace } from "@/components/WorkspaceContext";
+import type { NodeRow } from "@/lib/types";
 
 function pill(status: NodeRow["status"]): string {
   if (status === "online") {
@@ -23,10 +23,6 @@ function safeTime(input: string | null): string {
   if (!input) return "—";
   const d = new Date(input);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
-}
-
-function isJsonObject(value: unknown): value is JsonObject {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export default function NodesPanel() {
@@ -49,9 +45,7 @@ export default function NodesPanel() {
         .order("updated_at", { ascending: false })
         .limit(60);
 
-      if (queryError) {
-        throw queryError;
-      }
+      if (queryError) throw queryError;
 
       setItems(Array.isArray(data) ? (data as NodeRow[]) : []);
     } catch (err: unknown) {
@@ -116,7 +110,7 @@ export default function NodesPanel() {
       <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Red
+            Equipo
           </p>
           <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
             Nodos en vivo
@@ -131,7 +125,7 @@ export default function NodesPanel() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-[11px] text-slate-400">
-            Sin nodos disponibles.
+            No hay nodos visibles por ahora.
           </div>
         ) : (
           items.map((node, index) => (
@@ -145,7 +139,7 @@ export default function NodesPanel() {
               <div className="relative flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <h4 className="truncate text-sm font-black text-white group-hover:text-sky-300">
-                    {node.name || "Nodo"}
+                    {node.name || "Equipo"}
                   </h4>
                   <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${pill(node.status)}`}>
                     {node.status}
@@ -188,19 +182,6 @@ export default function NodesPanel() {
                   )}
                 </div>
               </div>
-
-              {isJsonObject(node.meta) && Object.keys(node.meta).length > 0 ? (
-                <details className="mt-4">
-                  <summary className="cursor-pointer list-none text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
-                    Inspeccionar datos
-                  </summary>
-                  <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-slate-950/80 shadow-inner">
-                    <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
-                      {JSON.stringify(node.meta, null, 2)}
-                    </pre>
-                  </div>
-                </details>
-              ) : null}
             </article>
           ))
         )}
