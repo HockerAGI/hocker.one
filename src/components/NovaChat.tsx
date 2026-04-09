@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import VoiceInput from "@/components/VoiceInput";
+import { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
+import VoiceInput from "@/components/VoiceInput";
 import { speak } from "@/lib/tts";
 
 type Message = {
@@ -16,10 +16,6 @@ function makeId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function textOf(value: unknown): string {
-  return typeof value === "string" ? value : "";
 }
 
 function safeReply(payload: unknown): string {
@@ -86,7 +82,6 @@ export default function NovaChat() {
     const clean = text.trim();
     if (!clean || sending) return;
 
-    const userMessage = clean;
     setSending(true);
     setError(null);
     setLastText(clean);
