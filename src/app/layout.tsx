@@ -1,22 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Orbitron, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import BottomDock from "@/components/BottomDock";
 import PwaRegister from "@/components/PwaRegister";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const siteUrl = new URL("https://hockerone.vercel.app");
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://hocker.one");
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -75,19 +83,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark scroll-smooth h-full" suppressHydrationWarning>
-      <body
-        className={`
-          ${geistSans.variable}
-          ${geistMono.variable}
-          min-h-screen
-          overflow-x-hidden
-          bg-slate-950
-          text-slate-100
-          antialiased
-          selection:bg-sky-500/30
-        `}
-      >
+    <html
+      lang="es"
+      className={`${orbitron.variable} ${dmSans.variable} ${jetBrainsMono.variable} dark scroll-smooth h-full`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30">
         <WorkspaceProvider>
           <div className="relative min-h-screen overflow-hidden">
             <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%),linear-gradient(180deg,#020617_0%,#020617_100%)]" />
