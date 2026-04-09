@@ -13,7 +13,7 @@ export default function ChatPage() {
   return (
     <PageShell
       title="Hablar"
-      subtitle="Conversa con NOVA de forma simple y directa."
+      subtitle="Habla con NOVA. Claro, corto y directo."
       actions={
         <Link href="/dashboard" className="hocker-button-primary">
           Panel
@@ -33,7 +33,7 @@ export default function ChatPage() {
                 <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
               </span>
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">
-                En línea
+                Conexión segura establecida
               </span>
             </div>
             <span className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500">
