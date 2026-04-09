@@ -29,7 +29,7 @@ type AppNavProps = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Inicio", icon: Sparkles, hint: "Entrada" },
-  { href: "/dashboard", label: "Vista general", icon: LayoutDashboard, hint: "Resumen" },
+  { href: "/dashboard", label: "Panel", icon: LayoutDashboard, hint: "Resumen" },
   { href: "/chat", label: "Hablar", icon: MessageCircle, hint: "Mensajes" },
   { href: "/commands", label: "Tareas", icon: Workflow, hint: "Órdenes" },
   { href: "/nodes", label: "Equipo", icon: Database, hint: "Estado" },
