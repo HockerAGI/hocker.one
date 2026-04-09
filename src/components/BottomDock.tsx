@@ -35,6 +35,8 @@ function isActivePath(pathname: string, href: string): boolean {
 export default function BottomDock() {
   const pathname = usePathname() || "/";
 
+  if (pathname.startsWith("/login")) return null;
+
   return (
     <nav
       className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 px-3 sm:px-5"
