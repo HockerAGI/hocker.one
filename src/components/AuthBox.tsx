@@ -1,48 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import BrandMark from "@/components/BrandMark";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 
 type AuthBoxProps = {
-  fixedEmail?: string;
-  fixedPassword?: string;
+  fixedEmail: string;
+  fixedPassword: string;
+  className?: string;
 };
 
 export default function AuthBox({
-  fixedEmail = "",
-  fixedPassword = "",
+  fixedEmail,
+  fixedPassword,
+  className = "",
 }: AuthBoxProps) {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabase(), []);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (loading) return;
-
-    const loginEmail = email.trim() || fixedEmail.trim();
-    const loginPassword = password || fixedPassword;
-
-    if (!loginEmail || !loginPassword) {
-      setError("Faltan credenciales.");
-      return;
-    }
 
     setLoading(true);
     setError(null);
 
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
+        email: fixedEmail,
+        password: fixedPassword,
       });
 
       if (authError) throw authError;
@@ -58,25 +50,32 @@ export default function AuthBox({
   }
 
   return (
-    <section className="relative w-full max-w-md overflow-hidden rounded-[34px] border border-white/5 bg-slate-950/82 p-5 shadow-[0_24px_100px_rgba(2,6,23,0.45)] backdrop-blur-3xl sm:p-7">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.10),transparent_36%)]" />
+    <section
+      className={`relative w-full max-w-[34rem] overflow-hidden rounded-[36px] border border-white/5 bg-slate-950/82 p-5 shadow-[0_30px_120px_rgba(2,6,23,0.5)] backdrop-blur-3xl sm:p-7 ${className}`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)]" />
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
       <div className="relative flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
-          <BrandMark compact showWordmark={false} />
-          <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-sky-300">
-            Seguro
+          <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-sky-300">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Cuenta lista
+          </div>
+
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
+            Sesión privada
           </span>
         </div>
 
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-sky-300">
-            Acceder
+            Entrada segura
           </p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-white">
-            Iniciar sesión
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
+            Inicia sesión
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            Tu entrada al panel central.
+            El acceso queda resuelto sin mostrar credenciales en pantalla.
           </p>
         </div>
 
@@ -87,40 +86,38 @@ export default function AuthBox({
         ) : null}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-              Correo
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu-correo@dominio.com"
-              className="w-full rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-400/30 focus:bg-white/[0.05]"
-              autoComplete="email"
-            />
-          </div>
+          <input type="hidden" name="email" value={fixedEmail} />
+          <input type="hidden" name="password" value={fixedPassword} />
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-              Contraseña
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-400/30 focus:bg-white/[0.05]"
-              autoComplete="current-password"
-            />
+          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-slate-950/60">
+                <Sparkles className="h-5 w-5 text-sky-300" />
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-500">
+                  Inicio cinematográfico
+                </p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Logo grande, panel limpio, una sola acción.
+                </p>
+              </div>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="hocker-button-brand w-full disabled:cursor-not-allowed disabled:opacity-60"
+            className="hocker-button-brand w-full justify-center py-4 text-[10px] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Entrando
+              </>
+            ) : (
+              "Entrar ahora"
+            )}
           </button>
         </form>
 
