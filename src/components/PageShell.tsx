@@ -6,6 +6,7 @@ import Image from "next/image";
 import AppNav from "@/components/AppNav";
 import InteractiveBackground from "@/components/InteractiveBackground";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import BrandMark from "@/components/BrandMark";
 
 interface PageShellProps {
   title: string;
@@ -23,66 +24,76 @@ export default function PageShell({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 900);
+    const timer = window.setTimeout(() => setLoading(false), 650);
     return () => window.clearTimeout(timer);
   }, []);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-slate-950 text-slate-100 selection:bg-sky-500/30 lg:flex-row">
       {loading ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 animate-out fade-out duration-700 fill-mode-forwards">
-          <div className="relative">
-            <div className="absolute inset-0 animate-ping rounded-full bg-sky-500/20 blur-2xl" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950">
+          <div className="relative flex flex-col items-center gap-5">
+            <div className="absolute inset-0 -z-10 h-28 w-28 rounded-full bg-sky-500/20 blur-3xl animate-pulse" />
             <Image
               src="/brand/hocker-one-isotype.png"
-              alt="Iniciando Matriz"
-              width={84}
-              height={84}
+              alt="Iniciando Hocker ONE"
+              width={88}
+              height={88}
               className="relative animate-pulse"
               priority
             />
+            <div className="text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
+                Cargando experiencia
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Hocker ONE está preparando tu entorno.
+              </p>
+            </div>
           </div>
         </div>
       ) : null}
 
       <InteractiveBackground />
 
-      <aside className="relative z-30 hidden w-72 border-r border-white/5 bg-slate-950/40 backdrop-blur-3xl lg:flex">
+      <aside className="relative z-30 hidden w-76 border-r border-white/5 bg-slate-950/50 backdrop-blur-3xl lg:flex">
         <AppNav />
       </aside>
 
       <main className="relative z-10 flex flex-1 flex-col">
-        <header className="flex min-h-[5rem] shrink-0 items-center justify-between gap-4 border-b border-white/5 bg-slate-950/20 px-4 backdrop-blur-md sm:px-6 lg:px-8">
-          <div className="flex min-w-0 flex-col justify-center py-3">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-              <Link href="/dashboard" className="transition-colors hover:text-sky-400">
-                MATRIZ
-              </Link>
-
-              <svg className="h-2.5 w-2.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-
-              <span className="truncate text-sky-400/90">{title}</span>
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/5 bg-slate-950/25 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="hidden xl:block">
+              <BrandMark compact showWordmark={false} href="/dashboard" />
             </div>
 
-            <h1 className="mt-1 truncate text-lg font-black tracking-tighter text-white sm:text-2xl hocker-text-glow">
-              {title}
-            </h1>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.35em] text-slate-500">
+                <Link href="/dashboard" className="transition-colors hover:text-sky-400">
+                  HOCKER ONE
+                </Link>
+                <span className="text-slate-700">/</span>
+                <span className="truncate text-sky-300/90">{title}</span>
+              </div>
 
-            {subtitle ? (
-              <p className="mt-1 hidden text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:block">
-                {subtitle}
-              </p>
-            ) : null}
+              <h1 className="mt-1 truncate text-[20px] font-black tracking-tight text-white sm:text-[28px] font-display">
+                {title}
+              </h1>
+
+              {subtitle ? (
+                <p className="mt-1 hidden max-w-3xl text-[11px] font-medium uppercase tracking-[0.28em] text-slate-400 sm:block">
+                  {subtitle}
+                </p>
+              ) : null}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="hidden rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-sky-300 md:block">
-              Omni-Sync 2025
-            </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden rounded-full border border-emerald-400/15 bg-emerald-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.28em] text-emerald-300 md:inline-flex">
+              Online
+            </span>
 
-            {actions ? <div>{actions}</div> : null}
+            {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
 
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-sky-500/20 bg-sky-500/5 p-2 shadow-[0_0_15px_rgba(14,165,233,0.1)] lg:hidden">
               <Image
@@ -98,7 +109,7 @@ export default function PageShell({
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
-          <div className="mx-auto max-w-[1600px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="mx-auto max-w-[1600px] animate-[hocker-enter_700ms_ease_both]">
             <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </div>
