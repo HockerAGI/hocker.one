@@ -18,14 +18,8 @@ function asMeta(value: unknown): JsonObject {
 
 function loadPercent(meta: JsonObject): string {
   const raw = meta.load;
-  if (typeof raw === "string" && raw.trim()) {
-    return raw.trim();
-  }
-
-  if (typeof raw === "number" && Number.isFinite(raw)) {
-    return `${Math.max(0, Math.min(100, raw))}%`;
-  }
-
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
+  if (typeof raw === "number" && Number.isFinite(raw)) return `${Math.max(0, Math.min(100, raw))}%`;
   return "0%";
 }
 
@@ -34,7 +28,7 @@ function safeDate(input: string): string {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
 }
 
-export default function AgisRegistry({ title = "Células operativas" }: Props) {
+export default function AgisRegistry({ title = "Equipo activo" }: Props) {
   const sb = useMemo(() => createBrowserSupabase(), []);
   const { projectId } = useWorkspace();
 
@@ -53,9 +47,7 @@ export default function AgisRegistry({ title = "Células operativas" }: Props) {
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (queryError) {
-        throw queryError;
-      }
+      if (queryError) throw queryError;
 
       setAgents((data ?? []) as AgiRow[]);
     } catch (err: unknown) {
@@ -75,7 +67,7 @@ export default function AgisRegistry({ title = "Células operativas" }: Props) {
       <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-            AGIs
+            Equipo
           </p>
           <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
             {title}
@@ -89,13 +81,13 @@ export default function AgisRegistry({ title = "Células operativas" }: Props) {
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
         {loading ? (
-          <div className="text-[10px] text-slate-500 animate-pulse">Escaneando AGIs...</div>
+          <div className="animate-pulse text-[10px] text-slate-500">Escaneando módulos...</div>
         ) : error ? (
           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-[11px] leading-relaxed text-rose-300">
             {error}
           </div>
         ) : agents.length === 0 ? (
-          <div className="text-[10px] text-slate-600">No hay AGIs registradas en este sector.</div>
+          <div className="text-[10px] text-slate-600">No hay módulos registrados aquí.</div>
         ) : (
           agents.map((agi) => {
             const meta = asMeta(agi.meta);
@@ -112,7 +104,7 @@ export default function AgisRegistry({ title = "Células operativas" }: Props) {
                       {agi.name ?? agi.id}
                     </span>
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                      {agi.description ?? "AGI de registro."}
+                      {agi.description ?? "Módulo activo."}
                     </p>
                   </div>
 
@@ -123,7 +115,7 @@ export default function AgisRegistry({ title = "Células operativas" }: Props) {
 
                 <div className="mt-4 space-y-4">
                   <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-slate-500">Carga cognitiva</span>
+                    <span className="text-slate-500">Nivel</span>
                     <span className="text-sky-400">{percent}</span>
                   </div>
 
@@ -165,7 +157,7 @@ export default function AgisRegistry({ title = "Células operativas" }: Props) {
                   {Object.keys(meta).length > 0 ? (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
-                        Inspeccionar datos
+                        Ver detalles
                       </summary>
                       <pre className="mt-2 overflow-auto rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
                         {JSON.stringify(meta, null, 2)}
