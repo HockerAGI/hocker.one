@@ -1,40 +1,66 @@
-const FALLBACK_PROJECT = "global";
-const CLOUD_NODE_ID = "hocker-agi";
+export const HOCKER_PROJECT_ID = "hocker-one" as const;
+export type ProjectId = typeof HOCKER_PROJECT_ID;
 
-const LEGACY_PROJECT_ALIASES: Record<string, string> = {
-  "hocker-one": "global",
+const HOCKER_NODE_ID = "hocker-agi" as const;
+export type NodeId = typeof HOCKER_NODE_ID;
+
+const LEGACY_PROJECT_ALIASES: Record<string, ProjectId> = {
+  "hocker one": HOCKER_PROJECT_ID,
+  "hocker-one": HOCKER_PROJECT_ID,
+  "hocker_one": HOCKER_PROJECT_ID,
 };
 
-function cleanId(input: string | null | undefined, fallback: string): string {
-  const raw = String(input ?? "").trim().toLowerCase();
-  if (!raw) return fallback;
-
-  const cleaned = raw.replace(/\s+/g, "-").replace(/[^a-z0-9._-]/g, "");
-  if (!cleaned) return fallback;
-
-  return LEGACY_PROJECT_ALIASES[cleaned] ?? cleaned;
+function normalizeKey(input: string): string {
+  return input.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
-export function defaultProjectId(): string {
+export function normalizeProjectId(input: string | null | undefined): ProjectId {
+  const raw = String(input ?? "").trim();
+
+  if (!raw) {
+    throw new Error("HOCKER_PROJECT_ID es obligatorio y debe ser 'hocker-one'.");
+  }
+
+  const normalized = normalizeKey(raw);
+  const alias = LEGACY_PROJECT_ALIASES[normalized];
+
+  if (alias) return alias;
+
+  if (normalized !== HOCKER_PROJECT_ID) {
+    throw new Error(`ProjectId inválido: "${raw}". Usa exactamente "hocker-one".`);
+  }
+
+  return HOCKER_PROJECT_ID;
+}
+
+export function normalizeNodeId(input: string | null | undefined): NodeId {
+  const raw = String(input ?? "").trim();
+
+  if (!raw) {
+    return HOCKER_NODE_ID;
+  }
+
+  const normalized = normalizeKey(raw);
+
+  if (!normalized) {
+    return HOCKER_NODE_ID;
+  }
+
+  return normalized as NodeId;
+}
+
+export function getProjectId(): ProjectId {
   return normalizeProjectId(
     process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID ??
-      process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID ??
-      FALLBACK_PROJECT,
+      process.env.HOCKER_PROJECT_ID ??
+      HOCKER_PROJECT_ID,
   );
 }
 
-export function defaultNodeId(): string {
+export function getNodeId(): NodeId {
   return normalizeNodeId(
     process.env.NEXT_PUBLIC_HOCKER_DEFAULT_NODE_ID ??
       process.env.HOCKER_DEFAULT_NODE_ID ??
-      CLOUD_NODE_ID,
+      HOCKER_NODE_ID,
   );
-}
-
-export function normalizeNodeId(input: string | null | undefined): string {
-  return cleanId(input, CLOUD_NODE_ID);
-}
-
-export function normalizeProjectId(input: string | null | undefined): string {
-  return cleanId(input, FALLBACK_PROJECT);
 }
