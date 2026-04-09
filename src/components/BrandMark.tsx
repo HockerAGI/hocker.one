@@ -16,8 +16,10 @@ export default function BrandMark({
   hero = false,
   className = "",
 }: BrandMarkProps) {
-  const shellSize = hero ? "h-14 w-14" : compact ? "h-10 w-10" : "h-11 w-11";
-  const isotypeSize = hero ? 40 : compact ? 28 : 32;
+  const shellSize = hero ? "h-16 w-16 sm:h-20 sm:w-20" : compact ? "h-10 w-10" : "h-11 w-11";
+  const isotypeSize = hero ? 56 : compact ? 28 : 32;
+  const wordmarkWidth = hero ? 420 : 260;
+  const wordmarkHeight = hero ? 120 : 68;
 
   return (
     <Link
@@ -37,7 +39,7 @@ export default function BrandMark({
         <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.28),transparent_60%)] opacity-80 transition-opacity group-hover:opacity-100" />
         <Image
           src="/brand/hocker-one-isotype.png"
-          alt="Hocker One"
+          alt="Hocker ONE"
           width={isotypeSize}
           height={isotypeSize}
           priority
@@ -49,14 +51,13 @@ export default function BrandMark({
         <span className="hidden min-w-0 sm:block">
           <Image
             src="/brand/hocker-one-logo.png"
-            alt="Hocker One"
-            width={260}
-            height={68}
+            alt="Hocker ONE"
+            width={wordmarkWidth}
+            height={wordmarkHeight}
             priority
-            className={[
-              "h-auto w-auto object-contain transition-transform duration-300 group-hover:scale-[1.01]",
-              hero ? "max-h-[68px]" : "max-h-[48px]",
-            ].join(" ")}
+            className={`h-auto w-auto object-contain drop-shadow-[0_0_22px_rgba(14,165,233,0.18)] ${
+              hero ? "max-w-[340px] sm:max-w-[420px]" : "max-w-[220px] lg:max-w-[260px]"
+            }`}
           />
         </span>
       ) : null}
