@@ -12,7 +12,9 @@ const PROTECTED_PATHS = [
 ];
 
 function isProtected(pathname: string): boolean {
-  return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return PROTECTED_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
 }
 
 export async function middleware(req: NextRequest) {
@@ -39,13 +41,17 @@ export async function middleware(req: NextRequest) {
 
   if (error) {
     if (isProtected(pathname)) {
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/login", req.url));
     }
     return res;
   }
 
+  if (pathname.startsWith("/login") && data.user) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   if (isProtected(pathname) && !data.user) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return res;
@@ -53,6 +59,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/login",
     "/dashboard/:path*",
     "/chat/:path*",
     "/commands/:path*",
