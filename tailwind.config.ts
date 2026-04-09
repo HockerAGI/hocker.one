@@ -12,21 +12,22 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-orbitron)", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
       },
       colors: {
         hocker: {
-          bg: "#020617",
-          surface: "#0B1220",
-          panel: "#0F172A",
-          cyan: "#0EA5E9",
-          blue: "#38BDF8",
-          white: "#F8FAFC",
-          line: "rgba(148, 163, 184, 0.18)",
-          alert: "#FB7185",
-          success: "#34D399",
+          bg: "var(--hocker-bg)",
+          surface: "var(--hocker-surface)",
+          panel: "var(--hocker-panel)",
+          cyan: "var(--hocker-cyan)",
+          blue: "var(--hocker-blue)",
+          white: "var(--hocker-white)",
+          muted: "var(--hocker-muted)",
+          line: "var(--hocker-line)",
+          alert: "var(--hocker-alert)",
+          success: "var(--hocker-success)",
         },
       },
       backgroundImage: {
