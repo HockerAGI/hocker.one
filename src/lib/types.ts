@@ -146,3 +146,21 @@ export interface AgiRow {
   meta: JsonObject | null;
   created_at: string;
 }
+
+// ==========================
+// ROLES
+// ==========================
+export type Role = "owner" | "admin" | "operator" | "viewer";
+
+// ==========================
+// SYSTEM CONTROLS
+// ==========================
+export interface ControlRow {
+  project_id: ProjectId;
+  id: string;
+  kill_switch: boolean;
+  allow_write: boolean;
+  meta: JsonObject;
+  created_at: string;
+  updated_at: string;
+}
