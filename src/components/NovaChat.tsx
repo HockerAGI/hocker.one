@@ -1,114 +1,66 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/lib/errors";
+import VoiceInput from "@/components/VoiceInput";
+import { useWorkspace } from "@/components/WorkspaceContext";
+import { speak } from "@/lib/tts";
 
-type ChatRole = "user" | "assistant";
-
-type ChatMessage = {
+type Message = {
   id: string;
-  role: ChatRole;
+  role: "user" | "nova" | "system";
   content: string;
+  timestamp: string;
 };
 
-const PROMPTS = [
-  "Dame un diagnóstico del ecosistema.",
-  "Genera una estrategia de crecimiento.",
-  "Resume el estado de nodos y seguridad.",
-  "Escribe un plan de acción de 7 días.",
-];
-
-function uid(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+function makeId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function readAssistantText(data: unknown): string {
-  if (!data || typeof data !== "object") return "";
-  const payload = data as Record<string, unknown>;
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function safeReply(payload: unknown): string {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return "";
+  const obj = payload as Record<string, unknown>;
 
   for (const key of ["reply", "response", "message", "text", "content"]) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
+    const v = obj[key];
+    if (typeof v === "string" && v.trim()) return v.trim();
   }
 
-  if (typeof payload.error === "string" && payload.error.trim()) {
-    return payload.error.trim();
-  }
-
+  if (typeof obj.error === "string" && obj.error.trim()) return obj.error.trim();
   return "";
 }
 
-async function postNova(message: string): Promise<string> {
-  const payload = {
-    project_id: "global",
-    message,
-    prefer: "auto",
-    mode: "auto",
-    allow_actions: false,
-  };
-
-  const endpoints = ["/api/nova/chat", "/api/chat"];
-
-  let lastError: unknown = null;
-
-  for (const endpoint of endpoints) {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        throw new Error(readAssistantText(data) || `HTTP ${res.status}`);
-      }
-
-      const text = readAssistantText(data);
-      if (text) return text;
-
-      throw new Error("La respuesta llegó vacía.");
-    } catch (error: unknown) {
-      lastError = error;
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error("No se pudo conectar con NOVA.");
-}
+const SUGGESTIONS = [
+  "Resume el estado actual.",
+  "Dame un plan de hoy.",
+  "Revisa los módulos activos.",
+  "Sugiere la siguiente acción.",
+];
 
 export default function NovaChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const { projectId, nodeId } = useWorkspace();
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: uid(),
-      role: "assistant",
-      content: "NOVA en línea. Envíame la instrucción.",
+      id: "init-1",
+      role: "nova",
+      content: "Hola, soy NOVA. Estoy lista para ayudarte.",
+      timestamp: new Date().toISOString(),
     },
   ]);
   const [input, setInput] = useState("");
-  const [threadId, setThreadId] = useState<string>("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [lastText, setLastText] = useState<string>("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const endRef = useRef<HTMLDivElement | null>(null);
-  const lastUserMessageRef = useRef<string>("");
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const existing = window.localStorage.getItem("hocker:nova-thread");
-    if (existing) {
-      setThreadId(existing);
-      return;
-    }
-
-    const next = uid();
-    window.localStorage.setItem("hocker:nova-thread", next);
-    setThreadId(next);
-  }, []);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
 
   useEffect(() => {
@@ -118,62 +70,88 @@ export default function NovaChat() {
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [input]);
 
-  const canSend = useMemo(() => input.trim().length > 0 && !sending, [input, sending]);
+  function push(role: Message["role"], content: string): void {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: makeId(),
+        role,
+        content,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+  }
 
-  async function sendMessage(text: string) {
-    const content = text.trim();
-    if (!content || sending) return;
+  async function sendToNova(text: string): Promise<void> {
+    const clean = text.trim();
+    if (!clean || sending) return;
 
+    const userMessage = clean;
     setSending(true);
     setError(null);
-    lastUserMessageRef.current = content;
-
-    const userMessage: ChatMessage = { id: uid(), role: "user", content };
-    setMessages((current) => [...current, userMessage]);
+    setLastText(clean);
+    push("user", clean);
     setInput("");
 
     try {
-      const reply = await postNova(content);
-      setMessages((current) => [...current, { id: uid(), role: "assistant", content: reply }]);
+      const res = await fetch("/api/nova/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: projectId,
+          projectId,
+          node_id: nodeId,
+          nodeId,
+          message: clean,
+          prefer: "auto",
+          mode: "auto",
+          allow_actions: false,
+        }),
+      });
+
+      const payload: unknown = await res.json().catch(() => ({}));
+      const reply = safeReply(payload);
+
+      if (!res.ok) {
+        throw new Error(reply || "No se pudo responder.");
+      }
+
+      const finalReply = reply || "Te leo. Dame el siguiente paso.";
+      push("nova", finalReply);
+      speak(finalReply);
     } catch (err: unknown) {
-      const message = getErrorMessage(err);
+      const message = err instanceof Error ? err.message : "Ocurrió un problema.";
       setError(message);
-      toast.error(message);
-      setMessages((current) => [
-        ...current,
-        {
-          id: uid(),
-          role: "assistant",
-          content: "Hubo un error al responder. Vuelve a intentar.",
-        },
-      ]);
+      push("system", message);
     } finally {
       setSending(false);
     }
   }
 
-  function handleRetry() {
-    if (!lastUserMessageRef.current) return;
-    void sendMessage(lastUserMessageRef.current);
+  function handleRetry(): void {
+    if (!lastText) return;
+    void sendToNova(lastText);
   }
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/70 backdrop-blur-2xl">
+    <section className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/75 shadow-[0_24px_100px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
       <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 sm:px-5">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-            NOVA
+            Hablar con NOVA
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">Chat operativo y persistente.</p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Texto o voz. Respuestas claras.
+          </p>
         </div>
 
         <button
           type="button"
           onClick={handleRetry}
-          disabled={!lastUserMessageRef.current || sending}
+          disabled={!lastText || sending}
           className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300 transition-all hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Reintentar
+          Repetir
         </button>
       </div>
 
@@ -185,61 +163,71 @@ export default function NovaChat() {
               className={`max-w-[92%] rounded-[22px] border px-4 py-3 text-sm leading-relaxed ${
                 message.role === "user"
                   ? "ml-auto border-sky-400/20 bg-sky-500/10 text-sky-50"
-                  : "border-white/5 bg-white/[0.03] text-slate-100"
+                  : message.role === "system"
+                    ? "border-rose-400/15 bg-rose-500/10 text-rose-200"
+                    : "border-white/5 bg-white/[0.03] text-slate-100"
               }`}
             >
               {message.content}
             </article>
           ))}
-          <div ref={endRef} />
+          {sending ? (
+            <div className="max-w-[92%] rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+              Escribiendo respuesta...
+            </div>
+          ) : null}
+          <div ref={bottomRef} />
         </div>
       </div>
 
+      {error ? (
+        <div className="border-t border-white/5 px-4 py-3 text-xs text-rose-200">
+          {error}
+        </div>
+      ) : null}
+
       <div className="border-t border-white/5 p-3 sm:p-4">
         <div className="mb-3 flex flex-wrap gap-2">
-          {PROMPTS.map((prompt) => (
+          {SUGGESTIONS.map((label) => (
             <button
-              key={prompt}
+              key={label}
               type="button"
-              onClick={() => setInput(prompt)}
+              onClick={() => setInput(label)}
               className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300 transition-all hover:bg-white/[0.06]"
             >
-              {prompt}
+              {label}
             </button>
           ))}
         </div>
-
-        {error ? (
-          <div className="mb-3 rounded-2xl border border-rose-400/15 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
-            {error}
-          </div>
-        ) : null}
 
         <div className="rounded-[24px] border border-white/5 bg-white/[0.03] p-3">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            rows={1}
+            placeholder="Escribe aquí..."
+            className="min-h-[48px] w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void sendMessage(input);
+                void sendToNova(input);
               }
             }}
-            placeholder={threadId ? `Hilo: ${threadId.slice(0, 8)}...` : "Escribe aquí..."}
-            rows={1}
-            className="min-h-[48px] w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
           />
 
           <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">
-              {sending ? "Procesando..." : "Shift+Enter para salto"}
-            </span>
+            <div className="flex items-center gap-2">
+              <VoiceInput onResult={(t) => void sendToNova(t)} />
+              <span className="hidden text-[10px] uppercase tracking-[0.22em] text-slate-500 sm:block">
+                Shift+Enter para salto
+              </span>
+            </div>
 
             <button
               type="button"
-              onClick={() => void sendMessage(input)}
-              disabled={!canSend}
+              onClick={() => void sendToNova(input)}
+              disabled={!input.trim() || sending}
               className="hocker-button-brand disabled:cursor-not-allowed disabled:opacity-60"
             >
               Enviar
