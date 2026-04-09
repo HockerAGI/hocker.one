@@ -1,15 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { ControlRow, JsonObject } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
-
-function asMeta(value: unknown): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonObject)
-    : {};
-}
+import type { ControlRow } from "@/lib/types";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
@@ -38,7 +32,7 @@ export default function GovernancePanel() {
       if (!res.ok) {
         const body = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
         throw new Error(
-          typeof body?.error === "string" ? body.error : "Error al cargar protocolos.",
+          typeof body?.error === "string" ? body.error : "No se pudo leer la seguridad.",
         );
       }
 
@@ -79,7 +73,7 @@ export default function GovernancePanel() {
       if (!res.ok) {
         const body = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
         throw new Error(
-          typeof body?.error === "string" ? body.error : "Falla al actualizar protocolo.",
+          typeof body?.error === "string" ? body.error : "No se pudo actualizar.",
         );
       }
 
@@ -93,7 +87,6 @@ export default function GovernancePanel() {
   }
 
   const lastUpdate = formatDate(controls?.updated_at);
-  const meta = asMeta(controls?.meta);
 
   return (
     <section className="hocker-panel-pro overflow-hidden border-rose-500/20 shadow-[0_0_40px_rgba(225,29,72,0.08)]">
@@ -101,10 +94,10 @@ export default function GovernancePanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.35em] text-rose-300">
-              Gobernanza
+              Seguridad
             </p>
             <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
-              Control del núcleo
+              Control principal
             </h3>
           </div>
 
@@ -142,23 +135,13 @@ export default function GovernancePanel() {
                   : "border-white/5 bg-slate-950/60 hover:border-rose-500/20"
               }`}
             >
-              {controls?.kill_switch ? (
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-10"
-                  style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(45deg, transparent, transparent 10px, #f43f5e 10px, #f43f5e 20px)",
-                  }}
-                />
-              ) : null}
-
               <div className="relative z-10 flex items-center justify-between gap-4">
                 <div>
                   <h4 className="text-[14px] font-black uppercase tracking-wide text-white">
-                    Kill switch
+                    Pausa total
                   </h4>
                   <p className="mt-1 text-[11px] font-medium text-slate-400">
-                    Detención total del sistema.
+                    Detiene toda escritura y ejecución.
                   </p>
                 </div>
 
@@ -187,7 +170,7 @@ export default function GovernancePanel() {
                     : "border-white/10 bg-white/5 text-slate-500"
                 }`}
               >
-                {controls?.kill_switch ? "Emergencia activa" : "Sistema normal"}
+                {controls?.kill_switch ? "Todo detenido" : "Operación normal"}
               </div>
             </div>
 
@@ -198,17 +181,13 @@ export default function GovernancePanel() {
                   : "border-white/5 bg-slate-950/60 hover:border-emerald-500/20"
               }`}
             >
-              {controls?.allow_write ? (
-                <div className="pointer-events-none absolute inset-0 animate-pulse bg-emerald-500/5" />
-              ) : null}
-
               <div className="relative z-10 flex items-center justify-between gap-4">
                 <div>
                   <h4 className="text-[14px] font-black uppercase tracking-wide text-white">
-                    Escritura
+                    Permitir cambios
                   </h4>
                   <p className="mt-1 text-[11px] font-medium text-slate-400">
-                    Permite cambios en el entorno.
+                    Autoriza nuevas escrituras en el sistema.
                   </p>
                 </div>
 
@@ -218,7 +197,7 @@ export default function GovernancePanel() {
                   disabled={loading || saving}
                   className={`relative inline-flex h-10 w-20 items-center rounded-full transition-all focus:outline-none disabled:opacity-50 ${
                     controls?.allow_write
-                      ? "bg-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.6)]"
+                      ? "bg-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.7)]"
                       : "border border-white/10 bg-slate-800"
                   }`}
                 >
@@ -237,32 +216,21 @@ export default function GovernancePanel() {
                     : "border-white/10 bg-white/5 text-slate-500"
                 }`}
               >
-                {controls?.allow_write ? "Escritura activa" : "Solo lectura"}
+                {controls?.allow_write ? "Cambios activos" : "Escritura pausada"}
               </div>
             </div>
           </div>
         )}
 
-        <div className="mt-5 rounded-[24px] border border-white/5 bg-white/[0.03] p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Matriz
+        <div className="mt-4 rounded-[24px] border border-white/5 bg-white/[0.03] p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-500">
+            Estado
           </p>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                Project
-              </p>
-              <p className="mt-1 truncate text-xs text-slate-100">{projectId}</p>
-            </div>
-            <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                Meta
-              </p>
-              <p className="mt-1 text-xs text-slate-100">
-                {Object.keys(meta).length > 0 ? "Presente" : "Vacía"}
-              </p>
-            </div>
-          </div>
+          <p className="mt-2 text-sm text-slate-300">
+            {controls
+              ? "El panel ya leyó el estado actual del sistema."
+              : "Aún no se pudo leer el estado actual."}
+          </p>
         </div>
       </div>
     </section>
