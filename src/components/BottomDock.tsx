@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   Bot,
+  Boxes,
   Database,
   Home,
   MessageCircle,
@@ -20,11 +21,12 @@ type DockItem = {
 
 const items: DockItem[] = [
   { href: "/", label: "Inicio", icon: Home },
-  { href: "/chat", label: "Hablar", icon: MessageCircle },
-  { href: "/commands", label: "Tareas", icon: Workflow },
-  { href: "/nodes", label: "Equipo", icon: Database },
-  { href: "/agis", label: "Módulos", icon: Bot },
-  { href: "/governance", label: "Seguridad", icon: Shield },
+  { href: "/chat", label: "Nova AGI", icon: MessageCircle },
+  { href: "/agis", label: "AGIs", icon: Bot },
+  { href: "/commands", label: "Órdenes", icon: Workflow },
+  { href: "/nodes", label: "Nodos", icon: Database },
+  { href: "/supply", label: "Suministros", icon: Boxes },
+  { href: "/governance", label: "Guardia", icon: Shield },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -42,7 +44,7 @@ export default function BottomDock() {
       className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 px-3 sm:px-5"
       aria-label="Navegación principal"
     >
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 overflow-x-auto rounded-[32px] border border-white/10 bg-slate-950/85 p-2 shadow-[0_22px_90px_rgba(2,6,23,0.58)] backdrop-blur-2xl">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 overflow-x-auto rounded-[32px] border border-white/10 bg-slate-950/85 p-2 shadow-[0_22px_90px_rgba(2,6,23,0.58)] backdrop-blur-2xl">
         {items.map((item) => {
           const active = isActivePath(pathname, item.href);
           const Icon = item.icon;
