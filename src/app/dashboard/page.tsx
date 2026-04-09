@@ -16,7 +16,7 @@ export default function DashboardPage() {
   return (
     <PageShell
       title="Vista general"
-      subtitle="Todo lo importante en una sola lectura."
+      subtitle="Resumen claro de salud, nodos y actividad."
       actions={
         <Link href="/chat" className="hocker-button-brand">
           Hablar
@@ -28,7 +28,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Todo listo
+            Sistema activo
           </span>
         </div>
       </div>
@@ -41,7 +41,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="hocker-panel-pro p-5">
-              <AgisRegistry title="Equipo activo" />
+              <AgisRegistry title="Células activas" />
             </div>
           </div>
         </div>
