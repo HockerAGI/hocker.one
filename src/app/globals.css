@@ -34,7 +34,7 @@ body {
 body {
   font-family: var(--font-dm-sans), system-ui, sans-serif;
   background:
-    linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.96)),
+    linear-gradient(to bottom, rgba(2, 6, 23, 0.82), rgba(2, 6, 23, 0.96)),
     url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230ea5e9' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E"),
     var(--background);
   color: var(--foreground);
@@ -56,7 +56,8 @@ button,
 a,
 input,
 textarea,
-select {
+select,
+summary {
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -81,12 +82,28 @@ body::after {
     @apply rounded-[30px] border border-white/5 bg-white/[0.03] shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl;
   }
 
+  .hocker-panel-strong {
+    @apply rounded-[34px] border border-white/10 bg-slate-950/72 shadow-[0_28px_100px_rgba(2,6,23,0.45)] backdrop-blur-3xl;
+  }
+
+  .hocker-surface-soft {
+    @apply rounded-[28px] border border-white/5 bg-white/[0.04] shadow-[0_20px_70px_rgba(2,6,23,0.22)] backdrop-blur-2xl;
+  }
+
+  .hocker-card-float {
+    @apply rounded-[32px] border border-white/5 bg-white/[0.035] shadow-[0_28px_110px_rgba(2,6,23,0.34)] backdrop-blur-3xl;
+  }
+
   .hocker-glass-vfx {
     @apply rounded-[32px] border border-white/5 bg-slate-950/55 shadow-[0_28px_100px_rgba(2,6,23,0.35)] backdrop-blur-3xl;
   }
 
   .hocker-button-brand {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-500 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] text-slate-950 shadow-[0_0_20px_rgba(14,165,233,0.25)] transition-all hover:translate-y-[-1px] hover:bg-sky-400 active:scale-[0.98];
+  }
+
+  .hocker-button-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] text-slate-100 transition-all hover:bg-white/[0.07] active:scale-[0.98];
   }
 
   .hocker-button-primary {
@@ -137,6 +154,10 @@ body::after {
     background-position: center;
   }
 
+  .hocker-glow-line {
+    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.35), transparent);
+  }
+
   .custom-scrollbar {
     overscroll-behavior: auto;
     -webkit-overflow-scrolling: touch;
@@ -153,39 +174,69 @@ body::after {
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.04);
-  }
-}
-
-@layer utilities {
-  .safe-x {
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
+    background: transparent;
   }
 
-  .safe-b {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  details > summary {
+    list-style: none;
+  }
+
+  details > summary::-webkit-details-marker {
+    display: none;
   }
 }
 
 @keyframes hocker-enter {
   from {
-    opacity: var(--hocker-from-opacity, 1);
-    transform: translate3d(var(--hocker-from-x, 0), var(--hocker-from-y, 0), 0)
-      scale(var(--hocker-from-scale, 1));
+    opacity: var(--hocker-from-opacity, 0);
+    transform: translate3d(0, var(--hocker-from-y, 1rem), 0) scale(var(--hocker-from-scale, 1));
+    filter: blur(10px);
   }
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(6px, -12px, 0) rotate(3deg);
   }
 }
 
 @keyframes scanline {
   0% {
-    transform: translateY(-100%);
+    transform: translateY(-20vh);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.2;
   }
   100% {
-    transform: translateY(100vh);
+    transform: translateY(120vh);
+    opacity: 0;
   }
 }
 
@@ -193,8 +244,9 @@ body::after {
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 
