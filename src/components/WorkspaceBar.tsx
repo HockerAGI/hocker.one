@@ -16,9 +16,9 @@ export default function WorkspaceBar() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Espacio
+            Espacio actual
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">Contexto actual</p>
+          <p className="mt-1 text-[11px] text-slate-500">Contexto vivo</p>
         </div>
 
         <button
@@ -30,7 +30,7 @@ export default function WorkspaceBar() {
               : "border-white/10 bg-white/[0.04] text-slate-400"
           }`}
         >
-          {tutorial ? "Guía activa" : "Guía oculta"}
+          {tutorial ? "Ayuda visible" : "Ayuda oculta"}
         </button>
       </div>
 
