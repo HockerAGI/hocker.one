@@ -8,18 +8,18 @@ import NodesPanel from "@/components/NodesPanel";
 import AgisRegistry from "@/components/AgisRegistry";
 
 export const metadata: Metadata = {
-  title: "Vista general",
+  title: "Panel",
   description: "Resumen visual del ecosistema.",
 };
 
 export default function DashboardPage() {
   return (
     <PageShell
-      title="Vista general"
-      subtitle="Resumen claro de salud, nodos y actividad."
+      title="Panel"
+      subtitle="Resumen claro de salud y actividad."
       actions={
         <Link href="/chat" className="hocker-button-brand">
-          Hablar
+          Nova AGI
         </Link>
       }
     >
@@ -41,7 +41,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="hocker-panel-pro p-5">
-              <AgisRegistry title="Células activas" />
+              <AgisRegistry title="AGIs activas" />
             </div>
           </div>
         </div>
