@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { getErrorMessage } from "@/lib/errors";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type HealthCheckMap = {
   db: boolean;
@@ -23,6 +23,11 @@ type HealthPayload = {
   timestamp: string;
 };
 
+type StatItem = {
+  label: string;
+  ok: boolean;
+};
+
 function CheckDot({ ok }: { ok: boolean }) {
   return (
     <span
@@ -41,50 +46,57 @@ function formatDate(input: string): string {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
 }
 
-const CHECK_LABELS: Array<[keyof HealthCheckMap, string]> = [
-  ["db", "DB"],
-  ["supabaseUrl", "URL"],
-  ["supabaseAnon", "Anon"],
-  ["novaAgi", "NOVA"],
-  ["novaKey", "Key"],
-  ["commandHmac", "HMAC"],
-  ["langfuse", "Trace"],
-];
-
 export default function SystemStatus() {
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchHealth = useCallback(async () => {
+  const summary = useMemo<StatItem[]>(() => {
+    const checks = health?.checks;
+    return [
+      { label: "Base", ok: Boolean(checks?.db) },
+      { label: "Acceso", ok: Boolean(checks?.supabaseUrl && checks?.supabaseAnon) },
+      { label: "Núcleo", ok: Boolean(checks?.novaAgi && checks?.novaKey) },
+      { label: "Firma", ok: Boolean(checks?.commandHmac) },
+      { label: "Bitácora", ok: Boolean(checks?.langfuse) },
+    ];
+  }, [health]);
+
+  const load = useCallback(async (): Promise<void> => {
     try {
+      setError(null);
       const res = await fetch("/api/health", { cache: "no-store" });
-      const data = (await res.json()) as HealthPayload;
+      const data: unknown = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || data.message || `HTTP ${res.status}`);
+        const body = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+        throw new Error(
+          typeof body?.error === "string"
+            ? body.error
+            : "No se pudo leer el estado del sistema.",
+        );
       }
 
-      setHealth(data);
-      setError(null);
+      setHealth(data as HealthPayload);
     } catch (err: unknown) {
       setError(getErrorMessage(err));
+      setHealth(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void fetchHealth();
-    const id = window.setInterval(() => {
-      void fetchHealth();
+    void load();
+
+    const timer = window.setInterval(() => {
+      void load();
     }, 30000);
 
-    return () => window.clearInterval(id);
-  }, [fetchHealth]);
+    return () => window.clearInterval(timer);
+  }, [load]);
 
-  const overallOk = health?.status === "online";
-  const items = useMemo(() => CHECK_LABELS, []);
+  const online = health?.status === "online";
 
   return (
     <section className="space-y-4">
@@ -94,10 +106,10 @@ export default function SystemStatus() {
             Estado del sistema
           </p>
           <h3 className="mt-2 text-xl font-black tracking-tight text-white">
-            {loading && !health ? "Verificando..." : overallOk ? "Online" : "Degradado"}
+            {loading && !health ? "Verificando..." : online ? "Todo listo" : "Hay atención"}
           </h3>
           <p className="mt-1 text-[11px] text-slate-500">
-            {health?.infrastructure ?? "Control Plane"}
+            {health?.infrastructure ?? "Control principal"}
           </p>
         </div>
 
@@ -118,21 +130,18 @@ export default function SystemStatus() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {items.map(([key, label]) => {
-          const ok = Boolean(health?.checks?.[key]);
-          return (
-            <div key={key} className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-              <div className="flex items-center gap-2">
-                <CheckDot ok={ok} />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                  {label}
-                </span>
-              </div>
-              <p className="mt-2 text-sm font-bold text-white">{ok ? "OK" : "OFF"}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {summary.map((item) => (
+          <div key={item.label} className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+            <div className="flex items-center gap-2">
+              <CheckDot ok={item.ok} />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                {item.label}
+              </span>
             </div>
-          );
-        })}
+            <p className="mt-2 text-sm font-bold text-white">{item.ok ? "OK" : "OFF"}</p>
+          </div>
+        ))}
       </div>
     </section>
   );
