@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, Sparkles } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
@@ -16,17 +17,17 @@ export const metadata: Metadata = {
 const quickLinks = [
   { href: "/login", title: "Entrar", desc: "Acceso privado." },
   { href: "/dashboard", title: "Panel", desc: "Vista rápida." },
-  { href: "/chat", title: "Hablar", desc: "Conversación directa." },
-  { href: "/commands", title: "Tareas", desc: "Movimientos en curso." },
-  { href: "/nodes", title: "Equipo", desc: "Estado en vivo." },
-  { href: "/governance", title: "Seguridad", desc: "Control total." },
-];
+  { href: "/chat", title: "Nova AGI", desc: "Conversación directa." },
+  { href: "/commands", title: "Órdenes", desc: "Movimientos en curso." },
+  { href: "/nodes", title: "Nodos", desc: "Estado en vivo." },
+  { href: "/governance", title: "Guardia", desc: "Control total." },
+] as const;
 
 export default function HomePage() {
   return (
     <PageShell
       title="Inicio"
-      subtitle="Todo el ecosistema en una sola pantalla. Claro, premium y fácil de navegar."
+      subtitle="Todo el ecosistema en una sola pantalla. Claro, limpio y premium."
       actions={
         <>
           <Link href="/login" className="hocker-button-brand">
@@ -50,7 +51,7 @@ export default function HomePage() {
 
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-                  Centro de mando
+                  Base central
                 </p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
                   Limpio. Claro. Listo para operar.
@@ -122,7 +123,7 @@ export default function HomePage() {
 
         <div className="xl:col-span-5">
           <div className="hocker-panel-pro p-4 sm:p-5">
-            <AgisRegistry title="Equipo activo" />
+            <AgisRegistry title="AGIs activas" />
           </div>
         </div>
       </div>
@@ -130,7 +131,7 @@ export default function HomePage() {
       <div className="mt-6 hocker-glass-vfx overflow-hidden border-sky-500/15">
         <div className="border-b border-white/5 px-4 py-3 sm:px-6">
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Hablar
+            Nova AGI
           </p>
         </div>
         <div className="p-2 sm:p-3">
