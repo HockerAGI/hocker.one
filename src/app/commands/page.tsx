@@ -5,14 +5,14 @@ import CommandBox from "@/components/CommandBox";
 import CommandsQueue from "@/components/CommandsQueue";
 
 export const metadata: Metadata = {
-  title: "Tareas",
+  title: "Órdenes",
   description: "Centro de instrucciones y seguimiento.",
 };
 
 export default function CommandsPage() {
   return (
     <PageShell
-      title="Tareas"
+      title="Órdenes"
       subtitle="Escribe una instrucción clara y sigue su avance."
     >
       <div className="flex flex-col gap-6">
