@@ -16,7 +16,7 @@ function normalizeLevel(level: EventLevel | string | null | undefined): EventLev
   return "info";
 }
 
-function levelBadge(level: EventLevel): string {
+function levelClasses(level: EventLevel): string {
   switch (level) {
     case "warn":
       return "border-amber-500/20 bg-amber-500/10 text-amber-300";
@@ -154,11 +154,11 @@ export default function EventsFeed() {
                       {item.type}
                     </p>
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${levelBadge(
+                      className={`rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${levelClasses(
                         item.level,
                       )}`}
                     >
-                      {item.level}
+                      {item.level === "info" ? "Normal" : item.level === "warn" ? "Atención" : "Alerta"}
                     </span>
                   </div>
 
