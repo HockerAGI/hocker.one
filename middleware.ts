@@ -12,9 +12,7 @@ const PROTECTED_PATHS = [
 ];
 
 function isProtected(pathname: string): boolean {
-  return PROTECTED_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
+  return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 export async function middleware(req: NextRequest) {
