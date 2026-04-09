@@ -1,11 +1,11 @@
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
+import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import type { NodeRow } from "@/lib/types";
+import type { NodeRow, JsonObject } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 function pill(status: NodeRow["status"]): string {
   if (status === "online") {
@@ -23,6 +23,10 @@ function safeTime(input: string | null): string {
   if (!input) return "—";
   const d = new Date(input);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export default function NodesPanel() {
@@ -142,7 +146,7 @@ export default function NodesPanel() {
                     {node.name || "Equipo"}
                   </h4>
                   <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${pill(node.status)}`}>
-                    {node.status}
+                    {node.status === "online" ? "En línea" : node.status === "degraded" ? "Con atención" : "Fuera"}
                   </span>
                 </div>
 
@@ -158,7 +162,7 @@ export default function NodesPanel() {
                   </div>
 
                   <div className="flex items-center gap-2 sm:col-span-2">
-                    <span className="uppercase text-slate-600">Latido:</span>
+                    <span className="uppercase text-slate-600">Última señal:</span>
                     <span className="text-slate-300">{safeTime(node.last_seen_at)}</span>
                   </div>
                 </div>
@@ -181,6 +185,17 @@ export default function NodesPanel() {
                     </span>
                   )}
                 </div>
+
+                {isJsonObject(node.meta) && Object.keys(node.meta).length > 0 ? (
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
+                      Ver detalles
+                    </summary>
+                    <pre className="mt-2 overflow-auto rounded-xl border border-white/10 bg-slate-950/80 p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
+                      {JSON.stringify(node.meta, null, 2)}
+                    </pre>
+                  </details>
+                ) : null}
               </div>
             </article>
           ))
