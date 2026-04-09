@@ -8,7 +8,7 @@ import type { AgiRow, JsonObject } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Módulos",
-  description: "Registro operativo de inteligencias y módulos.",
+  description: "Registro operativo de inteligencias del ecosistema.",
 };
 
 function asMeta(value: unknown): JsonObject {
@@ -44,7 +44,7 @@ export default async function AgisPage() {
   return (
     <PageShell
       title="Módulos"
-      subtitle="Listado real desde base de datos."
+      subtitle="Registro real de inteligencias activas y módulos operativos."
       actions={
         <Link href="/dashboard" className="hocker-button-primary">
           Panel
