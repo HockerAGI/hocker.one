@@ -88,6 +88,33 @@ async function resolveExecution(command: CommandRow): Promise<JsonObject> {
         active: false,
       };
 
+    case "restart_db":
+      return {
+        ok: true,
+        command: command.command,
+        acknowledged: true,
+        handled: true,
+        note: "Solicitud registrada para reinicio de base de datos.",
+      };
+
+    case "restart_nova":
+      return {
+        ok: true,
+        command: command.command,
+        acknowledged: true,
+        handled: true,
+        note: "Solicitud registrada para reinicio de NOVA.",
+      };
+
+    case "restart_telemetry":
+      return {
+        ok: true,
+        command: command.command,
+        acknowledged: true,
+        handled: true,
+        note: "Solicitud registrada para reinicio de telemetría.",
+      };
+
     default:
       throw new Error(`Unknown command: ${command.command}`);
   }
@@ -96,23 +123,20 @@ async function resolveExecution(command: CommandRow): Promise<JsonObject> {
 export async function executeCommand(commandId: string): Promise<void> {
   const sb = createAdminSupabase();
 
-  const { data, error } = await sb
-    .from("commands")
-    .select("*")
-    .eq("id", commandId)
-    .single();
+  const { data, error } = await sb.from("commands").select("*").eq("id", commandId).single();
 
   if (error || !isCommandRow(data)) {
     throw new Error(`Invalid command: ${error ? getErrorMessage(error) : "unknown shape"}`);
   }
 
   const command = data;
+  const now = new Date().toISOString();
 
   await sb
     .from("commands")
     .update({
       status: "running",
-      started_at: new Date().toISOString(),
+      started_at: now,
     })
     .eq("id", command.id);
 
@@ -127,8 +151,8 @@ export async function executeCommand(commandId: string): Promise<void> {
         status: "done",
         result,
         error: null,
-        executed_at: new Date().toISOString(),
-        finished_at: new Date().toISOString(),
+        executed_at: now,
+        finished_at: now,
       })
       .eq("id", command.id);
 
@@ -141,7 +165,7 @@ export async function executeCommand(commandId: string): Promise<void> {
       .update({
         status: "error",
         error: message,
-        finished_at: new Date().toISOString(),
+        finished_at: now,
       })
       .eq("id", command.id);
 
