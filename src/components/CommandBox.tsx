@@ -1,106 +1,102 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function CommandBox() {
-  const supabase = createBrowserSupabase();
-  const { projectId, nodeId } = useWorkspace();
+  const { projectId, nodeId, refresh } = useWorkspace();
 
   const [command, setCommand] = useState("");
   const [payload, setPayload] = useState("{}");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setOk(false);
-
-    let parsed: unknown;
-
-    try {
-      parsed = JSON.parse(payload || "{}");
-    } catch {
-      setError("Payload JSON inválido");
-      return;
-    }
-
-    if (!command.trim()) {
-      setError("El comando es obligatorio");
-      return;
-    }
+  async function handleSend(): Promise<void> {
+    if (!command.trim()) return;
 
     setLoading(true);
+    setError(null);
+
+    let parsedPayload: Record<string, unknown> = {};
+    try {
+      parsedPayload = JSON.parse(payload || "{}") as Record<string, unknown>;
+    } catch {
+      setError("Los detalles no tienen un formato válido.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      const { error } = await supabase.from("commands").insert({
-        project_id: projectId,
-        node_id: nodeId,
-        type: command.trim(),
-        payload: parsed,
-        status: "pending",
+      const res = await fetch("/api/commands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: projectId,
+          projectId,
+          node_id: nodeId,
+          nodeId,
+          command: command.trim(),
+          payload: parsedPayload,
+          needs_approval: false,
+        }),
       });
 
-      if (error) throw error;
+      if (!res.ok) throw new Error("No se pudo enviar.");
 
       setCommand("");
       setPayload("{}");
-      setOk(true);
-    } catch (err: any) {
-      setError(err.message || "Error al enviar comando");
+      refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="hocker-panel-pro p-5 flex flex-col gap-4"
-    >
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-          Inyección de comando
-        </p>
-        <p className="mt-1 text-xs text-slate-500">
-          Ejecuta acciones sobre el nodo activo con trazabilidad completa.
-        </p>
+    <div className="hocker-surface-soft space-y-4 p-5 hocker-fade-up">
+      <div className="space-y-1">
+        <p className="hocker-title-line">Nueva tarea</p>
+        <p className="hocker-kicker">Escribe una instrucción breve y clara.</p>
       </div>
 
-      <input
-        value={command}
-        onChange={(e) => setCommand(e.target.value)}
-        placeholder="Ej: nodes.sync_status"
-        className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none focus:border-sky-400"
-      />
+      <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
+        <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          Tarea
+        </label>
+        <input
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          placeholder="Ej: revisar inventario"
+          className="mt-1 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+        />
+      </div>
 
-      <textarea
-        value={payload}
-        onChange={(e) => setPayload(e.target.value)}
-        rows={5}
-        className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-xs font-mono text-emerald-300 outline-none focus:border-sky-400"
-      />
+      <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
+        <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+          Detalles
+        </label>
+        <textarea
+          value={payload}
+          onChange={(e) => setPayload(e.target.value)}
+          rows={6}
+          className="mt-1 w-full resize-none bg-transparent text-xs font-mono text-slate-100 outline-none placeholder:text-slate-600"
+        />
+      </div>
 
-      {error && (
-        <div className="text-xs text-rose-400 font-medium">{error}</div>
-      )}
-
-      {ok && (
-        <div className="text-xs text-emerald-400 font-medium">
-          Comando enviado correctamente
+      {error ? (
+        <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
+          {error}
         </div>
-      )}
+      ) : null}
 
       <button
-        type="submit"
+        onClick={() => void handleSend()}
         disabled={loading}
-        className="hocker-button-brand w-full disabled:opacity-50"
+        className="hocker-button-brand w-full"
       >
-        {loading ? "Enviando..." : "Ejecutar comando"}
+        {loading ? "Enviando..." : "Enviar tarea"}
       </button>
-    </form>
+    </div>
   );
 }
