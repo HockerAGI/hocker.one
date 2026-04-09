@@ -24,14 +24,14 @@ export default function PageShell({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 700);
+    const timer = window.setTimeout(() => setLoading(false), 650);
     return () => window.clearTimeout(timer);
   }, []);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-slate-950 text-slate-100 selection:bg-sky-500/30 lg:flex-row">
       {loading ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/96">
           <div className="relative flex flex-col items-center gap-4">
             <div className="absolute inset-0 rounded-full bg-sky-500/15 blur-3xl animate-pulse" />
             <Image
@@ -44,7 +44,7 @@ export default function PageShell({
             />
             <div className="text-center">
               <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-                Hocker One
+                Hocker ONE
               </p>
               <p className="mt-2 text-sm text-slate-400">
                 Preparando la experiencia...
@@ -68,7 +68,7 @@ export default function PageShell({
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.32em] text-slate-500">
                 <Link href="/dashboard" className="transition-colors hover:text-sky-400">
-                  Matriz
+                  Panel
                 </Link>
                 <span className="text-slate-700">/</span>
                 <span className="truncate text-sky-400/90">{title}</span>
@@ -88,7 +88,7 @@ export default function PageShell({
 
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="hidden rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.28em] text-sky-300 md:block">
-              Todo en orden
+              Listo
             </div>
 
             {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
@@ -106,16 +106,12 @@ export default function PageShell({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 pb-28 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="mx-auto max-w-[1600px] animate-[hocker-enter_520ms_ease_both]">
             <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </div>
       </main>
-
-      <nav className="relative z-30 border-t border-white/5 bg-slate-950/90 pb-safe pt-2 backdrop-blur-2xl lg:hidden">
-        <AppNav isMobile />
-      </nav>
     </div>
   );
 }
