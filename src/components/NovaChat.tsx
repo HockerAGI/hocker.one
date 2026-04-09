@@ -1,274 +1,252 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useWorkspace } from "@/components/WorkspaceContext";
-import VoiceInput from "@/components/VoiceInput";
-import { NOVA_PROFILE } from "@/lib/novaPersona";
-import { parseVoice } from "@/lib/voiceParser";
-import { speak } from "@/lib/tts";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errors";
 
-type Message = {
+type ChatRole = "user" | "assistant";
+
+type ChatMessage = {
   id: string;
-  role: "user" | "nova" | "system";
+  role: ChatRole;
   content: string;
-  timestamp: string;
 };
 
-type NovaResponse = {
-  ok?: boolean;
-  reply?: string;
-  response?: string;
-  error?: string;
-};
+const PROMPTS = [
+  "Dame un diagnóstico del ecosistema.",
+  "Genera una estrategia de crecimiento.",
+  "Resume el estado de nodos y seguridad.",
+  "Escribe un plan de acción de 7 días.",
+];
 
-function makeId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function uid(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-function asText(value: unknown): string {
-  return typeof value === "string" ? value : "";
+function readAssistantText(data: unknown): string {
+  if (!data || typeof data !== "object") return "";
+  const payload = data as Record<string, unknown>;
+
+  for (const key of ["reply", "response", "message", "text", "content"]) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+
+  if (typeof payload.error === "string" && payload.error.trim()) {
+    return payload.error.trim();
+  }
+
+  return "";
+}
+
+async function postNova(message: string): Promise<string> {
+  const payload = {
+    project_id: "global",
+    message,
+    prefer: "auto",
+    mode: "auto",
+    allow_actions: false,
+  };
+
+  const endpoints = ["/api/nova/chat", "/api/chat"];
+
+  let lastError: unknown = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(readAssistantText(data) || `HTTP ${res.status}`);
+      }
+
+      const text = readAssistantText(data);
+      if (text) return text;
+
+      throw new Error("La respuesta llegó vacía.");
+    } catch (error: unknown) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("No se pudo conectar con NOVA.");
 }
 
 export default function NovaChat() {
-  const { projectId, nodeId } = useWorkspace();
-
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: "init-0",
-      role: "system",
-      content: "ENLACE ESTABLECIDO. CANAL DE COMUNICACIÓN ENCRIPTADO.",
-      timestamp: new Date().toISOString(),
-    },
-    {
-      id: "init-1",
-      role: "nova",
-      content: "Aquí NOVA. Estoy en línea. Puedes hablarme o escribirme.",
-      timestamp: new Date().toISOString(),
+      id: uid(),
+      role: "assistant",
+      content: "NOVA en línea. Envíame la instrucción.",
     },
   ]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [threadId, setThreadId] = useState<string>("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const lastUserMessageRef = useRef<string>("");
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
-
-  function append(role: Message["role"], content: string): void {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: makeId(),
-        role,
-        content,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-  }
-
-  async function postChat(text: string): Promise<void> {
-    const res = await fetch("/api/nova/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        project_id: projectId,
-        projectId,
-        node_id: nodeId,
-        nodeId,
-        message: text,
-        mode: "chat",
-        prefer: "human",
-        persona: NOVA_PROFILE.name,
-        system_prompt: NOVA_PROFILE.systemPrompt,
-        style: NOVA_PROFILE.styleHint,
-      }),
-    });
-
-    const raw: unknown = await res.json().catch(() => ({}));
-    const payload = raw as NovaResponse;
-
-    if (!res.ok) {
-      throw new Error(asText(payload.error) || "Fallo en la matriz de transmisión.");
+    const existing = window.localStorage.getItem("hocker:nova-thread");
+    if (existing) {
+      setThreadId(existing);
+      return;
     }
 
-    const reply = asText(payload.reply) || asText(payload.response) || "Silencio en la red.";
-    append("nova", reply);
-    speak(reply);
-  }
+    const next = uid();
+    window.localStorage.setItem("hocker:nova-thread", next);
+    setThreadId(next);
+  }, []);
 
-  async function createCommand(
-    command: string,
-    payload: Record<string, unknown>,
-    origin: string,
-  ): Promise<void> {
-    const res = await fetch("/api/commands", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        project_id: projectId,
-        projectId,
-        node_id: nodeId,
-        nodeId,
-        command,
-        payload: {
-          ...payload,
-          origin,
-          source: "voice",
-          via: "nova",
-        },
-        needs_approval: false,
-      }),
-    });
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, sending]);
 
-    const raw: unknown = await res.json().catch(() => ({}));
-    const output = raw as { ok?: boolean; error?: string; item?: { command?: string } };
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+  }, [input]);
 
-    if (!res.ok) {
-      throw new Error(asText(output.error) || "No se pudo encolar el comando.");
-    }
+  const canSend = useMemo(() => input.trim().length > 0 && !sending, [input, sending]);
 
-    const label = asText(output.item?.command) || command;
-    const ack = `Orden encolada: ${label}.`;
-    append("system", ack);
-    speak(ack);
-  }
+  async function sendMessage(text: string) {
+    const content = text.trim();
+    if (!content || sending) return;
 
-  async function processInput(rawText: string, origin: "text" | "voice"): Promise<void> {
-    const clean = rawText.trim();
-    if (!clean || !projectId) return;
+    setSending(true);
+    setError(null);
+    lastUserMessageRef.current = content;
 
-    const parsed = parseVoice(clean);
-    setIsTyping(true);
+    const userMessage: ChatMessage = { id: uid(), role: "user", content };
+    setMessages((current) => [...current, userMessage]);
+    setInput("");
 
     try {
-      if (parsed.type === "create_command") {
-        await createCommand(parsed.command, parsed.payload, origin);
-        return;
-      }
-
-      await postChat(parsed.message);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Anomalía detectada en el enlace.";
-      append("system", `ERROR CRÍTICO: ${message}`);
-      speak("Hubo un error en la transmisión.");
+      const reply = await postNova(content);
+      setMessages((current) => [...current, { id: uid(), role: "assistant", content: reply }]);
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      setError(message);
+      toast.error(message);
+      setMessages((current) => [
+        ...current,
+        {
+          id: uid(),
+          role: "assistant",
+          content: "Hubo un error al responder. Vuelve a intentar.",
+        },
+      ]);
     } finally {
-      setIsTyping(false);
+      setSending(false);
     }
   }
 
-  const handleSend = async (): Promise<void> => {
-    if (!input.trim() || isTyping || !projectId) return;
-    const text = input.trim();
-    append("user", text);
-    setInput("");
-    await processInput(text, "text");
-  };
-
-  const handleVoice = async (text: string): Promise<void> => {
-    if (!text.trim() || isTyping || !projectId) return;
-    append("user", `[VOZ] ${text.trim()}`);
-    await processInput(text.trim(), "voice");
-  };
+  function handleRetry() {
+    if (!lastUserMessageRef.current) return;
+    void sendMessage(lastUserMessageRef.current);
+  }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/5 bg-[#05070d] shadow-[0_24px_100px_rgba(2,6,23,0.45)]">
-      <div className="border-b border-white/5 bg-slate-950/70 px-4 py-3 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
-            </span>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
-                Terminal NOVA
-              </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500">
-                {projectId} · {nodeId}
-              </p>
-            </div>
-          </div>
-
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-300">
-            {NOVA_PROFILE.styleHint}
-          </span>
+    <section className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/70 backdrop-blur-2xl">
+      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 sm:px-5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
+            NOVA
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">Chat operativo y persistente.</p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleRetry}
+          disabled={!lastUserMessageRef.current || sending}
+          className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300 transition-all hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Reintentar
+        </button>
       </div>
 
-      <div className="relative flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.06),transparent_26%)] p-4 sm:p-5 custom-scrollbar">
-        <div className="space-y-4">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
+      <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar sm:px-5">
+        <div className="space-y-3">
+          {messages.map((message) => (
+            <article
+              key={message.id}
+              className={`max-w-[92%] rounded-[22px] border px-4 py-3 text-sm leading-relaxed ${
+                message.role === "user"
+                  ? "ml-auto border-sky-400/20 bg-sky-500/10 text-sky-50"
+                  : "border-white/5 bg-white/[0.03] text-slate-100"
+              }`}
             >
-              <span className="mb-1 text-[9px] font-mono uppercase tracking-widest text-slate-500">
-                {msg.role} // {new Date(msg.timestamp).toLocaleTimeString("es-MX")}
-              </span>
-
-              <div
-                className={`max-w-[82%] rounded-3xl border px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "rounded-br-lg border-sky-400/20 bg-sky-500/10 text-white"
-                    : msg.role === "system"
-                      ? "rounded-bl-lg border-amber-400/20 bg-amber-500/10 text-amber-200"
-                      : "rounded-bl-lg border-white/5 bg-white/[0.04] text-slate-200"
-                }`}
-              >
-                {msg.content}
-              </div>
-            </div>
+              {message.content}
+            </article>
           ))}
-
-          {isTyping ? (
-            <div className="flex flex-col items-start">
-              <span className="mb-1 text-[9px] font-mono uppercase tracking-widest text-sky-400">
-                NOVA // PROCESANDO
-              </span>
-              <div className="flex items-center gap-2 rounded-3xl border border-white/5 bg-white/[0.04] px-4 py-3">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-sky-400" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-sky-400 [animation-delay:0.15s]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-sky-400 [animation-delay:0.3s]" />
-              </div>
-            </div>
-          ) : null}
-
-          <div ref={bottomRef} />
+          <div ref={endRef} />
         </div>
       </div>
 
-      <div className="border-t border-white/5 bg-slate-950/70 p-3 sm:p-4">
-        <div className="flex gap-2 sm:gap-3">
-          <input
-            type="text"
-            className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-[#0a1020] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-500/40 focus:ring-1 focus:ring-sky-500/20"
-            placeholder="Escribe una directiva..."
+      <div className="border-t border-white/5 p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => setInput(prompt)}
+              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300 transition-all hover:bg-white/[0.06]"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+
+        {error ? (
+          <div className="mb-3 rounded-2xl border border-rose-400/15 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="rounded-[24px] border border-white/5 bg-white/[0.03] p-3">
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void handleSend();
+                void sendMessage(input);
               }
             }}
-            disabled={isTyping}
-            spellCheck={false}
+            placeholder={threadId ? `Hilo: ${threadId.slice(0, 8)}...` : "Escribe aquí..."}
+            rows={1}
+            className="min-h-[48px] w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
           />
 
-          <VoiceInput onResult={handleVoice} />
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-500">
+              {sending ? "Procesando..." : "Shift+Enter para salto"}
+            </span>
 
-          <button
-            onClick={() => void handleSend()}
-            disabled={isTyping || !input.trim()}
-            className="inline-flex items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/12 px-5 py-3 text-xs font-black uppercase tracking-widest text-sky-300 transition-all hover:bg-sky-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Emitir
-          </button>
+            <button
+              type="button"
+              onClick={() => void sendMessage(input)}
+              disabled={!canSend}
+              className="hocker-button-brand disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Enviar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
