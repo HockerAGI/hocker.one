@@ -24,7 +24,9 @@ const jetBrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://hockerone.vercel.app");
+const siteUrl = new URL(
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://hockerone.vercel.app",
+);
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
   },
-  description: "Centro de mando unificado de Hocker IA Technologies.",
+  description: "Centro visual unificado de Hocker ONE.",
   alternates: {
     canonical: "/",
   },
@@ -62,12 +64,12 @@ export const metadata: Metadata = {
     siteName: "Hocker ONE",
     locale: "es_MX",
     title: "Hocker ONE",
-    description: "Centro de mando unificado de Hocker IA Technologies.",
+    description: "Centro visual unificado de Hocker ONE.",
   },
   twitter: {
     card: "summary",
     title: "Hocker ONE",
-    description: "Centro de mando unificado de Hocker IA Technologies.",
+    description: "Centro visual unificado de Hocker ONE.",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -96,7 +98,6 @@ export default function RootLayout({
             <div className="pointer-events-none fixed bottom-0 right-0 h-96 w-96 rounded-full bg-fuchsia-500/10 blur-3xl animate-[pulse_12s_ease-in-out_infinite]" />
 
             <div className="relative z-10 min-h-screen">{children}</div>
-
             <BottomDock />
           </div>
 
