@@ -1,12 +1,21 @@
+// ==========================
+// JSON BASE
+// ==========================
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 export type JsonObject = {
   [key: string]: JsonValue;
 };
 
+// ==========================
+// CORE
+// ==========================
 export type ProjectId = "hocker-one";
 export type NodeId = "hocker-agi";
 
+// ==========================
+// COMMANDS
+// ==========================
 export type CommandStatus =
   | "queued"
   | "needs_approval"
@@ -26,8 +35,49 @@ export type CommandName =
   | "restart_nova"
   | "restart_telemetry";
 
+// ✅ FIX: normalizador que faltaba
+export function normalizeCommandStatus(input?: string): CommandStatus {
+  switch ((input ?? "").toLowerCase()) {
+    case "queued":
+      return "queued";
+    case "needs_approval":
+      return "needs_approval";
+    case "running":
+      return "running";
+    case "done":
+      return "done";
+    case "error":
+    case "failed":
+      return "error";
+    case "canceled":
+    case "cancelled":
+      return "canceled";
+    default:
+      return "queued";
+  }
+}
+
+// ==========================
+// EVENTS
+// ==========================
 export type EventLevel = "info" | "warn" | "error";
 
+// ✅ FIX
+export function normalizeEventLevel(input?: string): EventLevel {
+  switch ((input ?? "").toLowerCase()) {
+    case "warn":
+    case "warning":
+      return "warn";
+    case "error":
+      return "error";
+    default:
+      return "info";
+  }
+}
+
+// ==========================
+// NODES
+// ==========================
 export type NodeStatus =
   | "offline"
   | "online"
@@ -36,40 +86,19 @@ export type NodeStatus =
   | "warning"
   | "error";
 
-export interface CommandRow {
-  id: string;
-  project_id: ProjectId;
-  node_id: NodeId;
-  command: CommandName;
-  payload: JsonObject;
-  status: CommandStatus;
-  needs_approval: boolean;
-  signature: string;
-  result: JsonObject | null;
-  error: string | null;
-  created_at: string;
-  executed_at: string | null;
-  started_at: string | null;
-  finished_at: string | null;
-  approved_at: string | null;
-}
+// ==========================
+// SUPPLY
+// ==========================
+export type SupplyOrderStatus =
+  | "pending"
+  | "paid"
+  | "producing"
+  | "shipped"
+  | "delivered"
+  | "canceled";
 
-export interface NodeRow {
-  id: NodeId;
-  project_id: ProjectId;
-  name: string | null;
-  type: string;
-  status: NodeStatus;
-  last_seen_at: string | null;
-  meta: JsonObject;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProjectRow {
-  id: ProjectId;
-  name: string | null;
-  meta: JsonObject;
-  created_at: string;
-}
+// ✅ FIX
+export function normalizeSupplyOrderStatus(input?: string): SupplyOrderStatus {
+  switch ((input ?? "").toLowerCase()) {
+    case "paid":
+      return "paid";
