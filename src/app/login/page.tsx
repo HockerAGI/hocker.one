@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  const defaultEmail = process.env.HOCKER_LOGIN_EMAIL ?? "";
-  const defaultPassword = process.env.HOCKER_LOGIN_PASSWORD ?? "";
+  const fixedEmail = process.env.HOCKER_LOGIN_EMAIL ?? "";
+  const fixedPassword = process.env.HOCKER_LOGIN_PASSWORD ?? "";
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
@@ -18,10 +18,10 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-fuchsia-500/10 blur-3xl" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] opacity-40" />
 
-      <section className="relative z-10 grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="flex flex-col items-center justify-center text-center lg:items-start lg:text-left">
-          <div className="relative mb-8 w-full max-w-[440px]">
-            <div className="absolute -inset-8 rounded-full bg-sky-500/10 blur-3xl" />
+      <section className="relative z-10 w-full max-w-5xl">
+        <div className="mx-auto flex w-full max-w-[520px] flex-col items-center text-center">
+          <div className="relative mb-8 w-full">
+            <div className="absolute -inset-10 rounded-full bg-sky-500/10 blur-3xl" />
             <Image
               src="/brand/hocker-one-logo.png"
               alt="Hocker One"
@@ -43,11 +43,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="flex justify-center lg:justify-end">
-          <AuthBox
-            defaultEmail={defaultEmail}
-            defaultPassword={defaultPassword}
-          />
+        <div className="mt-8 flex justify-center">
+          <AuthBox fixedEmail={fixedEmail} fixedPassword={fixedPassword} />
         </div>
       </section>
     </main>
