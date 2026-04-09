@@ -1,63 +1,55 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type BrandMarkProps = {
+  href?: string;
   compact?: boolean;
   showWordmark?: boolean;
-  href?: string;
+  hero?: boolean;
   className?: string;
 };
 
-function cx(...parts: Array<string | undefined | false>): string {
-  return parts.filter(Boolean).join(" ");
-}
-
 export default function BrandMark({
+  href = "/",
   compact = false,
   showWordmark = true,
-  href = "/",
-  className,
+  hero = false,
+  className = "",
 }: BrandMarkProps) {
-  const shouldShowWordmark = showWordmark && !compact;
+  const shellSize = hero ? "h-14 w-14" : "h-11 w-11";
+  const logoSize = hero ? "h-10 w-10" : "h-8 w-8";
+  const wordmarkSize = hero ? "h-12 sm:h-14" : "h-9 sm:h-10";
 
   return (
     <Link
       href={href}
-      aria-label="Ir al inicio de Hocker ONE"
-      className={cx("group inline-flex items-center gap-3", className)}
+      className={`group inline-flex items-center gap-3 rounded-[28px] border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_10px_40px_rgba(2,6,23,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-sky-500/20 hover:bg-white/[0.06] active:scale-95 ${className}`}
+      aria-label="Ir al inicio"
     >
-      <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-[18px] border border-sky-400/20 bg-slate-950/70 shadow-[0_0_30px_rgba(14,165,233,0.16)] transition-transform duration-300 group-hover:scale-[1.02]">
-        <span className="absolute inset-0 rounded-[18px] bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.22),transparent_62%)]" />
-        <svg
-          viewBox="0 0 64 64"
-          className="relative h-8 w-8 drop-shadow-[0_0_14px_rgba(14,165,233,0.35)]"
-          fill="none"
-          aria-hidden="true"
-        >
-          <rect x="9" y="9" width="46" height="46" rx="16" stroke="rgba(56,189,248,0.22)" />
-          <path
-            d="M23 16v32M23 33c0-6.627 5.373-12 12-12s12 5.373 12 12v15"
-            stroke="#38BDF8"
-            strokeWidth="5.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M23 16h8M23 48h8M35 21h8M35 48h8"
-            stroke="rgba(148,163,184,0.32)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-        </svg>
+      <span
+        className={`relative flex ${shellSize} items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 transition-transform duration-300 group-hover:scale-105`}
+      >
+        <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.28),transparent_60%)] opacity-80 transition-opacity group-hover:opacity-100" />
+        <Image
+          src="/brand/hocker-one-isotype.png"
+          alt="Hocker"
+          width={40}
+          height={40}
+          priority
+          className={`relative ${logoSize} object-contain drop-shadow-[0_0_14px_rgba(14,165,233,0.35)]`}
+        />
       </span>
 
-      {shouldShowWordmark ? (
+      {showWordmark && !compact ? (
         <span className="hidden min-w-0 sm:block">
-          <span className="block text-[10px] font-black uppercase tracking-[0.45em] text-sky-300">
-            Hocker One
-          </span>
-          <span className="block text-[11px] font-medium uppercase tracking-[0.3em] text-slate-500">
-            Control Plane
-          </span>
+          <Image
+            src="/brand/hocker-one-horizontal.png"
+            alt="Hocker One"
+            width={240}
+            height={52}
+            priority
+            className={`${wordmarkSize} w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]`}
+          />
         </span>
       ) : null}
     </Link>
