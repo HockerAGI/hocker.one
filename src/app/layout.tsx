@@ -1,30 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { Orbitron, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import BottomDock from "@/components/BottomDock";
 import PwaRegister from "@/components/PwaRegister";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import "./globals.css";
 
-const orbitron = Orbitron({
-  variable: "--font-orbitron",
+const inter = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
 });
 
 const jetBrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
 
-const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://hocker.one");
+const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://hockerone.vercel.app");
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
   },
-  description: "Centro de Mando Unificado de Hocker IA Technologies.",
+  description: "Centro de mando unificado de Hocker IA Technologies.",
   alternates: {
     canonical: "/",
   },
@@ -62,12 +62,12 @@ export const metadata: Metadata = {
     siteName: "Hocker ONE",
     locale: "es_MX",
     title: "Hocker ONE",
-    description: "Centro de Mando Unificado de Hocker IA Technologies.",
+    description: "Centro de mando unificado de Hocker IA Technologies.",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Hocker ONE",
-    description: "Centro de Mando Unificado de Hocker IA Technologies.",
+    description: "Centro de mando unificado de Hocker IA Technologies.",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -85,13 +85,13 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${orbitron.variable} ${dmSans.variable} ${jetBrainsMono.variable} dark scroll-smooth h-full`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} dark h-full scroll-smooth`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 antialiased selection:bg-sky-500/30">
+      <body className="min-h-screen overflow-x-hidden bg-slate-950 font-sans text-slate-100 antialiased selection:bg-sky-500/30">
         <WorkspaceProvider>
           <div className="relative min-h-screen overflow-hidden">
-            <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%),linear-gradient(180deg,#020617_0%,#020617_100%)]" />
+            <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_26%),linear-gradient(180deg,#020617_0%,#020617_100%)]" />
             <div className="pointer-events-none fixed -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-sky-500/10 blur-3xl animate-[pulse_10s_ease-in-out_infinite]" />
             <div className="pointer-events-none fixed bottom-0 right-0 h-96 w-96 rounded-full bg-fuchsia-500/10 blur-3xl animate-[pulse_12s_ease-in-out_infinite]" />
 
@@ -109,7 +109,7 @@ export default function RootLayout({
             richColors
             toastOptions={{
               style: {
-                background: "rgba(15, 23, 32, 0.88)",
+                background: "rgba(15, 23, 32, 0.92)",
                 backdropFilter: "blur(18px)",
                 border: "1px solid rgba(14, 165, 233, 0.16)",
                 borderRadius: "24px",
