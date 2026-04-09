@@ -50,7 +50,7 @@ export default function BrandMark({
             width={logoWidth}
             height={logoHeight}
             priority
-            className={`h-${hero ? "14" : "10"} w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]`}
+            className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
           />
         </span>
       ) : null}
