@@ -13,7 +13,7 @@ export default function CommandsPage() {
   return (
     <PageShell
       title="Tareas"
-      subtitle="Entra una instrucción y sigue su estado."
+      subtitle="Escribe una instrucción clara y sigue su avance."
     >
       <div className="flex flex-col gap-6">
         <Hint title="Antes de enviar">
