@@ -16,9 +16,9 @@ export default function WorkspaceBar() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Espacio actual
+            Contexto
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">Contexto vivo</p>
+          <p className="mt-1 text-[11px] text-slate-500">Base viva</p>
         </div>
 
         <button
@@ -30,21 +30,21 @@ export default function WorkspaceBar() {
               : "border-white/10 bg-white/[0.04] text-slate-400"
           }`}
         >
-          {tutorial ? "Ayuda visible" : "Ayuda oculta"}
+          {tutorial ? "Guía ON" : "Guía OFF"}
         </button>
       </div>
 
       <div className="mt-4 space-y-3">
         <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
           <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-            Proyecto
+            Base
           </label>
           <div className="mt-1 truncate text-xs font-mono text-slate-100">{projectId}</div>
         </div>
 
         <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
           <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-            Equipo
+            Nodo actual
           </label>
           <input
             value={nodeId}
