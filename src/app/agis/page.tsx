@@ -7,8 +7,8 @@ import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { AgiRow, JsonObject } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "AGIs",
-  description: "Registro operativo de inteligencias del ecosistema.",
+  title: "Módulos",
+  description: "Registro operativo de inteligencias y módulos.",
 };
 
 function asMeta(value: unknown): JsonObject {
@@ -43,14 +43,11 @@ export default async function AgisPage() {
 
   return (
     <PageShell
-      title="AGIs"
-      subtitle="Registro real de inteligencias activas y módulos operativos."
+      title="Módulos"
+      subtitle="Listado real desde base de datos."
       actions={
-        <Link
-          href="/dashboard"
-          className="hocker-button-primary"
-        >
-          Dashboard
+        <Link href="/dashboard" className="hocker-button-primary">
+          Panel
         </Link>
       }
     >
@@ -62,8 +59,8 @@ export default async function AgisPage() {
           </div>
         </div>
 
-        <Hint title="Registro real">
-          Este listado sale desde Supabase, no desde simulación local.
+        <Hint title="Listado en vivo">
+          Esto sale de Supabase, no de un demo local.
         </Hint>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -82,6 +79,7 @@ export default async function AgisPage() {
                       {agi.description ?? "Sin descripción."}
                     </p>
                   </div>
+
                   <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[9px] font-black uppercase text-sky-300">
                     {agi.version ?? "—"}
                   </span>
