@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Mic, RefreshCcw, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import VoiceInput from "@/components/VoiceInput";
 import { speak } from "@/lib/tts";
@@ -36,7 +37,7 @@ const SUGGESTIONS = [
   "Dame un plan de hoy.",
   "Revisa los módulos activos.",
   "Sugiere la siguiente acción.",
-];
+] as const;
 
 export default function NovaChat() {
   const { projectId, nodeId } = useWorkspace();
@@ -51,7 +52,7 @@ export default function NovaChat() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastText, setLastText] = useState<string>("");
+  const [lastText, setLastText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -131,10 +132,13 @@ export default function NovaChat() {
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/75 shadow-[0_24px_100px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
       <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 sm:px-5">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-            Hablar con NOVA
-          </p>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.55)]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
+              Nova AGI
+            </p>
+          </div>
           <p className="mt-1 text-[11px] text-slate-500">
             Texto o voz. Respuestas claras.
           </p>
@@ -144,8 +148,9 @@ export default function NovaChat() {
           type="button"
           onClick={handleRetry}
           disabled={!lastText || sending}
-          className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300 transition-all hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300 transition-all hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
         >
+          <RefreshCcw className="h-3.5 w-3.5" />
           Repetir
         </button>
       </div>
@@ -166,6 +171,7 @@ export default function NovaChat() {
               {message.content}
             </article>
           ))}
+
           {sending ? (
             <div className="max-w-[92%] rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
               Escribiendo respuesta...
@@ -225,6 +231,7 @@ export default function NovaChat() {
               disabled={!input.trim() || sending}
               className="hocker-button-brand disabled:cursor-not-allowed disabled:opacity-60"
             >
+              <ArrowUpRight className="h-4 w-4" />
               Enviar
             </button>
           </div>
