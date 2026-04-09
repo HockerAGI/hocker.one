@@ -65,7 +65,7 @@ export default function NodeBadge() {
     void load();
     const interval = window.setInterval(() => void load(), 10000);
     return () => window.clearInterval(interval);
-  }, [load, nodeId, projectId, supabase]);
+  }, [nodeId, projectId, supabase]);
 
   const status = node?.status?.toLowerCase?.() ?? "offline";
   const online = status === "online" || status === "degraded";
@@ -82,14 +82,14 @@ export default function NodeBadge() {
         <div className="min-w-0">
           <p className="truncate text-sm font-black text-white">{label}</p>
           <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500">
-            {online ? "En línea" : "Desconectado"}
+            {online ? "En línea" : "Fuera"}
           </p>
         </div>
       </div>
 
       <div className="mt-3 rounded-2xl border border-white/5 bg-slate-950/45 p-3">
         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-          Última conexión
+          Última señal
         </p>
         <p className="mt-1 text-xs text-slate-200">{relative(node?.last_seen_at ?? null)}</p>
       </div>
