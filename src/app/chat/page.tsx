@@ -5,15 +5,15 @@ import Hint from "@/components/Hint";
 import NovaChat from "@/components/NovaChat";
 
 export const metadata: Metadata = {
-  title: "Hablar",
+  title: "Nova AGI",
   description: "Canal privado de conversación con NOVA.",
 };
 
 export default function ChatPage() {
   return (
     <PageShell
-      title="Hablar"
-      subtitle="Habla con NOVA. Claro, corto y directo."
+      title="Nova AGI"
+      subtitle="Habla con NOVA. Claro y directo."
       actions={
         <Link href="/dashboard" className="hocker-button-primary">
           Panel
