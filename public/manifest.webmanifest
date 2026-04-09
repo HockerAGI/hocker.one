@@ -2,7 +2,7 @@
   "name": "Hocker ONE",
   "short_name": "Hocker ONE",
   "description": "Centro de control de Hocker AGI Technologies.",
-  "id": "hocker-one-v1",
+  "id": "hocker-one",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -13,15 +13,9 @@
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/icon-192x192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512x512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "src": "/brand/hocker-one-isotype.png",
+      "sizes": "500x500",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
@@ -30,13 +24,25 @@
       "name": "Matriz Dashboard",
       "short_name": "Panel",
       "url": "/dashboard",
-      "icons": [{ "src": "/icon-192x192.svg", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/brand/hocker-one-isotype.png",
+          "sizes": "500x500",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "NOVA AGI",
       "short_name": "NOVA",
       "url": "/chat",
-      "icons": [{ "src": "/icon-192x192.svg", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/brand/hocker-one-isotype.png",
+          "sizes": "500x500",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "prefer_related_applications": false
