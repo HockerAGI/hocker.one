@@ -1,98 +1,94 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
-import { useWorkspace } from "@/components/WorkspaceContext";
+import { Cpu, TriangleAlert } from "lucide-react";
 import type { NodeRow } from "@/lib/types";
 
-function isNodeRow(data: unknown): data is NodeRow {
-  if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
+type NodeBadgeProps = {
+  node: NodeRow;
+  compact?: boolean;
+  className?: string;
+};
 
-  const obj = data as Record<string, unknown>;
-  return (
-    typeof obj.id === "string" &&
-    typeof obj.project_id === "string" &&
-    (typeof obj.name === "string" || obj.name === null) &&
-    typeof obj.status === "string" &&
-    (typeof obj.last_seen_at === "string" || obj.last_seen_at === null)
-  );
-}
+const statusTone: Record<string, string> = {
+  online: "border-emerald-400/15 bg-emerald-400/10 text-emerald-200",
+  busy: "border-amber-400/15 bg-amber-400/10 text-amber-200",
+  warning: "border-yellow-400/15 bg-yellow-400/10 text-yellow-200",
+  error: "border-rose-400/15 bg-rose-400/10 text-rose-200",
+  offline: "border-slate-400/15 bg-slate-400/10 text-slate-200",
+  idle: "border-sky-400/15 bg-sky-400/10 text-sky-200",
+};
 
-function relative(ts: string | null): string {
-  if (!ts) return "—";
-  const diff = Math.max(0, Date.now() - new Date(ts).getTime());
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 48) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
+const dotTone: Record<string, string> = {
+  online: "bg-emerald-400",
+  busy: "bg-amber-400",
+  warning: "bg-yellow-400",
+  error: "bg-rose-400",
+  offline: "bg-slate-500",
+  idle: "bg-sky-400",
+};
 
-export default function NodeBadge() {
-  const supabase = useMemo(() => createBrowserSupabase(), []);
-  const { projectId, nodeId } = useWorkspace();
-
-  const [node, setNode] = useState<NodeRow | null>(null);
-
-  async function load(): Promise<void> {
-    try {
-      if (!nodeId) {
-        setNode(null);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("nodes")
-        .select("id, project_id, name, status, last_seen_at, meta")
-        .eq("project_id", projectId)
-        .eq("id", nodeId)
-        .maybeSingle();
-
-      if (error || !isNodeRow(data)) {
-        setNode(null);
-        return;
-      }
-
-      setNode(data);
-    } catch {
-      setNode(null);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-    const interval = window.setInterval(() => void load(), 10000);
-    return () => window.clearInterval(interval);
-  }, [nodeId, projectId, supabase]);
-
-  const status = node?.status?.toLowerCase?.() ?? "offline";
-  const online = status === "online" || status === "degraded";
-  const label = node?.name ?? "Equipo";
+export default function NodeBadge({ node, compact = false, className = "" }: NodeBadgeProps) {
+  const tone = statusTone[node.status] ?? statusTone.offline;
+  const dot = dotTone[node.status] ?? dotTone.offline;
 
   return (
-    <div className="rounded-[26px] border border-white/5 bg-white/[0.03] p-4 shadow-[0_12px_50px_rgba(2,6,23,0.16)]">
-      <div className="flex items-center gap-3">
-        <span
-          className={`h-2.5 w-2.5 rounded-full ${
-            online ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.45)]" : "bg-slate-500"
-          }`}
-        />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-white">{label}</p>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500">
-            {online ? "En línea" : "Fuera"}
-          </p>
+    <article
+      className={[
+        "hocker-card-float relative overflow-hidden border p-4 transition-all duration-300 hover:-translate-y-0.5",
+        className,
+      ].join(" ")}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.10),transparent_34%)]" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-slate-950/55">
+              <Cpu className="h-4.5 w-4.5 text-sky-300" />
+            </span>
+
+            <div className="min-w-0">
+              <p className="text-sm font-black text-white">
+                {node.name || node.id}
+              </p>
+              <p className="truncate text-[10px] uppercase tracking-[0.26em] text-slate-500">
+                {node.type} · {node.id}
+              </p>
+            </div>
+          </div>
+
+          {!compact ? (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-[18px] border border-white/5 bg-white/[0.03] px-3 py-2.5">
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                  Estado
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">{node.status}</p>
+              </div>
+
+              <div className="rounded-[18px] border border-white/5 bg-white/[0.03] px-3 py-2.5">
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                  Última señal
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  {node.last_seen_at ? new Date(node.last_seen_at).toLocaleTimeString("es-MX") : "—"}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className={["inline-flex rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em]", tone].join(" ")}>
+          <span className={["mr-2 mt-[2px] h-2.5 w-2.5 rounded-full", dot].join(" ")} />
+          {node.status}
         </div>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-white/5 bg-slate-950/45 p-3">
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-          Última señal
-        </p>
-        <p className="mt-1 text-xs text-slate-200">{relative(node?.last_seen_at ?? null)}</p>
-      </div>
-    </div>
+      {node.status === "error" ? (
+        <div className="relative mt-4 flex items-center gap-2 rounded-[18px] border border-rose-400/15 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
+          <TriangleAlert className="h-4 w-4" />
+          Nodo con alerta activa.
+        </div>
+      ) : null}
+    </article>
   );
 }

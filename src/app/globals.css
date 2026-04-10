@@ -254,3 +254,55 @@ body::after {
     display: none;
   }
 }
+@layer components {
+  .nova-hero-shell {
+    @apply rounded-[40px] border border-white/5 bg-white/[0.03] shadow-[0_30px_120px_rgba(2,6,23,0.24)] backdrop-blur-3xl;
+  }
+
+  .nova-avatar-shell {
+    @apply rounded-[34px] border border-white/5 bg-slate-950/55 shadow-[0_24px_100px_rgba(2,6,23,0.34)] backdrop-blur-3xl;
+  }
+
+  .nova-mini-card {
+    @apply rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-3 shadow-[0_14px_50px_rgba(2,6,23,0.18)];
+  }
+}
+
+@keyframes nova-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes nova-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes nova-scan {
+  0% {
+    transform: translateY(-20vh);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(120vh);
+    opacity: 0;
+  }
+}

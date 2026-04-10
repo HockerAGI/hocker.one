@@ -12,7 +12,7 @@ function pill(status: NodeRow["status"]): string {
     return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.1)]";
   }
 
-  if (status === "degraded") {
+  if (status === "warning") {
     return "border-amber-500/30 bg-amber-500/10 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.1)]";
   }
 
@@ -146,7 +146,7 @@ export default function NodesPanel() {
                     {node.name || "Equipo"}
                   </h4>
                   <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${pill(node.status)}`}>
-                    {node.status === "online" ? "En línea" : node.status === "degraded" ? "Con atención" : "Fuera"}
+                    {node.status === "online" ? "En línea" : node.status === "warning" ? "Con atención" : "Fuera"}
                   </span>
                 </div>
 

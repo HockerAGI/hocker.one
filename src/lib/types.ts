@@ -11,7 +11,7 @@ export type JsonObject = {
 // CORE
 // ==========================
 export type ProjectId = "hocker-one";
-export type NodeId = "hocker-agi";
+export type NodeId = string & { readonly brand?: unique symbol };
 
 // ==========================
 // COMMANDS
@@ -163,4 +163,17 @@ export interface ControlRow {
   meta: JsonObject;
   created_at: string;
   updated_at: string;
+}
+// ==========================
+// EVENTS
+// ==========================
+export interface EventRow {
+  id: string;
+  project_id: ProjectId;
+  node_id: NodeId | null;
+  type: string;
+  message: string;
+  level: EventLevel;
+  data: JsonObject | null;
+  created_at: string;
 }

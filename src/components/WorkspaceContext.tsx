@@ -1,117 +1,104 @@
 "use client";
 
-import React, {
+import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
-import { defaultNodeId, defaultProjectId } from "@/lib/project";
+import type { NodeId, ProjectId } from "@/lib/project";
 
-type WorkspaceState = {
-  projectId: string;
-  nodeId: string;
+type WorkspaceContextValue = {
+  projectId: ProjectId;
+  nodeId: NodeId;
   tutorial: boolean;
-};
-
-type WorkspaceCtx = WorkspaceState & {
-  setProjectId: (v: string) => void;
-  setNodeId: (v: string) => void;
-  setTutorial: (v: boolean) => void;
+  ready: boolean;
+  setProjectId: (value: ProjectId) => void;
+  setNodeId: (value: NodeId) => void;
+  setTutorial: (value: boolean) => void;
   toggleTutorial: () => void;
-  reset: () => void;
-  refresh: () => void;
-  version: number;
+  resetWorkspace: () => void;
 };
 
-function createDefaults(): WorkspaceState {
-  return {
-    projectId: defaultProjectId(),
-    nodeId: defaultNodeId(),
-    tutorial: true,
-  };
+const DEFAULT_PROJECT_ID = "hocker-one" as ProjectId;
+const DEFAULT_NODE_ID = "hocker-agi" as NodeId;
+
+const STORAGE_KEYS = {
+  projectId: "hocker.workspace.projectId",
+  nodeId: "hocker.workspace.nodeId",
+  tutorial: "hocker.workspace.tutorial",
+} as const;
+
+const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
+
+function readBoolean(value: string | null, fallback: boolean): boolean {
+  if (value === null) return fallback;
+  return value === "true" || value === "1";
 }
 
-const KEY = "hocker.workspace.v3";
-const Ctx = createContext<WorkspaceCtx | null>(null);
-
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<WorkspaceState>(() => createDefaults());
+export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [version, setVersion] = useState(0);
-
-  const refresh = useCallback(() => {
-    setVersion((v) => v + 1);
-  }, []);
+  const [projectId, setProjectIdState] = useState<ProjectId>(DEFAULT_PROJECT_ID);
+  const [nodeId, setNodeIdState] = useState<NodeId>(DEFAULT_NODE_ID);
+  const [tutorial, setTutorialState] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(KEY);
-      if (raw) {
-        const parsed: unknown = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          const p = parsed as Record<string, unknown>;
-          setState({
-            projectId:
-              typeof p.projectId === "string" && p.projectId.trim()
-                ? p.projectId.trim()
-                : defaultProjectId(),
-            nodeId:
-              typeof p.nodeId === "string" && p.nodeId.trim()
-                ? p.nodeId.trim()
-                : defaultNodeId(),
-            tutorial: typeof p.tutorial === "boolean" ? p.tutorial : true,
-          });
-        }
-      }
-    } catch {
-      // silent
-    } finally {
-      setReady(true);
-    }
+    const storedProjectId = window.localStorage.getItem(STORAGE_KEYS.projectId);
+    const storedNodeId = window.localStorage.getItem(STORAGE_KEYS.nodeId);
+    const storedTutorial = window.localStorage.getItem(STORAGE_KEYS.tutorial);
+
+    setProjectIdState((storedProjectId as ProjectId) || DEFAULT_PROJECT_ID);
+    setNodeIdState((storedNodeId as NodeId) || DEFAULT_NODE_ID);
+    setTutorialState(readBoolean(storedTutorial, false));
+    setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
+    window.localStorage.setItem(STORAGE_KEYS.projectId, projectId);
+  }, [projectId, ready]);
 
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      // no-op
-    }
-  }, [state, ready]);
+  useEffect(() => {
+    if (!ready) return;
+    window.localStorage.setItem(STORAGE_KEYS.nodeId, nodeId);
+  }, [nodeId, ready]);
 
-  const value = useMemo<WorkspaceCtx>(
+  useEffect(() => {
+    if (!ready) return;
+    window.localStorage.setItem(STORAGE_KEYS.tutorial, tutorial ? "true" : "false");
+  }, [tutorial, ready]);
+
+  const value = useMemo<WorkspaceContextValue>(
     () => ({
-      ...state,
-      version,
-      setProjectId: (v) =>
-        setState((s) => ({
-          ...s,
-          projectId: v.trim() || defaultProjectId(),
-        })),
-      setNodeId: (v) =>
-        setState((s) => ({
-          ...s,
-          nodeId: v.trim() || defaultNodeId(),
-        })),
-      setTutorial: (v) => setState((s) => ({ ...s, tutorial: Boolean(v) })),
-      toggleTutorial: () => setState((s) => ({ ...s, tutorial: !s.tutorial })),
-      reset: () => setState(createDefaults()),
-      refresh,
+      projectId,
+      nodeId,
+      tutorial,
+      ready,
+      setProjectId: setProjectIdState,
+      setNodeId: setNodeIdState,
+      setTutorial: setTutorialState,
+      toggleTutorial: () => setTutorialState((prev) => !prev),
+      resetWorkspace: () => {
+        setProjectIdState(DEFAULT_PROJECT_ID);
+        setNodeIdState(DEFAULT_NODE_ID);
+        setTutorialState(false);
+        window.localStorage.removeItem(STORAGE_KEYS.projectId);
+        window.localStorage.removeItem(STORAGE_KEYS.nodeId);
+        window.localStorage.removeItem(STORAGE_KEYS.tutorial);
+      },
     }),
-    [refresh, state, version],
+    [projectId, nodeId, tutorial, ready],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
-export function useWorkspace(): WorkspaceCtx {
-  const ctx = useContext(Ctx);
-  if (!ctx) {
+export function useWorkspace(): WorkspaceContextValue {
+  const context = useContext(WorkspaceContext);
+  if (!context) {
     throw new Error("useWorkspace debe usarse dentro de WorkspaceProvider.");
   }
-  return ctx;
+  return context;
 }

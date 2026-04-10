@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import BrandMark from "@/components/BrandMark";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 
@@ -72,7 +71,6 @@ export default function SupplyPage() {
     >
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4 rounded-[28px] border border-white/5 bg-slate-950/40 p-4 sm:p-5">
-          <BrandMark compact />
           <div className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-sky-300">
             Supply visible
           </div>

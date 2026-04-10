@@ -1,147 +1,148 @@
 "use client";
 
-import { getErrorMessage } from "@/lib/errors";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, CircleDot, ShieldCheck, Waves } from "lucide-react";
 
-type HealthCheckMap = {
-  db: boolean;
-  supabaseUrl: boolean;
-  supabaseAnon: boolean;
-  novaAgi: boolean;
-  novaKey: boolean;
-  commandHmac: boolean;
-  langfuse: boolean;
+type SystemStatusTone = "online" | "connecting" | "warning" | "offline" | "error";
+
+type SystemStatusProps = {
+  title?: string;
+  subtitle?: string;
+  tone?: SystemStatusTone;
+  updatedAt?: string;
+  projectId?: string;
+  nodeId?: string;
+  className?: string;
 };
 
-type HealthPayload = {
-  status: "online" | "degraded";
-  infrastructure: string;
-  checks: HealthCheckMap;
-  message?: string;
-  error?: string;
-  details?: string;
-  timestamp: string;
+const toneStyles: Record<SystemStatusTone, { pill: string; glow: string; label: string }> = {
+  online: {
+    pill: "border-emerald-400/15 bg-emerald-400/10 text-emerald-200",
+    glow: "bg-emerald-400/20",
+    label: "Online",
+  },
+  connecting: {
+    pill: "border-sky-400/15 bg-sky-400/10 text-sky-200",
+    glow: "bg-sky-400/20",
+    label: "Conectando",
+  },
+  warning: {
+    pill: "border-amber-400/15 bg-amber-400/10 text-amber-200",
+    glow: "bg-amber-400/20",
+    label: "Advertencia",
+  },
+  offline: {
+    pill: "border-slate-400/15 bg-slate-400/10 text-slate-200",
+    glow: "bg-slate-400/20",
+    label: "Offline",
+  },
+  error: {
+    pill: "border-rose-400/15 bg-rose-400/10 text-rose-200",
+    glow: "bg-rose-400/20",
+    label: "Error",
+  },
 };
 
-type StatItem = {
-  label: string;
-  ok: boolean;
-};
+export default function SystemStatus({
+  title = "Estado global",
+  subtitle = "Sistema vivo",
+  tone = "connecting",
+  updatedAt,
+  projectId,
+  nodeId,
+  className = "",
+}: SystemStatusProps) {
+  const t = toneStyles[tone];
 
-function CheckDot({ ok }: { ok: boolean }) {
   return (
-    <span
+    <section
       className={[
-        "inline-flex h-2.5 w-2.5 rounded-full",
-        ok
-          ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.55)]"
-          : "bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.45)]",
+        "hocker-panel-pro relative overflow-hidden border p-4 sm:p-5",
+        className,
       ].join(" ")}
-    />
-  );
-}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_28%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
 
-function formatDate(input: string): string {
-  const d = new Date(input);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("es-MX");
-}
-
-export default function SystemStatus() {
-  const [health, setHealth] = useState<HealthPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const summary = useMemo<StatItem[]>(() => {
-    const checks = health?.checks;
-    return [
-      { label: "Base", ok: Boolean(checks?.db) },
-      { label: "Acceso", ok: Boolean(checks?.supabaseUrl && checks?.supabaseAnon) },
-      { label: "Núcleo", ok: Boolean(checks?.novaAgi && checks?.novaKey) },
-      { label: "Firma", ok: Boolean(checks?.commandHmac) },
-      { label: "Bitácora", ok: Boolean(checks?.langfuse) },
-    ];
-  }, [health]);
-
-  const load = useCallback(async (): Promise<void> => {
-    try {
-      setError(null);
-      const res = await fetch("/api/health", { cache: "no-store" });
-      const data: unknown = await res.json();
-
-      if (!res.ok) {
-        const body = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
-        throw new Error(
-          typeof body?.error === "string"
-            ? body.error
-            : "No se pudo leer el estado del sistema.",
-        );
-      }
-
-      setHealth(data as HealthPayload);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err));
-      setHealth(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-
-    const timer = window.setInterval(() => {
-      void load();
-    }, 30000);
-
-    return () => window.clearInterval(timer);
-  }, [load]);
-
-  const online = health?.status === "online";
-
-  return (
-    <section className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-            Estado del sistema
-          </p>
-          <h3 className="mt-2 text-xl font-black tracking-tight text-white">
-            {loading && !health ? "Verificando..." : online ? "Todo listo" : "Hay atención"}
-          </h3>
-          <p className="mt-1 text-[11px] text-slate-500">
-            {health?.infrastructure ?? "Control principal"}
-          </p>
-        </div>
-
-        <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
-          {health ? formatDate(health.timestamp) : "—"}
-        </div>
-      </div>
-
-      {error ? (
-        <div className="rounded-2xl border border-rose-400/15 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
-          {error}
-        </div>
-      ) : null}
-
-      {health?.message ? (
-        <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
-          {health.message}
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {summary.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-            <div className="flex items-center gap-2">
-              <CheckDot ok={item.ok} />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                {item.label}
-              </span>
-            </div>
-            <p className="mt-2 text-sm font-bold text-white">{item.ok ? "OK" : "OFF"}</p>
+      <div className="relative flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="hocker-title-line">{title}</p>
+            <h3 className="mt-2 text-lg font-black tracking-tight text-white">
+              {subtitle}
+            </h3>
           </div>
-        ))}
+
+          <div className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.32em]">
+            <span className={["h-2.5 w-2.5 rounded-full", t.glow, "shadow-[0_0_18px_rgba(14,165,233,0.35)]"].join(" ")} />
+            <span className={t.pill.split(" ").slice(-1)[0]}>{t.label}</span>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              Proyecto
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">
+              {projectId || "hocker-one"}
+            </p>
+          </div>
+
+          <div className="rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              Nodo
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">
+              {nodeId || "hocker-agi"}
+            </p>
+          </div>
+
+          <div className="rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              Actualizado
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">
+              {updatedAt || "en vivo"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[22px] border border-white/5 bg-slate-950/45 px-3 py-3">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-sky-300" />
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                Telemetría
+              </p>
+            </div>
+            <p className="mt-2 text-sm text-slate-200">Señal continua</p>
+          </div>
+
+          <div className="rounded-[22px] border border-white/5 bg-slate-950/45 px-3 py-3">
+            <div className="flex items-center gap-2">
+              <Waves className="h-4 w-4 text-sky-300" />
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                Flujo
+              </p>
+            </div>
+            <p className="mt-2 text-sm text-slate-200">Realtime activo</p>
+          </div>
+
+          <div className="rounded-[22px] border border-white/5 bg-slate-950/45 px-3 py-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-sky-300" />
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                Seguridad
+              </p>
+            </div>
+            <p className="mt-2 text-sm text-slate-200">Controlado</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+          <CircleDot className="h-3.5 w-3.5 text-sky-300" />
+          <span>Hocker One opera en modo sistema.</span>
+        </div>
       </div>
     </section>
   );

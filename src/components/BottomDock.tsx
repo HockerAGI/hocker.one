@@ -2,102 +2,84 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
 import {
-  Bot,
-  Boxes,
-  Database,
-  Home,
-  MessageCircle,
-  Shield,
+  Brain,
+  Command,
+  Cpu,
+  LayoutDashboard,
+  Sparkles,
   Workflow,
 } from "lucide-react";
+import { useWorkspace } from "@/components/WorkspaceContext";
 
 type DockItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
 };
 
-const items: DockItem[] = [
-  { href: "/", label: "Inicio", icon: Home },
-  { href: "/chat", label: "Nova AGI", icon: MessageCircle },
-  { href: "/agis", label: "AGIs", icon: Bot },
-  { href: "/commands", label: "Órdenes", icon: Workflow },
-  { href: "/nodes", label: "Nodos", icon: Database },
-  { href: "/supply", label: "Suministros", icon: Boxes },
-  { href: "/governance", label: "Guardia", icon: Shield },
+const ITEMS: DockItem[] = [
+  { href: "/dashboard", label: "Core", icon: LayoutDashboard },
+  { href: "/chat", label: "NOVA", icon: Brain },
+  { href: "/commands", label: "Órdenes", icon: Command },
+  { href: "/nodes", label: "Nodos", icon: Cpu },
+  { href: "/supply", label: "Supply", icon: Workflow },
 ];
-
-function isActivePath(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export default function BottomDock() {
   const pathname = usePathname() || "/";
-
-  if (pathname.startsWith("/login")) return null;
+  const { projectId } = useWorkspace();
 
   return (
-    <nav
-      className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 px-3 sm:px-5"
-      aria-label="Navegación principal"
-    >
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 overflow-x-auto rounded-[32px] border border-white/10 bg-slate-950/85 p-2 shadow-[0_22px_90px_rgba(2,6,23,0.58)] backdrop-blur-2xl">
-        {items.map((item) => {
-          const active = isActivePath(pathname, item.href);
-          const Icon = item.icon;
-          const isHub = item.href === "/chat";
+    <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden pb-safe px-3 pb-3">
+      <div className="rounded-[30px] border border-white/5 bg-slate-950/78 px-3 py-3 shadow-[0_24px_90px_rgba(2,6,23,0.55)] backdrop-blur-3xl">
+        <div className="mb-3 flex items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-70 animate-ping" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-400" />
+            </span>
+            <span className="text-[9px] font-black uppercase tracking-[0.34em] text-slate-300">
+              {projectId}
+            </span>
+          </div>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={`group relative flex min-w-[80px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-center transition-all duration-300 active:scale-90 ${
-                active ? "text-sky-300" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span
-                className={`absolute inset-0 rounded-2xl blur-xl opacity-0 transition-all duration-500 ${
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-400/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.34em] text-sky-200"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            NOVA
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-5 gap-2">
+          {ITEMS.map((item) => {
+            const active =
+              item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={[
+                  "flex flex-col items-center gap-1.5 rounded-[22px] border px-2 py-2.5 transition-all duration-300",
                   active
-                    ? "bg-sky-500/20 opacity-100"
-                    : isHub
-                      ? "bg-sky-500/10 group-hover:opacity-60"
-                      : "group-hover:bg-white/5 group-hover:opacity-40"
-                }`}
-              />
-
-              <div
-                className={`relative flex items-center justify-center rounded-xl transition-all duration-300 ${
-                  isHub
-                    ? "h-12 w-12 bg-sky-500 text-black shadow-[0_0_25px_rgba(14,165,233,0.55)] group-hover:scale-110"
-                    : "h-10 w-10"
-                } ${active && !isHub ? "bg-sky-500/10" : ""}`}
+                    ? "border-sky-400/20 bg-sky-400/10 text-white shadow-[0_0_18px_rgba(14,165,233,0.12)]"
+                    : "border-white/5 bg-white/[0.03] text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-white",
+                ].join(" ")}
               >
-                <Icon
-                  className={`h-5 w-5 transition-transform duration-300 ${
-                    isHub ? "text-black" : "group-hover:-translate-y-0.5"
-                  }`}
-                />
-              </div>
-
-              <span
-                className={`text-[9px] font-black uppercase tracking-widest leading-none ${
-                  isHub ? "text-sky-300" : ""
-                }`}
-              >
-                {item.label}
-              </span>
-
-              {active ? (
-                <span className="absolute -bottom-1 h-1 w-6 rounded-full bg-sky-400 shadow-[0_0_10px_#0ea5e9]" />
-              ) : null}
-            </Link>
-          );
-        })}
+                <Icon className={["h-4.5 w-4.5", active ? "text-sky-300" : ""].join(" ")} />
+                <span className="text-[9px] font-black uppercase tracking-[0.28em]">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-    </nav>
+    </div>
   );
 }

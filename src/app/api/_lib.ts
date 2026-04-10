@@ -151,7 +151,7 @@ export async function ensureNode(
     id: nid,
     project_id: pid,
     name: nid === "hocker-agi" ? "Núcleo AGI" : `Nodo ${nid}`,
-    type: nid === "hocker-agi" || nid.startsWith("cloud-") ? "cloud" : "agent",
+    type: nid === "hocker-agi" || String(nid).startsWith("cloud-") ? "cloud" : "agent",
     status: "online",
     last_seen_at: now,
     tags: nid === "hocker-agi" ? ["core", "agi"] : ["agent"],

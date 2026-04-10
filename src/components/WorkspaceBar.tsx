@@ -1,57 +1,46 @@
 "use client";
 
+import { RefreshCcw, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function WorkspaceBar() {
-  const {
-    projectId,
-    nodeId,
-    tutorial,
-    setNodeId,
-    toggleTutorial,
-  } = useWorkspace();
+  const { projectId, nodeId, tutorial, toggleTutorial, resetWorkspace } = useWorkspace();
 
   return (
-    <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4 shadow-[0_12px_50px_rgba(2,6,23,0.18)]">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.35em] text-sky-400">
-            Contexto
-          </p>
-          <p className="mt-1 text-[11px] text-slate-500">Base viva</p>
+    <div className="rounded-[28px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-2xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-sky-200">
+            <Sparkles className="h-3.5 w-3.5" />
+            {projectId}
+          </span>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
+            Nodo: {nodeId}
+          </span>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200">
+            {tutorial ? "Guía activa" : "Modo libre"}
+          </span>
         </div>
 
-        <button
-          type="button"
-          onClick={toggleTutorial}
-          className={`rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
-            tutorial
-              ? "border-sky-400/20 bg-sky-500/10 text-sky-300"
-              : "border-white/10 bg-white/[0.04] text-slate-400"
-          }`}
-        >
-          {tutorial ? "Guía ON" : "Guía OFF"}
-        </button>
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTutorial}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.06]"
+          >
+            {tutorial ? "Desactivar guía" : "Activar guía"}
+          </button>
 
-      <div className="mt-4 space-y-3">
-        <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
-          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-            Base
-          </label>
-          <div className="mt-1 truncate text-xs font-mono text-slate-100">{projectId}</div>
-        </div>
-
-        <div className="rounded-2xl border border-white/5 bg-slate-950/45 p-3">
-          <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-            Nodo actual
-          </label>
-          <input
-            value={nodeId}
-            onChange={(e) => setNodeId(e.target.value)}
-            className="mt-1 w-full bg-transparent text-xs font-mono text-slate-100 outline-none placeholder:text-slate-600"
-            placeholder="equipo principal"
-          />
+          <button
+            type="button"
+            onClick={resetWorkspace}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.06]"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Reiniciar
+          </button>
         </div>
       </div>
     </div>

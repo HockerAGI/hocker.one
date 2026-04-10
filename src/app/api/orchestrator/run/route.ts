@@ -67,7 +67,7 @@ function buildActions(health: HealthSnapshot): PlannedAction[] {
 
 export async function POST(req: Request): Promise<NextResponse> {
   const baseUrl = resolveBaseUrl(req);
-  const projectId = defaultProjectId();
+  const projectId = defaultProjectId;
   const nodeId = "orchestrator";
   const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
 

@@ -4,6 +4,7 @@ import { Langfuse } from "langfuse-node";
 import { defaultNodeId, normalizeNodeId } from "@/lib/project";
 import { signCommand } from "@/lib/security";
 import type { JsonObject, CommandRow } from "@/lib/types";
+import { commandSchema } from "@/lib/validators";
 import {
   ApiError,
   ensureNode,
@@ -23,6 +24,9 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
+// ==========================
+// HELPERS
+// ==========================
 function asBool(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -41,6 +45,9 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
+// ==========================
+// TYPES
+// ==========================
 type CommandInsert = Pick<
   CommandRow,
   | "id"
@@ -60,16 +67,29 @@ type CommandInsert = Pick<
   | "created_at"
 >;
 
+// ==========================
+// GET
+// ==========================
 export async function GET(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
-    const project_id = String(url.searchParams.get("project_id") ?? url.searchParams.get("projectId") ?? "").trim();
+
+    const project_id = String(
+      url.searchParams.get("project_id") ??
+        url.searchParams.get("projectId") ??
+        ""
+    ).trim();
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(project_id, [
+      "owner",
+      "admin",
+      "operator",
+      "viewer",
+    ]);
 
     const { data, error } = await ctx.sb
       .from("commands")
@@ -79,7 +99,9 @@ export async function GET(req: Request): Promise<Response> {
       .limit(100);
 
     if (error) {
-      throw new ApiError(500, { error: "No se pudo leer la cola de comandos." });
+      throw new ApiError(500, {
+        error: "No se pudo leer la cola de comandos.",
+      });
     }
 
     return json({ ok: true, items: data ?? [] });
@@ -89,6 +111,9 @@ export async function GET(req: Request): Promise<Response> {
   }
 }
 
+// ==========================
+// POST
+// ==========================
 export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({
     name: "Ingreso_Orden_Tactica",
@@ -97,39 +122,71 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
+
+    const project_id = String(
+      body.project_id ?? body.projectId ?? ""
+    ).trim();
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const command = String(body.command ?? "").trim();
-    if (!command) {
-      throw new ApiError(400, { error: "El comando no puede venir vacío." });
-    }
+    // ==========================
+    // VALIDACIÓN ZOD (CORE FIX)
+    // ==========================
+    const parsed = commandSchema.parse(body);
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+    const command = parsed.command;
+    const node_id = normalizeNodeId(parsed.node_id);
+    const payload = asJsonObject(parsed.payload);
+
+    // ==========================
+    // CONTEXTO
+    // ==========================
+    const ctx = await requireProjectRole(project_id, [
+      "owner",
+      "admin",
+      "operator",
+    ]);
 
     const controls = await getControls(ctx.sb, ctx.project_id);
+
     if (controls.kill_switch) {
-      throw new ApiError(423, { error: "SISTEMA BLOQUEADO: Kill Switch activo." });
+      throw new ApiError(423, {
+        error: "SISTEMA BLOQUEADO: Kill Switch activo.",
+      });
     }
 
     if (!controls.allow_write) {
-      throw new ApiError(403, { error: "MODO SEGURO: solo lectura." });
+      throw new ApiError(403, {
+        error: "MODO SEGURO: solo lectura.",
+      });
     }
 
-    const node_id = normalizeNodeId(
-      String(body.node_id ?? body.nodeId ?? defaultNodeId()).trim() || defaultNodeId(),
+    // ==========================
+    // FLAGS
+    // ==========================
+    const needsApproval = asBool(
+      body.needs_approval ?? body.needsApproval,
+      false
     );
-    const payload = asJsonObject(body.payload);
-    const needsApproval = asBool(body.needs_approval ?? body.needsApproval, false);
 
-    const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
+    // ==========================
+    // SEGURIDAD
+    // ==========================
+    const secret = String(
+      process.env.COMMAND_HMAC_SECRET ?? ""
+    ).trim();
+
     if (!secret) {
-      throw new ApiError(500, { error: "COMMAND_HMAC_SECRET no está configurado en el entorno." });
+      throw new ApiError(500, {
+        error: "COMMAND_HMAC_SECRET no está configurado en el entorno.",
+      });
     }
 
+    // ==========================
+    // CREACIÓN
+    // ==========================
     const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
 
@@ -142,7 +199,7 @@ export async function POST(req: Request): Promise<Response> {
       node_id,
       command,
       payload,
-      created_at,
+      created_at
     );
 
     const row: CommandInsert = {
@@ -163,6 +220,9 @@ export async function POST(req: Request): Promise<Response> {
       created_at,
     };
 
+    // ==========================
+    // DB INSERT
+    // ==========================
     const { data, error } = await ctx.sb
       .from("commands")
       .insert(row)
@@ -173,6 +233,9 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(500, { error: error.message });
     }
 
+    // ==========================
+    // TRIGGER
+    // ==========================
     if (!needsApproval) {
       await tasks.trigger("hocker-core-executor", {
         commandId: id,
@@ -180,6 +243,9 @@ export async function POST(req: Request): Promise<Response> {
       });
     }
 
+    // ==========================
+    // TRACKING
+    // ==========================
     trace.event({
       name: "ORDEN_INGRESADA",
       input: { commandId: id, node_id, needsApproval },
@@ -188,11 +254,13 @@ export async function POST(req: Request): Promise<Response> {
     return json({ ok: true, item: data }, 201);
   } catch (err: unknown) {
     const apiErr = toApiError(err);
+
     trace.event({
       name: "FALLA_INGRESO",
       level: "ERROR",
       output: { error: apiErr.payload },
     });
+
     return json(apiErr.payload, apiErr.status);
   } finally {
     await langfuse.flushAsync();
