@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import BrandMark from "@/components/BrandMark";
 import AuthBox from "@/components/AuthBox";
 
 export const metadata: Metadata = {
@@ -8,62 +8,59 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  const fixedEmail = "contacto.hocker@gmail.com";
-  const fixedPassword = "Hockerpass16";
-
   return (
-    <main className="relative min-h-screen overflow-hidden flex items-center justify-center px-4">
-
-      {/* Fondo base */}
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8">
       <div className="absolute inset-0 bg-hocker-aurora" />
-
-      {/* Glow dinámico */}
-      <div className="absolute inset-0 animate-[hocker-pulse_6s_ease-in-out_infinite] opacity-30 bg-[radial-gradient(circle,rgba(56,189,248,0.25),transparent_60%)]" />
-
-      {/* Grid suave */}
+      <div className="absolute inset-0 animate-[hocker-pulse_6s_ease-in-out_infinite] bg-[radial-gradient(circle,rgba(56,189,248,0.25),transparent_60%)] opacity-30" />
       <div className="absolute inset-0 hocker-grid-soft opacity-30" />
 
-      {/* Contenido */}
-      <section className="relative z-10 w-full max-w-5xl flex flex-col items-center">
+      <section className="relative z-10 w-full max-w-6xl">
+        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+          <div className="flex flex-col gap-6">
+            <BrandMark hero className="w-fit" />
 
-        {/* Logo cinematográfico */}
-        <div className="relative flex justify-center mb-10 animate-[hocker-enter_900ms_cubic-bezier(0.16,1,0.3,1)_both]">
+            <div className="max-w-2xl">
+              <p className="hocker-title-line">Hocker ONE · Control Plane</p>
+              <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+                Un solo acceso.
+                <span className="block text-sky-300 hocker-text-glow">
+                  Una sola NOVA.
+                </span>
+              </h1>
 
-          {/* Glow fuerte */}
-          <div className="absolute inset-0 blur-3xl opacity-50 bg-[radial-gradient(circle,rgba(14,165,233,0.35),transparent_65%)]" />
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                Entrar aquí es pasar directo al núcleo operativo del ecosistema:
+                chat, comandos, nodos, supply y gobernanza en una sola matriz.
+              </p>
+            </div>
 
-          {/* Glow secundario animado */}
-          <div className="absolute inset-0 animate-[hocker-pulse_5s_ease-in-out_infinite] opacity-30 bg-[radial-gradient(circle,rgba(56,189,248,0.25),transparent_60%)]" />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+                <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                  Seguridad
+                </p>
+                <p className="mt-2 text-sm font-semibold text-white">Supabase Auth</p>
+              </div>
+              <div className="rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+                <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                  Runtime
+                </p>
+                <p className="mt-2 text-sm font-semibold text-white">Realtime vivo</p>
+              </div>
+              <div className="rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+                <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                  Plataformas
+                </p>
+                <p className="mt-2 text-sm font-semibold text-white">Web · PWA · APK</p>
+              </div>
+            </div>
+          </div>
 
-          {/* Logo */}
-          <Image
-            src="/brand/hocker-one-logo.png"
-            alt="Hocker ONE"
-            width={460}
-            height={140}
-            priority
-            className="relative object-contain drop-shadow-[0_20px_80px_rgba(14,165,233,0.35)] animate-[float-soft_6s_ease-in-out_infinite]"
-          />
+          <div className="relative">
+            <div className="absolute inset-0 rounded-[36px] bg-gradient-to-br from-sky-400/10 to-purple-500/10 blur-2xl" />
+            <AuthBox className="relative z-10" />
+          </div>
         </div>
-
-        {/* Subtexto */}
-        <p className="text-sm text-slate-400 mb-8 text-center max-w-md animate-[hocker-enter_1.2s_ease_both]">
-          Control total. Automatización. Ejecución sin fricción.
-        </p>
-
-        {/* Login box */}
-        <div className="w-full max-w-md relative animate-[hocker-enter_1.4s_ease_both]">
-
-          {/* Glow contenedor */}
-          <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-sky-400/10 to-purple-500/10 blur-2xl" />
-
-          <AuthBox
-            fixedEmail={fixedEmail}
-            fixedPassword={fixedPassword}
-            className="relative z-10"
-          />
-        </div>
-
       </section>
     </main>
   );
