@@ -1,10 +1,11 @@
 import { exec as execCb } from "node:child_process";
-import fs from "node:fs/promises";
+import fs, { type Dirent } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
 import { verifyCommandSignature } from "@/lib/security";
+
 
 const exec = promisify(execCb);
 
@@ -70,9 +71,21 @@ function resolveSandboxPath(requestedPath: string): string {
   const resolved = path.resolve(root, safeInput);
   const rootWithSep = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
 
-  if (resolved !== root && !resolved.startsWith(rootWithSep)) {
-    throw new Error(`VIOLACIÓN DE PERÍMETRO: Acceso denegado a ${requestedPath}.`);
-  }
+      if (cmd === "read_dir") {
+      const dir = resolveSandboxPath(asString(p.path, "."));
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+
+      return {
+        command: cmd,
+        ok: true,
+        data: entries.map((entry: Dirent) => ({
+          name: entry.name,
+          isFile: entry.isFile(),
+          isDirectory: entry.isDirectory(),
+          isSymbolicLink: entry.isSymbolicLink(),
+        })),
+      };
+    }
 
   return resolved;
 }
