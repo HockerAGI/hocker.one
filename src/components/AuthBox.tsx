@@ -8,39 +8,45 @@ import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 
 type AuthBoxProps = {
-  fixedEmail: string;
-  fixedPassword: string;
   className?: string;
 };
 
-export default function AuthBox({
-  fixedEmail,
-  fixedPassword,
-  className = "",
-}: AuthBoxProps) {
+export default function AuthBox({ className = "" }: AuthBoxProps) {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabase(), []);
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
     if (loading) return;
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      setError("Completa correo y contraseña.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: fixedEmail,
-        password: fixedPassword,
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        throw authError;
+      }
 
       toast.success("Acceso concedido.");
-      router.push("/dashboard");
+      router.replace("/dashboard");
       router.refresh();
     } catch (err: unknown) {
       setError(getErrorMessage(err) || "Acceso rechazado.");
@@ -55,6 +61,7 @@ export default function AuthBox({
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)]" />
       <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
+
       <div className="relative flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-sky-300">
@@ -75,7 +82,7 @@ export default function AuthBox({
             Inicia sesión
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            El acceso queda resuelto sin mostrar credenciales en pantalla.
+            Acceso con Supabase Auth para mantener la matriz limpia y segura.
           </p>
         </div>
 
@@ -86,23 +93,32 @@ export default function AuthBox({
         ) : null}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <input type="hidden" name="email" value={fixedEmail} />
-          <input type="hidden" name="password" value={fixedPassword} />
+          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4">
+            <label className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
+              Correo
+            </label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
+              placeholder="tu@correo.com"
+              className="mt-2 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+            />
+          </div>
 
           <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-slate-950/60">
-                <Sparkles className="h-5 w-5 text-sky-300" />
-              </span>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-500">
-                  Inicio cinematográfico
-                </p>
-                <p className="mt-1 text-sm text-slate-300">
-                  Logo grande, panel limpio, una sola acción.
-                </p>
-              </div>
-            </div>
+            <label className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
+              Contraseña
+            </label>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••••"
+              className="mt-2 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+            />
           </div>
 
           <button
@@ -116,7 +132,10 @@ export default function AuthBox({
                 Entrando
               </>
             ) : (
-              "Entrar ahora"
+              <>
+                <Sparkles className="h-4 w-4" />
+                Entrar ahora
+              </>
             )}
           </button>
         </form>
