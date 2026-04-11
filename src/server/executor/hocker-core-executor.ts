@@ -9,7 +9,7 @@ function isCommandRow(data: unknown): data is CommandRow {
 
   return (
     typeof row.id === "string" &&
-    row.project_id === "hocker-one" &&
+    typeof row.project_id === "string" &&
     typeof row.node_id === "string" &&
     typeof row.command === "string" &&
     typeof row.created_at === "string"
@@ -31,7 +31,7 @@ async function logEvent(
   data?: JsonObject,
 ): Promise<void> {
   await sb.from("events").insert({
-    project_id: "hocker-one",
+    project_id: command.project_id,
     node_id: command.node_id,
     level,
     type,
@@ -114,29 +114,49 @@ async function resolveExecution(command: CommandRow): Promise<JsonObject> {
   }
 }
 
-export async function executeCommand(commandId: string): Promise<void> {
+export async function executeCommand(
+  commandId: string,
+  expectedProjectId?: string,
+): Promise<void> {
   const sb = createAdminSupabase();
 
-  const { data, error } = await sb.from("commands").select("*").eq("id", commandId).single();
+  const { data, error } = await sb
+    .from("commands")
+    .select("*")
+    .eq("id", commandId)
+    .single();
 
   if (error || !isCommandRow(data)) {
     throw new Error(`Invalid command: ${error ? getErrorMessage(error) : "unknown shape"}`);
   }
 
   const command = data;
+
+  if (expectedProjectId && command.project_id !== expectedProjectId) {
+    throw new Error("Project mismatch.");
+  }
+
   const now = new Date().toISOString();
 
-  await sb
+  const { data: lockData, error: lockError } = await sb
     .from("commands")
     .update({
       status: "running",
       started_at: now,
     })
-    .eq("id", command.id);
+    .eq("id", command.id)
+    .eq("project_id", command.project_id)
+    .eq("status", "queued")
+    .select("id")
+    .maybeSingle();
 
-  await logEvent(sb, command, "info", "command.started");
+  if (lockError || !lockData) {
+    throw new Error("Command no disponible para ejecución.");
+  }
 
   try {
+    await logEvent(sb, command, "info", "command.started");
+
     const result = await resolveExecution(command);
 
     await sb
@@ -148,7 +168,8 @@ export async function executeCommand(commandId: string): Promise<void> {
         executed_at: now,
         finished_at: now,
       })
-      .eq("id", command.id);
+      .eq("id", command.id)
+      .eq("project_id", command.project_id);
 
     await logEvent(sb, command, "info", "command.completed", result);
   } catch (err: unknown) {
@@ -161,7 +182,8 @@ export async function executeCommand(commandId: string): Promise<void> {
         error: message,
         finished_at: now,
       })
-      .eq("id", command.id);
+      .eq("id", command.id)
+      .eq("project_id", command.project_id);
 
     await logEvent(sb, command, "error", "command.failed", {
       message,
