@@ -6,15 +6,57 @@ type VoiceInputProps = {
   onResult: (text: string) => void;
 };
 
+type SpeechRecognitionAlternativeLike = {
+  transcript: string;
+  confidence?: number;
+};
+
+type SpeechRecognitionResultLike = ArrayLike<SpeechRecognitionAlternativeLike> & {
+  0: SpeechRecognitionAlternativeLike;
+  isFinal: boolean;
+  length: number;
+};
+
+type SpeechRecognitionEventLike = Event & {
+  results: ArrayLike<SpeechRecognitionResultLike>;
+};
+
+type SpeechRecognitionInstance = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: Event) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
+
 export default function VoiceInput({ onResult }: VoiceInputProps) {
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const onResultRef = useRef(onResult);
   const [active, setActive] = useState(false);
   const [supported, setSupported] = useState(false);
 
   useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const browserWindow = window as SpeechRecognitionWindow;
+    const Recognition =
+      browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition;
 
     if (!Recognition) {
       setSupported(false);
@@ -31,9 +73,11 @@ export default function VoiceInput({ onResult }: VoiceInputProps) {
     recognition.onend = () => setActive(false);
     recognition.onerror = () => setActive(false);
     recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim?.() ?? "";
+      const firstResult = event.results[0];
+      const transcript = firstResult?.[0]?.transcript?.trim() ?? "";
+
       if (transcript) {
-        onResult(transcript);
+        onResultRef.current(transcript);
       }
     };
 
@@ -44,7 +88,7 @@ export default function VoiceInput({ onResult }: VoiceInputProps) {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [onResult]);
+  }, []);
 
   function start(): void {
     if (!recognitionRef.current) return;
