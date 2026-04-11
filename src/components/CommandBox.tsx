@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 export default function CommandBox() {
-  const { projectId, nodeId, refresh } = useWorkspace();
+  const { projectId, nodeId } = useWorkspace();
 
   const [command, setCommand] = useState("");
   const [payload, setPayload] = useState("{}");
@@ -12,7 +12,8 @@ export default function CommandBox() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSend(): Promise<void> {
-    if (!command.trim()) return;
+    const cleanCommand = command.trim();
+    if (!cleanCommand) return;
 
     setLoading(true);
     setError(null);
@@ -35,17 +36,24 @@ export default function CommandBox() {
           projectId,
           node_id: nodeId,
           nodeId,
-          command: command.trim(),
+          command: cleanCommand,
           payload: parsedPayload,
           needs_approval: false,
         }),
       });
 
-      if (!res.ok) throw new Error("No se pudo enviar.");
+      const body: unknown = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg =
+          body && typeof body === "object" && !Array.isArray(body) && typeof (body as Record<string, unknown>).error === "string"
+            ? String((body as Record<string, unknown>).error)
+            : "No se pudo enviar.";
+        throw new Error(msg);
+      }
 
       setCommand("");
       setPayload("{}");
-      refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "No se pudo enviar.");
     } finally {
