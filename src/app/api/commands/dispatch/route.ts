@@ -41,10 +41,16 @@ function isDispatchCommandRow(value: unknown): value is DispatchCommandRow {
   );
 }
 
-async function dispatchCommandById(commandId: string): Promise<boolean> {
-  const appUrl = String(
-    process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "",
-  ).trim();
+function expectedKey(): string {
+  return String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
+}
+
+function resolveAppUrl(): string {
+  return String(process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "").trim();
+}
+
+async function dispatchCommandById(row: DispatchCommandRow, token: string): Promise<void> {
+  const appUrl = resolveAppUrl();
 
   if (!appUrl) {
     throw new ApiError(500, {
@@ -56,16 +62,34 @@ async function dispatchCommandById(commandId: string): Promise<boolean> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ commandId }),
+    body: JSON.stringify({
+      commandId: row.id,
+      projectId: row.project_id,
+    }),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "Execution error");
-    throw new Error(text || `Fallo al despachar comando ${commandId}.`);
+    throw new Error(text || `Fallo al despachar comando ${row.id}.`);
   }
+}
 
-  return true;
+async function markFailed(
+  sb: ReturnType<typeof createAdminSupabase>,
+  row: DispatchCommandRow,
+  message: string,
+): Promise<void> {
+  await sb
+    .from("commands")
+    .update({
+      status: "error",
+      error: message,
+      finished_at: new Date().toISOString(),
+    })
+    .eq("id", row.id)
+    .eq("project_id", row.project_id);
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -76,12 +100,10 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body: Record<string, unknown> = await req.json().catch(() => ({}));
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() || "";
+    const expected = expectedKey();
 
-    const authHeader = req.headers.get("authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    const expectedKey = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
-
-    if (!expectedKey || token !== expectedKey) {
+    if (!expected || token !== expected) {
       throw new ApiError(401, { error: "Firma de delegación inválida." });
     }
 
@@ -103,9 +125,7 @@ export async function POST(req: Request): Promise<Response> {
 
     let query = sb
       .from("commands")
-      .select(
-        "id,project_id,node_id,command,payload,status,needs_approval,signature,created_at",
-      )
+      .select("id,project_id,node_id,command,payload,status,needs_approval,signature,created_at")
       .in("status", ["pending", "queued"])
       .eq("needs_approval", false);
 
@@ -117,9 +137,7 @@ export async function POST(req: Request): Promise<Response> {
       query = query.eq("id", command_id);
     }
 
-    const { data, error } = await query
-      .order("created_at", { ascending: true })
-      .limit(100);
+    const { data, error } = await query.order("created_at", { ascending: true }).limit(100);
 
     if (error) {
       throw new ApiError(500, {
@@ -149,7 +167,14 @@ export async function POST(req: Request): Promise<Response> {
           return false;
         }
 
-        return dispatchCommandById(row.id);
+        try {
+          await dispatchCommandById(row, expected);
+          return true;
+        } catch (err: unknown) {
+          const message = getErrorMessage(err);
+          await markFailed(sb, row, message);
+          return false;
+        }
       }),
     );
 
