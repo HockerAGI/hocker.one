@@ -5,7 +5,7 @@ import type { ControlRow, JsonObject, Role } from "@/lib/types";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const CONTROL_ROW_ID = "control";
+export const CONTROL_ROW_ID = "global";
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -74,10 +74,7 @@ export function toApiError(e: unknown): ApiError {
   });
 }
 
-export async function requireProjectRole(
-  project_id: string,
-  allowedRoles: Role[],
-) {
+export async function requireProjectRole(project_id: string, allowedRoles: Role[]) {
   const pid = normalizeProjectId(project_id);
   if (!pid) {
     throw new ApiError(400, { error: "project_id es obligatorio." });
