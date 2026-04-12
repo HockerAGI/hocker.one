@@ -1,55 +1,24 @@
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 
-function getConfig(): { url: string; anon: string } {
-  const url = (
-    process.env.SUPABASE_URL ??
-    process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    ""
-  ).trim();
-
-  const anon = (
-    process.env.SUPABASE_ANON_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    ""
-  ).trim();
-
-  if (!url) throw new Error("SUPABASE_URL no está configurado.");
-  if (!anon) throw new Error("SUPABASE_ANON_KEY no está configurado.");
-
-  return { url, anon };
-}
-
-type CookieStore = Awaited<ReturnType<typeof cookies>>;
-
-function cookieAdapter(cookieStore: CookieStore) {
-  return {
-    get(name: string): string | undefined {
-      return cookieStore.get(name)?.value;
-    },
-    set(name: string, value: string, options: CookieOptions): void {
-      try {
-        cookieStore.set({ name, value, ...options });
-      } catch {
-        // lectura sin escritura: válido en Server Components
-      }
-    },
-    remove(name: string, options: CookieOptions): void {
-      try {
-        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-      } catch {
-        // noop
-      }
-    },
-  };
-}
-
-export async function createServerSupabase(): Promise<SupabaseClient> {
-  const { url, anon } = getConfig();
+export async function createServerSupabase() {
   const cookieStore = await cookies();
 
-  return createServerClient(url, anon, {
-    cookies: cookieAdapter(cookieStore),
-  });
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: Parameters<typeof cookieStore.set>[1]) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: Parameters<typeof cookieStore.set>[1]) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    },
+  );
 }
