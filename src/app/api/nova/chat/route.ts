@@ -65,7 +65,7 @@ export async function POST(req: Request): Promise<Response> {
   const payload = parsed.data;
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const res = await fetch(new URL("/chat", baseUrl), {
@@ -96,6 +96,6 @@ export async function POST(req: Request): Promise<Response> {
       { status: 502 },
     );
   } finally {
-    window.clearTimeout(timeout);
+    clearTimeout(timeoutId);
   }
 }
