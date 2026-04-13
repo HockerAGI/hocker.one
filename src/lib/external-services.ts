@@ -11,14 +11,18 @@ export type ExternalServiceItem = {
   lastCheckedAt: string;
 };
 
-function withTimeout(timeoutMs: number): AbortController {
+function withTimeout(timeoutMs: number): { controller: AbortController; cleanup: () => void } {
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), timeoutMs);
-  return controller;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  return {
+    controller,
+    cleanup: () => clearTimeout(timeoutId),
+  };
 }
 
 async function checkHealth(endpoint: string): Promise<boolean> {
-  const controller = withTimeout(2500);
+  const { controller, cleanup } = withTimeout(2500);
 
   try {
     const res = await fetch(new URL("/health", endpoint), {
@@ -26,7 +30,7 @@ async function checkHealth(endpoint: string): Promise<boolean> {
       cache: "no-store",
       signal: controller.signal,
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "Cache-Control": "no-cache",
       },
     });
@@ -34,6 +38,8 @@ async function checkHealth(endpoint: string): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  } finally {
+    cleanup();
   }
 }
 
@@ -68,9 +74,7 @@ export async function resolveExternalServices(): Promise<ExternalServiceItem[]> 
 
   const checked = await Promise.all(
     services.map(async (service) => {
-      if (service.endpoint === "no-configurado") {
-        return service;
-      }
+      if (service.endpoint === "no-configurado") return service;
 
       const healthy = await checkHealth(service.endpoint);
 
