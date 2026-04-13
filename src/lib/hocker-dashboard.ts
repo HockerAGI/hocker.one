@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase-server";
+import { resolveExternalServices, type ExternalServiceItem } from "@/lib/external-services";
 
 export type AppStatus = "live" | "ready" | "in_development";
 export type NodeStatus = "live" | "ready" | "in_development";
@@ -60,6 +61,7 @@ export type DashboardSummary = {
   apps: AppRegistryItem[];
   agis: AgiRegistryItem[];
   repos: RepoRegistryItem[];
+  services: ExternalServiceItem[];
   recentEvents: DashboardEventItem[];
   recentCommands: DashboardCommandItem[];
 };
@@ -235,9 +237,9 @@ const REPO_REGISTRY: RepoRegistryItem[] = [
     note: "Repositorio presente y listo para enlazar.",
   },
   {
-    key: "nova-agi",
+    key: "nova.agi",
     title: "nova.agi",
-    subtitle: "Repositorio de la conciencia central.",
+    subtitle: "Repositorio de orquestación real.",
     branch: "main",
     status: "connected",
     note: "Repositorio presente y listo para enlazar.",
@@ -282,13 +284,24 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
     eventsRes,
     commandsRes,
     ordersRes,
+    servicesRes,
   ] = await Promise.all([
     sb.from("hocker_dashboard_snapshot").select("*").maybeSingle<SnapshotRow>(),
     sb.from("projects").select("id,name,created_at"),
     sb.from("nodes").select("id,project_id,name,status"),
-    sb.from("events").select("id,project_id,level,type,message,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(12),
-    sb.from("commands").select("id,project_id,command,status,created_at").order("created_at", { ascending: false }).limit(12),
+    sb
+      .from("events")
+      .select("id,project_id,level,type,message,created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(12),
+    sb
+      .from("commands")
+      .select("id,project_id,command,status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(12),
     sb.from("supply_orders").select("id,project_id,status,total_cents,created_at"),
+    resolveExternalServices(),
   ]);
 
   const snapshot = snapshotRes.data ?? {
@@ -323,20 +336,41 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
 
   const liveNodes = nodes.filter((node) => String(node.status ?? "").toLowerCase() === "online").length;
   const revenueCents = orders.reduce((sum, order) => sum + Number(order.total_cents ?? 0), 0);
-  const queuedCommands = commands.filter((command) => ["queued", "pending", "needs_approval"].includes(command.status)).length;
+  const queuedCommands = commands.filter((command) =>
+    ["queued", "pending", "needs_approval"].includes(command.status),
+  ).length;
 
   const metrics: DashboardMetric[] = [
-    { label: "Proyectos", value: String(snapshot.total_projects ?? projects.length), hint: "Apps y espacios registrados" },
-    { label: "Nodos vivos", value: String(snapshot.live_nodes ?? liveNodes), hint: "Infraestructura con señal activa" },
-    { label: "Eventos 24 h", value: String(snapshot.events_24h ?? events.length), hint: "Actividad reciente real" },
-    { label: "Movimientos", value: money(Number(snapshot.gross_revenue_cents ?? revenueCents)), hint: "Órdenes y flujo económico" },
+    {
+      label: "Proyectos",
+      value: String(snapshot.total_projects ?? projects.length),
+      hint: "Apps y espacios registrados",
+    },
+    {
+      label: "Nodos vivos",
+      value: String(snapshot.live_nodes ?? liveNodes),
+      hint: "Infraestructura con señal activa",
+    },
+    {
+      label: "Eventos 24 h",
+      value: String(snapshot.events_24h ?? events.length),
+      hint: "Actividad reciente real",
+    },
+    {
+      label: "Movimientos",
+      value: money(Number(snapshot.gross_revenue_cents ?? revenueCents)),
+      hint: "Órdenes y flujo económico",
+    },
   ];
 
   const recentEvents: DashboardEventItem[] = events.map((event) => ({
     id: event.id,
     title: event.type,
     detail: event.message,
-    level: (event.level === "warn" || event.level === "error" ? event.level : "info") as "info" | "warn" | "error",
+    level: (event.level === "warn" || event.level === "error" ? event.level : "info") as
+      | "info"
+      | "warn"
+      | "error",
     at: timeLabel(event.created_at),
   }));
 
@@ -354,6 +388,7 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
     apps,
     agis,
     repos: REPO_REGISTRY,
+    services: servicesRes,
     recentEvents,
     recentCommands,
   };
