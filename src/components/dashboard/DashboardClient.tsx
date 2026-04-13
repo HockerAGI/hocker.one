@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -7,16 +8,29 @@ import {
   ArrowUpRight,
   Clock3,
   CircleDot,
+  CircleSlash2,
   Layers3,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import type { DashboardSummary } from "@/lib/hocker-dashboard";
-import { getAppStatusLabel, getStatusTone } from "@/lib/hocker-dashboard";
+import { getStatusLabel, getStatusTone } from "@/lib/hocker-dashboard";
 
 type DashboardClientProps = {
   summary: DashboardSummary;
 };
+
+function liveClock(now: Date): string {
+  return new Intl.DateTimeFormat("es-MX", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(now);
+}
 
 function SectionTitle({
   eyebrow,
@@ -57,7 +71,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint: 
   );
 }
 
-function StatusPill({ status }: { status: "live" | "ready" | "pending" }) {
+function StatusPill({ status }: { status: "live" | "ready" | "in_development" | "connected" | "pending" }) {
   return (
     <span
       className={[
@@ -66,12 +80,21 @@ function StatusPill({ status }: { status: "live" | "ready" | "pending" }) {
       ].join(" ")}
     >
       <CircleDot className="h-3 w-3" />
-      {getAppStatusLabel(status)}
+      {getStatusLabel(status)}
     </span>
   );
 }
 
 export default function DashboardClient({ summary }: DashboardClientProps) {
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const clockLabel = useMemo(() => liveClock(now), [now]);
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050816] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.20),transparent_28%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.16),transparent_25%),linear-gradient(180deg,rgba(2,6,23,0.98),rgba(2,6,23,1))]" />
@@ -85,6 +108,7 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
           className="relative overflow-hidden rounded-[36px] border border-white/6 bg-white/[0.035] p-6 shadow-[0_40px_140px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:p-8"
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)]" />
+
           <div className="relative grid gap-8 xl:grid-cols-[1.2fr_0.8fr] xl:items-center">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-4">
@@ -110,19 +134,19 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
               </div>
 
               <p className="max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                Vista completa del ecosistema, con lectura real desde Supabase, estructura lista
-                para integrar Chido Casino y todos los módulos que ya están definidos en la
-                documentación.
+                Vista viva del ecosistema con datos reales desde Supabase. Lo que ya existe aparece
+                como activo; lo que está en proceso queda visible como desarrollo, sin inventar
+                nada.
               </p>
 
               <div className="flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-300">
                   <ShieldCheck className="h-4 w-4" />
-                  Supabase conectado
+                  Supabase real
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-sky-300">
-                  <Sparkles className="h-4 w-4" />
-                  Integración lista
+                  <RefreshCw className="h-4 w-4" />
+                  {clockLabel}
                 </span>
               </div>
             </div>
@@ -149,11 +173,11 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
           >
             <SectionTitle
               eyebrow="Apps y webs"
-              title="Diez nodos core, listos para enchufar."
-              subtitle="La documentación sí marca un núcleo claro: Hocker ONE, Hocker Ads, Chido Casino, Hocker Drive Cloud, Hocker Hub, Hocker Up, NEXPA, Trackhok, Hocker Wallet y Hocker Supply."
+              title="Lo real va arriba. Lo pendiente queda claro."
+              subtitle="Hocker ONE, Chido Casino, Hocker Ads, Hocker Hub, Hocker Drive Cloud, Hocker Up, Trackhok, NEXPA, Hocker Wallet y Hocker Supply viven como nodos separados."
             />
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2">
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
               {summary.apps.map((app, index) => (
                 <motion.article
                   key={app.key}
@@ -186,6 +210,10 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                         {app.integration}
                       </p>
                     </div>
+
+                    <div className="rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
+                      {app.note}
+                    </div>
                   </div>
                 </motion.article>
               ))}
@@ -200,8 +228,8 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
           >
             <SectionTitle
               eyebrow="AGIs y Shadows"
-              title="Quince nodos operativos, si sumas la capa Shadow."
-              subtitle="Aquí vive la jerarquía: NOVA, Syntia, Vertx, Numia, Jurix, Hostia, Candy Ads, Nova Ads, PRO IA, Trackhok, NEXPA, Curvewind, Chido Wins, Chido Gerente y Shadows."
+              title="Quince nodos operativos en la jerarquía completa."
+              subtitle="NOVA, Syntia, Vertx, Numia, Jurix, Hostia, Candy Ads, Nova Ads, PRO IA, Curvewind, Chido Wins, Chido Gerente, Trackhok, NEXPA y Shadows."
             />
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
@@ -226,6 +254,9 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                   </div>
 
                   <p className="mt-3 text-sm leading-relaxed text-slate-300">{agi.subtitle}</p>
+                  <div className="mt-4 rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
+                    {agi.note}
+                  </div>
                 </motion.article>
               ))}
             </div>
@@ -241,8 +272,8 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
           >
             <SectionTitle
               eyebrow="Actividad reciente"
-              title="Lectura viva del sistema."
-              subtitle="Eventos, cambios y señales de operación en tiempo real."
+              title="Registro vivo, sin maquillaje."
+              subtitle="Eventos, comandos y órdenes reales que ya entraron a Supabase."
             />
 
             <div className="mt-6 space-y-3">
@@ -279,33 +310,42 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
             className="rounded-[34px] border border-white/6 bg-white/[0.03] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
           >
             <SectionTitle
-              eyebrow="Puente listo"
-              title="Deja las puertas abiertas para las próximas apps."
-              subtitle="Aquí se enchufan Hocker Ads Wallet, Drive Wallet, BrandMatrix IA, WebForge Quantum, API Forge y todo lo que siga naciendo."
+              eyebrow="Repos existentes"
+              title="Lo que ya vive afuera también entra al mapa."
+              subtitle="hocker-node-agent y nova.agi aparecen como repos reales conectados; su detalle se deja listo para cuando abras su telemetría."
             />
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {[
-                "BrandMatrix IA",
-                "WebForge Quantum",
-                "API Forge",
-                "Guardian Quantum",
-                "TalentIA",
-                "Learning Hub",
-                "Quantum Drive Cloud",
-                "Nova Health Check",
-              ].map((moduleName) => (
+                {
+                  key: "hocker-node-agent",
+                  title: "hocker-node-agent",
+                  detail: "Repositorio existente",
+                  status: "connected" as const,
+                },
+                {
+                  key: "nova.agi",
+                  title: "nova.agi",
+                  detail: "Repositorio existente",
+                  status: "connected" as const,
+                },
+              ].map((repo) => (
                 <div
-                  key={moduleName}
+                  key={repo.key}
                   className="rounded-[24px] border border-white/6 bg-[#09111f]/80 p-4"
                 >
-                  <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-                    Listo para integrar
-                  </p>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-bold text-white">{moduleName}</h3>
-                    <ArrowUpRight className="h-4 w-4 text-sky-300" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                        Repo real
+                      </p>
+                      <h3 className="mt-2 text-sm font-bold text-white">{repo.title}</h3>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] ${getStatusTone(repo.status)}`}>
+                      {getStatusLabel(repo.status)}
+                    </span>
                   </div>
+                  <p className="mt-3 text-sm text-slate-400">{repo.detail}</p>
                 </div>
               ))}
             </div>
@@ -315,8 +355,7 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                 Chido Casino
               </p>
               <p className="mt-2 text-sm leading-relaxed text-slate-300">
-                Queda como nodo preparado. En cuanto metas su esquema final, este panel lo toma
-                sin tocar la estructura madre.
+                Se muestra como nodo real en desarrollo. Nada simulado. Nada inventado.
               </p>
             </div>
 
