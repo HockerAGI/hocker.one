@@ -6,16 +6,15 @@ import { motion } from "framer-motion";
 import {
   Activity,
   ArrowUpRight,
-  Clock3,
   CircleDot,
-  CircleSlash2,
-  Layers3,
+  Clock3,
   RefreshCw,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import type { DashboardSummary } from "@/lib/hocker-dashboard";
 import { getStatusLabel, getStatusTone } from "@/lib/hocker-dashboard";
+import ExternalServicesSection from "@/components/dashboard/ExternalServicesSection";
 
 type DashboardClientProps = {
   summary: DashboardSummary;
@@ -71,7 +70,11 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint: 
   );
 }
 
-function StatusPill({ status }: { status: "live" | "ready" | "in_development" | "connected" | "pending" }) {
+function StatusPill({
+  status,
+}: {
+  status: "live" | "ready" | "in_development" | "connected" | "pending";
+}) {
   return (
     <span
       className={[
@@ -316,20 +319,7 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
             />
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {[
-                {
-                  key: "hocker-node-agent",
-                  title: "hocker-node-agent",
-                  detail: "Repositorio existente",
-                  status: "connected" as const,
-                },
-                {
-                  key: "nova.agi",
-                  title: "nova.agi",
-                  detail: "Repositorio existente",
-                  status: "connected" as const,
-                },
-              ].map((repo) => (
+              {summary.repos.map((repo) => (
                 <div
                   key={repo.key}
                   className="rounded-[24px] border border-white/6 bg-[#09111f]/80 p-4"
@@ -341,11 +331,16 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                       </p>
                       <h3 className="mt-2 text-sm font-bold text-white">{repo.title}</h3>
                     </div>
-                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] ${getStatusTone(repo.status)}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] ${getStatusTone(
+                        repo.status,
+                      )}`}
+                    >
                       {getStatusLabel(repo.status)}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm text-slate-400">{repo.detail}</p>
+                  <p className="mt-3 text-sm text-slate-400">{repo.subtitle}</p>
+                  <p className="mt-2 text-xs text-slate-500">{repo.note}</p>
                 </div>
               ))}
             </div>
@@ -392,6 +387,10 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
               </div>
             </div>
           </motion.div>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <ExternalServicesSection services={summary.services} />
         </section>
       </div>
     </main>
