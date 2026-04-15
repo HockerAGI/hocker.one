@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { executeCommand } from "@/server/executor/hocker-core-executor";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 type ExecuteBody = {
   commandId?: unknown;
   command_id?: unknown;
