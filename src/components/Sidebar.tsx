@@ -15,6 +15,7 @@ import {
   Waves,
   Workflow,
   Cpu,
+  Zap
 } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 
