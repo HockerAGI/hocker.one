@@ -22,13 +22,21 @@ export async function middleware(req: NextRequest) {
 
   if (!url || !anon) return NextResponse.next();
 
-  const res = NextResponse.next();
+  // Clonamos la respuesta para sincronizar las cookies internamente y externamente
+  let res = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
 
   const supabase = createServerClient(url, anon, {
     cookies: {
       getAll: () => req.cookies.getAll(),
       setAll: (cookiesToSet) => {
         cookiesToSet.forEach(({ name, value, options }) => {
+          // 1. Sincronizamos para los Server Components
+          req.cookies.set(name, value);
+          // 2. Sincronizamos para el Cliente/Navegador
           res.cookies.set(name, value, options);
         });
       },
@@ -37,11 +45,8 @@ export async function middleware(req: NextRequest) {
 
   const { data, error } = await supabase.auth.getUser();
 
-  if (error) {
-    if (isProtected(pathname)) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    return res;
+  if (error && isProtected(pathname)) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   if (pathname.startsWith("/login") && data.user) {
