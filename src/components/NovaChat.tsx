@@ -1,242 +1,133 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Mic, RefreshCcw, Sparkles } from "lucide-react";
-import { useWorkspace } from "@/components/WorkspaceContext";
-import VoiceInput from "@/components/VoiceInput";
-import { speak } from "@/lib/tts";
+import React, { useState, useRef, useEffect } from "react";
 
 type Message = {
   id: string;
   role: "user" | "nova" | "system";
   content: string;
-  timestamp: string;
 };
 
-function makeId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function safeReply(payload: unknown): string {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return "";
-  const obj = payload as Record<string, unknown>;
-
-  for (const key of ["reply", "response", "message", "text", "content"]) {
-    const v = obj[key];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-
-  if (typeof obj.error === "string" && obj.error.trim()) return obj.error.trim();
-  return "";
-}
-
-const SUGGESTIONS = [
-  "Resume el estado actual.",
-  "Dame un plan de hoy.",
-  "Revisa los módulos activos.",
-  "Sugiere la siguiente acción.",
-] as const;
-
 export default function NovaChat() {
-  const { projectId, nodeId } = useWorkspace();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "init-1",
-      role: "nova",
-      content: "Hola, soy NOVA. Estoy lista para ayudarte.",
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastText, setLastText] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll táctico para mantener el enfoque en la interacción reciente
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, sending]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
 
+  // Limpieza absoluta de memoria en desmontaje
   useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
-  }, [input]);
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
-  function push(role: Message["role"], content: string): void {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: makeId(),
-        role,
-        content,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-  }
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!input.trim() || isTyping) return;
 
-  async function sendToNova(text: string): Promise<void> {
-    const clean = text.trim();
-    if (!clean || sending) return;
-
-    setSending(true);
-    setError(null);
-    setLastText(clean);
-    push("user", clean);
+    const userText = input.trim();
     setInput("");
+    
+    const newMessage: Message = { id: Date.now().toString(), role: "user", content: userText };
+    setMessages((prev) => [...prev, newMessage]);
+    setIsTyping(true);
+
+    // Cortamos conexiones huérfanas antes de iniciar una nueva
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
     try {
       const res = await fetch("/api/nova/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_id: projectId,
-          projectId,
-          node_id: nodeId,
-          nodeId,
-          message: clean,
-          prefer: "auto",
-          mode: "auto",
-          allow_actions: false,
-        }),
+        body: JSON.stringify({ message: userText, mode: "auto" }),
+        signal: abortControllerRef.current.signal,
       });
 
-      const payload: unknown = await res.json().catch(() => ({}));
-      const reply = safeReply(payload);
+      if (!res.ok) throw new Error("Anomalía detectada en el enlace neuronal.");
 
-      if (!res.ok) {
-        throw new Error(reply || "No se pudo responder.");
+      const data = await res.json();
+      
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString() + "-nova", role: "nova", content: data.reply || "Recepción vacía." }
+      ]);
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString() + "-sys", role: "system", content: "Conexión interrumpida con el núcleo central." }
+        ]);
       }
-
-      const finalReply = reply || "Te leo. Dame el siguiente paso.";
-      push("nova", finalReply);
-      speak(finalReply);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Ocurrió un problema.";
-      setError(message);
-      push("system", message);
     } finally {
-      setSending(false);
+      setIsTyping(false);
     }
-  }
-
-  function handleRetry(): void {
-    if (!lastText) return;
-    void sendToNova(lastText);
-  }
+  };
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-[28px] border border-white/5 bg-slate-950/75 shadow-[0_24px_100px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
-      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 sm:px-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.55)]" />
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-              Nova AGI
-            </p>
+    <div className="flex flex-col h-full w-full bg-transparent font-sans">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+        {messages.length === 0 && (
+          <div className="flex justify-center items-center h-full text-blue-400/40 text-sm tracking-widest">
+            SISTEMAS EN LÍNEA. LISTA PARA RECIBIR INSTRUCCIONES.
           </div>
-          <p className="mt-1 text-[11px] text-slate-500">
-            Texto o voz. Respuestas claras.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleRetry}
-          disabled={!lastText || sending}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-300 transition-all hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <RefreshCcw className="h-3.5 w-3.5" />
-          Repetir
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar sm:px-5">
-        <div className="space-y-3">
-          {messages.map((message) => (
-            <article
-              key={message.id}
-              className={`max-w-[92%] rounded-[22px] border px-4 py-3 text-sm leading-relaxed ${
-                message.role === "user"
-                  ? "ml-auto border-sky-400/20 bg-sky-500/10 text-sky-50"
-                  : message.role === "system"
-                    ? "border-rose-400/15 bg-rose-500/10 text-rose-200"
-                    : "border-white/5 bg-white/[0.03] text-slate-100"
-              }`}
-            >
-              {message.content}
-            </article>
-          ))}
-
-          {sending ? (
-            <div className="max-w-[92%] rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
-              Escribiendo respuesta...
+        )}
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} w-full animate-fade-in`}>
+            <div className={`max-w-[85%] p-4 rounded-xl text-sm leading-relaxed shadow-lg backdrop-blur-md ${
+              msg.role === "user" 
+                ? "bg-blue-900/30 text-blue-50 border border-blue-500/40 rounded-tr-sm" 
+                : msg.role === "nova" 
+                  ? "bg-slate-900/60 text-slate-200 border border-slate-700/50 rounded-tl-sm shadow-blue-900/10"
+                  : "bg-red-950/40 text-red-300 border border-red-800/50 rounded-tl-sm"
+            }`}>
+              {msg.content}
             </div>
-          ) : null}
-          <div ref={bottomRef} />
-        </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start w-full animate-fade-in">
+            <div className="bg-slate-900/60 border border-slate-700/50 p-4 rounded-xl rounded-tl-sm text-blue-400/80 text-xs tracking-widest uppercase">
+              Procesando matriz...
+            </div>
+          </div>
+        )}
       </div>
-
-      {error ? (
-        <div className="border-t border-white/5 px-4 py-3 text-xs text-rose-200">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="border-t border-white/5 p-3 sm:p-4">
-        <div className="mb-3 flex flex-wrap gap-2">
-          {SUGGESTIONS.map((label) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setInput(label)}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300 transition-all hover:bg-white/[0.06]"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="rounded-[24px] border border-white/5 bg-white/[0.03] p-3">
-          <textarea
-            ref={textareaRef}
+      
+      <form onSubmit={handleSend} className="p-4 border-t border-slate-800/40 bg-slate-950/20 backdrop-blur-sm">
+        <div className="flex relative items-center group">
+          <input
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            rows={1}
-            placeholder="Escribe aquí..."
-            className="min-h-[48px] w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void sendToNova(input);
-              }
-            }}
+            placeholder="Transmite tu orden..."
+            className="w-full bg-slate-900/40 border border-slate-700/60 rounded-lg py-3 px-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 transition-all"
+            disabled={isTyping}
+            autoComplete="off"
           />
-
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <VoiceInput onResult={(t) => void sendToNova(t)} />
-              <span className="hidden text-[10px] uppercase tracking-[0.22em] text-slate-500 sm:block">
-                Shift+Enter para salto
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void sendToNova(input)}
-              disabled={!input.trim() || sending}
-              className="hocker-button-brand disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <ArrowUpRight className="h-4 w-4" />
-              Enviar
-            </button>
-          </div>
+          <button 
+            type="submit" 
+            disabled={!input.trim() || isTyping}
+            className="absolute right-2 p-2 text-blue-500 hover:text-blue-300 disabled:opacity-30 disabled:hover:text-blue-500 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
         </div>
-      </div>
-    </section>
+      </form>
+    </div>
   );
 }
