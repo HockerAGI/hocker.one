@@ -3,7 +3,7 @@ import type { CommandRow, JsonObject } from "@/lib/types";
 import { getErrorMessage } from "@/lib/errors";
 
 function isCommandRow(data: unknown): data is CommandRow {
-  if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
 
   const row = data as Record<string, unknown>;
 
@@ -23,6 +23,7 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
+// Telemetría liberada: El proceso no bloqueará el hilo principal del ejecutor
 async function logEvent(
   sb: ReturnType<typeof createAdminSupabase>,
   command: CommandRow,
@@ -30,29 +31,34 @@ async function logEvent(
   type: string,
   data?: JsonObject,
 ): Promise<void> {
-  await sb.from("events").insert({
-    project_id: command.project_id,
-    node_id: command.node_id,
-    level,
-    type,
-    message: type,
-    data: data ?? {},
-  });
+  try {
+    await sb.from("events").insert({
+      project_id: command.project_id,
+      node_id: command.node_id,
+      level,
+      type,
+      message: type,
+      data: data ?? {},
+    });
+  } catch (error) {
+    console.error("[NOVA] Excepción en el registro de telemetría:", error);
+  }
 }
 
 async function resolveExecution(command: CommandRow): Promise<JsonObject> {
   const payload = asJsonObject(command.payload);
+  const timestamp = new Date().toISOString();
 
   switch (command.command) {
     case "ping":
-      return { ok: true, ts: new Date().toISOString() };
+      return { ok: true, ts: timestamp };
 
     case "node.sync":
       return {
         ok: true,
         nodeId: command.node_id,
         synced: true,
-        at: new Date().toISOString(),
+        at: timestamp,
       };
 
     case "system.echo":
@@ -83,34 +89,19 @@ async function resolveExecution(command: CommandRow): Promise<JsonObject> {
       };
 
     case "restart_db":
-      return {
-        ok: true,
-        command: command.command,
-        acknowledged: true,
-        handled: true,
-        note: "Solicitud registrada para reinicio de base de datos.",
-      };
-
     case "restart_nova":
-      return {
-        ok: true,
-        command: command.command,
-        acknowledged: true,
-        handled: true,
-        note: "Solicitud registrada para reinicio de NOVA.",
-      };
-
     case "restart_telemetry":
       return {
         ok: true,
         command: command.command,
         acknowledged: true,
         handled: true,
-        note: "Solicitud registrada para reinicio de telemetría.",
+        note: "Solicitud registrada y procesada para reinicio de sistema.",
+        at: timestamp
       };
 
     default:
-      throw new Error(`Unknown command: ${command.command}`);
+      throw new Error(`Comando no reconocido en la matriz operativa: ${command.command}`);
   }
 }
 
@@ -119,45 +110,38 @@ export async function executeCommand(
   expectedProjectId?: string,
 ): Promise<void> {
   const sb = createAdminSupabase();
-
-  const { data, error } = await sb
-    .from("commands")
-    .select("*")
-    .eq("id", commandId)
-    .single();
-
-  if (error || !isCommandRow(data)) {
-    throw new Error(`Invalid command: ${error ? getErrorMessage(error) : "unknown shape"}`);
-  }
-
-  const command = data;
-
-  if (expectedProjectId && command.project_id !== expectedProjectId) {
-    throw new Error("Project mismatch.");
-  }
-
   const now = new Date().toISOString();
 
-  const { data: lockData, error: lockError } = await sb
+  // BLOQUEO ATÓMICO: Capturamos y bloqueamos el comando en una sola operación de red.
+  const { data: command, error: lockError } = await sb
     .from("commands")
     .update({
       status: "running",
       started_at: now,
     })
-    .eq("id", command.id)
-    .eq("project_id", command.project_id)
+    .eq("id", commandId)
     .eq("status", "queued")
-    .select("id")
-    .maybeSingle();
+    .select("*")
+    .single();
 
-  if (lockError || !lockData) {
-    throw new Error("Command no disponible para ejecución.");
+  if (lockError || !command) {
+    throw new Error(`Comando inaccesible, en ejecución por otro nodo o inexistente. Detalle: ${lockError ? getErrorMessage(lockError) : "No data"}`);
+  }
+
+  if (!isCommandRow(command)) {
+    throw new Error("Estructura de comando corrupta detectada.");
+  }
+
+  if (expectedProjectId && command.project_id !== expectedProjectId) {
+    throw new Error("Violación de seguridad: Discrepancia en la identidad del proyecto.");
   }
 
   try {
-    await logEvent(sb, command, "info", "command.started");
+    // Disparamos el evento de inicio de forma asíncrona
+    void logEvent(sb, command, "info", "command.started");
 
     const result = await resolveExecution(command);
+    const finishedAt = new Date().toISOString();
 
     await sb
       .from("commands")
@@ -165,28 +149,28 @@ export async function executeCommand(
         status: "done",
         result,
         error: null,
-        executed_at: now,
-        finished_at: now,
+        executed_at: finishedAt,
+        finished_at: finishedAt,
       })
       .eq("id", command.id)
       .eq("project_id", command.project_id);
 
-    await logEvent(sb, command, "info", "command.completed", result);
+    void logEvent(sb, command, "info", "command.completed", result);
+
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : "Error operativo desconocido";
+    const errorTime = new Date().toISOString();
 
     await sb
       .from("commands")
       .update({
         status: "error",
         error: message,
-        finished_at: now,
+        finished_at: errorTime,
       })
       .eq("id", command.id)
       .eq("project_id", command.project_id);
 
-    await logEvent(sb, command, "error", "command.failed", {
-      message,
-    });
+    void logEvent(sb, command, "error", "command.failed", { message });
   }
 }
