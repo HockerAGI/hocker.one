@@ -1,54 +1,23 @@
-import { getErrorMessage } from "@/lib/errors";
-import { createServerSupabase } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { createServerSupabase } from "@/lib/supabase-server";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function safeNextPath(input: string | null): string {
-  const fallback = "/dashboard";
-  const raw = String(input ?? "").trim();
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/dashboard";
 
-  if (!raw) return fallback;
-  if (!raw.startsWith("/")) return fallback;
-  if (raw.startsWith("//")) return fallback;
-  if (raw.includes("\\")) return fallback;
-  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw)) return fallback;
+  if (code) {
+    const supabase = await createServerSupabase();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  try {
-    const parsed = new URL(raw, "https://hocker.local");
-    if (parsed.origin !== "https://hocker.local") return fallback;
-    return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export async function GET(req: Request): Promise<NextResponse> {
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const next = safeNextPath(url.searchParams.get("next"));
-
-  try {
-    if (code) {
-      const supabase = await createServerSupabase();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (error) {
-        return NextResponse.redirect(
-          new URL(
-            `/?error=${encodeURIComponent("Llave de acceso inválida o expirada.")}`,
-            url,
-          ),
-        );
-      }
+    if (!error) {
+      // Intercambio exitoso, acceso concedido al ecosistema
+      return NextResponse.redirect(`${origin}${next}`);
     }
-
-    return NextResponse.redirect(new URL(next, req.url));
-  } catch (err: unknown) {
-    const message = getErrorMessage(err);
-    return NextResponse.redirect(
-      new URL(`/?error=${encodeURIComponent(message)}`, url),
-    );
   }
+
+  // Si la llave expira o es interceptada, cerramos la puerta limpiamente
+  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
 }
