@@ -1,208 +1,65 @@
-import { Langfuse } from "langfuse-node";
-import { getErrorMessage } from "@/lib/errors";
-import { createAdminSupabase } from "@/lib/supabase-admin";
-import { ApiError, json, toApiError } from "../../_lib";
+import { NextResponse } from "next/server";
+import { createServerSupabase } from "@/lib/supabase-server";
+import { z } from "zod";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+// Blindaje perimetral: Ningún comando anómalo pasará de esta línea
+const DispatchSchema = z.object({
+  project_id: z.string().optional().default("global"),
+  command: z.string().min(2, "Instrucción no válida"),
+  payload: z.record(z.string(), z.any()).default({}),
+  node_id: z.string().min(1).default("global_node"),
 });
 
-type DispatchCommandRow = {
-  id: string;
-  project_id: string;
-  node_id: string;
-  command: string;
-  payload: Record<string, unknown>;
-  status: "pending" | "queued" | "needs_approval" | "running";
-  needs_approval: boolean;
-  signature: string | null;
-  created_at: string;
-};
-
-function isDispatchCommandRow(value: unknown): value is DispatchCommandRow {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-
-  const row = value as Record<string, unknown>;
-
-  return (
-    typeof row.id === "string" &&
-    typeof row.project_id === "string" &&
-    typeof row.node_id === "string" &&
-    typeof row.command === "string" &&
-    typeof row.created_at === "string" &&
-    typeof row.needs_approval === "boolean"
-  );
-}
-
-function expectedKey(): string {
-  return String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
-}
-
-function resolveAppUrl(): string {
-  return String(process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "").trim();
-}
-
-async function dispatchCommandById(row: DispatchCommandRow, token: string): Promise<void> {
-  const appUrl = resolveAppUrl();
-
-  if (!appUrl) {
-    throw new ApiError(500, {
-      error: "NEXT_PUBLIC_APP_URL no está configurado.",
-    });
-  }
-
-  const res = await fetch(`${appUrl}/api/execute`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      commandId: row.id,
-      projectId: row.project_id,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "Execution error");
-    throw new Error(text || `Fallo al despachar comando ${row.id}.`);
-  }
-}
-
-async function markFailed(
-  sb: ReturnType<typeof createAdminSupabase>,
-  row: DispatchCommandRow,
-  message: string,
-): Promise<void> {
-  await sb
-    .from("commands")
-    .update({
-      status: "error",
-      error: message,
-      finished_at: new Date().toISOString(),
-    })
-    .eq("id", row.id)
-    .eq("project_id", row.project_id);
-}
-
-export async function POST(req: Request): Promise<Response> {
-  const trace = langfuse.trace({
-    name: "Dispatch_Tactico",
-    metadata: { endpoint: "/api/commands/dispatch" },
-  });
-
+export async function POST(req: Request) {
   try {
-    const body: Record<string, unknown> = await req.json().catch(() => ({}));
-    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() || "";
-    const expected = expectedKey();
-
-    if (!expected || token !== expected) {
-      throw new ApiError(401, { error: "Firma de delegación inválida." });
+    const supabase = await createServerSupabase();
+    
+    // Verificación estricta de identidad
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { ok: false, error: "Conexión rechazada. Identidad no verificada en el ecosistema." }, 
+        { status: 401 }
+      );
     }
 
-    const project_id =
-      typeof body.project_id === "string" && body.project_id.trim()
-        ? body.project_id.trim()
-        : null;
+    const body = await req.json().catch(() => ({}));
+    const parsed = DispatchSchema.safeParse(body);
 
-    const command_id =
-      typeof body.command_id === "string" && body.command_id.trim()
-        ? body.command_id.trim()
-        : null;
-
-    if (!project_id && !command_id) {
-      throw new ApiError(400, { error: "Se requiere project_id o command_id." });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: "Anomalía estructural en el comando enviado." },
+        { status: 400 }
+      );
     }
 
-    const sb = createAdminSupabase();
+    const { project_id, command, payload, node_id } = parsed.data;
 
-    let query = sb
+    // Inserción atómica y segura en la matriz de cola
+    const { data: newCommand, error: insertError } = await supabase
       .from("commands")
-      .select("id,project_id,node_id,command,payload,status,needs_approval,signature,created_at")
-      .in("status", ["pending", "queued"])
-      .eq("needs_approval", false);
+      .insert({
+        project_id,
+        node_id,
+        command,
+        payload,
+        status: "queued",
+      })
+      .select("id")
+      .single();
 
-    if (project_id) {
-      query = query.eq("project_id", project_id);
+    if (insertError) {
+      throw new Error(insertError.message);
     }
 
-    if (command_id) {
-      query = query.eq("id", command_id);
-    }
+    return NextResponse.json({ ok: true, command_id: newCommand.id, status: "queued" }, { status: 201 });
 
-    const { data, error } = await query.order("created_at", { ascending: true }).limit(100);
-
-    if (error) {
-      throw new ApiError(500, {
-        error: `Falla al leer la cola de comandos: ${getErrorMessage(error)}`,
-      });
-    }
-
-    const rows = Array.isArray(data) ? data.filter(isDispatchCommandRow) : [];
-
-    const results = await Promise.allSettled(
-      rows.map(async (row) => {
-        const lockedAt = new Date().toISOString();
-
-        const { data: lockData, error: lockError } = await sb
-          .from("commands")
-          .update({
-            status: "running",
-            started_at: lockedAt,
-          })
-          .eq("id", row.id)
-          .eq("project_id", row.project_id)
-          .eq("status", row.status)
-          .select("id")
-          .maybeSingle();
-
-        if (lockError || !lockData) {
-          return false;
-        }
-
-        try {
-          await dispatchCommandById(row, expected);
-          return true;
-        } catch (err: unknown) {
-          const message = getErrorMessage(err);
-          await markFailed(sb, row, message);
-          return false;
-        }
-      }),
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "Fallo en la matriz de despacho de Hocker." },
+      { status: 500 }
     );
-
-    const dispatched = results.filter(
-      (r): r is PromiseFulfilledResult<boolean> => r.status === "fulfilled" && r.value === true,
-    ).length;
-
-    trace.event({
-      name: "DESPACHO_COMPLETADO",
-      input: { dispatched, project_id, command_id },
-    });
-
-    return json({
-      ok: true,
-      dispatched,
-      items: rows.map((row) => row.id),
-    });
-  } catch (err: unknown) {
-    const apiErr = toApiError(err);
-
-    trace.event({
-      name: "FALLA_DESPACHO",
-      level: "ERROR",
-      output: { error: apiErr.payload },
-    });
-
-    return json(apiErr.payload, apiErr.status);
-  } finally {
-    await langfuse.flushAsync();
   }
 }
