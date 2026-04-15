@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+// Ejecución perimetral (Edge) para latencia nula y evitar cold-starts severos
+export const runtime = "edge";
+export const maxDuration = 60;
+
 const ChatSchema = z.object({
   project_id: z.string().min(1).default("global"),
   thread_id: z.string().uuid().optional(),
@@ -42,7 +46,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json(
       {
         ok: false,
-        error: "NOVA_AGI_URL o NOVA_ORCHESTRATOR_KEY no están configurados.",
+        error: "Fallo crítico: NOVA_AGI_URL o NOVA_ORCHESTRATOR_KEY no configurados.",
       },
       { status: 500 },
     );
@@ -55,7 +59,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json(
       {
         ok: false,
-        error: "Payload inválido.",
+        error: "Anomalía estructural en el payload enviado.",
         issues: parsed.error.flatten(),
       },
       { status: 400 },
@@ -64,8 +68,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const payload = parsed.data;
 
+  // CUELLO DE BOTELLA ELIMINADO: Extensión a 55s para inferencia profunda.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 55000);
 
   try {
     const res = await fetch(new URL("/chat", baseUrl), {
@@ -84,14 +89,18 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json(responseJson, {
       status: res.status,
       headers: {
-        "Cache-Control": "no-store",
+        "Cache-Control": "no-store, max-age=0",
       },
     });
   } catch (error) {
+    const isTimeout = error instanceof Error && error.name === "AbortError";
+    
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "Fallo al contactar nova.agi.",
+        error: isTimeout 
+          ? "Timeout: La inferencia superó el umbral de seguridad de tiempo." 
+          : (error instanceof Error ? error.message : "Fallo de conexión profunda con nova.agi."),
       },
       { status: 502 },
     );
