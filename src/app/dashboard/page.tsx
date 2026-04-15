@@ -1,16 +1,24 @@
 import type { Metadata } from "next";
 import DashboardClient from "@/components/dashboard/DashboardClient";
-import { buildDashboardSummary } from "@/lib/hocker-dashboard";
+import { getDashboardSummary } from "@/lib/hocker-dashboard-server";
 
 export const metadata: Metadata = {
-  title: "Hocker ONE",
-  description: "Dashboard maestro del ecosistema Hocker",
+  title: "Dashboard | Hocker ONE",
+  description: "Panel de control central de Hocker AGI Technologies",
 };
 
+// Forzamos el renderizado dinámico para asegurar que las métricas de Supabase 
+// se actualicen en tiempo real en cada carga.
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const summary = await buildDashboardSummary();
-  return <DashboardClient summary={summary} />;
+  // La extracción de datos ocurre exclusivamente en el servidor (Node.js/Edge),
+  // eliminando la carga de procesamiento y secretos del navegador.
+  const summary = await getDashboardSummary();
+
+  return (
+    <main className="relative min-h-screen bg-transparent">
+      <DashboardClient summary={summary} />
+    </main>
+  );
 }
