@@ -46,11 +46,23 @@ export function signCommand(
 
 function safeHexEqual(a: string, b: string): boolean {
   if (!a || !b) return false;
+  
+  // Normalización de longitud para prevenir fugas de información
+  const expectedLength = 64; 
+  if (a.length !== expectedLength || b.length !== expectedLength) {
+    return false;
+  }
+
   const aBuf = Buffer.from(a, "hex");
   const bBuf = Buffer.from(b, "hex");
+  
   if (aBuf.length !== bBuf.length) return false;
+  
   return crypto.timingSafeEqual(aBuf, bBuf);
 }
+
+// Ventana de tolerancia estricta (5 minutos) contra interceptaciones
+const MAX_TIME_DRIFT_MS = 5 * 60 * 1000;
 
 export function verifyCommandSignature(
   secret: string,
@@ -60,17 +72,29 @@ export function verifyCommandSignature(
   node_id: string,
   command: string,
   payload: unknown,
-  created_at: string,
+  created_at: string
 ): boolean {
   if (!signature) return false;
-  const expected = signCommand(
+
+  // 1. Blindaje contra Replay Attacks
+  const commandTime = new Date(created_at).getTime();
+  const now = Date.now();
+  
+  if (isNaN(commandTime) || Math.abs(now - commandTime) > MAX_TIME_DRIFT_MS) {
+    console.warn(`[NOVA] Amenaza neutralizada. Comando ${id} rechazado por expiración temporal.`);
+    return false;
+  }
+
+  // 2. Validación criptográfica
+  const expectedSignature = signCommand(
     secret,
     id,
     project_id,
     node_id,
     command,
     payload,
-    created_at,
+    created_at
   );
-  return safeHexEqual(signature, expected);
+
+  return safeHexEqual(expectedSignature, signature);
 }
