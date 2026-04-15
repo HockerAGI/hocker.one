@@ -1,49 +1,45 @@
 export {};
 
 declare global {
-  interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
+  interface ISpeechRecognitionErrorEvent extends Event {
+    readonly error: string;
+    readonly message: string;
   }
 
-  interface SpeechRecognitionResult {
-    readonly 0: SpeechRecognitionAlternative;
-    readonly length: number;
-    isFinal: boolean;
-  }
-
-  interface SpeechRecognitionResultList {
-    readonly 0: SpeechRecognitionResult;
-    readonly length: number;
-    item(index: number): SpeechRecognitionResult | null;
-  }
-
-  interface SpeechRecognitionEvent extends Event {
-    readonly results: SpeechRecognitionResultList;
+  interface ISpeechRecognitionEvent extends Event {
     readonly resultIndex: number;
+    readonly results: {
+      readonly length: number;
+      item(index: number): {
+        readonly isFinal: boolean;
+        readonly length: number;
+        item(index: number): { transcript: string; confidence: number };
+        [index: number]: { transcript: string; confidence: number };
+      };
+      [index: number]: {
+        readonly isFinal: boolean;
+        readonly length: number;
+        item(index: number): { transcript: string; confidence: number };
+        [index: number]: { transcript: string; confidence: number };
+      };
+    };
   }
 
-  interface SpeechRecognitionErrorEvent extends Event {
-    error: string;
-    message: string;
-  }
-
-  interface SpeechRecognition {
-    lang: string;
+  interface ISpeechRecognition extends EventTarget {
     continuous: boolean;
     interimResults: boolean;
-    maxAlternatives: number;
-    onstart: (() => void) | null;
-    onend: (() => void) | null;
-    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    lang: string;
     start(): void;
     stop(): void;
     abort(): void;
+    onstart: ((this: ISpeechRecognition, ev: Event) => any) | null;
+    onend: ((this: ISpeechRecognition, ev: Event) => any) | null;
+    onerror: ((this: ISpeechRecognition, ev: ISpeechRecognitionErrorEvent) => any) | null;
+    onresult: ((this: ISpeechRecognition, ev: ISpeechRecognitionEvent) => any) | null;
   }
 
   interface SpeechRecognitionConstructor {
-    new (): SpeechRecognition;
+    new (): ISpeechRecognition;
   }
 
   interface Window {
