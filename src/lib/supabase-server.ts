@@ -13,10 +13,19 @@ export async function createServerSupabase() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: Parameters<typeof cookieStore.set>[1]) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            // Blindaje contra excepciones de solo lectura en Next.js Server Components
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            // Se silencia intencionalmente. El Middleware asume la responsabilidad de la mutación.
+          }
         },
         remove(name: string, options: Parameters<typeof cookieStore.set>[1]) {
-          cookieStore.set({ name, value: "", ...options });
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch (error) {
+            // Se silencia intencionalmente.
+          }
         },
       },
     },
