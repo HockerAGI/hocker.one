@@ -3,57 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Mic, MicOff } from "lucide-react";
 
-// 1. Declaración Estricta de la Web Speech API
-interface ISpeechRecognitionErrorEvent extends Event {
-  readonly error: string;
-  readonly message: string;
-}
-
-interface ISpeechRecognitionEvent extends Event {
-  readonly resultIndex: number;
-  readonly results: {
-    readonly length: number;
-    item(index: number): {
-      readonly isFinal: boolean;
-      readonly length: number;
-      item(index: number): { transcript: string; confidence: number };
-      [index: number]: { transcript: string; confidence: number };
-    };
-    [index: number]: {
-      readonly isFinal: boolean;
-      readonly length: number;
-      item(index: number): { transcript: string; confidence: number };
-      [index: number]: { transcript: string; confidence: number };
-    };
-  };
-}
-
-interface ISpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onstart: ((this: ISpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: ISpeechRecognition, ev: Event) => any) | null;
-  onerror: ((this: ISpeechRecognition, ev: ISpeechRecognitionErrorEvent) => any) | null;
-  onresult: ((this: ISpeechRecognition, ev: ISpeechRecognitionEvent) => any) | null;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): ISpeechRecognition;
-}
-
-// 2. Inyección Global para el Objeto Window
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  }
-}
-
-// 3. Propiedades del Componente
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
   disabled?: boolean;
@@ -63,10 +12,12 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
   const [isListening, setIsListening] = useState(false);
   const [supported, setSupported] = useState(false);
   
-  // Referencia 100% tipada
+  // Referencia utilizando los tipos globales declarados en global.d.ts
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
@@ -99,7 +50,6 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
       }
     };
 
-    // Asignación directa y segura, sin aserciones forzadas
     recognitionRef.current = recognition;
     setSupported(true);
 
