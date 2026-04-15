@@ -1,11 +1,11 @@
 import { exec as execCb } from "node:child_process";
-import fs, { type Dirent } from "node:fs/promises";
+import fs from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
 import { verifyCommandSignature } from "@/lib/security";
-
 
 const exec = promisify(execCb);
 
@@ -71,21 +71,9 @@ function resolveSandboxPath(requestedPath: string): string {
   const resolved = path.resolve(root, safeInput);
   const rootWithSep = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
 
-      if (cmd === "read_dir") {
-      const dir = resolveSandboxPath(asString(p.path, "."));
-      const entries = await fs.readdir(dir, { withFileTypes: true });
-
-      return {
-        command: cmd,
-        ok: true,
-        data: entries.map((entry: Dirent) => ({
-          name: entry.name,
-          isFile: entry.isFile(),
-          isDirectory: entry.isDirectory(),
-          isSymbolicLink: entry.isSymbolicLink(),
-        })),
-      };
-    }
+  if (!resolved.startsWith(rootWithSep) && resolved !== root) {
+    throw new Error("Violación de seguridad: Intento de escape del sandbox denegado.");
+  }
 
   return resolved;
 }
@@ -148,7 +136,8 @@ async function executeLocalCloud(
       return {
         command: cmd,
         ok: true,
-        data: entries.map((entry) => ({
+        // Aquí es donde Dirent hace su trabajo de tipado correctamente
+        data: entries.map((entry: Dirent) => ({
           name: entry.name,
           isFile: entry.isFile(),
           isDirectory: entry.isDirectory(),
@@ -159,214 +148,102 @@ async function executeLocalCloud(
 
     if (cmd === "read_file_head") {
       const file = resolveSandboxPath(asString(p.path, ""));
-      const limit = Math.max(1, Math.min(200, asInt(p.lines, 20)));
-      const raw = await fs.readFile(file, "utf8");
-      const lines = raw.split(/\r?\n/).slice(0, limit).join("\n");
+      const limit = Math.max(1, Math.min(200, asInt(p.limit, 10)));
+      
+      const content = await fs.readFile(file, "utf-8");
+      const lines = content.split("\n").slice(0, limit);
 
       return {
         command: cmd,
         ok: true,
-        data: {
-          path: file,
-          lines,
-          totalLines: raw.split(/\r?\n/).length,
-        },
+        data: { lines, totalLines: content.split("\n").length },
       };
     }
   }
 
-  if (WRITE_COMMANDS.has(cmd) && process.env.ALLOW_LOCAL_COMMANDS !== "1") {
-    throw new Error(`Comando de escritura bloqueado por política: ${cmd}`);
-  }
-
-  switch (cmd) {
-    case "shell.exec": {
-      const shellCommand = asString(p.command || p.cmd || "");
-      if (!shellCommand) throw new Error("shell.exec requiere payload.command");
-
-      const result = await exec(shellCommand, {
-        cwd: getWorkspaceRoot(),
-        shell: "/bin/sh",
-      });
-
-      return {
-        command: cmd,
-        ok: true,
-        stdout: result.stdout,
-        stderr: result.stderr,
-        code: 0,
-        data: { cwd: getWorkspaceRoot() },
-      };
-    }
-
-    case "fs.write": {
-      const file = resolveSandboxPath(asString(p.path || p.file || ""));
-      const content = asString(p.content || p.text || "");
-
-      await fs.mkdir(path.dirname(file), { recursive: true });
-      await fs.writeFile(file, content, "utf8");
-
-      return {
-        command: cmd,
-        ok: true,
-        data: {
-          path: file,
-          bytes: Buffer.byteLength(content, "utf8"),
-        },
-      };
-    }
-
-    case "run_sql":
-      return {
-        command: cmd,
-        ok: false,
-        note: "run_sql está deshabilitado en este executor local.",
-      };
-
-    case "stripe.charge":
-    case "meta.send_msg":
-      return {
-        command: cmd,
-        ok: false,
-        note: `El comando ${cmd} debe ejecutarse en un conector remoto especializado.`,
-        data: p,
-      };
-
-    default:
-      throw new Error(`Comando no soportado en executor local: ${cmd}`);
-  }
-}
-
-function normalizeResult(value: unknown): JsonRecord {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as JsonRecord;
-  }
-  return { value };
+  throw new Error(`Comando no reconocido o no autorizado en entorno Cloud: ${cmd}`);
 }
 
 export async function processCloudQueue(
   sb: SupabaseClient,
-  project_id: string,
-  options: CloudQueueOptions = {},
-): Promise<{
-  dispatched: number;
-  results: Array<{ id: string } & CloudExecResult>;
-}> {
-  const results: Array<{ id: string } & CloudExecResult> = [];
-  let dispatched = 0;
-
-  const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
-
+  options?: CloudQueueOptions,
+): Promise<void> {
   let query = sb
     .from("commands")
-    .select(
-      "id,project_id,node_id,command,payload,signature,status,needs_approval,created_at",
-    )
-    .eq("project_id", project_id)
+    .select("*")
     .eq("status", "queued")
     .eq("needs_approval", false)
     .order("created_at", { ascending: true })
-    .limit(100);
+    .limit(1);
 
-  if (options.commandId) {
+  if (options?.commandId) {
     query = query.eq("id", options.commandId);
   }
-
-  if (options.nodeId) {
+  if (options?.nodeId) {
     query = query.eq("node_id", options.nodeId);
   }
 
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(getErrorMessage(error));
+  const { data: queue, error: fetchErr } = await query;
+  if (fetchErr) throw new Error(fetchErr.message);
+
+  if (!queue || queue.length === 0) {
+    return;
   }
 
-  const queue = (data ?? []) as CloudCommandRow[];
+  const row = queue[0] as CloudCommandRow;
 
-  for (const cmd of queue) {
-    const payload = asRecord(cmd.payload);
+  const { error: lockErr } = await sb
+    .from("commands")
+    .update({ status: "running" })
+    .eq("id", row.id)
+    .eq("status", "queued");
 
-    if (
-      !secret ||
-      !verifyCommandSignature(
-        secret,
-        cmd.signature,
-        cmd.id,
-        cmd.project_id,
-        cmd.node_id,
-        cmd.command,
-        payload,
-        cmd.created_at,
-      )
-    ) {
+  if (lockErr) return;
+
+  const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
+  if (secret) {
+    const isValid = verifyCommandSignature(
+      secret,
+      row.signature,
+      row.id,
+      row.project_id,
+      row.node_id,
+      row.command,
+      row.payload,
+      row.created_at,
+    );
+    if (!isValid) {
       await sb
         .from("commands")
         .update({
           status: "error",
-          error: "Firma inválida o ausente.",
+          error: "Firma inválida o expirada en el entorno Cloud.",
           finished_at: nowIso(),
         })
-        .eq("id", cmd.id)
-        .eq("project_id", project_id);
-
-      results.push({
-        id: cmd.id,
-        command: cmd.command,
-        ok: false,
-        note: "Firma inválida o ausente.",
-      });
-
-      continue;
-    }
-
-    await sb
-      .from("commands")
-      .update({
-        status: "running",
-        started_at: nowIso(),
-      })
-      .eq("id", cmd.id)
-      .eq("project_id", project_id);
-
-    try {
-      const out = await executeLocalCloud(cmd.command, payload);
-      const resultData = normalizeResult(out.data);
-
-      await sb
-        .from("commands")
-        .update({
-          status: "done",
-          result: resultData,
-          error: null,
-          executed_at: nowIso(),
-          finished_at: nowIso(),
-        })
-        .eq("id", cmd.id)
-        .eq("project_id", project_id);
-
-      results.push({ id: cmd.id, ...out });
-      dispatched++;
-    } catch (err: unknown) {
-      const msg = getErrorMessage(err);
-
-      await sb
-        .from("commands")
-        .update({
-          status: "error",
-          error: msg,
-          finished_at: nowIso(),
-        })
-        .eq("id", cmd.id)
-        .eq("project_id", project_id);
-
-      results.push({
-        id: cmd.id,
-        command: cmd.command,
-        ok: false,
-        note: msg,
-      });
+        .eq("id", row.id);
+      return;
     }
   }
 
-  return { dispatched, results };
+  let result: CloudExecResult;
+  let hasError = false;
+  let errorMsg = "";
+
+  try {
+    result = await executeLocalCloud(row.command, row.payload ?? {});
+  } catch (err: unknown) {
+    hasError = true;
+    errorMsg = getErrorMessage(err);
+    result = { command: row.command, ok: false, note: errorMsg };
+  }
+
+  await sb
+    .from("commands")
+    .update({
+      status: hasError ? "error" : "done",
+      result: result as unknown as Record<string, unknown>,
+      error: hasError ? errorMsg : null,
+      finished_at: nowIso(),
+    })
+    .eq("id", row.id);
 }
