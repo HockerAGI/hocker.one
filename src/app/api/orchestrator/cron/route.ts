@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 async function runOrchestrator(req: Request): Promise<NextResponse> {
   const cronSecret = String(process.env.CRON_SECRET ?? "").trim();
@@ -29,7 +29,8 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    // CUELLO DE BOTELLA ELIMINADO: Expandido a 55 segundos.
+    const timeout = setTimeout(() => controller.abort(), 55000);
 
     const res = await fetch(new URL("/api/orchestrator/run", baseUrl), {
       method: "POST",
