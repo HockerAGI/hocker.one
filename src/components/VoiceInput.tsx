@@ -1,123 +1,151 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Mic, MicOff } from "lucide-react";
 
-type VoiceInputProps = {
-  onResult: (text: string) => void;
-};
+// 1. Declaración Estricta de la Web Speech API
+interface ISpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+  readonly message: string;
+}
 
-type SpeechRecognitionAlternativeLike = {
-  transcript: string;
-  confidence?: number;
-};
+interface ISpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: {
+    readonly length: number;
+    item(index: number): {
+      readonly isFinal: boolean;
+      readonly length: number;
+      item(index: number): { transcript: string; confidence: number };
+      [index: number]: { transcript: string; confidence: number };
+    };
+    [index: number]: {
+      readonly isFinal: boolean;
+      readonly length: number;
+      item(index: number): { transcript: string; confidence: number };
+      [index: number]: { transcript: string; confidence: number };
+    };
+  };
+}
 
-type SpeechRecognitionResultLike = ArrayLike<SpeechRecognitionAlternativeLike> & {
-  0: SpeechRecognitionAlternativeLike;
-  isFinal: boolean;
-  length: number;
-};
-
-type SpeechRecognitionEventLike = Event & {
-  results: ArrayLike<SpeechRecognitionResultLike>;
-};
-
-type SpeechRecognitionInstance = {
-  lang: string;
+interface ISpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
-  maxAlternatives: number;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: Event) => void) | null;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  start: () => void;
-  stop: () => void;
-};
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onstart: ((this: ISpeechRecognition, ev: Event) => any) | null;
+  onend: ((this: ISpeechRecognition, ev: Event) => any) | null;
+  onerror: ((this: ISpeechRecognition, ev: ISpeechRecognitionErrorEvent) => any) | null;
+  onresult: ((this: ISpeechRecognition, ev: ISpeechRecognitionEvent) => any) | null;
+}
 
-type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+interface SpeechRecognitionConstructor {
+  new (): ISpeechRecognition;
+}
 
-type SpeechRecognitionWindow = Window & {
-  SpeechRecognition?: SpeechRecognitionConstructor;
-  webkitSpeechRecognition?: SpeechRecognitionConstructor;
-};
+// 2. Inyección Global para el Objeto Window
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
-export default function VoiceInput({ onResult }: VoiceInputProps) {
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const onResultRef = useRef(onResult);
-  const [active, setActive] = useState(false);
+// 3. Propiedades del Componente
+interface VoiceInputProps {
+  onTranscript: (text: string) => void;
+  disabled?: boolean;
+}
+
+export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
+  const [isListening, setIsListening] = useState(false);
   const [supported, setSupported] = useState(false);
+  
+  // Referencia 100% tipada
+  const recognitionRef = useRef<ISpeechRecognition | null>(null);
 
   useEffect(() => {
-    onResultRef.current = onResult;
-  }, [onResult]);
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const browserWindow = window as SpeechRecognitionWindow;
-    const Recognition =
-      browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition;
-
-    if (!Recognition) {
+    if (!SpeechRecognition) {
       setSupported(false);
       return;
     }
 
-    const recognition = new Recognition();
-    recognition.lang = "es-MX";
+    const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.lang = "es-MX";
 
-    recognition.onstart = () => setActive(true);
-    recognition.onend = () => setActive(false);
-    recognition.onerror = () => setActive(false);
-    recognition.onresult = (event) => {
-      const firstResult = event.results[0];
-      const transcript = firstResult?.[0]?.transcript?.trim() ?? "";
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
 
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
+      console.error("[NOVA] Error de entrada de voz:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event: ISpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
       if (transcript) {
-        onResultRef.current(transcript);
+        onTranscript(transcript);
       }
     };
 
+    // Asignación directa y segura, sin aserciones forzadas
     recognitionRef.current = recognition;
     setSupported(true);
 
     return () => {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
     };
-  }, []);
+  }, [onTranscript]);
 
-  function start(): void {
+  const toggleListening = () => {
     if (!recognitionRef.current) return;
 
-    try {
-      recognitionRef.current.start();
-    } catch {
-      // noop
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error("[NOVA] Anomalía al iniciar el micrófono:", err);
+      }
     }
-  }
-
-  function stop(): void {
-    recognitionRef.current?.stop();
-  }
+  };
 
   if (!supported) return null;
 
   return (
     <button
       type="button"
-      onClick={active ? stop : start}
-      className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-all active:scale-95 ${
-        active
-          ? "border border-rose-400/20 bg-rose-500/10 text-rose-300 shadow-[0_0_20px_rgba(244,63,94,0.5)]"
-          : "border border-sky-400/20 bg-sky-500/10 text-sky-300 shadow-[0_0_20px_rgba(14,165,233,0.15)] hover:bg-sky-500/20"
-      }`}
-      aria-pressed={active}
+      onClick={toggleListening}
+      disabled={disabled}
+      className={`relative flex items-center justify-center p-2 rounded-full transition-all duration-300 ${
+        isListening
+          ? "bg-red-500/20 text-red-400 ring-2 ring-red-500/50"
+          : "bg-slate-800/40 text-slate-400 hover:bg-slate-700/60 hover:text-sky-400"
+      } disabled:opacity-30 disabled:cursor-not-allowed`}
+      title={isListening ? "Detener micrófono" : "Dictar orden"}
     >
-      {active ? "Escuchando..." : "Voz"}
+      {isListening ? (
+        <>
+          <span className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+          <MicOff className="w-5 h-5 relative z-10" />
+        </>
+      ) : (
+        <Mic className="w-5 h-5" />
+      )}
     </button>
   );
 }
