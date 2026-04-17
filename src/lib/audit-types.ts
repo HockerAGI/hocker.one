@@ -11,18 +11,12 @@ export interface AuditChainHeadRow {
 export interface AuditChainRow {
   id: string;
   project_id: string;
-  seq: number;
-  prev_hash: string;
-  row_hash: string;
-  event_type: string;
-  entity_type: string;
-  entity_id: string | null;
   actor_type: AuditActorType;
-  actor_id: string | null;
-  role: string;
+  actor_id: string;
   action: string;
   severity: AuditSeverity;
-  payload: Record<string, unknown>;
+  payload_hash: string;
+  payload: Record<string, any>;
   signature: string;
   created_at: string;
 }
