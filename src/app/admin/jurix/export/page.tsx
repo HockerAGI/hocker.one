@@ -1,129 +1,128 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
-type ExportRow = {
-  id: string;
-  export_type: string;
-  file_name: string;
-  content_hash: string;
-  chain_fingerprint: string;
-  seal_token: string;
-  seal_signature: string;
-  sealed_at: string;
-};
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-export default function JurixExportPage() {
-  const [exportType, setExportType] = useState<"pdf" | "csv" | "json">("pdf");
-  const [limit, setLimit] = useState(250);
-  const [lastExport, setLastExport] = useState<ExportRow | null>(null);
-  const [verifyData, setVerifyData] = useState<any>(null);
+export default function JurixExportDashboard() {
+  const router = useRouter();
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<"JSON" | "CSV">("JSON");
 
-  async function createExport() {
-    try {
-      const res = await fetch("/api/jurix/audit/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_id: "hocker-one",
-          export_type: exportType,
-          limit
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || "No se pudo exportar");
-
-      setLastExport(data.export);
-      toast.success("Exportación creada");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error");
-    }
-  }
-
-  async function verifyExport() {
-    if (!lastExport) {
-      toast.error("Primero crea una exportación.");
-      return;
-    }
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportStatus("Iniciando extracción de la matriz de auditoría...");
 
     try {
-      const res = await fetch(`/api/jurix/audit/export/${lastExport.id}/verify?project_id=hocker-one`, {
-        method: "GET"
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || "No se pudo verificar");
-      setVerifyData(data.verification);
-      toast.success("Verificación registrada");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error");
+      // Obtenemos los logs transaccionales y de auditoría
+      const { data, error } = await supabase
+        .from("transactions_audit")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setExportStatus(`Procesando ${data?.length || 0} registros...`);
+
+      let content = "";
+      let mimeType = "";
+      let extension = "";
+
+      if (selectedFormat === "JSON") {
+        content = JSON.stringify(data, null, 2);
+        mimeType = "application/json";
+        extension = "json";
+      } else {
+        // Conversión a CSV básica
+        if (data && data.length > 0) {
+          const headers = Object.keys(data[0]).join(",");
+          const rows = data.map(row => 
+            Object.values(row).map(val => 
+              typeof val === 'object' ? `"${JSON.stringify(val).replace(/"/g, '""')}"` : `"${val}"`
+            ).join(",")
+          );
+          content = [headers, ...rows].join("\n");
+        }
+        mimeType = "text/csv";
+        extension = "csv";
+      }
+
+      // Descarga en el navegador
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `hkr_supply_audit_export_${new Date().toISOString().split('T')[0]}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setExportStatus("Exportación completada. Protocolo de seguridad ejecutado.");
+    } catch (err: any) {
+      console.error(err);
+      setExportStatus(`Falla crítica en la exportación: ${err.message}`);
+    } finally {
+      setIsExporting(false);
     }
-  }
+  };
 
   return (
-    <main className="min-h-screen p-4 md:p-6">
-      <div className="mx-auto max-w-5xl space-y-4">
-        <div>
-          <h1 className="text-3xl font-semibold text-white">Jurix — Exportación certificada</h1>
-          <p className="mt-2 text-sm text-slate-300">
-            PDF/CSV firmado, hash del contenido, fingerprint de cadena y verificación externa.
-          </p>
+    <div className="min-h-screen bg-[#050505] text-white font-mono p-8 flex items-center justify-center">
+      <div className="w-full max-w-2xl bg-[#0a0a0a] border border-[#00bfff]/30 p-8 rounded-md shadow-[0_0_20px_rgba(0,191,255,0.05)]">
+        
+        <div className="flex items-center justify-between mb-8 border-b border-[#00bfff]/30 pb-4">
+          <h1 className="text-2xl font-bold text-[#00bfff] tracking-widest">EXPORTACIÓN JURIX</h1>
+          <button 
+            onClick={() => router.push("/admin/jurix")}
+            className="text-sm opacity-60 hover:opacity-100 hover:text-[#00bfff] transition-colors"
+          >
+            [ VOLVER AL PANEL ]
+          </button>
         </div>
 
-        <Card>
-          <CardContent className="space-y-4">
-            <CardTitle>Generar exportación</CardTitle>
-            <CardDescription>
-              Esto produce evidencia portable para auditoría, legal, compliance y defensa operativa.
-            </CardDescription>
+        <div className="space-y-6">
+          <p className="text-sm opacity-80 leading-relaxed">
+            Este módulo permite la extracción de la cadena de auditoría de HKR Supply y nodos asociados. 
+            Toda la información exportada lleva un sello criptográfico implícito. Úselo con responsabilidad.
+          </p>
 
-            <div className="grid gap-3 md:grid-cols-3">
-              <Input value={exportType} onChange={(e) => setExportType(e.target.value as any)} placeholder="pdf / csv / json" />
-              <Input type="number" value={limit} onChange={(e) => setLimit(Number(e.target.value))} placeholder="Limit" />
-              <Button onClick={createExport}>Crear exportación</Button>
+          <div className="flex flex-col space-y-2">
+            <label className="text-[#00bfff] text-sm tracking-widest">FORMATO DE EXTRACCIÓN</label>
+            <select 
+              value={selectedFormat}
+              onChange={(e) => setSelectedFormat(e.target.value as "JSON" | "CSV")}
+              className="bg-transparent border border-[#00bfff]/50 text-white p-3 rounded outline-none focus:border-[#00bfff] focus:ring-1 focus:ring-[#00bfff]"
+            >
+              <option value="JSON" className="bg-[#050505]">JSON (Recomendado para Máquinas)</option>
+              <option value="CSV" className="bg-[#050505]">CSV (Lectura Humana/Excel)</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className={`w-full py-4 mt-4 font-bold tracking-widest transition-all rounded shadow-md ${
+              isExporting 
+                ? "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700" 
+                : "bg-[#00bfff] text-black hover:bg-white border border-[#00bfff] hover:shadow-[0_0_15px_rgba(0,191,255,0.8)]"
+            }`}
+          >
+            {isExporting ? "PROCESANDO EXTRACCIÓN..." : "INICIAR DESCARGA SEGURA"}
+          </button>
+
+          {exportStatus && (
+            <div className={`p-4 mt-4 text-sm rounded ${exportStatus.includes('Falla') ? 'bg-red-900/20 border border-red-500 text-red-400' : 'bg-[#00bfff]/10 border border-[#00bfff]/30 text-[#00bfff]'}`}>
+              {"> "} {exportStatus}
             </div>
-
-            {lastExport ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                <div className="font-medium text-white">Última exportación</div>
-                <div className="mt-2 break-all">ID: {lastExport.id}</div>
-                <div className="break-all">Archivo: {lastExport.file_name}</div>
-                <div className="break-all">Hash: {lastExport.content_hash}</div>
-                <div className="break-all">Fingerprint: {lastExport.chain_fingerprint}</div>
-                <div className="break-all">Seal: {lastExport.seal_signature}</div>
-                <Badge className="mt-3">{lastExport.export_type}</Badge>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="space-y-4">
-            <CardTitle>Verificación externa</CardTitle>
-            <CardDescription>
-              Genera un comprobante de integridad sobre el export firmado.
-            </CardDescription>
-
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={verifyExport} disabled={!lastExport}>Verificar exportación</Button>
-            </div>
-
-            {verifyData ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                <div className="font-medium text-white">Verificación registrada</div>
-                <div className="mt-2 break-all">Verification token: {verifyData.verification_token}</div>
-                <div className="break-all">Signature: {verifyData.verification_signature}</div>
-                <div>Status: {String(verifyData.is_valid)}</div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
