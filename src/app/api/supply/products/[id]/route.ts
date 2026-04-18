@@ -1,5 +1,5 @@
 import { getErrorMessage } from "@/lib/errors";
-import { ApiError, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
+import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,6 +78,15 @@ export async function PATCH(
     }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+    const controls = await getControls(ctx.sb, ctx.project_id);
+
+    if (controls.kill_switch) {
+      throw new ApiError(423, { error: "Kill Switch activo. No se puede modificar supply." });
+    }
+
+    if (!controls.allow_write) {
+      throw new ApiError(403, { error: "Modo solo lectura activo." });
+    }
 
     const updates: Record<string, unknown> = {};
 
@@ -86,7 +95,11 @@ export async function PATCH(
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "name")) {
-      updates.name = String(body.name ?? "").trim();
+      const name = String(body.name ?? "").trim();
+      if (!name) {
+        throw new ApiError(400, { error: "El nombre del producto no puede ir vacío." });
+      }
+      updates.name = name;
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "description")) {
