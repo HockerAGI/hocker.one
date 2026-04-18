@@ -23,12 +23,12 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
 
   const apps = APP_REGISTRY.map(item => ({
     ...item,
-    status: projectIds.has(item.projectId ?? item.key) ? "live" : item.status
+    status: projectIds.has((item as any).projectId ?? item.key) ? "live" : item.status
   }));
 
   const agis = AGI_REGISTRY.map(item => ({
     ...item,
-    status: projectIds.has(item.projectId ?? item.key) ? "live" : item.status
+    status: projectIds.has((item as any).projectId ?? item.key) ? "live" : item.status
   }));
 
   const metrics: DashboardMetric[] = [
