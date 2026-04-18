@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
-import { normalizeNodeId } from "@/lib/project";
-import { getCommandHmacSecret, signCommand } from "@/lib/security";
+import { defaultNodeId, normalizeNodeId } from "@/lib/project";
+import { signCommand } from "@/lib/security";
 import type { JsonObject, CommandRow } from "@/lib/types";
 import { commandSchema } from "@/lib/validators";
 import {
@@ -24,6 +24,9 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
+// ==========================
+// HELPERS
+// ==========================
 function asBool(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -42,6 +45,9 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
+// ==========================
+// TYPES
+// ==========================
 type CommandInsert = Pick<
   CommandRow,
   | "id"
@@ -61,9 +67,13 @@ type CommandInsert = Pick<
   | "created_at"
 >;
 
+// ==========================
+// GET
+// ==========================
 export async function GET(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
+
     const project_id = String(
       url.searchParams.get("project_id") ??
         url.searchParams.get("projectId") ??
@@ -101,6 +111,9 @@ export async function GET(req: Request): Promise<Response> {
   }
 }
 
+// ==========================
+// POST
+// ==========================
 export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({
     name: "Ingreso_Orden_Tactica",
@@ -109,15 +122,16 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
 
+    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
     const parsed = commandSchema.parse(body);
+
     const command = parsed.command;
-    const node_id = normalizeNodeId(parsed.node_id);
+    const node_id = normalizeNodeId(parsed.node_id || defaultNodeId);
     const payload = asJsonObject(parsed.payload);
 
     const ctx = await requireProjectRole(project_id, [
@@ -142,10 +156,10 @@ export async function POST(req: Request): Promise<Response> {
 
     const needsApproval = asBool(body.needs_approval ?? body.needsApproval, false);
 
-    const secret = getCommandHmacSecret();
+    const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
     if (!secret) {
       throw new ApiError(500, {
-        error: "No existe HOCKER_COMMAND_HMAC_SECRET ni COMMAND_HMAC_SECRET en el entorno.",
+        error: "COMMAND_HMAC_SECRET no está configurado en el entorno.",
       });
     }
 
