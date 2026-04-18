@@ -37,7 +37,7 @@ type Message = {
   createdAt: number;
 };
 
-type Provider = "auto" | "openai" | "gemini" | "anthropic" | "ollama";
+type Provider = "auto" | "openai" | "gemini";
 type Mode = "auto" | "fast" | "pro";
 type ToolKey =
   | "chat"
@@ -90,8 +90,6 @@ const PROVIDERS: Array<{
   { value: "auto", label: "Auto", hint: "elige la mejor ruta" },
   { value: "openai", label: "ChatGPT", hint: "redacción y razonamiento" },
   { value: "gemini", label: "Gemini", hint: "contexto y documentos" },
-  { value: "anthropic", label: "Claude", hint: "análisis y cuidado" },
-  { value: "ollama", label: "Local", hint: "modo interno" },
 ];
 
 const MODES: Array<{
@@ -350,13 +348,6 @@ export default function NovaChat() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    const attachmentMeta = attachments.map((item) => ({
-      name: item.file.name,
-      type: item.file.type,
-      size: item.file.size,
-      kind: fileKind(item.file),
-    }));
-
     try {
       const res = await fetch("/api/nova/chat", {
         method: "POST",
@@ -369,16 +360,9 @@ export default function NovaChat() {
           project_id: projectId,
           thread_id: threadId,
           message: prompt,
-          mode,
           prefer: provider,
+          mode,
           allow_actions: true,
-          context_data: {
-            selected_tool: selectedTool,
-            attachments: attachmentMeta,
-            provider_ui: activeProvider.label,
-            mode_ui: activeMode.label,
-            client: "hocker.one",
-          },
         }),
       });
 
@@ -490,7 +474,7 @@ export default function NovaChat() {
       </div>
 
       <div className="border-b border-white/5 px-4 py-4 sm:px-5">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {PROVIDERS.map((item) => {
             const active = provider === item.value;
             return (
@@ -798,4 +782,58 @@ export default function NovaChat() {
                       : "border border-sky-400/20 bg-sky-400 px-4 py-3 text-slate-950 shadow-[0_0_24px_rgba(14,165,233,0.18)] hover:-translate-y-0.5",
                   )}
                 >
-                  En
+                  Enviar
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFiles}
+            accept=".pdf,.txt,.md,.csv,.json,.js,.jsx,.ts,.tsx,.html,.css,.png,.jpg,.jpeg,.webp,.mp4,.mov,.zip"
+          />
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => addQuickPrompt(QUICK_STARTS[0])}
+              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
+                Rápido
+              </p>
+              <p className="mt-1">Propuesta clara y elegante</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedTool("reason")}
+              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
+                Profundo
+              </p>
+              <p className="mt-1">Analiza paso a paso</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedTool("github")}
+              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
+                Código
+              </p>
+              <p className="mt-1">Trae repos y archivos</p>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
