@@ -1,8 +1,8 @@
-export type AuditActorType = "user" | "nova" | "system" | "worker" | string;
-export type AuditSeverity = "info" | "warn" | "error" | "critical" | string;
+export type AuditActorType = "user" | "nova" | "system" | "worker";
+export type AuditSeverity = "info" | "warn" | "error" | "critical";
 
 export interface AuditChainRow {
-  id?: string;
+  id: string;
   project_id: string;
   seq: number;
   prev_hash: string;
@@ -10,11 +10,11 @@ export interface AuditChainRow {
   event_type: string;
   entity_type: string;
   entity_id: string | null;
-  actor_type: string;
+  actor_type: AuditActorType;
   actor_id: string | null;
   role: string;
   action: string;
-  severity: string;
+  severity: AuditSeverity;
   payload: Record<string, unknown>;
   created_at: string;
   signature: string;
