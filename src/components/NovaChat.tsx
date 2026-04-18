@@ -185,7 +185,7 @@ export default function NovaChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const speechRef = useRef<SpeechRecognition | null>(null);
+  const speechRef = useRef<any | null>(null);
 
   const activeProvider = useMemo(
     () => PROVIDERS.find((item) => item.value === provider) ?? PROVIDERS[0],
