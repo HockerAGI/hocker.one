@@ -11,6 +11,10 @@ import {
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  MessagesSquare,
+  LayoutDashboard,
+  Layers3,
+  Bot,
 } from "lucide-react";
 import type { DashboardSummary } from "@/lib/hocker-dashboard";
 import { getStatusLabel, getStatusTone } from "@/lib/hocker-dashboard";
@@ -29,6 +33,10 @@ function liveClock(now: Date): string {
     minute: "2-digit",
     second: "2-digit",
   }).format(now);
+}
+
+function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(" ");
 }
 
 function SectionTitle({
@@ -55,7 +63,15 @@ function SectionTitle({
   );
 }
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
   return (
     <div className="group relative overflow-hidden rounded-[28px] border border-white/6 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -63,7 +79,9 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint: 
         <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
           {label}
         </p>
-        <div className="text-3xl font-black tracking-tight text-white">{value}</div>
+        <div className="text-3xl font-black tracking-tight text-white">
+          {value}
+        </div>
         <p className="text-sm text-slate-400">{hint}</p>
       </div>
     </div>
@@ -77,14 +95,31 @@ function StatusPill({
 }) {
   return (
     <span
-      className={[
+      className={cx(
         "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em]",
         getStatusTone(status),
-      ].join(" ")}
+      )}
     >
       <CircleDot className="h-3 w-3" />
       {getStatusLabel(status)}
     </span>
+  );
+}
+
+function SmallPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.34em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-white">{value}</p>
+    </div>
   );
 }
 
@@ -98,10 +133,15 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
 
   const clockLabel = useMemo(() => liveClock(now), [now]);
 
+  const liveApps = summary.apps.filter((app) => app.status === "live").length;
+  const liveAgis = summary.agis.filter((agi) => agi.status === "live").length;
+  const connectedRepos = summary.repos.filter((repo) => repo.status === "connected").length;
+  const liveCommands = summary.recentCommands.length;
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050816] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.20),transparent_28%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.16),transparent_25%),linear-gradient(180deg,rgba(2,6,23,0.98),rgba(2,6,23,1))]" />
-      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.20),transparent_28%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.16),transparent_25%),linear-gradient(180deg,rgba(2,6,23,0.98),rgba(2,6,23,1))]" />
+      <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
       <div className="relative mx-auto flex w-full max-w-[1800px] flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <motion.section
@@ -125,21 +165,22 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                     className="h-14 w-14 object-contain"
                   />
                 </div>
+
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.42em] text-sky-300/80">
-                    Hocker ONE · Control Plane
+                    Hocker ONE · Control Center
                   </p>
                   <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">
                     Un solo centro.
-                    <span className="block text-sky-300">Todo el ecosistema delante.</span>
+                    <span className="block text-sky-300">
+                      Todo el ecosistema delante.
+                    </span>
                   </h1>
                 </div>
               </div>
 
               <p className="max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                Vista viva del ecosistema con datos reales desde Supabase. Lo que ya existe aparece
-                como activo; lo que está en proceso queda visible como desarrollo, sin inventar
-                nada.
+                Vista viva del ecosistema con datos reales desde Supabase. Lo que ya existe aparece activo; lo que está en proceso queda visible como desarrollo, sin inventar nada.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -177,8 +218,16 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
             <SectionTitle
               eyebrow="Apps y webs"
               title="Lo real va arriba. Lo pendiente queda claro."
-              subtitle="Hocker ONE, Chido Casino, Hocker Ads, Hocker Hub, Hocker Drive Cloud, Hocker Up, Trackhok, NEXPA, Hocker Wallet y Hocker Supply viven como nodos separados."
+              subtitle="Cada app vive como nodo propio, con estado visible y sin humo."
             />
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              <SmallPill label="Apps activas" value={`${liveApps}`} />
+              <SmallPill label="AGIs activas" value={`${liveAgis}`} />
+              <SmallPill label="Repos conectados" value={`${connectedRepos}`} />
+              <SmallPill label="Cola viva" value={`${liveCommands}`} />
+              <SmallPill label="Snapshot" value={summary.snapshotAt} />
+            </div>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {summary.apps.map((app, index) => (
@@ -231,8 +280,8 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
           >
             <SectionTitle
               eyebrow="AGIs y Shadows"
-              title="Quince nodos operativos en la jerarquía completa."
-              subtitle="NOVA, Syntia, Vertx, Numia, Jurix, Hostia, Candy Ads, Nova Ads, PRO IA, Curvewind, Chido Wins, Chido Gerente, Trackhok, NEXPA y Shadows."
+              title="Nodos operativos visibles."
+              subtitle="Cada unidad tiene su lugar, su estado y su descripción en lenguaje simple."
             />
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
@@ -256,7 +305,10 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                     <StatusPill status={agi.status} />
                   </div>
 
-                  <p className="mt-3 text-sm leading-relaxed text-slate-300">{agi.subtitle}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-300">
+                    {agi.subtitle}
+                  </p>
+
                   <div className="mt-4 rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
                     {agi.note}
                   </div>
@@ -275,8 +327,8 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
           >
             <SectionTitle
               eyebrow="Actividad reciente"
-              title="Registro vivo, sin maquillaje."
-              subtitle="Eventos, comandos y órdenes reales que ya entraron a Supabase."
+              title="Registro vivo."
+              subtitle="Eventos y comandos reales que ya entraron al sistema."
             />
 
             <div className="mt-6 space-y-3">
@@ -292,8 +344,12 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white">{event.title}</p>
-                        <p className="mt-1 text-sm text-slate-400">{event.detail}</p>
+                        <p className="text-sm font-semibold text-white">
+                          {event.title}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {event.detail}
+                        </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
                         <Clock3 className="h-4 w-4" />
@@ -315,7 +371,7 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
             <SectionTitle
               eyebrow="Repos existentes"
               title="Lo que ya vive afuera también entra al mapa."
-              subtitle="hocker-node-agent y nova.agi aparecen como repos reales conectados; su detalle se deja listo para cuando abras su telemetría."
+              subtitle="Los repos reales quedan visibles como nodos conectados."
             />
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -329,12 +385,15 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                       <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
                         Repo real
                       </p>
-                      <h3 className="mt-2 text-sm font-bold text-white">{repo.title}</h3>
+                      <h3 className="mt-2 text-sm font-bold text-white">
+                        {repo.title}
+                      </h3>
                     </div>
                     <span
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] ${getStatusTone(
-                        repo.status,
-                      )}`}
+                      className={cx(
+                        "inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em]",
+                        getStatusTone(repo.status),
+                      )}
                     >
                       {getStatusLabel(repo.status)}
                     </span>
@@ -359,13 +418,14 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                 <Activity className="h-4 w-4 text-sky-300" />
                 <p className="text-sm font-semibold text-white">Resumen operativo</p>
               </div>
+
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
                     Apps activas
                   </p>
                   <p className="mt-2 text-2xl font-black text-white">
-                    {summary.apps.filter((app) => app.status === "live").length}
+                    {liveApps}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
@@ -373,7 +433,7 @@ export default function DashboardClient({ summary }: DashboardClientProps) {
                     AGIs activas
                   </p>
                   <p className="mt-2 text-2xl font-black text-white">
-                    {summary.agis.filter((agi) => agi.status === "live").length}
+                    {liveAgis}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
