@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
-import { defaultNodeId, normalizeNodeId } from "@/lib/project";
-import { signCommand } from "@/lib/security";
+import { normalizeNodeId } from "@/lib/project";
+import { getCommandHmacSecret, signCommand } from "@/lib/security";
 import type { JsonObject, CommandRow } from "@/lib/types";
 import { commandSchema } from "@/lib/validators";
 import {
@@ -24,9 +24,6 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-// ==========================
-// HELPERS
-// ==========================
 function asBool(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -45,9 +42,6 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
-// ==========================
-// TYPES
-// ==========================
 type CommandInsert = Pick<
   CommandRow,
   | "id"
@@ -67,17 +61,13 @@ type CommandInsert = Pick<
   | "created_at"
 >;
 
-// ==========================
-// GET
-// ==========================
 export async function GET(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
-
     const project_id = String(
       url.searchParams.get("project_id") ??
         url.searchParams.get("projectId") ??
-        ""
+        "",
     ).trim();
 
     if (!project_id) {
@@ -111,9 +101,6 @@ export async function GET(req: Request): Promise<Response> {
   }
 }
 
-// ==========================
-// POST
-// ==========================
 export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({
     name: "Ingreso_Orden_Tactica",
@@ -122,27 +109,17 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const body = await parseBody(req);
-
-    const project_id = String(
-      body.project_id ?? body.projectId ?? ""
-    ).trim();
+    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    // ==========================
-    // VALIDACIÓN ZOD (CORE FIX)
-    // ==========================
     const parsed = commandSchema.parse(body);
-
     const command = parsed.command;
     const node_id = normalizeNodeId(parsed.node_id);
     const payload = asJsonObject(parsed.payload);
 
-    // ==========================
-    // CONTEXTO
-    // ==========================
     const ctx = await requireProjectRole(project_id, [
       "owner",
       "admin",
@@ -163,30 +140,15 @@ export async function POST(req: Request): Promise<Response> {
       });
     }
 
-    // ==========================
-    // FLAGS
-    // ==========================
-    const needsApproval = asBool(
-      body.needs_approval ?? body.needsApproval,
-      false
-    );
+    const needsApproval = asBool(body.needs_approval ?? body.needsApproval, false);
 
-    // ==========================
-    // SEGURIDAD
-    // ==========================
-    const secret = String(
-      process.env.COMMAND_HMAC_SECRET ?? ""
-    ).trim();
-
+    const secret = getCommandHmacSecret();
     if (!secret) {
       throw new ApiError(500, {
-        error: "COMMAND_HMAC_SECRET no está configurado en el entorno.",
+        error: "No existe HOCKER_COMMAND_HMAC_SECRET ni COMMAND_HMAC_SECRET en el entorno.",
       });
     }
 
-    // ==========================
-    // CREACIÓN
-    // ==========================
     const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
 
@@ -199,7 +161,7 @@ export async function POST(req: Request): Promise<Response> {
       node_id,
       command,
       payload,
-      created_at
+      created_at,
     );
 
     const row: CommandInsert = {
@@ -220,9 +182,6 @@ export async function POST(req: Request): Promise<Response> {
       created_at,
     };
 
-    // ==========================
-    // DB INSERT
-    // ==========================
     const { data, error } = await ctx.sb
       .from("commands")
       .insert(row)
@@ -233,9 +192,6 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(500, { error: error.message });
     }
 
-    // ==========================
-    // TRIGGER
-    // ==========================
     if (!needsApproval) {
       await tasks.trigger("hocker-core-executor", {
         commandId: id,
@@ -243,9 +199,6 @@ export async function POST(req: Request): Promise<Response> {
       });
     }
 
-    // ==========================
-    // TRACKING
-    // ==========================
     trace.event({
       name: "ORDEN_INGRESADA",
       input: { commandId: id, node_id, needsApproval },
