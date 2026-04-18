@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Sparkles,
   Workflow,
+  MessagesSquare,
 } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
@@ -16,23 +17,24 @@ type DockItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  accent?: boolean;
 };
 
 const ITEMS: DockItem[] = [
-  { href: "/dashboard", label: "Core", icon: LayoutDashboard },
-  { href: "/chat", label: "NOVA", icon: Brain },
-  { href: "/commands", label: "Órdenes", icon: Command },
-  { href: "/nodes", label: "Nodos", icon: Cpu },
-  { href: "/supply", label: "Supply", icon: Workflow },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/chat", label: "NOVA", icon: Brain, accent: true },
+  { href: "/commands", label: "Tareas", icon: Command },
+  { href: "/nodes", label: "Equipo", icon: Cpu },
+  { href: "/supply", label: "Tienda", icon: Workflow },
 ];
 
 export default function BottomDock() {
   const pathname = usePathname() || "/";
-  const { projectId } = useWorkspace();
+  const { projectId, tutorial } = useWorkspace();
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden pb-safe px-3 pb-3">
-      <div className="rounded-[30px] border border-white/5 bg-slate-950/78 px-3 py-3 shadow-[0_24px_90px_rgba(2,6,23,0.55)] backdrop-blur-3xl">
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 lg:hidden pb-safe">
+      <div className="rounded-[30px] border border-white/5 bg-slate-950/80 px-3 py-3 shadow-[0_24px_90px_rgba(2,6,23,0.55)] backdrop-blur-3xl">
         <div className="mb-3 flex items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5">
             <span className="relative flex h-2.5 w-2.5">
@@ -56,7 +58,9 @@ export default function BottomDock() {
         <div className="grid grid-cols-5 gap-2">
           {ITEMS.map((item) => {
             const active =
-              item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              item.href === "/"
+                ? pathname === "/"
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 
             return (
@@ -66,9 +70,13 @@ export default function BottomDock() {
                 aria-current={active ? "page" : undefined}
                 className={[
                   "flex flex-col items-center gap-1.5 rounded-[22px] border px-2 py-2.5 transition-all duration-300",
-                  active
-                    ? "border-sky-400/20 bg-sky-400/10 text-white shadow-[0_0_18px_rgba(14,165,233,0.12)]"
-                    : "border-white/5 bg-white/[0.03] text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-white",
+                  item.accent
+                    ? active
+                      ? "border-sky-400/20 bg-sky-400/15 text-white shadow-[0_0_18px_rgba(14,165,233,0.12)]"
+                      : "border-sky-400/15 bg-sky-400/10 text-sky-200 hover:border-sky-400/25 hover:bg-sky-400/15"
+                    : active
+                      ? "border-sky-400/20 bg-sky-400/10 text-white shadow-[0_0_18px_rgba(14,165,233,0.12)]"
+                      : "border-white/5 bg-white/[0.03] text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-white",
                 ].join(" ")}
               >
                 <Icon className={["h-4.5 w-4.5", active ? "text-sky-300" : ""].join(" ")} />
@@ -78,6 +86,19 @@ export default function BottomDock() {
               </Link>
             );
           })}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between px-1">
+          <span className="text-[9px] font-black uppercase tracking-[0.32em] text-slate-500">
+            {tutorial ? "Guía activa" : "Modo libre"}
+          </span>
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.32em] text-sky-200"
+          >
+            Abrir chat
+            <MessagesSquare className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </div>
     </div>
