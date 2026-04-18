@@ -1,36 +1,29 @@
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import type { CommandRow, JsonObject } from "@/lib/types";
+import { getErrorMessage } from "@/lib/errors";
+import { processCloudQueue } from "@/app/api/commands/_cloud";
 
 export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {
   const sb = createAdminSupabase();
-  const now = new Date().toISOString();
 
-  // Bloqueo atómico para evitar duplicidad
   const { data: command, error } = await sb
     .from("commands")
-    .update({ status: "running", started_at: now })
-    .eq("id", commandId)
-    .eq("status", "queued")
     .select("*")
-    .single();
+    .eq("id", commandId)
+    .maybeSingle();
 
   if (error || !command) return;
 
-  try {
-    // Lógica de ejecución estratégica aquí
-    const result = { ok: true, ts: now };
-
-    await sb.from("commands").update({
-      status: "done",
-      result,
-      finished_at: new Date().toISOString()
-    }).eq("id", commandId);
-
-  } catch (err: any) {
-    await sb.from("commands").update({
-      status: "error",
-      error: err.message,
-      finished_at: new Date().toISOString()
-    }).eq("id", commandId);
+  if (expectedProjectId && command.project_id !== expectedProjectId) {
+    return;
   }
+
+  if (command.status !== "queued" && command.status !== "needs_approval") {
+    return;
+  }
+
+  if (command.needs_approval) {
+    return;
+  }
+
+  await processCloudQueue(sb, { commandId });
 }
