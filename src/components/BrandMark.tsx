@@ -1,55 +1,73 @@
-"use client";
-
+import Image from "next/image";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
-import { cn } from "@/lib/cn";
 
 type BrandMarkProps = {
-  className?: string;
+  href?: string;
   compact?: boolean;
   showWordmark?: boolean;
-  href?: string;
+  hero?: boolean;
+  className?: string;
 };
 
 export default function BrandMark({
-  className = "",
+  href = "/dashboard",
   compact = false,
   showWordmark = true,
-  href = "/dashboard",
+  hero = false,
+  className = "",
 }: BrandMarkProps) {
+  const shellClass = hero
+    ? "rounded-[30px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_24px_80px_rgba(2,6,23,0.30)] backdrop-blur-3xl"
+    : compact
+      ? "rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_12px_40px_rgba(2,6,23,0.18)] backdrop-blur-xl"
+      : "rounded-[26px] border border-white/5 bg-white/[0.03] px-3 py-2.5 shadow-[0_16px_50px_rgba(2,6,23,0.20)] backdrop-blur-xl";
+
+  const isotypeSize = hero ? 58 : compact ? 30 : 36;
+  const wordmarkWidth = hero ? 360 : 220;
+  const wordmarkHeight = hero ? 104 : 64;
+
   return (
     <Link
       href={href}
-      className={cn(
-        "group inline-flex items-center gap-3 rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-3",
-        "shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-400/20 hover:bg-white/[0.05]",
+      aria-label="Ir al inicio"
+      className={[
+        "group inline-flex items-center gap-3 transition-all duration-300",
+        hero ? "hover:translate-y-[-1px]" : "hover:border-sky-400/15 hover:bg-white/[0.05]",
+        shellClass,
         className,
-      )}
-      aria-label="Ir al inicio de Hocker ONE"
+      ].join(" ")}
     >
-      <div className={cn(
-        "relative flex items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10",
-        compact ? "h-10 w-10" : "h-12 w-12",
-      )}>
-        <div className="absolute inset-0 rounded-2xl bg-sky-400/10 blur-xl opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
-        <Sparkles className={cn(
-          "relative z-10 text-sky-300 drop-shadow-[0_0_10px_rgba(125,211,252,0.8)]",
-          compact ? "h-4.5 w-4.5" : "h-5 w-5",
-        )} />
-      </div>
+      <span
+        className={[
+          "relative flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 transition-transform duration-300 group-hover:scale-[1.03]",
+          hero ? "h-16 w-16 sm:h-20 sm:w-20" : compact ? "h-10 w-10" : "h-11 w-11",
+        ].join(" ")}
+      >
+        <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.28),transparent_60%)] opacity-90 transition-opacity group-hover:opacity-100" />
+        <Image
+          src="/brand/hocker-one-isotype.png"
+          alt="Hocker ONE"
+          width={isotypeSize}
+          height={isotypeSize}
+          priority
+          className="relative object-contain drop-shadow-[0_0_16px_rgba(14,165,233,0.35)]"
+        />
+      </span>
 
-      {showWordmark ? (
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.38em] text-sky-300">
-            Hocker
-          </p>
-          <p className={cn(
-            "mt-1 truncate font-black text-white tracking-tight",
-            compact ? "text-base" : "text-lg",
-          )}>
-            ONE
-          </p>
-        </div>
+      {showWordmark && !compact ? (
+        <span className="hidden min-w-0 sm:block">
+          <Image
+            src="/brand/hocker-one-logo.png"
+            alt="Hocker ONE"
+            width={wordmarkWidth}
+            height={wordmarkHeight}
+            priority
+            className={[
+              "h-auto w-auto object-contain transition-all duration-300 drop-shadow-[0_0_22px_rgba(14,165,233,0.16)]",
+              hero ? "max-w-[340px] sm:max-w-[360px]" : "max-w-[220px] lg:max-w-[240px]",
+            ].join(" ")}
+          />
+        </span>
       ) : null}
     </Link>
   );
