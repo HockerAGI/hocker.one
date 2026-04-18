@@ -9,18 +9,18 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8">
-      <div className="absolute inset-0 bg-hocker-aurora" />
-      <div className="absolute inset-0 animate-[hocker-pulse_6s_ease-in-out_infinite] bg-[radial-gradient(circle,rgba(56,189,248,0.25),transparent_60%)] opacity-30" />
-      <div className="absolute inset-0 hocker-grid-soft opacity-30" />
+    <main className="relative min-h-screen overflow-hidden px-4 py-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_24%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:80px_80px] opacity-25" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_35%,rgba(2,6,23,0.55)_100%)]" />
 
-      <section className="relative z-10 w-full max-w-6xl">
-        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
-          <div className="flex flex-col gap-6">
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center">
+        <div className="grid w-full gap-10 xl:grid-cols-[1.08fr_0.92fr] xl:items-center">
+          <div className="flex flex-col gap-6 hocker-page-enter">
             <BrandMark hero className="w-fit" />
 
             <div className="max-w-2xl">
-              <p className="hocker-title-line">Hocker ONE · Control Plane</p>
+              <p className="hocker-title-line">Hocker ONE · Control Panel</p>
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
                 Un solo acceso.
                 <span className="block text-sky-300 hocker-text-glow">
@@ -29,35 +29,53 @@ export default function LoginPage() {
               </h1>
 
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
-                Entrar aquí es pasar directo al núcleo operativo del ecosistema:
-                chat, comandos, nodos, supply y gobernanza en una sola matriz.
+                Entra al espacio donde conversas con NOVA, revisas tareas, operas nodos y mantienes la vista completa del ecosistema.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+              <div className="hocker-panel-pro px-4 py-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
                   Seguridad
                 </p>
-                <p className="mt-2 text-sm font-semibold text-white">Supabase Auth</p>
+                <p className="mt-2 text-sm font-semibold text-white">Acceso privado</p>
               </div>
-              <div className="rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+              <div className="hocker-panel-pro px-4 py-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-                  Runtime
+                  Experiencia
                 </p>
-                <p className="mt-2 text-sm font-semibold text-white">Realtime vivo</p>
+                <p className="mt-2 text-sm font-semibold text-white">Web · PWA</p>
               </div>
-              <div className="rounded-[24px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+              <div className="hocker-panel-pro px-4 py-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-                  Plataformas
+                  Núcleo
                 </p>
-                <p className="mt-2 text-sm font-semibold text-white">Web · PWA · APK</p>
+                <p className="mt-2 text-sm font-semibold text-white">NOVA activa</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="hocker-panel-pro px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.34em] text-sky-300">
+                  Chat
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                  Haz preguntas, sube archivos y recibe respuestas rápidas o profundas.
+                </p>
+              </div>
+              <div className="hocker-panel-pro px-4 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.34em] text-sky-300">
+                  Operación
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                  Ve tareas, nodos, tienda y seguridad en una sola interfaz.
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 rounded-[36px] bg-gradient-to-br from-sky-400/10 to-purple-500/10 blur-2xl" />
+          <div className="relative xl:justify-self-end">
+            <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-sky-400/10 via-transparent to-violet-500/10 blur-2xl" />
             <AuthBox className="relative z-10" />
           </div>
         </div>
