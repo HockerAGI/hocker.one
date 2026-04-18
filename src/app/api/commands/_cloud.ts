@@ -51,6 +51,8 @@ type CloudCommandRow = {
   status: string;
   needs_approval: boolean;
   created_at: string;
+  started_at?: string | null;
+  finished_at?: string | null;
 };
 
 function nowIso(): string {
@@ -72,7 +74,7 @@ function resolveSandboxPath(requestedPath: string): string {
   const rootWithSep = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
 
   if (!resolved.startsWith(rootWithSep) && resolved !== root) {
-    throw new Error("Violación de seguridad: Intento de escape del sandbox denegado.");
+    throw new Error("Violación de seguridad: intento de escape del sandbox denegado.");
   }
 
   return resolved;
@@ -94,6 +96,10 @@ function asString(value: unknown, fallback = ""): string {
 function asInt(value: unknown, fallback = 0): number {
   const n = Math.trunc(Number(value));
   return Number.isFinite(n) ? n : fallback;
+}
+
+function allowWriteExecution(): boolean {
+  return process.env.ALLOW_LOCAL_COMMANDS === "1" || process.env.ALLOW_WRITE_COMMANDS === "1";
 }
 
 async function executeLocalCloud(
@@ -123,7 +129,7 @@ async function executeLocalCloud(
         ok: true,
         data: {
           workspace: getWorkspaceRoot(),
-          allowWrites: process.env.ALLOW_LOCAL_COMMANDS === "1",
+          allowWrites: allowWriteExecution(),
           uptime: process.uptime(),
         },
       };
@@ -136,7 +142,6 @@ async function executeLocalCloud(
       return {
         command: cmd,
         ok: true,
-        // Aquí es donde Dirent hace su trabajo de tipado correctamente
         data: entries.map((entry: Dirent) => ({
           name: entry.name,
           isFile: entry.isFile(),
@@ -149,7 +154,7 @@ async function executeLocalCloud(
     if (cmd === "read_file_head") {
       const file = resolveSandboxPath(asString(p.path, ""));
       const limit = Math.max(1, Math.min(200, asInt(p.limit, 10)));
-      
+
       const content = await fs.readFile(file, "utf-8");
       const lines = content.split("\n").slice(0, limit);
 
@@ -161,7 +166,63 @@ async function executeLocalCloud(
     }
   }
 
-  throw new Error(`Comando no reconocido o no autorizado en entorno Cloud: ${cmd}`);
+  if (!WRITE_COMMANDS.has(cmd)) {
+    throw new Error(`Comando no reconocido o no autorizado en entorno Cloud: ${cmd}`);
+  }
+
+  if (!allowWriteExecution()) {
+    throw new Error(`Ejecución de escritura bloqueada por política para: ${cmd}`);
+  }
+
+  if (cmd === "fs.write") {
+    const file = resolveSandboxPath(asString(p.path, ""));
+    const content = asString(p.content, "");
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, content, "utf-8");
+
+    return {
+      command: cmd,
+      ok: true,
+      data: { written: path.relative(getWorkspaceRoot(), file) },
+    };
+  }
+
+  if (cmd === "shell.exec") {
+    const script = asString(p.script, "").trim();
+    if (!script) {
+      throw new Error("shell.exec requiere payload.script");
+    }
+
+    const cwd = getWorkspaceRoot();
+    const timeout = Math.max(1000, Math.min(120000, asInt(p.timeout, 30000)));
+
+    const { stdout, stderr } = await exec(script, {
+      cwd,
+      shell: "/bin/sh",
+      timeout,
+      maxBuffer: 10 * 1024 * 1024,
+      env: {
+        ...process.env,
+        HOME: cwd,
+        TMPDIR: path.join(cwd, ".tmp"),
+      },
+    });
+
+    return {
+      command: cmd,
+      ok: true,
+      data: { cwd, timeout },
+      stdout,
+      stderr,
+      code: 0,
+    };
+  }
+
+  return {
+    command: cmd,
+    ok: false,
+    note: `Comando soportado por contrato pero no implementado en Cloud: ${cmd}`,
+  };
 }
 
 export async function processCloudQueue(
@@ -194,13 +255,13 @@ export async function processCloudQueue(
 
   const { error: lockErr } = await sb
     .from("commands")
-    .update({ status: "running" })
+    .update({ status: "running", started_at: nowIso() })
     .eq("id", row.id)
     .eq("status", "queued");
 
   if (lockErr) return;
 
-  const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
+  const secret = String(process.env.COMMAND_HMAC_SECRET ?? process.env.HOCKER_COMMAND_HMAC_SECRET ?? "").trim();
   if (secret) {
     const isValid = verifyCommandSignature(
       secret,
@@ -212,6 +273,7 @@ export async function processCloudQueue(
       row.payload,
       row.created_at,
     );
+
     if (!isValid) {
       await sb
         .from("commands")
