@@ -57,6 +57,33 @@ type AttachmentItem = {
   file: File;
 };
 
+type SpeechRecognitionResultLike = {
+  transcript?: string;
+};
+
+type SpeechRecognitionEventLike = {
+  results: ArrayLike<ArrayLike<SpeechRecognitionResultLike>>;
+};
+
+type SpeechRecognitionInstance = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: unknown) => void) | null;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+type WindowWithSpeechRecognition = Window &
+  typeof globalThis & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+
 const PROVIDERS: Array<{
   value: Provider;
   label: string;
@@ -95,7 +122,13 @@ const ACTIONS: Array<{
   { key: "voice", label: "Voz", icon: Mic, hint: "dictado en el navegador" },
 ];
 
-const QUICK_STARTS: Array<{ label: string; text: string; tool?: ToolKey; provider?: Provider; mode?: Mode }> = [
+const QUICK_STARTS: Array<{
+  label: string;
+  text: string;
+  tool?: ToolKey;
+  provider?: Provider;
+  mode?: Mode;
+}> = [
   {
     label: "Diseña una propuesta",
     text: "Necesito una propuesta clara, elegante y fácil de entender para un cliente.",
@@ -185,7 +218,7 @@ export default function NovaChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const speechRef = useRef<any | null>(null);
+  const speechRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const activeProvider = useMemo(
     () => PROVIDERS.find((item) => item.value === provider) ?? PROVIDERS[0],
@@ -226,9 +259,8 @@ export default function NovaChat() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const SR =
-      (window as Window & typeof globalThis & { webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition ||
-      (window as Window & typeof globalThis & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
+    const win = window as WindowWithSpeechRecognition;
+    const SR = win.SpeechRecognition ?? win.webkitSpeechRecognition;
 
     setSpeechSupported(Boolean(SR));
     if (!SR) return;
@@ -238,7 +270,7 @@ export default function NovaChat() {
     recognition.interimResults = true;
     recognition.continuous = false;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       const transcript = Array.from(event.results)
         .map((result) => result[0]?.transcript ?? "")
         .join("")
