@@ -10,8 +10,8 @@ export type JsonObject = {
 // ==========================
 // CORE
 // ==========================
-export type ProjectId = "hocker-one";
-export type NodeId = string & { readonly brand?: unique symbol };
+export type ProjectId = string;
+export type NodeId = string;
 
 // ==========================
 // COMMANDS
@@ -26,6 +26,14 @@ export type CommandStatus =
 
 export type CommandName =
   | "ping"
+  | "status"
+  | "read_dir"
+  | "read_file_head"
+  | "shell.exec"
+  | "fs.write"
+  | "run_sql"
+  | "stripe.charge"
+  | "meta.send_msg"
   | "node.sync"
   | "system.echo"
   | "supply.create_order"
@@ -35,32 +43,10 @@ export type CommandName =
   | "restart_nova"
   | "restart_telemetry";
 
-export function normalizeCommandStatus(input?: string): CommandStatus {
-  const value = (input ?? "").toLowerCase();
-
-  if (value === "queued") return "queued";
-  if (value === "needs_approval") return "needs_approval";
-  if (value === "running") return "running";
-  if (value === "done") return "done";
-  if (value === "error" || value === "failed") return "error";
-  if (value === "canceled" || value === "cancelled") return "canceled";
-
-  return "queued";
-}
-
 // ==========================
 // EVENTS
 // ==========================
 export type EventLevel = "info" | "warn" | "error";
-
-export function normalizeEventLevel(input?: string): EventLevel {
-  const value = (input ?? "").toLowerCase();
-
-  if (value === "warn" || value === "warning") return "warn";
-  if (value === "error") return "error";
-
-  return "info";
-}
 
 // ==========================
 // NODES
@@ -82,19 +68,19 @@ export type SupplyOrderStatus =
   | "producing"
   | "shipped"
   | "delivered"
-  | "canceled";
+  | "canceled"
+  | "cancelled";
 
-export function normalizeSupplyOrderStatus(input?: string): SupplyOrderStatus {
-  const value = (input ?? "").toLowerCase();
+// ==========================
+// ROLES
+// ==========================
+export type Role = "owner" | "admin" | "operator" | "viewer";
 
-  if (value === "paid") return "paid";
-  if (value === "producing") return "producing";
-  if (value === "shipped") return "shipped";
-  if (value === "delivered") return "delivered";
-  if (value === "canceled" || value === "cancelled") return "canceled";
-
-  return "pending";
-}
+// ==========================
+// AUDIT
+// ==========================
+export type AuditActorType = "user" | "nova" | "system" | "worker";
+export type AuditSeverity = "info" | "warn" | "error" | "critical";
 
 // ==========================
 // DATABASE ROWS
@@ -147,14 +133,6 @@ export interface AgiRow {
   created_at: string;
 }
 
-// ==========================
-// ROLES
-// ==========================
-export type Role = "owner" | "admin" | "operator" | "viewer";
-
-// ==========================
-// SYSTEM CONTROLS
-// ==========================
 export interface ControlRow {
   project_id: ProjectId;
   id: string;
@@ -164,9 +142,7 @@ export interface ControlRow {
   created_at: string;
   updated_at: string;
 }
-// ==========================
-// EVENTS
-// ==========================
+
 export interface EventRow {
   id: string;
   project_id: ProjectId;
@@ -176,4 +152,64 @@ export interface EventRow {
   level: EventLevel;
   data: JsonObject | null;
   created_at: string;
+}
+
+export interface SupplyProductRow {
+  id: string;
+  project_id: ProjectId;
+  name: string;
+  sku: string | null;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  active: boolean;
+  meta: JsonObject;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplyOrderRow {
+  id: string;
+  project_id: ProjectId;
+  status: SupplyOrderStatus;
+  customer_name: string | null;
+  customer_phone: string | null;
+  total_cents: number;
+  currency: string;
+  meta: JsonObject;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplyOrderItemRow {
+  id: string;
+  project_id: ProjectId;
+  order_id: string;
+  product_id: string | null;
+  qty: number;
+  unit_price_cents: number;
+  line_total_cents: number;
+  currency: string;
+  meta: JsonObject;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditChainRow {
+  id: string;
+  project_id: ProjectId;
+  seq: number;
+  prev_hash: string;
+  row_hash: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_type: AuditActorType;
+  actor_id: string | null;
+  role: string;
+  action: string;
+  severity: AuditSeverity;
+  payload: JsonObject;
+  created_at: string;
+  signature: string;
 }
