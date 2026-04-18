@@ -10,10 +10,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import {
-  ArrowUpRight,
   Bot,
   Brain,
-  FileText,
   Github,
   Image as ImageIcon,
   Loader2,
@@ -65,7 +63,7 @@ type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<SpeechRecognitionResultLike>>;
 };
 
-type SpeechRecognitionInstance = {
+type SpeechRecognitionLike = {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
@@ -76,7 +74,7 @@ type SpeechRecognitionInstance = {
   onerror: ((event: unknown) => void) | null;
 };
 
-type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 type WindowWithSpeechRecognition = Window &
   typeof globalThis & {
@@ -176,29 +174,6 @@ function fileKind(file: File): string {
   return "Archivo";
 }
 
-function iconForTool(tool: ToolKey) {
-  switch (tool) {
-    case "image":
-      return ImageIcon;
-    case "video":
-      return Video;
-    case "reason":
-      return Brain;
-    case "research":
-      return Search;
-    case "apps":
-      return Plug;
-    case "github":
-      return Github;
-    case "voice":
-      return Mic;
-    case "files":
-      return Paperclip;
-    default:
-      return Sparkles;
-  }
-}
-
 export default function NovaChat() {
   const { projectId } = useWorkspace();
 
@@ -218,7 +193,7 @@ export default function NovaChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const speechRef = useRef<SpeechRecognitionInstance | null>(null);
+  const speechRef = useRef<SpeechRecognitionLike | null>(null);
 
   const activeProvider = useMemo(
     () => PROVIDERS.find((item) => item.value === provider) ?? PROVIDERS[0],
@@ -266,6 +241,7 @@ export default function NovaChat() {
     if (!SR) return;
 
     const recognition = new SR();
+
     recognition.lang = "es-MX";
     recognition.interimResults = true;
     recognition.continuous = false;
@@ -406,7 +382,10 @@ export default function NovaChat() {
         }),
       });
 
-      const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        reply?: string;
+        error?: string;
+      };
 
       if (!res.ok) {
         throw new Error(data.error || "No se pudo conectar con NOVA.");
@@ -802,7 +781,7 @@ export default function NovaChat() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setInput("")}
+                  onClick={clearComposer}
                   className="inline-flex items-center gap-2 rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-[10px] font-black uppercase tracking-[0.32em] text-slate-200 transition-all hover:bg-white/[0.06]"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -819,58 +798,4 @@ export default function NovaChat() {
                       : "border border-sky-400/20 bg-sky-400 px-4 py-3 text-slate-950 shadow-[0_0_24px_rgba(14,165,233,0.18)] hover:-translate-y-0.5",
                   )}
                 >
-                  Enviar
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFiles}
-            accept=".pdf,.txt,.md,.csv,.json,.js,.jsx,.ts,.tsx,.html,.css,.png,.jpg,.jpeg,.webp,.mp4,.mov,.zip"
-          />
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => addQuickPrompt(QUICK_STARTS[0])}
-              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
-                Rápido
-              </p>
-              <p className="mt-1">Propuesta clara y elegante</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedTool("reason")}
-              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
-                Profundo
-              </p>
-              <p className="mt-1">Analiza paso a paso</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedTool("github")}
-              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
-                Código
-              </p>
-              <p className="mt-1">Trae repos y archivos</p>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+                  En
