@@ -1,19 +1,5 @@
 import crypto from "node:crypto";
-
-export function canonicalJson(value: unknown): string {
-  const sortDeep = (input: unknown): unknown => {
-    if (Array.isArray(input)) return input.map(sortDeep);
-    if (input && typeof input === "object") {
-      const obj = input as Record<string, unknown>;
-      const out: Record<string, unknown> = {};
-      for (const key of Object.keys(obj).sort()) out[key] = sortDeep(obj[key]);
-      return out;
-    }
-    return input;
-  };
-
-  return JSON.stringify(sortDeep(value ?? {}));
-}
+import { stableStringify } from "./stable-json";
 
 export function hash256(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex");
@@ -39,7 +25,7 @@ export function signAuditRow(args: {
   payload: Record<string, unknown>;
   created_at: string;
 }): { row_hash: string; signature: string } {
-  const canonical = canonicalJson({
+  const canonical = stableStringify({
     project_id: args.project_id,
     seq: args.seq,
     prev_hash: args.prev_hash,
@@ -52,11 +38,14 @@ export function signAuditRow(args: {
     action: args.action,
     severity: args.severity,
     payload: args.payload,
-    created_at: args.created_at
+    created_at: args.created_at,
   });
 
   const row_hash = hash256(canonical);
-  const signature = hmac256(args.secret, `${row_hash}|${args.prev_hash}|${args.seq}|${args.project_id}`);
+  const signature = hmac256(
+    args.secret,
+    `${row_hash}|${args.prev_hash}|${args.seq}|${args.project_id}`,
+  );
 
   return { row_hash, signature };
 }
@@ -95,7 +84,7 @@ export function verifyAuditRow(args: {
     action: args.row.action,
     severity: args.row.severity,
     payload: args.row.payload,
-    created_at: args.row.created_at
+    created_at: args.row.created_at,
   });
 
   return expected.row_hash === args.row.row_hash && expected.signature === args.row.signature;
