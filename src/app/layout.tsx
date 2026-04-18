@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
   applicationName: "Hocker ONE",
   manifest: "/manifest.webmanifest",
-  themeColor: "#020617",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
