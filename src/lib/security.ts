@@ -23,6 +23,41 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(sortKeysDeep(value ?? {}));
 }
 
+function hexSafeEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+
+  try {
+    const aBuf = Buffer.from(a, "hex");
+    const bBuf = Buffer.from(b, "hex");
+    if (aBuf.length !== bBuf.length) return false;
+    return crypto.timingSafeEqual(aBuf, bBuf);
+  } catch {
+    return false;
+  }
+}
+
+function getSecretFromEnv(keys: readonly string[]): string {
+  for (const key of keys) {
+    const value = String(process.env[key] ?? "").trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+export function getCommandHmacSecret(): string {
+  return getSecretFromEnv(["HOCKER_COMMAND_HMAC_SECRET", "COMMAND_HMAC_SECRET"]);
+}
+
+export function getInternalApiSecret(): string {
+  return getSecretFromEnv([
+    "HOCKER_ONE_INTERNAL_TOKEN",
+    "NOVA_ORCHESTRATOR_KEY",
+    "HOCKER_COMMAND_HMAC_SECRET",
+    "COMMAND_HMAC_SECRET",
+  ]);
+}
+
 export function signCommand(
   secret: string,
   id: string,
@@ -44,24 +79,6 @@ export function signCommand(
   return crypto.createHmac("sha256", secret).update(base).digest("hex");
 }
 
-function safeHexEqual(a: string, b: string): boolean {
-  if (!a || !b) return false;
-  
-  // Normalización de longitud para prevenir fugas de información
-  const expectedLength = 64; 
-  if (a.length !== expectedLength || b.length !== expectedLength) {
-    return false;
-  }
-
-  const aBuf = Buffer.from(a, "hex");
-  const bBuf = Buffer.from(b, "hex");
-  
-  if (aBuf.length !== bBuf.length) return false;
-  
-  return crypto.timingSafeEqual(aBuf, bBuf);
-}
-
-// Ventana de tolerancia estricta (5 minutos) contra interceptaciones
 const MAX_TIME_DRIFT_MS = 5 * 60 * 1000;
 
 export function verifyCommandSignature(
@@ -72,20 +89,18 @@ export function verifyCommandSignature(
   node_id: string,
   command: string,
   payload: unknown,
-  created_at: string
+  created_at: string,
 ): boolean {
+  if (!secret) return false;
   if (!signature) return false;
 
-  // 1. Blindaje contra Replay Attacks
   const commandTime = new Date(created_at).getTime();
   const now = Date.now();
-  
-  if (isNaN(commandTime) || Math.abs(now - commandTime) > MAX_TIME_DRIFT_MS) {
-    console.warn(`[NOVA] Amenaza neutralizada. Comando ${id} rechazado por expiración temporal.`);
+
+  if (!Number.isFinite(commandTime) || Math.abs(now - commandTime) > MAX_TIME_DRIFT_MS) {
     return false;
   }
 
-  // 2. Validación criptográfica
   const expectedSignature = signCommand(
     secret,
     id,
@@ -93,8 +108,8 @@ export function verifyCommandSignature(
     node_id,
     command,
     payload,
-    created_at
+    created_at,
   );
 
-  return safeHexEqual(expectedSignature, signature);
+  return hexSafeEqual(expectedSignature, signature);
 }
