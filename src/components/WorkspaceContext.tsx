@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { NodeId, ProjectId } from "@/lib/project";
+import { defaultNodeId, defaultProjectId, type NodeId, type ProjectId } from "@/lib/project";
 
 type WorkspaceContextValue = {
   projectId: ProjectId;
@@ -21,9 +21,6 @@ type WorkspaceContextValue = {
   toggleTutorial: () => void;
   resetWorkspace: () => void;
 };
-
-const DEFAULT_PROJECT_ID = "hocker-one" as ProjectId;
-const DEFAULT_NODE_ID = "hocker-agi" as NodeId;
 
 const STORAGE_KEYS = {
   projectId: "hocker.workspace.projectId",
@@ -40,8 +37,8 @@ function readBoolean(value: string | null, fallback: boolean): boolean {
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [projectId, setProjectIdState] = useState<ProjectId>(DEFAULT_PROJECT_ID);
-  const [nodeId, setNodeIdState] = useState<NodeId>(DEFAULT_NODE_ID);
+  const [projectId, setProjectIdState] = useState<ProjectId>(defaultProjectId);
+  const [nodeId, setNodeIdState] = useState<NodeId>(defaultNodeId);
   const [tutorial, setTutorialState] = useState(false);
 
   useEffect(() => {
@@ -49,8 +46,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const storedNodeId = window.localStorage.getItem(STORAGE_KEYS.nodeId);
     const storedTutorial = window.localStorage.getItem(STORAGE_KEYS.tutorial);
 
-    setProjectIdState((storedProjectId as ProjectId) || DEFAULT_PROJECT_ID);
-    setNodeIdState((storedNodeId as NodeId) || DEFAULT_NODE_ID);
+    setProjectIdState((storedProjectId as ProjectId) || defaultProjectId);
+    setNodeIdState((storedNodeId as NodeId) || defaultNodeId);
     setTutorialState(readBoolean(storedTutorial, false));
     setReady(true);
   }, []);
@@ -81,8 +78,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setTutorial: setTutorialState,
       toggleTutorial: () => setTutorialState((prev) => !prev),
       resetWorkspace: () => {
-        setProjectIdState(DEFAULT_PROJECT_ID);
-        setNodeIdState(DEFAULT_NODE_ID);
+        setProjectIdState(defaultProjectId);
+        setNodeIdState(defaultNodeId);
         setTutorialState(false);
         window.localStorage.removeItem(STORAGE_KEYS.projectId);
         window.localStorage.removeItem(STORAGE_KEYS.nodeId);
