@@ -1,102 +1,244 @@
 import crypto from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
-// Importaciones limpias, sin la extensión .js que hacía colapsar a Vercel
-import type { AuditActorType, AuditSeverity, AuditChainRow } from "./audit-types";
-import { signAuditRow } from "./audit-signature";
+import { createAdminSupabase } from "@/lib/supabase-admin";
+import { canonicalJson } from "./security";
+import type { AuditActorType, AuditChainRow, AuditSeverity } from "./audit-types";
 
-// ============================================================================
-// NOVA: AGI AUDIT CHAIN CORE (FULL BLOCKCHAIN ARCHITECTURE)
-// ============================================================================
+type AuditDbRow = {
+  id: string;
+  project_id: string | null;
+  actor_user_id: string | null;
+  action: string;
+  context: Record<string, unknown> | null;
+  created_at: string;
+};
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-export const sbAdmin = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false }
-});
-
-export const nowIso = (): string => new Date().toISOString();
-
-export async function appendAuditRecord(args: {
-  projectId: string;
-  eventType?: string;
-  entityType?: string;
-  entityId?: string | null;
-  actorType: AuditActorType;
-  actorId: string | null;
-  role?: string;
+type AuditTrailEventArgs = {
+  project_id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_type: AuditActorType;
+  actor_id: string | null;
+  role: string;
   action: string;
   severity: AuditSeverity;
-  payload: Record<string, any>;
-}): Promise<AuditChainRow | null> {
-  
-  // 1. Extraemos el bloque anterior para mantener la inmutabilidad de la cadena
-  const { data: lastRow } = await sbAdmin
-    .from("transactions_audit")
-    .select("seq, row_hash")
-    .eq("project_id", args.projectId)
-    .order("seq", { ascending: false })
-    .limit(1)
-    .single();
+  payload: Record<string, unknown>;
+};
 
-  const seq = lastRow ? lastRow.seq + 1 : 1;
-  const prev_hash = lastRow ? lastRow.row_hash : "GENESIS";
-  const timestamp = nowIso();
-  
-  // Llave de seguridad maestra
-  const secret = process.env.HKR_SUPPLY_KEY || "hkr-supply-master-key-2026";
+type AuditFingerprintResult = {
+  project_id: string;
+  count: number;
+  fingerprint: string;
+  valid: boolean;
+  last_created_at: string | null;
+};
 
-  // 2. Preparamos el payload exacto que exige tu motor original
-  const signArgs = {
-    secret,
-    project_id: args.projectId,
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function sha256(input: string): string {
+  return crypto.createHash("sha256").update(input).digest("hex");
+}
+
+function hmac256(secret: string, input: string): string {
+  return crypto.createHmac("sha256", secret).update(input).digest("hex");
+}
+
+function auditSecret(): string {
+  const configured = String(process.env.HOCKER_AUDIT_SECRET ?? "").trim();
+  if (configured) return configured;
+  const fallback = String(process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+  if (fallback) return fallback;
+  return "hocker-audit-fallback";
+}
+
+function normalizeContext(row: AuditDbRow): Record<string, unknown> {
+  const context = row.context && typeof row.context === "object" && !Array.isArray(row.context)
+    ? row.context
+    : {};
+
+  return {
+    ...context,
+    action: row.action,
+    created_at: row.created_at,
+    actor_user_id: row.actor_user_id,
+    project_id: row.project_id,
+  };
+}
+
+function rowToVirtualChain(
+  row: AuditDbRow,
+  index: number,
+  prevHash: string,
+): AuditChainRow {
+  const context = normalizeContext(row);
+  const seq = index + 1;
+  const rowHash = sha256(
+    canonicalJson({
+      seq,
+      prev_hash: prevHash,
+      project_id: row.project_id,
+      action: row.action,
+      context,
+      created_at: row.created_at,
+      id: row.id,
+    }),
+  );
+  const signature = hmac256(auditSecret(), `${rowHash}|${prevHash}|${seq}|${row.project_id ?? ""}`);
+
+  return {
+    id: row.id,
+    project_id: row.project_id ?? "",
     seq,
-    prev_hash,
-    event_type: args.eventType || "system_event",
-    entity_type: args.entityType || "general",
-    entity_id: args.entityId || null,
-    actor_type: args.actorType,
-    actor_id: args.actorId,
-    role: args.role || "system",
-    action: args.action,
-    severity: args.severity,
-    payload: args.payload,
-    created_at: timestamp
+    prev_hash: prevHash,
+    row_hash: rowHash,
+    event_type: String(context.event_type ?? "manual"),
+    entity_type: String(context.entity_type ?? "system"),
+    entity_id: context.entity_id ?? null,
+    actor_type: String(context.actor_type ?? "system"),
+    actor_id: context.actor_id ?? null,
+    role: String(context.role ?? "nova"),
+    action: row.action,
+    severity: String(context.severity ?? "info"),
+    payload: (context.payload && typeof context.payload === "object" && !Array.isArray(context.payload))
+      ? (context.payload as Record<string, unknown>)
+      : {},
+    created_at: row.created_at,
+    signature,
   };
+}
 
-  // 3. Sellamos criptográficamente usando tu código original intacto
-  const { row_hash, signature } = signAuditRow(signArgs);
+async function loadAuditRows(project_id: string, limit = 5000): Promise<AuditDbRow[]> {
+  const sb = createAdminSupabase();
 
-  // 4. Construimos el bloque final para inserción
-  const insertPayload = {
-    id: crypto.randomUUID(),
-    project_id: signArgs.project_id,
-    seq: signArgs.seq,
-    prev_hash: signArgs.prev_hash,
-    row_hash: row_hash,
-    event_type: signArgs.event_type,
-    entity_type: signArgs.entity_type,
-    entity_id: signArgs.entity_id,
-    actor_type: signArgs.actor_type,
-    actor_id: signArgs.actor_id,
-    role: signArgs.role,
-    action: signArgs.action,
-    severity: signArgs.severity,
-    payload: signArgs.payload,
-    created_at: signArgs.created_at,
-    signature: signature
-  };
-
-  const { data, error } = await sbAdmin
-    .from("transactions_audit")
-    .insert([insertPayload])
-    .select()
-    .single();
+  const { data, error } = await sb
+    .from("audit_logs")
+    .select("id, project_id, actor_user_id, action, context, created_at")
+    .eq("project_id", project_id)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(Math.max(1, Math.min(limit, 5000)));
 
   if (error) {
-    console.error("[NOVA:Audit] Ruptura en la inserción de cadena transaccional:", error);
-    return null;
+    throw new Error(`No se pudo cargar la cadena de auditoría: ${error.message}`);
   }
 
-  return data as AuditChainRow;
+  return (data ?? []) as AuditDbRow[];
+}
+
+export async function appendAuditRecord(args: {
+  project_id: string;
+  action: string;
+  actor_user_id?: string | null;
+  context?: Record<string, unknown>;
+}): Promise<AuditChainRow> {
+  const sb = createAdminSupabase();
+  const createdAt = nowIso();
+
+  const { data, error } = await sb
+    .from("audit_logs")
+    .insert({
+      project_id: args.project_id,
+      actor_user_id: args.actor_user_id ?? null,
+      action: args.action,
+      context: args.context ?? {},
+      created_at: createdAt,
+    })
+    .select("id, project_id, actor_user_id, action, context, created_at")
+    .single();
+
+  if (error || !data) {
+    throw new Error(`No se pudo registrar el evento de auditoría: ${error?.message ?? "unknown"}`);
+  }
+
+  const rows = await loadAuditRows(args.project_id, 5000);
+  const currentIndex = rows.findIndex((row) => row.id === data.id);
+  const prevHash = currentIndex > 0
+    ? rowToVirtualChain(rows[currentIndex - 1], currentIndex - 1, currentIndex > 1 ? rowToVirtualChain(rows[currentIndex - 2], currentIndex - 2, "GENESIS").row_hash : "GENESIS").row_hash
+    : "GENESIS";
+
+  return rowToVirtualChain(data as AuditDbRow, currentIndex >= 0 ? currentIndex : rows.length, prevHash);
+}
+
+export async function auditTrailEvent(args: AuditTrailEventArgs): Promise<AuditChainRow> {
+  return appendAuditRecord({
+    project_id: args.project_id,
+    action: args.action,
+    context: {
+      event_type: args.event_type,
+      entity_type: args.entity_type,
+      entity_id: args.entity_id,
+      actor_type: args.actor_type,
+      actor_id: args.actor_id,
+      role: args.role,
+      severity: args.severity,
+      payload: args.payload,
+      created_at: nowIso(),
+    },
+    actor_user_id: args.actor_type === "user" ? args.actor_id : null,
+  });
+}
+
+export async function createAuditFingerprint(project_id: string): Promise<AuditFingerprintResult> {
+  const rows = await loadAuditRows(project_id, 5000);
+
+  let prevHash = "GENESIS";
+  let fingerprint = "GENESIS";
+
+  rows.forEach((row, index) => {
+    const virtual = rowToVirtualChain(row, index, prevHash);
+    fingerprint = virtual.row_hash;
+    prevHash = virtual.row_hash;
+  });
+
+  return {
+    project_id,
+    count: rows.length,
+    fingerprint,
+    valid: true,
+    last_created_at: rows.at(-1)?.created_at ?? null,
+  };
+}
+
+export async function verifyAuditChain(
+  project_id: string,
+  limit = 5000,
+): Promise<AuditFingerprintResult & { rows_checked: number }> {
+  const rows = await loadAuditRows(project_id, limit);
+
+  let prevHash = "GENESIS";
+  let fingerprint = "GENESIS";
+  let valid = true;
+
+  rows.forEach((row, index) => {
+    const virtual = rowToVirtualChain(row, index, prevHash);
+    if (index === 0 || virtual.prev_hash === prevHash) {
+      fingerprint = virtual.row_hash;
+      prevHash = virtual.row_hash;
+      return;
+    }
+
+    valid = false;
+    fingerprint = virtual.row_hash;
+    prevHash = virtual.row_hash;
+  });
+
+  return {
+    project_id,
+    count: rows.length,
+    fingerprint,
+    valid,
+    last_created_at: rows.at(-1)?.created_at ?? null,
+    rows_checked: rows.length,
+  };
+}
+
+export async function appendAuditRow(args: {
+  project_id: string;
+  action: string;
+  actor_user_id?: string | null;
+  context?: Record<string, unknown>;
+}): Promise<AuditChainRow> {
+  return appendAuditRecord(args);
 }
