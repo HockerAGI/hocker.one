@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { Loader2, ShieldCheck, Sparkles, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
@@ -18,6 +18,7 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
@@ -57,7 +58,11 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
 
   return (
     <section
-      className={`relative w-full max-w-[34rem] overflow-hidden rounded-[36px] border border-white/5 bg-slate-950/82 p-5 shadow-[0_30px_120px_rgba(2,6,23,0.5)] backdrop-blur-3xl sm:p-7 ${className}`}
+      className={[
+        "relative w-full max-w-[36rem] overflow-hidden rounded-[38px] border border-white/5",
+        "bg-slate-950/82 p-5 shadow-[0_30px_120px_rgba(2,6,23,0.5)] backdrop-blur-3xl sm:p-7",
+        className,
+      ].join(" ")}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)]" />
       <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
@@ -66,7 +71,7 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
         <div className="flex items-center justify-between gap-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-sky-300">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Cuenta lista
+            Acceso seguro
           </div>
 
           <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
@@ -82,8 +87,29 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
             Inicia sesión
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            Acceso con Supabase Auth para mantener la matriz limpia y segura.
+            Entra al centro de control para conversar con NOVA, revisar tareas y operar el ecosistema.
           </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+            <p className="text-[9px] font-black uppercase tracking-[0.34em] text-slate-500">
+              Chat
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">NOVA viva</p>
+          </div>
+          <div className="rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+            <p className="text-[9px] font-black uppercase tracking-[0.34em] text-slate-500">
+              Estado
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">Panel privado</p>
+          </div>
+          <div className="rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_14px_50px_rgba(2,6,23,0.18)]">
+            <p className="text-[9px] font-black uppercase tracking-[0.34em] text-slate-500">
+              Acceso
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">Web · PWA</p>
+          </div>
         </div>
 
         {error ? (
@@ -111,14 +137,24 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
             <label className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
               Contraseña
             </label>
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••••"
-              className="mt-2 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
-            />
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="••••••••••"
+                className="hocker-input border-none bg-transparent px-0 py-0"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-slate-400 transition hover:bg-white/[0.06] hover:text-white"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           <button
