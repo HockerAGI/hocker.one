@@ -1,67 +1,55 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
+import BottomDock from "@/components/BottomDock";
 import WorkspaceBar from "@/components/WorkspaceBar";
+import { cn } from "@/lib/cn";
 
 type PageShellProps = {
-  eyebrow?: string;
-  title: string;
-  description?: string;
-  subtitle?: string;
-  actions?: ReactNode;
-  children?: ReactNode;
+  children: ReactNode;
   className?: string;
-  compact?: boolean;
   showWorkspaceBar?: boolean;
 };
 
 export default function PageShell({
-  eyebrow,
-  title,
-  description,
-  subtitle,
-  actions,
   children,
   className = "",
-  compact = false,
   showWorkspaceBar = true,
 }: PageShellProps) {
-  const body = description ?? subtitle;
-
   return (
-    <section
-      className={[
-        "mx-auto w-full max-w-[1800px] px-4 py-5 sm:px-6 lg:px-8 lg:py-6",
-        className,
-      ].join(" ")}
-    >
-      <div className="hocker-panel-strong overflow-hidden border-sky-400/10 p-5 sm:p-6">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_30%)]" />
-        <div className="relative flex flex-col gap-5">
-          <div className={compact ? "space-y-3" : "space-y-4"}>
-            {eyebrow ? <p className="hocker-title-line">{eyebrow}</p> : null}
-
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                  {title}
-                </h1>
-                {body ? (
-                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
-                    {body}
-                  </p>
-                ) : null}
-              </div>
-
-              {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
-            </div>
-          </div>
-
-          {showWorkspaceBar ? <WorkspaceBar /> : null}
-
-          <div>{children}</div>
-        </div>
+    <div className="min-h-screen bg-[#020617] text-slate-50">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="absolute right-[-8rem] top-[12rem] h-[24rem] w-[24rem] rounded-full bg-violet-500/8 blur-3xl" />
+        <div className="absolute bottom-[-10rem] left-[30%] h-[20rem] w-[20rem] rounded-full bg-cyan-400/8 blur-3xl" />
       </div>
-    </section>
+
+      <Sidebar />
+
+      <div className="relative min-h-screen lg:pl-[292px]">
+        <Topbar />
+
+        <main
+          className={cn(
+            "relative mx-auto flex min-h-screen w-full flex-col px-3 pb-28 pt-[94px] sm:px-4 lg:px-5 lg:pb-8",
+            className,
+          )}
+        >
+          {showWorkspaceBar ? (
+            <div className="mx-auto w-full max-w-7xl">
+              <WorkspaceBar className="mb-4" />
+            </div>
+          ) : null}
+
+          <div className="mx-auto w-full max-w-7xl flex-1">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      <BottomDock />
+    </div>
   );
 }
