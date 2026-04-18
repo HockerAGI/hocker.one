@@ -1,29 +1,15 @@
 import crypto from "node:crypto";
+import { canonicalJson } from "./stable-json";
 
-function sortKeysDeep(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(sortKeysDeep);
+function getSecretFromEnv(keys: readonly string[]): string {
+  for (const key of keys) {
+    const value = String(process.env[key] ?? "").trim();
+    if (value) return value;
   }
-
-  if (value && typeof value === "object") {
-    const input = value as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-
-    for (const key of Object.keys(input).sort()) {
-      out[key] = sortKeysDeep(input[key]);
-    }
-
-    return out;
-  }
-
-  return value;
+  return "";
 }
 
-export function canonicalJson(value: unknown): string {
-  return JSON.stringify(sortKeysDeep(value ?? {}));
-}
-
-function hexSafeEqual(a: string, b: string): boolean {
+function safeHexEqual(a: string, b: string): boolean {
   if (!a || !b) return false;
   if (a.length !== b.length) return false;
 
@@ -35,14 +21,6 @@ function hexSafeEqual(a: string, b: string): boolean {
   } catch {
     return false;
   }
-}
-
-function getSecretFromEnv(keys: readonly string[]): string {
-  for (const key of keys) {
-    const value = String(process.env[key] ?? "").trim();
-    if (value) return value;
-  }
-  return "";
 }
 
 export function getCommandHmacSecret(): string {
@@ -67,18 +45,11 @@ export function signCommand(
   payload: unknown,
   created_at: string,
 ): string {
-  const base = [
-    id,
-    project_id,
-    node_id,
-    command,
-    created_at,
-    canonicalJson(payload),
-  ].join("|");
-
+  const base = [id, project_id, node_id, command, created_at, canonicalJson(payload)].join("|");
   return crypto.createHmac("sha256", secret).update(base).digest("hex");
 }
 
+// Ventana de tolerancia estricta (5 minutos)
 const MAX_TIME_DRIFT_MS = 5 * 60 * 1000;
 
 export function verifyCommandSignature(
@@ -111,5 +82,5 @@ export function verifyCommandSignature(
     created_at,
   );
 
-  return hexSafeEqual(expectedSignature, signature);
+  return safeHexEqual(expectedSignature, signature);
 }
