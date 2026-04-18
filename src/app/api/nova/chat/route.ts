@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-// Ejecución perimetral (Edge) para latencia nula y evitar cold-starts severos
 export const runtime = "edge";
 export const maxDuration = 60;
 
 const ChatSchema = z.object({
-  project_id: z.string().min(1).default("global"),
+  project_id: z.string().min(1).default(process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one"),
   thread_id: z.string().uuid().optional(),
   message: z.string().min(1),
-  prefer: z.enum(["auto", "openai", "gemini"]).default("auto"),
+  prefer: z.enum(["auto", "openai", "gemini", "anthropic", "ollama"]).default("auto"),
   mode: z.enum(["auto", "fast", "pro"]).default("auto"),
   allow_actions: z.boolean().default(false),
   user_id: z.string().nullable().optional(),
   user_email: z.string().email().nullable().optional(),
+  context_data: z.record(z.unknown()).optional(),
 });
 
 type NovaChatResponse = {
@@ -68,12 +68,11 @@ export async function POST(req: Request): Promise<Response> {
 
   const payload = parsed.data;
 
-  // CUELLO DE BOTELLA ELIMINADO: Extensión a 55s para inferencia profunda.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 55000);
+  const timeoutId = setTimeout(() => controller.abort(), 55_000);
 
   try {
-    const res = await fetch(new URL("/chat", baseUrl), {
+    const res = await fetch(new URL("/api/v1/nova/interact", baseUrl), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -94,13 +93,15 @@ export async function POST(req: Request): Promise<Response> {
     });
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
-    
+
     return NextResponse.json(
       {
         ok: false,
-        error: isTimeout 
-          ? "Timeout: La inferencia superó el umbral de seguridad de tiempo." 
-          : (error instanceof Error ? error.message : "Fallo de conexión profunda con nova.agi."),
+        error: isTimeout
+          ? "Timeout: La inferencia superó el umbral de seguridad de tiempo."
+          : error instanceof Error
+            ? error.message
+            : "Fallo de conexión profunda con nova.agi.",
       },
       { status: 502 },
     );
