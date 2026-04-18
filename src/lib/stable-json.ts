@@ -1,28 +1,27 @@
 import { getErrorMessage } from "./errors";
 
 /**
- * MOTOR DE SERIALIZACIÓN CANÓNICA HOCKER
- * Garantiza que la estructura de datos sea inmutable y predecible para firmas HMAC.
+ * Serialización canónica para firmas y hashes.
+ * Ordena llaves de forma determinista y evita colapsos por estructuras cíclicas.
  */
 export function stableStringify(obj: unknown): string {
-  const seen = new WeakSet();
+  const seen = new WeakSet<object>();
 
   const sorter = (v: unknown): unknown => {
     if (v === null || typeof v !== "object") return v;
-    
-    // Protección contra bucles infinitos en la memoria
-    if (seen.has(v)) return "[Circular]";
-    seen.add(v);
+
+    if (seen.has(v as object)) return "[Circular]";
+    seen.add(v as object);
 
     if (Array.isArray(v)) return v.map(sorter);
 
-    // Ordenamiento alfabético de llaves de grado militar
     const out: Record<string, unknown> = {};
     const keys = Object.keys(v as Record<string, unknown>).sort();
-    
+
     for (const k of keys) {
       out[k] = sorter((v as Record<string, unknown>)[k]);
     }
+
     return out;
   };
 
@@ -32,3 +31,5 @@ export function stableStringify(obj: unknown): string {
     throw new Error(`Colapso en la serialización: ${getErrorMessage(err)}`);
   }
 }
+
+export const canonicalJson = stableStringify;
