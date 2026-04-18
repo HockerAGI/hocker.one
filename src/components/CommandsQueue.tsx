@@ -2,6 +2,20 @@
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Filter,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  SquareCheckBig,
+  SquarePen,
+  XCircle,
+  Clock3,
+  Code2,
+  FileText,
+} from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
@@ -9,6 +23,19 @@ import type { CommandRow, CommandStatus, JsonObject } from "@/lib/types";
 import { normalizeCommandStatus } from "@/lib/types";
 
 type QueueItem = CommandRow;
+
+const FILTERS: Array<{ value: "all" | CommandStatus; label: string }> = [
+  { value: "all", label: "Todo" },
+  { value: "needs_approval", label: "Pendientes" },
+  { value: "running", label: "En curso" },
+  { value: "done", label: "Listas" },
+  { value: "error", label: "Con error" },
+  { value: "canceled", label: "Canceladas" },
+];
+
+function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
 
 function statusClasses(status: CommandStatus): string {
   switch (status) {
@@ -63,6 +90,16 @@ function asJsonObject(value: unknown): JsonObject {
     : {};
 }
 
+function commandIcon(command: string) {
+  if (command.includes("shell") || command.includes("write") || command.includes("run_sql")) {
+    return Code2;
+  }
+  if (command.includes("meta") || command.includes("stripe") || command.includes("supply")) {
+    return FileText;
+  }
+  return SquarePen;
+}
+
 export default function CommandsQueue() {
   const sb = useMemo(() => createBrowserSupabase(), []);
   const { projectId } = useWorkspace();
@@ -70,6 +107,10 @@ export default function CommandsQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | CommandStatus>("all");
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -83,7 +124,7 @@ export default function CommandsQueue() {
         )
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
-        .limit(24);
+        .limit(48);
 
       if (queryError) throw queryError;
 
@@ -127,6 +168,75 @@ export default function CommandsQueue() {
     };
   }, [load, projectId, sb]);
 
+  const filtered = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const matchFilter = filter === "all" ? true : item.status === filter;
+      const matchQuery =
+        !normalizedQuery ||
+        item.command.toLowerCase().includes(normalizedQuery) ||
+        item.node_id.toLowerCase().includes(normalizedQuery) ||
+        item.id.toLowerCase().includes(normalizedQuery);
+      return matchFilter && matchQuery;
+    });
+  }, [filter, items, query]);
+
+  const stats = useMemo(() => {
+    const pending = items.filter((item) => item.status === "needs_approval").length;
+    const running = items.filter((item) => item.status === "running").length;
+    const done = items.filter((item) => item.status === "done").length;
+    const errorCount = items.filter((item) => item.status === "error").length;
+
+    return { pending, running, done, errorCount };
+  }, [items]);
+
+  const approve = async (id: string) => {
+    setBusyId(id);
+    try {
+      const res = await fetch("/api/commands/approve", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, project_id: projectId, approved: true }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo aprobar.");
+      }
+
+      await load();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const reject = async (id: string) => {
+    setBusyId(id);
+    try {
+      const res = await fetch("/api/commands/reject", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, project_id: projectId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo rechazar.");
+      }
+
+      await load();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   if (loading && items.length === 0) {
     return (
       <div className="space-y-3">
@@ -153,107 +263,218 @@ export default function CommandsQueue() {
   }
 
   return (
-    <section className="flex h-full flex-col">
-      <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/5 pb-4">
-        <div>
+    <section className="flex h-full flex-col rounded-[34px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_20px_80px_rgba(2,6,23,0.22)] backdrop-blur-2xl sm:p-6">
+      <div className="mb-5 flex flex-col gap-4 border-b border-white/5 pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">
             Actividad
           </p>
-          <h3 className="mt-2 text-lg font-black text-white sm:text-xl">
-            Movimientos recientes
+          <h3 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+            Cola de comandos
           </h3>
+          <p className="max-w-2xl text-sm leading-relaxed text-slate-400">
+            Aquí ves lo que entró al sistema, lo que espera aprobación y lo que ya avanzó.
+          </p>
         </div>
 
-        <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-sky-300">
-          {items.length} items
-        </span>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.32em] text-slate-500">
+              Pendientes
+            </p>
+            <p className="mt-1 text-xl font-black text-white">{stats.pending}</p>
+          </div>
+          <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.32em] text-slate-500">
+              En curso
+            </p>
+            <p className="mt-1 text-xl font-black text-white">{stats.running}</p>
+          </div>
+          <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.32em] text-slate-500">
+              Listos
+            </p>
+            <p className="mt-1 text-xl font-black text-white">{stats.done}</p>
+          </div>
+          <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.32em] text-slate-500">
+              Con error
+            </p>
+            <p className="mt-1 text-xl font-black text-white">{stats.errorCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+        <label className="flex items-center gap-3 rounded-[22px] border border-white/5 bg-slate-950/55 px-4 py-3">
+          <Search className="h-4 w-4 text-slate-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por comando, nodo o ID..."
+            className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="inline-flex items-center justify-center gap-2 rounded-[22px] border border-sky-400/15 bg-sky-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.32em] text-sky-200 transition-all hover:-translate-y-0.5 hover:bg-sky-400/15"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Actualizar
+        </button>
+      </div>
+
+      <div className="mb-5 flex flex-wrap gap-2">
+        {FILTERS.map((item) => {
+          const active = filter === item.value;
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setFilter(item.value)}
+              className={cx(
+                "rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] transition-all",
+                active
+                  ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
+                  : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.05]",
+              )}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex flex-col gap-3">
-        {items.length === 0 ? (
-          <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-xs text-slate-400">
-            Sin movimientos por ahora.
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-sm text-slate-400">
+            No hay comandos que coincidan con el filtro actual.
           </div>
         ) : (
-          items.map((item) => (
-            <article
-              key={item.id}
-              className="group rounded-[24px] border border-white/5 bg-slate-950/50 p-4 shadow-[0_10px_50px_rgba(2,6,23,0.15)] transition-all duration-300 hover:border-sky-500/20 hover:bg-slate-900/65"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-[10px] font-mono text-cyan-400">
-                      {item.command}
-                    </p>
-                    {item.needs_approval ? (
-                      <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-300">
-                        Revisión
+          filtered.map((item) => {
+            const Icon = commandIcon(item.command);
+
+            return (
+              <article
+                key={item.id}
+                className="group rounded-[26px] border border-white/5 bg-slate-950/55 p-4 shadow-[0_10px_50px_rgba(2,6,23,0.15)] transition-all duration-300 hover:border-sky-500/20 hover:bg-slate-900/65"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
+                        <Icon className="h-3.5 w-3.5 text-sky-300" />
+                        {item.command}
                       </span>
-                    ) : null}
+                      {item.needs_approval ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.26em] text-amber-300">
+                          <ShieldCheck className="h-3 w-3" />
+                          Revisión
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-3 text-[11px] text-slate-400">
+                      Equipo:{" "}
+                      <span className="text-slate-200">{item.node_id}</span>
+                    </p>
+
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {safeDate(item.created_at)}
+                    </p>
                   </div>
 
-                  <p className="mt-2 text-[11px] text-slate-400">
-                    Equipo: <span className="text-slate-200">{item.node_id}</span>
-                  </p>
-
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {safeDate(item.created_at)}
-                  </p>
+                  <span
+                    className={cx(
+                      "shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest",
+                      statusClasses(item.status),
+                    )}
+                  >
+                    {statusLabel(item.status)}
+                  </span>
                 </div>
 
-                <span
-                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${statusClasses(
-                    item.status,
-                  )}`}
-                >
-                  {statusLabel(item.status)}
-                </span>
-              </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(openId === item.id ? null : item.id)}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-200 transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
+                  >
+                    Ver detalles
+                    <ChevronDown className={cx("h-3.5 w-3.5 transition-transform", openId === item.id && "rotate-180")} />
+                  </button>
 
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                    Creado
-                  </p>
-                  <p className="mt-1 text-xs text-slate-200">{safeDate(item.created_at)}</p>
+                  {item.needs_approval ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => void approve(item.id)}
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200 transition-all hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <SquareCheckBig className="h-3.5 w-3.5" />
+                        Aprobar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => void reject(item.id)}
+                        className="inline-flex items-center gap-2 rounded-full border border-rose-400/15 bg-rose-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-rose-200 transition-all hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Rechazar
+                      </button>
+                    </>
+                  ) : null}
                 </div>
-                <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                    Aprobado
-                  </p>
-                  <p className="mt-1 text-xs text-slate-200">
-                    {item.approved_at ? safeDate(item.approved_at) : "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                    Terminado
-                  </p>
-                  <p className="mt-1 text-xs text-slate-200">
-                    {item.finished_at ? safeDate(item.finished_at) : "—"}
-                  </p>
-                </div>
-              </div>
 
-              <details className="mt-4">
-                <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-sky-400">
-                  Ver detalles
-                </summary>
-                <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/80 shadow-inner">
-                  <pre className="overflow-auto p-4 font-mono text-[11px] leading-relaxed text-emerald-300 custom-scrollbar">
-                    {safePayload(asJsonObject(item.payload))}
-                  </pre>
-                </div>
-              </details>
+                {openId === item.id ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Creado
+                      </p>
+                      <p className="mt-1 text-xs text-slate-200">
+                        {safeDate(item.created_at)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Aprobado
+                      </p>
+                      <p className="mt-1 text-xs text-slate-200">
+                        {item.approved_at ? safeDate(item.approved_at) : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Terminado
+                      </p>
+                      <p className="mt-1 text-xs text-slate-200">
+                        {item.finished_at ? safeDate(item.finished_at) : "—"}
+                      </p>
+                    </div>
 
-              {item.error ? (
-                <div className="mt-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-[11px] leading-relaxed text-rose-300">
-                  {item.error}
-                </div>
-              ) : null}
-            </article>
-          ))
+                    <div className="sm:col-span-3">
+                      <div className="overflow-hidden rounded-[22px] border border-white/10 bg-slate-950/80 shadow-inner">
+                        <pre className="custom-scrollbar overflow-auto p-4 font-mono text-[11px] leading-relaxed text-emerald-300">
+                          {safePayload(asJsonObject(item.payload))}
+                        </pre>
+                      </div>
+                    </div>
+
+                    {item.error ? (
+                      <div className="sm:col-span-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-[11px] leading-relaxed text-rose-300">
+                        {item.error}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })
         )}
       </div>
     </section>
