@@ -55,33 +55,6 @@ type AttachmentItem = {
   file: File;
 };
 
-type SpeechRecognitionResultLike = {
-  transcript?: string;
-};
-
-type SpeechRecognitionEventLike = {
-  results: ArrayLike<ArrayLike<SpeechRecognitionResultLike>>;
-};
-
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: unknown) => void) | null;
-};
-
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-type WindowWithSpeechRecognition = Window &
-  typeof globalThis & {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  };
-
 const PROVIDERS: Array<{
   value: Provider;
   label: string;
@@ -191,7 +164,7 @@ export default function NovaChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const speechRef = useRef<SpeechRecognitionLike | null>(null);
+  const speechRef = useRef<any | null>(null);
 
   const activeProvider = useMemo(
     () => PROVIDERS.find((item) => item.value === provider) ?? PROVIDERS[0],
@@ -217,7 +190,7 @@ export default function NovaChat() {
     return () => {
       abortControllerRef.current?.abort();
       if (speechRef.current) {
-        speechRef.current.stop();
+        speechRef.current.stop?.();
       }
     };
   }, []);
@@ -231,42 +204,35 @@ export default function NovaChat() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const win = window as WindowWithSpeechRecognition;
+    const win = window as Window & typeof globalThis & {
+      SpeechRecognition?: any;
+      webkitSpeechRecognition?: any;
+    };
     const SR = win.SpeechRecognition ?? win.webkitSpeechRecognition;
-
     setSpeechSupported(Boolean(SR));
     if (!SR) return;
-
-    const recognition = new SR();
-
+    const recognition: any = new SR();
     recognition.lang = "es-MX";
     recognition.interimResults = true;
     recognition.continuous = false;
-
-    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+    recognition.onresult = (event: any) => {
       const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript ?? "")
+        .map((result: any) => result[0]?.transcript ?? "")
         .join("")
         .trim();
-
       if (transcript) {
         setInput(transcript);
       }
     };
-
     recognition.onend = () => {
       setVoiceActive(false);
     };
-
     recognition.onerror = () => {
       setVoiceActive(false);
     };
-
     speechRef.current = recognition;
-
     return () => {
-      recognition.stop();
+      recognition.stop?.();
       speechRef.current = null;
     };
   }, []);
@@ -314,15 +280,13 @@ export default function NovaChat() {
   const toggleVoice = () => {
     const recognition = speechRef.current;
     if (!recognition || !speechSupported) return;
-
     if (voiceActive) {
-      recognition.stop();
+      recognition.stop?.();
       setVoiceActive(false);
       return;
     }
-
     try {
-      recognition.start();
+      recognition.start?.();
       setVoiceActive(true);
       setSelectedTool("voice");
     } catch {
