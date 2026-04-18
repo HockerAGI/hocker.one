@@ -1,5 +1,5 @@
 import { getErrorMessage } from "@/lib/errors";
-import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError } from "../../_lib";
+import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError, getControls } from "../../_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,6 +65,15 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+    const controls = await getControls(ctx.sb, ctx.project_id);
+
+    if (controls.kill_switch) {
+      throw new ApiError(423, { error: "Kill Switch activo. No se puede modificar supply." });
+    }
+
+    if (!controls.allow_write) {
+      throw new ApiError(403, { error: "Modo solo lectura activo." });
+    }
 
     const name = String(body.name ?? "").trim();
     if (!name) {
