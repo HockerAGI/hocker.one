@@ -1,7 +1,7 @@
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
 import { createServerSupabase } from "@/lib/supabase-server";
-import type { ControlRow, JsonObject, Role } from "@/lib/types";
+import type { ControlRow, JsonObject, NodeRow, Role } from "@/lib/types";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -76,10 +76,6 @@ export function toApiError(e: unknown): ApiError {
 
 export async function requireProjectRole(project_id: string, allowedRoles: Role[]) {
   const pid = normalizeProjectId(project_id);
-  if (!pid) {
-    throw new ApiError(400, { error: "project_id es obligatorio." });
-  }
-
   const sb = await createServerSupabase();
 
   const {
@@ -129,8 +125,8 @@ type NodeUpsertRow = {
   type: "cloud" | "agent";
   status: "online" | "offline" | "degraded";
   last_seen_at: string;
-  tags: string[];
   meta: JsonObject;
+  tags: string[];
   created_at: string;
   updated_at: string;
 };
@@ -147,11 +143,11 @@ export async function ensureNode(
   const row: NodeUpsertRow = {
     id: nid,
     project_id: pid,
-    name: nid === "hocker-agi" ? "Núcleo AGI" : `Nodo ${nid}`,
-    type: nid === "hocker-agi" || String(nid).startsWith("cloud-") ? "cloud" : "agent",
+    name: nid === "hocker-node-1" ? "Nodo Hocker" : `Nodo ${nid}`,
+    type: nid.startsWith("cloud-") ? "cloud" : "agent",
     status: "online",
     last_seen_at: now,
-    tags: nid === "hocker-agi" ? ["core", "agi"] : ["agent"],
+    tags: nid === "hocker-node-1" ? ["agent", "core"] : ["agent"],
     meta: {
       source: "control-plane",
       trust: "high",
