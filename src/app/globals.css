@@ -215,3 +215,13 @@ body::after {
     display: none;
   }
 }
+
+@layer components {
+  .hocker-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-gradient-to-b from-sky-400 to-cyan-500 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] text-slate-950 transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(14,165,233,0.24)] active:translate-y-0;
+  }
+
+  .hocker-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] text-slate-200 transition-all hover:bg-white/[0.08];
+  }
+}
