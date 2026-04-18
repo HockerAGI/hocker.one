@@ -1,20 +1,17 @@
 /**
  * PROTOCOLO DE EXTRACCIÓN DE ANOMALÍAS
- * Decodifica cualquier objeto de error para presentarlo de forma concreta y humana.
+ * Convierte cualquier error en un mensaje claro y humano.
  */
 export function getErrorMessage(e: unknown): string {
   if (!e) return "Anomalía no identificada.";
 
   if (e instanceof Error) {
-    // Si el error tiene una causa anidada, la exploramos
     if (e.cause) return getErrorMessage(e.cause);
-    return e.message;
+    return e.message || "Error sin mensaje.";
   }
 
   if (typeof e === "object") {
     const obj = e as Record<string, unknown>;
-    
-    // Prioridad de campos tácticos
     if (typeof obj.message === "string") return obj.message;
     if (typeof obj.error === "string") return obj.error;
     if (typeof obj.code === "string") return `Error Code: ${obj.code}`;
