@@ -7,49 +7,53 @@ import BottomDock from "@/components/BottomDock";
 import WorkspaceBar from "@/components/WorkspaceBar";
 import { cn } from "@/lib/cn";
 
-type PageShellProps = {
+export type PageShellProps = {
   children: ReactNode;
   className?: string;
+  showSidebar?: boolean;
+  showTopbar?: boolean;
+  showBottomDock?: boolean;
   showWorkspaceBar?: boolean;
+  title?: string;
+  subtitle?: string;
+  actions?: ReactNode;
 };
 
 export default function PageShell({
   children,
-  className = "",
-  showWorkspaceBar = true,
+  className,
+  showSidebar = true,
+  showTopbar = true,
+  showBottomDock = true,
+  showWorkspaceBar = false,
+  title,
+  subtitle,
+  actions,
 }: PageShellProps) {
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-12rem] top-[-10rem] h-[28rem] w-[28rem] rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="absolute right-[-8rem] top-[12rem] h-[24rem] w-[24rem] rounded-full bg-violet-500/8 blur-3xl" />
-        <div className="absolute bottom-[-10rem] left-[30%] h-[20rem] w-[20rem] rounded-full bg-cyan-400/8 blur-3xl" />
-      </div>
-
-      <Sidebar />
-
-      <div className="relative min-h-screen lg:pl-[292px]">
-        <Topbar />
-
-        <main
-          className={cn(
-            "relative mx-auto flex min-h-screen w-full flex-col px-3 pb-28 pt-[94px] sm:px-4 lg:px-5 lg:pb-8",
-            className,
-          )}
-        >
-          {showWorkspaceBar ? (
-            <div className="mx-auto w-full max-w-7xl">
-              <WorkspaceBar className="mb-4" />
+    <div className="flex h-screen w-full bg-hocker-black text-hocker-light overflow-hidden">
+      {showSidebar && <Sidebar />}
+      
+      <div className="flex flex-col flex-1 relative overflow-hidden">
+        {showTopbar && <Topbar />}
+        {showWorkspaceBar && <WorkspaceBar />}
+        
+        <main className={cn("flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scrollbar-hocker", className)}>
+          {/* Motor de renderizado dinámico para las cabeceras */}
+          {(title || subtitle || actions) && (
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                {title && <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{title}</h1>}
+                {subtitle && <p className="text-hocker-dim mt-1">{subtitle}</p>}
+              </div>
+              {actions && <div className="flex items-center gap-3">{actions}</div>}
             </div>
-          ) : null}
-
-          <div className="mx-auto w-full max-w-7xl flex-1">
-            {children}
-          </div>
+          )}
+          {children}
         </main>
-      </div>
 
-      <BottomDock />
+        {showBottomDock && <BottomDock />}
+      </div>
     </div>
   );
 }
