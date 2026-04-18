@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -25,6 +26,7 @@ import {
   X,
   Search,
   Plug,
+  type LucideIcon,
 } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
@@ -78,7 +80,7 @@ const MODES: Array<{
 const ACTIONS: Array<{
   key: ToolKey;
   label: string;
-  icon: typeof Paperclip;
+  icon: LucideIcon;
   hint: string;
 }> = [
   { key: "files", label: "Subir archivo", icon: Paperclip, hint: "PDF, imagen, código" },
