@@ -21,7 +21,7 @@ function timeLabel(input: string): string {
 }
 
 export default function ExternalServicesSection({ services }: Props) {
-  const connected = services.filter((service) => service.status === "online").length;
+  const connected = services.filter((service) => service.status === "live").length;
 
   return (
     <section className="rounded-[34px] border border-white/6 bg-white/[0.03] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:p-7">
