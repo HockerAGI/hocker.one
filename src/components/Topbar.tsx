@@ -9,6 +9,8 @@ import {
   Search,
   Sparkles,
   Waves,
+  LayoutDashboard,
+  MessagesSquare,
 } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import { useWorkspace } from "@/components/WorkspaceContext";
@@ -32,29 +34,29 @@ function TopPill({
 
 export default function Topbar() {
   const pathname = usePathname() || "/";
-  const { projectId, nodeId, tutorial } = useWorkspace();
+  const { projectId, nodeId, tutorial, ready } = useWorkspace();
 
   const title =
     pathname === "/"
       ? "Inicio"
       : pathname.startsWith("/dashboard")
-        ? "Core"
+        ? "Centro"
         : pathname.startsWith("/chat")
           ? "NOVA"
           : pathname.startsWith("/commands")
-            ? "Órdenes"
+            ? "Tareas"
             : pathname.startsWith("/nodes")
-              ? "Nodos"
+              ? "Equipo"
               : pathname.startsWith("/agis")
-                ? "AGIs"
+                ? "Asistentes"
                 : pathname.startsWith("/supply")
-                  ? "Supply"
+                  ? "Tienda"
                   : pathname.startsWith("/governance")
-                    ? "Guardia"
+                    ? "Seguridad"
                     : "Hocker ONE";
 
   return (
-    <header className="fixed left-0 top-0 z-40 h-[78px] w-full border-b border-white/5 bg-slate-950/55 backdrop-blur-3xl">
+    <header className="fixed left-0 top-0 z-40 h-[78px] w-full border-b border-white/5 bg-slate-950/65 backdrop-blur-3xl">
       <div className="relative h-full">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,165,233,0.08),transparent_24%,transparent_76%,rgba(168,85,247,0.08))]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
@@ -74,21 +76,27 @@ export default function Topbar() {
                 {title}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                Centro de control vivo
+                {ready ? "Listo para seguir" : "Cargando espacio"}
               </p>
             </div>
           </div>
 
           <div className="hidden min-w-0 flex-1 items-center gap-3 xl:flex">
-            <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-2 shadow-[0_10px_40px_rgba(2,6,23,0.16)]">
+            <Link
+              href="/chat"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-[22px] border border-white/5 bg-white/[0.03] px-4 py-2 shadow-[0_10px_40px_rgba(2,6,23,0.16)] transition-all hover:border-sky-400/20 hover:bg-white/[0.05]"
+            >
               <Search className="h-4 w-4 shrink-0 text-slate-500" />
-              <span className="truncate text-sm text-slate-500">
-                Busca, ejecuta o entra a NOVA
+              <span className="truncate text-sm text-slate-400">
+                Buscar, escribir o abrir NOVA
               </span>
-            </div>
+              <span className="ml-auto hidden rounded-full border border-sky-400/15 bg-sky-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-sky-200 lg:inline-flex">
+                Chat rápido
+              </span>
+            </Link>
 
-            <TopPill label="Proyecto" value={projectId} />
-            <TopPill label="Nodo" value={nodeId} />
+            <TopPill label="Espacio" value={projectId} />
+            <TopPill label="Estación" value={nodeId} />
 
             <div className="rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-2">
               <div className="flex items-center gap-2">
@@ -97,7 +105,7 @@ export default function Topbar() {
                   <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
                 </span>
                 <span className="text-[9px] font-black uppercase tracking-[0.34em] text-emerald-200">
-                  Realtime
+                  En línea
                 </span>
               </div>
             </div>
@@ -114,7 +122,7 @@ export default function Topbar() {
             <div className="hidden items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-2 sm:flex">
               <Waves className="h-4 w-4 text-sky-300" />
               <span className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-                Sistema vivo
+                Experiencia viva
               </span>
             </div>
 
