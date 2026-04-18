@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { canonicalJson } from "./security";
+import { canonicalJson } from "./stable-json";
+import { signAuditRow, verifyAuditRow } from "./audit-signature";
 import type { AuditActorType, AuditChainRow, AuditSeverity } from "./audit-types";
 
 type AuditDbRow = {
@@ -10,19 +11,6 @@ type AuditDbRow = {
   action: string;
   context: Record<string, unknown> | null;
   created_at: string;
-};
-
-type AuditTrailEventArgs = {
-  project_id: string;
-  event_type: string;
-  entity_type: string;
-  entity_id: string | null;
-  actor_type: AuditActorType;
-  actor_id: string | null;
-  role: string;
-  action: string;
-  severity: AuditSeverity;
-  payload: Record<string, unknown>;
 };
 
 type AuditFingerprintResult = {
@@ -37,26 +25,21 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function sha256(input: string): string {
-  return crypto.createHash("sha256").update(input).digest("hex");
-}
-
-function hmac256(secret: string, input: string): string {
-  return crypto.createHmac("sha256", secret).update(input).digest("hex");
-}
-
 function auditSecret(): string {
   const configured = String(process.env.HOCKER_AUDIT_SECRET ?? "").trim();
   if (configured) return configured;
+
   const fallback = String(process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
   if (fallback) return fallback;
+
   return "hocker-audit-fallback";
 }
 
 function normalizeContext(row: AuditDbRow): Record<string, unknown> {
-  const context = row.context && typeof row.context === "object" && !Array.isArray(row.context)
-    ? row.context
-    : {};
+  const context =
+    row.context && typeof row.context === "object" && !Array.isArray(row.context)
+      ? row.context
+      : {};
 
   return {
     ...context,
@@ -74,38 +57,47 @@ function rowToVirtualChain(
 ): AuditChainRow {
   const context = normalizeContext(row);
   const seq = index + 1;
-  const rowHash = sha256(
-    canonicalJson({
-      seq,
-      prev_hash: prevHash,
-      project_id: row.project_id,
-      action: row.action,
-      context,
-      created_at: row.created_at,
-      id: row.id,
-    }),
-  );
-  const signature = hmac256(auditSecret(), `${rowHash}|${prevHash}|${seq}|${row.project_id ?? ""}`);
+
+  const signed = signAuditRow({
+    secret: auditSecret(),
+    project_id: row.project_id ?? "",
+    seq,
+    prev_hash: prevHash,
+    event_type: String(context.event_type ?? "manual"),
+    entity_type: String(context.entity_type ?? "system"),
+    entity_id: (context.entity_id ?? null) as string | null,
+    actor_type: String(context.actor_type ?? "system"),
+    actor_id: (context.actor_id ?? null) as string | null,
+    role: String(context.role ?? "nova"),
+    action: row.action,
+    severity: String(context.severity ?? "info"),
+    payload:
+      context.payload && typeof context.payload === "object" && !Array.isArray(context.payload)
+        ? (context.payload as Record<string, unknown>)
+        : {},
+    created_at: row.created_at,
+  });
 
   return {
     id: row.id,
     project_id: row.project_id ?? "",
     seq,
     prev_hash: prevHash,
-    row_hash: rowHash,
+    row_hash: signed.row_hash,
     event_type: String(context.event_type ?? "manual"),
     entity_type: String(context.entity_type ?? "system"),
-    entity_id: context.entity_id ?? null,
-    actor_type: String(context.actor_type ?? "system"),
-    actor_id: context.actor_id ?? null,
+    entity_id: (context.entity_id ?? null) as string | null,
+    actor_type: String(context.actor_type ?? "system") as AuditActorType,
+    actor_id: (context.actor_id ?? null) as string | null,
     role: String(context.role ?? "nova"),
     action: row.action,
-    severity: String(context.severity ?? "info"),
-    payload: (context.payload && typeof context.payload === "object" && !Array.isArray(context.payload))
-      ? (context.payload as Record<string, unknown>)
-      : {},
+    severity: String(context.severity ?? "info") as AuditSeverity,
+    payload:
+      context.payload && typeof context.payload === "object" && !Array.isArray(context.payload)
+        ? (context.payload as Record<string, unknown>)
+        : {},
     created_at: row.created_at,
-    signature,
+    signature: signed.signature,
   };
 }
 
@@ -154,14 +146,32 @@ export async function appendAuditRecord(args: {
 
   const rows = await loadAuditRows(args.project_id, 5000);
   const currentIndex = rows.findIndex((row) => row.id === data.id);
-  const prevHash = currentIndex > 0
-    ? rowToVirtualChain(rows[currentIndex - 1], currentIndex - 1, currentIndex > 1 ? rowToVirtualChain(rows[currentIndex - 2], currentIndex - 2, "GENESIS").row_hash : "GENESIS").row_hash
-    : "GENESIS";
+  const prevHash =
+    currentIndex > 0
+      ? rowToVirtualChain(
+          rows[currentIndex - 1],
+          currentIndex - 1,
+          currentIndex > 1
+            ? rowToVirtualChain(rows[currentIndex - 2], currentIndex - 2, "GENESIS").row_hash
+            : "GENESIS",
+        ).row_hash
+      : "GENESIS";
 
   return rowToVirtualChain(data as AuditDbRow, currentIndex >= 0 ? currentIndex : rows.length, prevHash);
 }
 
-export async function auditTrailEvent(args: AuditTrailEventArgs): Promise<AuditChainRow> {
+export async function auditTrailEvent(args: {
+  project_id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_type: AuditActorType;
+  actor_id: string | null;
+  role: string;
+  action: string;
+  severity: AuditSeverity;
+  payload: Record<string, unknown>;
+}): Promise<AuditChainRow> {
   return appendAuditRecord({
     project_id: args.project_id,
     action: args.action,
@@ -213,6 +223,7 @@ export async function verifyAuditChain(
 
   rows.forEach((row, index) => {
     const virtual = rowToVirtualChain(row, index, prevHash);
+
     if (index === 0 || virtual.prev_hash === prevHash) {
       fingerprint = virtual.row_hash;
       prevHash = virtual.row_hash;
@@ -241,4 +252,9 @@ export async function appendAuditRow(args: {
   context?: Record<string, unknown>;
 }): Promise<AuditChainRow> {
   return appendAuditRecord(args);
+}
+
+export async function verifyAuditRowChain(project_id: string, limit = 5000): Promise<boolean> {
+  const result = await verifyAuditChain(project_id, limit);
+  return result.valid;
 }
