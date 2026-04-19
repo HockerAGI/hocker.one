@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -17,10 +19,10 @@ export default function BrandMark({
   className = "",
 }: BrandMarkProps) {
   const shellClass = hero
-    ? "rounded-[30px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_24px_80px_rgba(2,6,23,0.30)] backdrop-blur-3xl"
+    ? "rounded-[28px] border border-white/5 bg-white/[0.02] px-4 py-3 shadow-[0_18px_60px_rgba(2,6,23,0.25)] backdrop-blur-2xl"
     : compact
       ? "rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_12px_40px_rgba(2,6,23,0.18)] backdrop-blur-xl"
-      : "rounded-[26px] border border-white/5 bg-white/[0.03] px-3 py-2.5 shadow-[0_16px_50px_rgba(2,6,23,0.20)] backdrop-blur-xl";
+      : "rounded-[26px] border border-white/5 bg-white/[0.03] px-3 py-2.5 shadow-[0_16px_50px_rgba(2,6,23,0.2)] backdrop-blur-xl";
 
   const isotypeSize = hero ? 58 : compact ? 30 : 36;
   const wordmarkWidth = hero ? 360 : 220;
