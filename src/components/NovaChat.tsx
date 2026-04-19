@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -11,12 +10,13 @@ import {
   type KeyboardEvent,
 } from "react";
 import {
+  ArrowUpRight,
   Bot,
   Brain,
+  FileText,
   Github,
   Image as ImageIcon,
   Loader2,
-  Mic,
   Paperclip,
   Send,
   Sparkles,
@@ -26,8 +26,8 @@ import {
   X,
   Search,
   Plug,
-  type LucideIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 type Role = "user" | "nova" | "system";
@@ -49,29 +49,20 @@ type ToolKey =
   | "research"
   | "reason"
   | "apps"
-  | "github"
-  | "voice";
+  | "github";
 
 type AttachmentItem = {
   id: string;
   file: File;
 };
 
-const PROVIDERS: Array<{
-  value: Provider;
-  label: string;
-  hint: string;
-}> = [
+const PROVIDERS: Array<{ value: Provider; label: string; hint: string }> = [
   { value: "auto", label: "Auto", hint: "elige la mejor ruta" },
   { value: "openai", label: "ChatGPT", hint: "redacción y razonamiento" },
   { value: "gemini", label: "Gemini", hint: "contexto y documentos" },
 ];
 
-const MODES: Array<{
-  value: Mode;
-  label: string;
-  hint: string;
-}> = [
+const MODES: Array<{ value: Mode; label: string; hint: string }> = [
   { value: "auto", label: "Auto", hint: "ajuste inteligente" },
   { value: "fast", label: "Rápido", hint: "respuestas cortas" },
   { value: "pro", label: "Profundo", hint: "más detalle" },
@@ -80,7 +71,7 @@ const MODES: Array<{
 const ACTIONS: Array<{
   key: ToolKey;
   label: string;
-  icon: LucideIcon;
+  icon: typeof Paperclip;
   hint: string;
 }> = [
   { key: "files", label: "Subir archivo", icon: Paperclip, hint: "PDF, imagen, código" },
@@ -90,7 +81,6 @@ const ACTIONS: Array<{
   { key: "reason", label: "Razonar", icon: Brain, hint: "análisis paso a paso" },
   { key: "apps", label: "Conectar apps", icon: Plug, hint: "flujo y automatización" },
   { key: "github", label: "Importar GitHub", icon: Github, hint: "repos y código" },
-  { key: "voice", label: "Voz", icon: Mic, hint: "dictado en el navegador" },
 ];
 
 const QUICK_STARTS: Array<{
@@ -126,10 +116,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function fileKind(file: File): string {
@@ -159,14 +146,11 @@ export default function NovaChat() {
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [threadId] = useState(() => crypto.randomUUID());
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [voiceActive, setVoiceActive] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const speechRef = useRef<any | null>(null);
 
   const activeProvider = useMemo(
     () => PROVIDERS.find((item) => item.value === provider) ?? PROVIDERS[0],
@@ -191,9 +175,6 @@ export default function NovaChat() {
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
-      if (speechRef.current) {
-        speechRef.current.stop?.();
-      }
     };
   }, []);
 
@@ -203,41 +184,6 @@ export default function NovaChat() {
     el.style.height = "0px";
     el.style.height = `${Math.max(el.scrollHeight, 58)}px`;
   }, [input]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const win = window as Window & typeof globalThis & {
-      SpeechRecognition?: any;
-      webkitSpeechRecognition?: any;
-    };
-    const SR = win.SpeechRecognition ?? win.webkitSpeechRecognition;
-    setSpeechSupported(Boolean(SR));
-    if (!SR) return;
-    const recognition: any = new SR();
-    recognition.lang = "es-MX";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((result: any) => result[0]?.transcript ?? "")
-        .join("")
-        .trim();
-      if (transcript) {
-        setInput(transcript);
-      }
-    };
-    recognition.onend = () => {
-      setVoiceActive(false);
-    };
-    recognition.onerror = () => {
-      setVoiceActive(false);
-    };
-    speechRef.current = recognition;
-    return () => {
-      recognition.stop?.();
-      speechRef.current = null;
-    };
-  }, []);
 
   const clearComposer = () => {
     setInput("");
@@ -274,26 +220,7 @@ export default function NovaChat() {
     if (item.provider) setProvider(item.provider);
     if (item.mode) setMode(item.mode);
     if (item.tool) setSelectedTool(item.tool);
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-    });
-  };
-
-  const toggleVoice = () => {
-    const recognition = speechRef.current;
-    if (!recognition || !speechSupported) return;
-    if (voiceActive) {
-      recognition.stop?.();
-      setVoiceActive(false);
-      return;
-    }
-    try {
-      recognition.start?.();
-      setVoiceActive(true);
-      setSelectedTool("voice");
-    } catch {
-      setVoiceActive(false);
-    }
+    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const sendMessage = async () => {
@@ -314,6 +241,13 @@ export default function NovaChat() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
+    const attachmentMeta = attachments.map((item) => ({
+      name: item.file.name,
+      type: item.file.type,
+      size: item.file.size,
+      kind: fileKind(item.file),
+    }));
+
     try {
       const res = await fetch("/api/nova/chat", {
         method: "POST",
@@ -329,13 +263,17 @@ export default function NovaChat() {
           prefer: provider,
           mode,
           allow_actions: true,
+          context_data: {
+            selected_tool: selectedTool,
+            attachments: attachmentMeta,
+            provider_ui: activeProvider.label,
+            mode_ui: activeMode.label,
+            client: "hocker.one",
+          },
         }),
       });
 
-      const data = (await res.json().catch(() => ({}))) as {
-        reply?: string;
-        error?: string;
-      };
+      const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };
 
       if (!res.ok) {
         throw new Error(data.error || "No se pudo conectar con NOVA.");
@@ -370,7 +308,6 @@ export default function NovaChat() {
       }
     } finally {
       setIsTyping(false);
-      setVoiceActive(false);
     }
   };
 
@@ -391,6 +328,7 @@ export default function NovaChat() {
       className={cx(
         "flex h-full w-full flex-col overflow-hidden rounded-[30px] border border-white/5",
         "bg-slate-950/35 backdrop-blur-2xl",
+        isDragOver && "ring-1 ring-sky-400/20",
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -413,118 +351,111 @@ export default function NovaChat() {
         setSelectedTool("files");
       }}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-white/5 bg-white/[0.02] px-4 py-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10">
-            <Sparkles className="h-5 w-5 text-sky-300" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-black text-white">NOVA</p>
-            <p className="truncate text-xs text-slate-400">
-              Habla, adjunta o elige una acción. Todo en un solo lugar.
-            </p>
-          </div>
-        </div>
+      <div className="border-b border-white/5 bg-white/[0.02] px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10">
+                <Sparkles className="h-5 w-5 text-sky-300" />
+              </div>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-            {activeProvider.label}
-          </span>
-          <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-            {activeMode.label}
-          </span>
-          <span className="rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200">
-            {toolLabel}
-          </span>
-        </div>
-      </div>
-
-      <div className="border-b border-white/5 px-4 py-4 sm:px-5">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {PROVIDERS.map((item) => {
-            const active = provider === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setProvider(item.value)}
-                className={cx(
-                  "rounded-[18px] border px-3 py-3 text-left transition-all",
-                  active
-                    ? "border-sky-400/20 bg-sky-400/10 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
-                    : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]",
-                )}
-              >
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-white">
-                  {item.label}
+              <div className="min-w-0">
+                <p className="text-sm font-black text-white">NOVA</p>
+                <p className="truncate text-xs text-slate-400">
+                  Habla, adjunta o elige una acción. Todo en un solo lugar.
                 </p>
-                <p className="mt-1 text-[11px] text-slate-400">{item.hint}</p>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+            </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {MODES.map((item) => {
-            const active = mode === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setMode(item.value)}
-                className={cx(
-                  "rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] transition-all",
-                  active
-                    ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
-                    : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.05]",
-                )}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
+            <button
+              type="button"
+              onClick={clearComposer}
+              className="hidden rounded-full border border-white/5 bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300 transition-all hover:border-sky-400/20 hover:bg-sky-400/10 sm:inline-flex"
+            >
+              Limpiar
+            </button>
+          </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {ACTIONS.map((item) => {
-            const Icon = item.icon;
-            const active = selectedTool === item.key;
+          <div className="grid gap-2 md:grid-cols-3">
+            {PROVIDERS.map((item) => {
+              const active = provider === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setProvider(item.value)}
+                  className={cx(
+                    "rounded-[18px] border px-3 py-3 text-left transition-all",
+                    active
+                      ? "border-sky-400/20 bg-sky-400/10 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
+                      : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]",
+                  )}
+                >
+                  <p className="text-xs font-black uppercase tracking-[0.28em] text-white">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">{item.hint}</p>
+                </button>
+              );
+            })}
+          </div>
 
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => {
-                  if (item.key === "files") {
-                    handleOpenFiles();
-                    setSelectedTool("files");
-                    return;
-                  }
+          <div className="flex flex-wrap gap-2">
+            {MODES.map((item) => {
+              const active = mode === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setMode(item.value)}
+                  className={cx(
+                    "rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] transition-all",
+                    active
+                      ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
+                      : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.05]",
+                  )}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
 
-                  if (item.key === "voice") {
-                    toggleVoice();
-                    return;
-                  }
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {ACTIONS.map((item) => {
+              const Icon = item.icon;
+              const active = selectedTool === item.key;
 
-                  setSelectedTool(item.key);
-                }}
-                className={cx(
-                  "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-all",
-                  active
-                    ? "border-sky-400/20 bg-sky-400/10 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
-                    : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]",
-                )}
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-slate-950/50">
-                  <Icon className={cx("h-4.5 w-4.5", active ? "text-sky-300" : "text-slate-300")} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{item.label}</p>
-                  <p className="text-[11px] text-slate-400">{item.hint}</p>
-                </div>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => {
+                    if (item.key === "files") {
+                      handleOpenFiles();
+                      setSelectedTool("files");
+                      return;
+                    }
+                    setSelectedTool(item.key);
+                  }}
+                  className={cx(
+                    "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-all",
+                    active
+                      ? "border-sky-400/20 bg-sky-400/10 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
+                      : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]",
+                  )}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-slate-950/50">
+                    <Icon className={cx("h-4.5 w-4.5", active ? "text-sky-300" : "text-slate-300")} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">{item.label}</p>
+                    <p className="text-[11px] text-slate-400">{item.hint}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -559,13 +490,17 @@ export default function NovaChat() {
         </div>
       ) : null}
 
-      <div
-        ref={scrollRef}
-        className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 sm:px-5"
-      >
-        <div className="space-y-4">
+      <div ref={scrollRef} className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+        <AnimatePresence initial={false}>
           {messages.length === 0 ? (
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, y: 12, filter: "blur(8px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
+            >
               <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10">
@@ -612,55 +547,61 @@ export default function NovaChat() {
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ) : (
-            messages.map((msg) => {
-              const isUser = msg.role === "user";
-              const isNova = msg.role === "nova";
+            <div className="space-y-4">
+              {messages.map((msg) => {
+                const isUser = msg.role === "user";
+                const isNova = msg.role === "nova";
 
-              return (
-                <div
-                  key={msg.id}
-                  className={cx("flex w-full", isUser ? "justify-end" : "justify-start")}
-                >
-                  <div
-                    className={cx(
-                      "max-w-[92%] rounded-[24px] px-4 py-3.5 shadow-[0_18px_60px_rgba(2,6,23,0.22)] sm:max-w-[82%]",
-                      isUser
-                        ? "border border-sky-400/20 bg-sky-400/10 text-sky-50"
-                        : isNova
-                          ? "border border-white/5 bg-white/[0.04] text-slate-100"
-                          : "border border-amber-400/15 bg-amber-400/10 text-amber-50",
-                    )}
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, y: 8 }}
+                    transition={{ duration: 0.28, ease: "easeOut" }}
+                    className={cx("flex w-full", isUser ? "justify-end" : "justify-start")}
                   >
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <span className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
-                        {isUser ? "Tú" : isNova ? "NOVA" : "Sistema"}
-                      </span>
-                      <span className="text-[10px] font-medium uppercase tracking-[0.28em] text-slate-500">
-                        {formatTime(msg.createdAt)}
-                      </span>
+                    <div
+                      className={cx(
+                        "max-w-[92%] rounded-[24px] px-4 py-3.5 shadow-[0_18px_60px_rgba(2,6,23,0.22)] sm:max-w-[82%]",
+                        isUser
+                          ? "border border-sky-400/20 bg-sky-400/10 text-sky-50"
+                          : isNova
+                            ? "border border-white/5 bg-white/[0.04] text-slate-100"
+                            : "border border-amber-400/15 bg-amber-400/10 text-amber-50",
+                      )}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
+                          {isUser ? "Tú" : isNova ? "NOVA" : "Sistema"}
+                        </span>
+                        <span className="text-[10px] font-medium uppercase tracking-[0.28em] text-slate-500">
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      </div>
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {msg.content}
+                      </div>
                     </div>
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {msg.content}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
+        </AnimatePresence>
 
-          {isTyping ? (
-            <div className="flex justify-start">
-              <div className="rounded-[24px] border border-white/5 bg-white/[0.04] px-4 py-3 text-sm text-slate-200">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-                  <span>Procesando la respuesta...</span>
-                </div>
+        {isTyping ? (
+          <div className="mt-4 flex justify-start">
+            <div className="rounded-[24px] border border-white/5 bg-white/[0.04] px-4 py-3 text-sm text-slate-200">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
+                <span>Procesando la respuesta...</span>
               </div>
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="border-t border-white/5 bg-slate-950/40 p-3 sm:p-4">
@@ -668,9 +609,7 @@ export default function NovaChat() {
           <div
             className={cx(
               "rounded-[28px] border p-3 shadow-[0_18px_70px_rgba(2,6,23,0.20)] backdrop-blur-2xl",
-              isDragOver
-                ? "border-sky-400/30 bg-sky-400/[0.09]"
-                : "border-white/5 bg-white/[0.03]",
+              isDragOver ? "border-sky-400/30 bg-sky-400/[0.09]" : "border-white/5 bg-white/[0.03]",
             )}
           >
             <div className="flex items-center justify-between gap-3">
@@ -714,18 +653,6 @@ export default function NovaChat() {
                 <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
                   Enter para enviar
                 </span>
-                {speechSupported ? (
-                  <span
-                    className={cx(
-                      "rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em]",
-                      voiceActive
-                        ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-200"
-                        : "border-white/5 bg-white/[0.03] text-slate-300",
-                    )}
-                  >
-                    Voz {voiceActive ? "activa" : "lista"}
-                  </span>
-                ) : null}
               </div>
 
               <div className="flex items-center gap-2">
