@@ -1,31 +1,46 @@
 "use client";
 
-import { Bot, Cpu, Sparkles, Waves } from "lucide-react";
+import { RefreshCcw, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
-import { cn } from "@/lib/cn";
 
-export default function WorkspaceBar({ className }: { className?: string }) {
-  const { projectId, nodeId } = useWorkspace();
+export default function WorkspaceBar() {
+  const { projectId, nodeId, tutorial, toggleTutorial, resetWorkspace } = useWorkspace();
 
   return (
-    <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4", className)}>
-      <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-5 backdrop-blur-xl">
-        <div className="flex items-center gap-4">
-          <div className="rounded-2xl bg-sky-500/10 p-3 text-sky-400"><Waves className="h-5 w-5" /></div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Señal</p>
-            <p className="text-sm font-bold text-white uppercase">{projectId}</p>
-          </div>
+    <div className="rounded-[28px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-2xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-sky-200">
+            <Sparkles className="h-3.5 w-3.5" />
+            {projectId}
+          </span>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
+            Nodo: {nodeId}
+          </span>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200">
+            {tutorial ? "Guía activa" : "Modo libre"}
+          </span>
         </div>
-      </div>
-      
-      <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-5 backdrop-blur-xl">
-        <div className="flex items-center gap-4">
-          <div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-400"><Cpu className="h-5 w-5" /></div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nodo</p>
-            <p className="text-sm font-bold text-white uppercase">{nodeId}</p>
-          </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTutorial}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.06]"
+          >
+            {tutorial ? "Desactivar guía" : "Activar guía"}
+          </button>
+
+          <button
+            type="button"
+            onClick={resetWorkspace}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.06]"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Reiniciar
+          </button>
         </div>
       </div>
     </div>
