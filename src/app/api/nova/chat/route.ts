@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const ChatSchema = z.object({
   project_id: z.string().min(1).default(process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one"),
-  thread_id: z.string().uuid().optional(),
+  thread_id: z.string().uuid().nullable().optional(),
   message: z.string().min(1),
   prefer: z.enum(["auto", "openai", "gemini", "anthropic", "ollama"]).default("auto"),
   mode: z.enum(["auto", "fast", "pro"]).default("auto"),
@@ -22,16 +23,15 @@ type NovaChatResponse = {
   reply?: string;
   provider?: string;
   model?: string;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-    total_tokens?: number;
-  };
+  intent?: string;
+  agi_id?: string;
+  actions?: unknown[];
+  meta?: Record<string, unknown>;
   error?: string;
 };
 
 function getNovaBaseUrl(): string {
-  return String(process.env.NOVA_AGI_URL ?? "").trim();
+  return String(process.env.NOVA_AGI_URL ?? "").trim().replace(/\/$/, "");
 }
 
 function getNovaKey(): string {
@@ -44,10 +44,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (!baseUrl || !key) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Fallo crítico: NOVA_AGI_URL o NOVA_ORCHESTRATOR_KEY no configurados.",
-      },
+      { ok: false, error: "Fallo crítico: NOVA_AGI_URL o NOVA_ORCHESTRATOR_KEY no configurados." },
       { status: 500 },
     );
   }
@@ -57,51 +54,43 @@ export async function POST(req: Request): Promise<Response> {
 
   if (!parsed.success) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Anomalía estructural en el payload enviado.",
-        issues: parsed.error.flatten(),
-      },
+      { ok: false, error: "Payload inválido para nova.agi.", issues: parsed.error.flatten() },
       { status: 400 },
     );
   }
-
-  const payload = parsed.data;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 55_000);
 
   try {
-    const res = await fetch(new URL("/api/v1/nova/interact", baseUrl), {
+    const res = await fetch(`${baseUrl}/api/v1/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
         "X-Hocker-Source": "hocker.one",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(parsed.data),
       signal: controller.signal,
+      cache: "no-store",
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
 
     return NextResponse.json(responseJson, {
       status: res.status,
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
-      },
+      headers: { "Cache-Control": "no-store, max-age=0" },
     });
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
-
     return NextResponse.json(
       {
         ok: false,
         error: isTimeout
-          ? "Timeout: La inferencia superó el umbral de seguridad de tiempo."
+          ? "Timeout: nova.agi excedió la ventana de 55s."
           : error instanceof Error
             ? error.message
-            : "Fallo de conexión profunda con nova.agi.",
+            : "Fallo de conexión con nova.agi.",
       },
       { status: 502 },
     );
