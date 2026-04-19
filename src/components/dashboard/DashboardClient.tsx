@@ -1,458 +1,466 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
   ArrowUpRight,
-  CircleDot,
+  Bot,
   Clock3,
-  RefreshCw,
+  CircleDot,
+  Layers3,
+  Rocket,
   ShieldCheck,
   Sparkles,
-  MessagesSquare,
-  LayoutDashboard,
-  Layers3,
-  Bot,
+  Workflow,
 } from "lucide-react";
-import type { DashboardSummary } from "@/lib/hocker-dashboard";
+
+import type {
+  DashboardSummary,
+  DashboardMetric,
+  DashboardEventItem,
+  DashboardCommandItem,
+} from "@/lib/hocker-dashboard";
 import { getStatusLabel, getStatusTone } from "@/lib/hocker-dashboard";
+
+import SystemStatus from "@/components/SystemStatus";
 import ExternalServicesSection from "@/components/dashboard/ExternalServicesSection";
 
-type DashboardClientProps = {
+type Props = {
   summary: DashboardSummary;
+  className?: string;
 };
 
-function liveClock(now: Date): string {
-  return new Intl.DateTimeFormat("es-MX", {
-    weekday: "long",
+function formatTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("es-MX", {
     day: "2-digit",
-    month: "long",
+    month: "short",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
-  }).format(now);
+  });
 }
 
-function cx(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(" ");
-}
-
-function SectionTitle({
-  eyebrow,
-  title,
-  subtitle,
-}: {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-}) {
+function MetricCard({ metric, index }: { metric: DashboardMetric; index: number }) {
   return (
-    <div className="space-y-2">
-      <p className="text-[10px] font-black uppercase tracking-[0.42em] text-sky-300/80">
-        {eyebrow}
-      </p>
-      <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-        {title}
-      </h2>
-      <p className="max-w-2xl text-sm leading-relaxed text-slate-400">
-        {subtitle}
-      </p>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      transition={{ duration: 0.35, delay: index * 0.05, ease: "easeOut" }}
+      className="group relative overflow-hidden rounded-[28px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_60px_rgba(2,6,23,0.16)] backdrop-blur-2xl"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.07),transparent_24%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      <div className="relative">
+        <p className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-500">
+          {metric.label}
+        </p>
+        <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
+          {metric.value}
+        </p>
+        <p className="mt-2 text-sm text-slate-400">{metric.hint}</p>
+      </div>
+    </motion.div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-}) {
+function sectionTitle(title: string, detail: string) {
   return (
-    <div className="group relative overflow-hidden rounded-[28px] border border-white/6 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-      <div className="relative space-y-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-          {label}
+    <div className="flex items-end justify-between gap-4">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.34em] text-sky-300/80">
+          {detail}
         </p>
-        <div className="text-3xl font-black tracking-tight text-white">
-          {value}
-        </div>
-        <p className="text-sm text-slate-400">{hint}</p>
+        <h3 className="mt-2 text-xl font-black tracking-tight text-white">{title}</h3>
       </div>
     </div>
   );
 }
 
-function StatusPill({
-  status,
-}: {
-  status: "live" | "ready" | "in_development" | "connected" | "pending";
-}) {
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em]",
-        getStatusTone(status),
-      )}
-    >
-      <CircleDot className="h-3 w-3" />
-      {getStatusLabel(status)}
-    </span>
+export default function DashboardClient({ summary, className }: Props) {
+  const [activeTab, setActiveTab] = useState<"overview" | "ops" | "signals">("overview");
+
+  const liveApps = useMemo(
+    () => summary.apps.filter((item) => item.status === "live" || item.status === "ready").length,
+    [summary.apps],
   );
-}
 
-function SmallPill({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-2">
-      <p className="text-[9px] font-black uppercase tracking-[0.34em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-1 text-xs font-semibold text-white">{value}</p>
-    </div>
+  const liveAgis = useMemo(
+    () => summary.agis.filter((item) => item.status === "live" || item.status === "ready").length,
+    [summary.agis],
   );
-}
 
-export default function DashboardClient({ summary }: DashboardClientProps) {
-  const [now, setNow] = useState<Date>(() => new Date());
+  const liveServices = useMemo(
+    () => summary.services.filter((item) => item.status === "live").length,
+    [summary.services],
+  );
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const clockLabel = useMemo(() => liveClock(now), [now]);
-
-  const liveApps = summary.apps.filter((app) => app.status === "live").length;
-  const liveAgis = summary.agis.filter((agi) => agi.status === "live").length;
-  const connectedRepos = summary.repos.filter((repo) => repo.status === "connected").length;
-  const liveCommands = summary.recentCommands.length;
+  const latestEvent = summary.recentEvents[0];
+  const latestCommand = summary.recentCommands[0];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050816] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.20),transparent_28%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.16),transparent_25%),linear-gradient(180deg,rgba(2,6,23,0.98),rgba(2,6,23,1))]" />
-      <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
+    <div className={className}>
+      <div className="relative overflow-hidden rounded-[36px] border border-white/5 bg-slate-950/55 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.09),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.07),transparent_24%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.014)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.014)_1px,transparent_1px)] bg-[size:44px_44px] opacity-20" />
 
-      <div className="relative mx-auto flex w-full max-w-[1800px] flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
-        <motion.section
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
-          className="relative overflow-hidden rounded-[36px] border border-white/6 bg-white/[0.035] p-6 shadow-[0_40px_140px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:p-8"
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)]" />
-
-          <div className="relative grid gap-8 xl:grid-cols-[1.2fr_0.8fr] xl:items-center">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="rounded-[24px] border border-white/6 bg-black/30 p-3 shadow-[0_14px_50px_rgba(0,0,0,0.2)]">
-                  <Image
-                    src="/brand/hocker-one-isotype.png"
-                    alt="Hocker One"
-                    width={60}
-                    height={60}
-                    priority
-                    className="h-14 w-14 object-contain"
-                  />
+        <div className="relative p-5 sm:p-6 lg:p-7">
+          <motion.div
+            initial={{ opacity: 0, y: 18, filter: "blur(10px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+            className="rounded-[32px] border border-white/5 bg-white/[0.03] p-6 shadow-[0_18px_80px_rgba(2,6,23,0.18)]"
+          >
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.42em] text-sky-300/80">
+                  <Sparkles className="h-4 w-4" />
+                  HOCKER ONE · Control plane vivo
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.42em] text-sky-300/80">
-                    Hocker ONE · Control Center
-                  </p>
-                  <h1 className="text-3xl font-black tracking-tight text-white sm:text-5xl">
-                    Un solo centro.
-                    <span className="block text-sky-300">
-                      Todo el ecosistema delante.
-                    </span>
-                  </h1>
-                </div>
+                <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">
+                  Centro de mando con lectura ejecutiva, señal real y visión de producto.
+                </h1>
+
+                <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                  Todo el ecosistema se ve aquí como una sola superficie: apps, AGIs, nodos,
+                  repos, eventos y servicios externos. Menos ruido. Más verdad.
+                </p>
               </div>
 
-              <p className="max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                Vista viva del ecosistema con datos reales desde Supabase. Lo que ya existe aparece activo; lo que está en proceso queda visible como desarrollo, sin inventar nada.
-              </p>
+              <div className="grid gap-3 sm:grid-cols-3 lg:w-[24rem] lg:grid-cols-1">
+                <div className="rounded-2xl border border-white/5 bg-slate-950/50 px-4 py-3">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                    <Activity className="h-4 w-4 text-sky-300" />
+                    Apps activas
+                  </div>
+                  <p className="mt-2 text-2xl font-black text-white">{liveApps}</p>
+                </div>
 
-              <div className="flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-300">
-                  <ShieldCheck className="h-4 w-4" />
-                  Supabase real
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-sky-300">
-                  <RefreshCw className="h-4 w-4" />
-                  {clockLabel}
-                </span>
+                <div className="rounded-2xl border border-white/5 bg-slate-950/50 px-4 py-3">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                    <Bot className="h-4 w-4 text-sky-300" />
+                    AGIs listas
+                  </div>
+                  <p className="mt-2 text-2xl font-black text-white">{liveAgis}</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/5 bg-slate-950/50 px-4 py-3">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                    <ShieldCheck className="h-4 w-4 text-sky-300" />
+                    Servicios vivos
+                  </div>
+                  <p className="mt-2 text-2xl font-black text-white">{liveServices}</p>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              {summary.metrics.map((metric) => (
-                <StatCard
-                  key={metric.label}
-                  label={metric.label}
-                  value={metric.value}
-                  hint={metric.hint}
-                />
-              ))}
+            <div className="mt-6 flex flex-wrap gap-2">
+              {[
+                { key: "overview", label: "Resumen" },
+                { key: "ops", label: "Operación" },
+                { key: "signals", label: "Señales" },
+              ].map((item) => {
+                const active = activeTab === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setActiveTab(item.key as typeof activeTab)}
+                    className={[
+                      "rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.28em] transition-all",
+                      active
+                        ? "border-sky-400/20 bg-sky-400/10 text-sky-200 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
+                        : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.05]",
+                    ].join(" ")}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-4">
+            {summary.metrics.map((metric, index) => (
+              <MetricCard key={metric.label} metric={metric} index={index} />
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
+            <div className="space-y-6">
+              <section className="rounded-[32px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_70px_rgba(2,6,23,0.18)]">
+                {sectionTitle("Apps y AGIs", "Estado del ecosistema")}
+
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                      Apps
+                    </p>
+                    {summary.apps.map((app) => (
+                      <div
+                        key={app.key}
+                        className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 className="text-sm font-black text-white">{app.title}</h4>
+                            <p className="mt-1 text-xs text-slate-400">{app.subtitle}</p>
+                          </div>
+                          <span
+                            className={[
+                              "rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.26em]",
+                              getStatusTone(app.status),
+                            ].join(" ")}
+                          >
+                            {getStatusLabel(app.status)}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                          <span className="rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1">
+                            {app.integration}
+                          </span>
+                          <span className="rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1">
+                            {app.projectId}
+                          </span>
+                        </div>
+
+                        <p className="mt-3 text-xs text-slate-400">{app.note}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                      AGIs
+                    </p>
+                    {summary.agis.map((agi) => (
+                      <div
+                        key={agi.key}
+                        className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 className="text-sm font-black text-white">{agi.title}</h4>
+                            <p className="mt-1 text-xs text-slate-400">{agi.subtitle}</p>
+                          </div>
+                          <span
+                            className={[
+                              "rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.26em]",
+                              getStatusTone(agi.status),
+                            ].join(" ")}
+                          >
+                            {getStatusLabel(agi.status)}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                          <span className="rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1">
+                            {agi.integration}
+                          </span>
+                          <span className="rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1">
+                            {agi.nodeId}
+                          </span>
+                        </div>
+
+                        <p className="mt-3 text-xs text-slate-400">{agi.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[32px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_70px_rgba(2,6,23,0.18)]">
+                {sectionTitle("Repos conectados", "Código y despliegue")}
+
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  {summary.repos.map((repo) => (
+                    <div
+                      key={repo.key}
+                      className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-black text-white">{repo.title}</h4>
+                          <p className="mt-1 text-xs text-slate-400">{repo.subtitle}</p>
+                        </div>
+                        <span
+                          className={[
+                            "rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.26em]",
+                            getStatusTone(repo.status),
+                          ].join(" ")}
+                        >
+                          {getStatusLabel(repo.status)}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                        <span className="rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1">
+                          {repo.branch}
+                        </span>
+                        <span className="rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1">
+                          {repo.key}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-xs text-slate-400">{repo.note}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[32px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_70px_rgba(2,6,23,0.18)]">
+                  {sectionTitle("Últimos eventos", "Señales del sistema")}
+
+                  <div className="mt-5 space-y-3">
+                    {summary.recentEvents.length === 0 ? (
+                      <p className="text-sm text-slate-500">No hay eventos recientes.</p>
+                    ) : (
+                      summary.recentEvents.map((event) => (
+                        <EventItem key={event.id} item={event} />
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-[32px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_70px_rgba(2,6,23,0.18)]">
+                  {sectionTitle("Cola reciente", "Comandos en movimiento")}
+
+                  <div className="mt-5 space-y-3">
+                    {summary.recentCommands.length === 0 ? (
+                      <p className="text-sm text-slate-500">No hay comandos recientes.</p>
+                    ) : (
+                      summary.recentCommands.map((command) => (
+                        <CommandItem key={command.id} item={command} />
+                      ))
+                    )}
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="space-y-6">
+              <SystemStatus summary={summary} />
+
+              <ExternalServicesSection services={summary.services} />
+
+              <section className="rounded-[32px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_70px_rgba(2,6,23,0.18)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.34em] text-sky-300/80">
+                      Momento
+                    </p>
+                    <h3 className="mt-2 text-lg font-black text-white">Última actualización</h3>
+                  </div>
+                  <Clock3 className="h-5 w-5 text-sky-300" />
+                </div>
+
+                <div className="mt-4 rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
+                  <p className="text-xs text-slate-400">
+                    Corte de datos: <span className="text-slate-200">{formatTime(summary.snapshotAt)}</span>
+                  </p>
+                  {latestEvent ? (
+                    <p className="mt-3 text-sm text-slate-200">
+                      Última señal: <span className="font-bold text-white">{latestEvent.title}</span>
+                    </p>
+                  ) : null}
+                  {latestCommand ? (
+                    <p className="mt-2 text-sm text-slate-200">
+                      Último comando: <span className="font-bold text-white">{latestCommand.command}</span>
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="rounded-[32px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_18px_70px_rgba(2,6,23,0.18)]">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                  <Workflow className="h-4 w-4 text-sky-300" />
+                  Lectura operativa
+                </div>
+
+                <div className="mt-4 space-y-3 text-sm text-slate-300">
+                  <p className="leading-relaxed">
+                    Si una app está “lista” pero no “viva”, el problema es de despliegue o conexión.
+                  </p>
+                  <p className="leading-relaxed">
+                    Si una AGI aparece “activa” pero no responde, el drift está en contrato o memoria.
+                  </p>
+                  <p className="leading-relaxed">
+                    Si el servicio externo cae, la UI no se rompe: solo marca la señal y sigue.
+                  </p>
+                </div>
+              </section>
             </div>
           </div>
-        </motion.section>
-
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.08, ease: "easeOut" }}
-            className="rounded-[34px] border border-white/6 bg-white/[0.03] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:p-7"
-          >
-            <SectionTitle
-              eyebrow="Apps y webs"
-              title="Lo real va arriba. Lo pendiente queda claro."
-              subtitle="Cada app vive como nodo propio, con estado visible y sin humo."
-            />
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
-              <SmallPill label="Apps activas" value={`${liveApps}`} />
-              <SmallPill label="AGIs activas" value={`${liveAgis}`} />
-              <SmallPill label="Repos conectados" value={`${connectedRepos}`} />
-              <SmallPill label="Cola viva" value={`${liveCommands}`} />
-              <SmallPill label="Snapshot" value={summary.snapshotAt} />
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {summary.apps.map((app, index) => (
-                <motion.article
-                  key={app.key}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: 0.03 * index, ease: "easeOut" }}
-                  className="group relative overflow-hidden rounded-[28px] border border-white/6 bg-[#09111f]/80 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
-                >
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_30%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                  <div className="relative flex h-full flex-col gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-500">
-                          {app.key.replaceAll("-", " / ")}
-                        </p>
-                        <h3 className="mt-2 text-xl font-black tracking-tight text-white">
-                          {app.title}
-                        </h3>
-                      </div>
-                      <StatusPill status={app.status} />
-                    </div>
-
-                    <p className="text-sm leading-relaxed text-slate-300">{app.subtitle}</p>
-
-                    <div className="mt-auto rounded-2xl border border-white/6 bg-black/20 px-4 py-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-                        Integración
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-sky-200">
-                        {app.integration}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
-                      {app.note}
-                    </div>
-                  </div>
-                </motion.article>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.12, ease: "easeOut" }}
-            className="rounded-[34px] border border-white/6 bg-white/[0.03] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:p-7"
-          >
-            <SectionTitle
-              eyebrow="AGIs y Shadows"
-              title="Nodos operativos visibles."
-              subtitle="Cada unidad tiene su lugar, su estado y su descripción en lenguaje simple."
-            />
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              {summary.agis.map((agi, index) => (
-                <motion.article
-                  key={agi.key}
-                  initial={{ opacity: 0, x: 14 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.35, delay: 0.02 * index, ease: "easeOut" }}
-                  className="rounded-[26px] border border-white/6 bg-[#09111f]/85 p-5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-500">
-                        {agi.integration}
-                      </p>
-                      <h3 className="mt-2 text-lg font-black tracking-tight text-white">
-                        {agi.title}
-                      </h3>
-                    </div>
-                    <StatusPill status={agi.status} />
-                  </div>
-
-                  <p className="mt-3 text-sm leading-relaxed text-slate-300">
-                    {agi.subtitle}
-                  </p>
-
-                  <div className="mt-4 rounded-2xl border border-white/6 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
-                    {agi.note}
-                  </div>
-                </motion.article>
-              ))}
-            </div>
-          </motion.div>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.16, ease: "easeOut" }}
-            className="rounded-[34px] border border-white/6 bg-white/[0.03] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
-          >
-            <SectionTitle
-              eyebrow="Actividad reciente"
-              title="Registro vivo."
-              subtitle="Eventos y comandos reales que ya entraron al sistema."
-            />
-
-            <div className="mt-6 space-y-3">
-              {summary.recentEvents.length === 0 ? (
-                <div className="rounded-[22px] border border-white/6 bg-black/20 px-4 py-5 text-sm text-slate-400">
-                  Aún no hay eventos recientes.
-                </div>
-              ) : (
-                summary.recentEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="rounded-[22px] border border-white/6 bg-black/20 px-4 py-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white">
-                          {event.title}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {event.detail}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                        <Clock3 className="h-4 w-4" />
-                        {event.at}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.2, ease: "easeOut" }}
-            className="rounded-[34px] border border-white/6 bg-white/[0.03] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
-          >
-            <SectionTitle
-              eyebrow="Repos existentes"
-              title="Lo que ya vive afuera también entra al mapa."
-              subtitle="Los repos reales quedan visibles como nodos conectados."
-            />
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {summary.repos.map((repo) => (
-                <div
-                  key={repo.key}
-                  className="rounded-[24px] border border-white/6 bg-[#09111f]/80 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-                        Repo real
-                      </p>
-                      <h3 className="mt-2 text-sm font-bold text-white">
-                        {repo.title}
-                      </h3>
-                    </div>
-                    <span
-                      className={cx(
-                        "inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em]",
-                        getStatusTone(repo.status),
-                      )}
-                    >
-                      {getStatusLabel(repo.status)}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm text-slate-400">{repo.subtitle}</p>
-                  <p className="mt-2 text-xs text-slate-500">{repo.note}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 rounded-[26px] border border-sky-400/10 bg-sky-500/8 p-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.36em] text-sky-300">
-                Chido Casino
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-300">
-                Se muestra como nodo real en desarrollo. Nada simulado. Nada inventado.
-              </p>
-            </div>
-
-            <div className="mt-4 rounded-[26px] border border-white/6 bg-black/20 p-5">
-              <div className="flex items-center gap-3">
-                <Activity className="h-4 w-4 text-sky-300" />
-                <p className="text-sm font-semibold text-white">Resumen operativo</p>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                    Apps activas
-                  </p>
-                  <p className="mt-2 text-2xl font-black text-white">
-                    {liveApps}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                    AGIs activas
-                  </p>
-                  <p className="mt-2 text-2xl font-black text-white">
-                    {liveAgis}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                    Cola viva
-                  </p>
-                  <p className="mt-2 text-2xl font-black text-white">
-                    {summary.recentCommands.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <ExternalServicesSection services={summary.services} />
-        </section>
+        </div>
       </div>
-    </main>
+    </div>
   );
+}
+
+function EventItem({ item }: { item: DashboardEventItem }) {
+  return (
+    <div className="rounded-[22px] border border-white/5 bg-slate-950/45 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-white">{item.title}</p>
+          <p className="mt-1 text-xs text-slate-400">{item.detail}</p>
+        </div>
+        <span
+          className={[
+            "rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.26em]",
+            item.level === "error"
+              ? "border-rose-400/20 bg-rose-500/10 text-rose-300"
+              : item.level === "warn"
+                ? "border-amber-400/20 bg-amber-500/10 text-amber-300"
+                : "border-sky-400/20 bg-sky-500/10 text-sky-300",
+          ].join(" ")}
+        >
+          {item.level}
+        </span>
+      </div>
+
+      <div className="mt-3 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+        {formatShortDate(item.at)}
+      </div>
+    </div>
+  );
+}
+
+function CommandItem({ item }: { item: DashboardCommandItem }) {
+  return (
+    <div className="rounded-[22px] border border-white/5 bg-slate-950/45 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-white">{item.command}</p>
+          <p className="mt-1 text-xs text-slate-400">{item.projectId}</p>
+        </div>
+        <span
+          className={[
+            "rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.26em]",
+            getStatusTone(item.status),
+          ].join(" ")}
+        >
+          {getStatusLabel(item.status)}
+        </span>
+      </div>
+
+      <div className="mt-3 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+        {formatShortDate(item.createdAt)}
+      </div>
+    </div>
+  );
+}
+
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
