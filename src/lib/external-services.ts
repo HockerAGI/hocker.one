@@ -43,11 +43,15 @@ async function checkHealth(endpoint: string): Promise<boolean> {
   }
 }
 
+function readEndpoint(name: string): string {
+  return String(process.env[name] ?? "").trim();
+}
+
 export async function resolveExternalServices(): Promise<ExternalServiceItem[]> {
   const now = new Date().toISOString();
 
-  const novaAgiUrl = String(process.env.NOVA_AGI_URL ?? "").trim();
-  const nodeAgentUrl = String(process.env.HOCKER_NODE_AGENT_URL ?? "").trim();
+  const novaAgiUrl = readEndpoint("NOVA_AGI_URL");
+  const nodeAgentUrl = readEndpoint("HOCKER_NODE_AGENT_URL");
 
   const services: ExternalServiceItem[] = [
     {
