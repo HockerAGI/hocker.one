@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleDot, RefreshCw, ShieldAlert, SignalHigh, Sparkles } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import type { DashboardSummary } from "@/lib/hocker-dashboard";
 
 type SystemState = "online" | "syncing" | "error";
 
@@ -12,6 +13,10 @@ type StatusSnapshot = {
   pendingCommands: number;
   recentEvents: number;
   lastSeenAt: string | null;
+};
+
+type Props = {
+  summary?: DashboardSummary;
 };
 
 function formatRelativeTime(value: string | null): string {
@@ -26,17 +31,31 @@ function formatRelativeTime(value: string | null): string {
   });
 }
 
-export default function SystemStatus() {
+export default function SystemStatus({ summary }: Props) {
+  const supabase = useMemo(() => createBrowserSupabase(), []);
   const [state, setState] = useState<SystemState>("online");
-  const [snapshot, setSnapshot] = useState<StatusSnapshot>({
+  const [loading, setLoading] = useState(true);
+  const [snapshot, setSnapshot] = useState<StatusSnapshot>(() => ({
     onlineNodes: 0,
     runningCommands: 0,
     pendingCommands: 0,
     recentEvents: 0,
     lastSeenAt: null,
-  });
-  const [loading, setLoading] = useState(true);
-  const supabase = useMemo(() => createBrowserSupabase(), []);
+  }));
+
+  const hydrateFromSummary = useCallback(() => {
+    if (!summary) return;
+
+    const onlineNodes = Number(summary.metrics.find((m) => m.label === "Nodos vivos")?.value ?? 0) || 0;
+    const recentEvents = Number(summary.metrics.find((m) => m.label === "Eventos 24h")?.value ?? 0) || 0;
+
+    setSnapshot((prev) => ({
+      ...prev,
+      onlineNodes,
+      recentEvents,
+      lastSeenAt: summary.snapshotAt,
+    }));
+  }, [summary]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +65,11 @@ export default function SystemStatus() {
 
       const [nodesRes, commandsRes, eventsRes] = await Promise.all([
         supabase.from("nodes").select("id,status,updated_at,last_seen_at"),
-        supabase.from("commands").select("id,status,created_at,updated_at").order("created_at", { ascending: false }).limit(50),
+        supabase
+          .from("commands")
+          .select("id,status,created_at,updated_at")
+          .order("created_at", { ascending: false })
+          .limit(50),
         supabase.from("events").select("id,created_at").gte("created_at", since).limit(50),
       ]);
 
@@ -54,13 +77,20 @@ export default function SystemStatus() {
       if (commandsRes.error) throw commandsRes.error;
       if (eventsRes.error) throw eventsRes.error;
 
-      const nodes = (nodesRes.data ?? []) as Array<{ status?: string; last_seen_at?: string | null; updated_at?: string | null }>;
+      const nodes = (nodesRes.data ?? []) as Array<{
+        status?: string;
+        last_seen_at?: string | null;
+        updated_at?: string | null;
+      }>;
       const commands = (commandsRes.data ?? []) as Array<{ status?: string }>;
       const events = eventsRes.data ?? [];
 
       const onlineNodes = nodes.filter((n) => n.status === "online").length;
       const runningCommands = commands.filter((c) => c.status === "running").length;
-      const pendingCommands = commands.filter((c) => c.status === "queued" || c.status === "needs_approval").length;
+      const pendingCommands = commands.filter(
+        (c) => c.status === "queued" || c.status === "needs_approval",
+      ).length;
+
       const lastSeenAt =
         nodes
           .map((n) => n.last_seen_at ?? n.updated_at ?? null)
@@ -84,6 +114,10 @@ export default function SystemStatus() {
       setLoading(false);
     }
   }, [supabase]);
+
+  useEffect(() => {
+    hydrateFromSummary();
+  }, [hydrateFromSummary]);
 
   useEffect(() => {
     void load();
@@ -134,13 +168,21 @@ export default function SystemStatus() {
   }[state];
 
   return (
-    <div className="hocker-panel-pro relative overflow-hidden border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl">
+    <div className="relative overflow-hidden rounded-[32px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.09),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.08),transparent_24%)]" />
 
       <div className="relative flex items-center gap-4">
         <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/5 bg-slate-950/70">
           <span className={`absolute inset-0 rounded-2xl opacity-70 blur-md ${tone}`} />
-          <CircleDot className={`relative z-10 h-5 w-5 ${state === "error" ? "text-rose-300" : state === "syncing" ? "text-sky-300" : "text-emerald-300"}`} />
+          <CircleDot
+            className={`relative z-10 h-5 w-5 ${
+              state === "error"
+                ? "text-rose-300"
+                : state === "syncing"
+                  ? "text-sky-300"
+                  : "text-emerald-300"
+            }`}
+          />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -148,9 +190,15 @@ export default function SystemStatus() {
             Estado del sistema
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className={`text-sm font-black uppercase tracking-[0.24em] ${
-              state === "error" ? "text-rose-200" : state === "syncing" ? "text-sky-200" : "text-emerald-200"
-            }`}>
+            <span
+              className={`text-sm font-black uppercase tracking-[0.24em] ${
+                state === "error"
+                  ? "text-rose-200"
+                  : state === "syncing"
+                    ? "text-sky-200"
+                    : "text-emerald-200"
+              }`}
+            >
               {label}
             </span>
             {loading ? (
@@ -173,17 +221,15 @@ export default function SystemStatus() {
       </div>
 
       <div className="relative mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="nova-mini-card">
+        <div className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
             <SignalHigh className="h-4 w-4 text-sky-300" />
             Nodos vivos
           </div>
-          <p className="mt-2 text-2xl font-black text-white">
-            {snapshot.onlineNodes}
-          </p>
+          <p className="mt-2 text-2xl font-black text-white">{snapshot.onlineNodes}</p>
         </div>
 
-        <div className="nova-mini-card">
+        <div className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
             <Sparkles className="h-4 w-4 text-sky-300" />
             Comandos
@@ -193,7 +239,7 @@ export default function SystemStatus() {
           </p>
         </div>
 
-        <div className="nova-mini-card">
+        <div className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
             <ShieldAlert className="h-4 w-4 text-sky-300" />
             Última señal
