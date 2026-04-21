@@ -1,6 +1,9 @@
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { getErrorMessage } from "@/lib/errors";
 import { processCloudQueue } from "@/app/api/commands/_cloud";
+
+function isCloudNode(nodeId: string | null | undefined): boolean {
+  return String(nodeId ?? "").startsWith("cloud-");
+}
 
 export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {
   const sb = createAdminSupabase();
@@ -17,6 +20,10 @@ export async function executeCommand(commandId: string, expectedProjectId?: stri
     return;
   }
 
+  if (!isCloudNode(command.node_id)) {
+    return;
+  }
+
   if (command.status !== "queued" && command.status !== "needs_approval") {
     return;
   }
@@ -25,5 +32,8 @@ export async function executeCommand(commandId: string, expectedProjectId?: stri
     return;
   }
 
-  await processCloudQueue(sb, { commandId });
+  await processCloudQueue(sb, {
+    commandId,
+    nodeId: command.node_id,
+  });
 }
