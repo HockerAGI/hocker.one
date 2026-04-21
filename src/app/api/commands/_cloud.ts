@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
 import { verifyCommandSignature } from "@/lib/security";
+import { auditTrailEvent } from "@/lib/audit-chain";
 
 const exec = promisify(execCb);
 
@@ -65,6 +66,10 @@ function getWorkspaceRoot(): string {
   ).trim();
 
   return path.resolve(configured || process.cwd());
+}
+
+function isCloudNode(nodeId: string): boolean {
+  return String(nodeId ?? "").startsWith("cloud-");
 }
 
 function resolveSandboxPath(requestedPath: string): string {
@@ -204,8 +209,8 @@ async function executeLocalCloud(
       env: {
         ...process.env,
         HOME: cwd,
-        TMPDIR: path.join(cwd, ".tmp"),
-      },
+        TMPDIR: path.join(cwd(), ".tmp"),
+      } as NodeJS.ProcessEnv,
     });
 
     return {
@@ -253,6 +258,10 @@ export async function processCloudQueue(
 
   const row = queue[0] as CloudCommandRow;
 
+  if (!isCloudNode(row.node_id)) {
+    return;
+  }
+
   const { error: lockErr } = await sb
     .from("commands")
     .update({ status: "running", started_at: nowIso() })
@@ -261,7 +270,21 @@ export async function processCloudQueue(
 
   if (lockErr) return;
 
-  const secret = String(process.env.COMMAND_HMAC_SECRET ?? process.env.HOCKER_COMMAND_HMAC_SECRET ?? "").trim();
+  await sb.from("events").insert({
+    project_id: row.project_id,
+    node_id: row.node_id,
+    level: "info",
+    type: "command.running",
+    message: `Cloud executor tomó ${row.command}`,
+    data: { command_id: row.id, command: row.command },
+  });
+
+  const secret = String(
+    process.env.HOCKER_COMMAND_HMAC_SECRET ??
+      process.env.COMMAND_HMAC_SECRET ??
+      "",
+  ).trim();
+
   if (secret) {
     const isValid = verifyCommandSignature(
       secret,
@@ -283,6 +306,29 @@ export async function processCloudQueue(
           finished_at: nowIso(),
         })
         .eq("id", row.id);
+
+      await sb.from("events").insert({
+        project_id: row.project_id,
+        node_id: row.node_id,
+        level: "error",
+        type: "command.invalid_signature",
+        message: `Firma inválida en command ${row.id}`,
+        data: { command_id: row.id },
+      });
+
+      await auditTrailEvent({
+        project_id: row.project_id,
+        event_type: "command.invalid_signature",
+        entity_type: "command",
+        entity_id: row.id,
+        actor_type: "system",
+        actor_id: null,
+        role: "orchestrator",
+        action: "cloud_reject_invalid_signature",
+        severity: "error",
+        payload: { command: row.command, node_id: row.node_id },
+      });
+
       return;
     }
   }
@@ -305,7 +351,41 @@ export async function processCloudQueue(
       status: hasError ? "error" : "done",
       result: result as unknown as Record<string, unknown>,
       error: hasError ? errorMsg : null,
+      executed_at: nowIso(),
       finished_at: nowIso(),
     })
     .eq("id", row.id);
+
+  await sb.from("events").insert({
+    project_id: row.project_id,
+    node_id: row.node_id,
+    level: hasError ? "error" : "info",
+    type: hasError ? "command.error" : "command.done",
+    message: hasError
+      ? `Cloud executor falló ${row.command}`
+      : `Cloud executor completó ${row.command}`,
+    data: {
+      command_id: row.id,
+      command: row.command,
+      ok: !hasError,
+    },
+  });
+
+  await auditTrailEvent({
+    project_id: row.project_id,
+    event_type: hasError ? "command.error" : "command.done",
+    entity_type: "command",
+    entity_id: row.id,
+    actor_type: "system",
+    actor_id: null,
+    role: "orchestrator",
+    action: hasError ? "cloud_command_failed" : "cloud_command_done",
+    severity: hasError ? "error" : "info",
+    payload: {
+      command: row.command,
+      node_id: row.node_id,
+      result,
+      error: hasError ? errorMsg : null,
+    },
+  });
 }
