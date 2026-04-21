@@ -6,7 +6,13 @@ import type {
   DashboardMetric,
   DashboardSummary,
 } from "@/lib/hocker-dashboard";
-import { APP_REGISTRY, AGI_REGISTRY, REPO_REGISTRY, getAppStatus, getNodeStatus } from "@/lib/hocker-dashboard";
+import {
+  APP_REGISTRY,
+  AGI_REGISTRY,
+  REPO_REGISTRY,
+  getAppStatus,
+  getNodeStatus,
+} from "@/lib/hocker-dashboard";
 
 type SnapshotRow = {
   total_projects?: number | null;
@@ -56,8 +62,24 @@ type OrderRow = {
   created_at: string;
 };
 
+type DashboardCommandStatus = DashboardCommandItem["status"];
+
 function moneyFromCents(totalCents: number): string {
   return `$${(totalCents / 100).toFixed(2)}`;
+}
+
+function normalizeCommandStatus(value?: string | null): DashboardCommandStatus {
+  switch (value) {
+    case "done":
+    case "running":
+    case "queued":
+    case "needs_approval":
+    case "error":
+    case "canceled":
+      return value;
+    default:
+      return "queued";
+  }
 }
 
 export async function buildDashboardSummary(): Promise<DashboardSummary> {
@@ -108,7 +130,10 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
 
   const agis = AGI_REGISTRY.map((item) => ({
     ...item,
-    status: activeNodeProjects.has(item.key) || activeNodeProjects.has(item.nodeId) ? "live" : getNodeStatus(item.status),
+    status:
+      activeNodeProjects.has(item.key) || activeNodeProjects.has(item.nodeId)
+        ? "live"
+        : getNodeStatus(item.status),
   }));
 
   const totalOrdersCents =
@@ -150,7 +175,7 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
     id: command.id,
     command: command.command ?? "command",
     projectId: command.project_id,
-    status: command.status ?? "queued",
+    status: normalizeCommandStatus(command.status),
     createdAt: command.created_at,
   }));
 
