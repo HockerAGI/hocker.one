@@ -1,4 +1,5 @@
 import { Langfuse } from "langfuse-node";
+import { auditTrailEvent } from "@/lib/audit-chain";
 import {
   ApiError,
   getControls,
@@ -71,13 +72,33 @@ export async function POST(req: Request): Promise<Response> {
       .select("*")
       .single();
 
-    if (error) {
+    if (error || !data) {
       throw new ApiError(500, { error: "Falla al registrar el rechazo en la matriz de datos." });
     }
 
-    trace.event({ name: "ORDEN_ANULADA", input: { commandId: id } });
-    trace.event({ name: "OPERACION_EXITOSA" });
+    await ctx.sb.from("events").insert({
+      project_id: ctx.project_id,
+      node_id: (data as { node_id?: string | null }).node_id ?? null,
+      level: "warn",
+      type: "command.rejected",
+      message: `Command ${id} rechazada manualmente`,
+      data: { command_id: id },
+    });
 
+    await auditTrailEvent({
+      project_id: ctx.project_id,
+      event_type: "command.rejected",
+      entity_type: "command",
+      entity_id: id,
+      actor_type: "user",
+      actor_id: ctx.user.id,
+      role: ctx.role,
+      action: "reject_command",
+      severity: "warn",
+      payload: { command_id: id },
+    });
+
+    trace.event({ name: "ORDEN_ANULADA", input: { commandId: id } });
     return json({ ok: true, item: data });
   } catch (err: unknown) {
     const apiErr = toApiError(err);
