@@ -248,4 +248,32 @@ export async function POST(req: Request): Promise<Response> {
       } else {
         try {
           await tasks.trigger("hocker-core-executor", {
-            command
+            commandId: id,
+            projectId: ctx.project_id,
+          });
+        } catch {
+          // el agente físico seguirá haciendo polling
+        }
+      }
+    }
+
+    trace.event({
+      name: "ORDEN_INGRESADA",
+      input: { commandId: id, node_id, needsApproval },
+    });
+
+    return json({ ok: true, item: data }, 201);
+  } catch (err: unknown) {
+    const apiErr = toApiError(err);
+
+    trace.event({
+      name: "FALLA_INGRESO",
+      level: "ERROR",
+      output: { error: apiErr.payload },
+    });
+
+    return json(apiErr.payload, apiErr.status);
+  } finally {
+    await langfuse.flushAsync();
+  }
+}
