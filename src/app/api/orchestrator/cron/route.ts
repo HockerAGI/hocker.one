@@ -29,12 +29,12 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
 
   try {
     const controller = new AbortController();
-    // CUELLO DE BOTELLA ELIMINADO: Expandido a 55 segundos.
-    const timeout = setTimeout(() => controller.abort(), 55000);
+    const timeout = setTimeout(() => controller.abort(), 55_000);
 
     const res = await fetch(new URL("/api/orchestrator/run", baseUrl), {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${cronSecret}`,
         "content-type": "application/json",
       },
       cache: "no-store",
