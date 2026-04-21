@@ -1,147 +1,58 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { RefreshCcw, Sparkles } from "lucide-react";
+import { useWorkspace } from "@/components/WorkspaceContext";
+import { cn } from "@/lib/cn";
 
-type WorkspaceContextValue = {
-  ready: boolean;
-  projectId: string;
-  nodeId: string;
-  tutorial: boolean;
-  setProjectId: (value: string) => void;
-  setNodeId: (value: string) => void;
-  setTutorial: (value: boolean) => void;
-  toggleTutorial: () => void;
-  resetWorkspace: () => void;
+type WorkspaceBarProps = {
+  className?: string;
 };
 
-const DEFAULT_PROJECT_ID = "hocker-one";
-const DEFAULT_NODE_ID = "hocker-node-1";
-const STORAGE_KEY = "hocker.one.workspace.v1";
+export default function WorkspaceBar({ className }: WorkspaceBarProps) {
+  const { projectId, nodeId, tutorial, toggleTutorial, resetWorkspace } = useWorkspace();
 
-type WorkspaceStoredState = {
-  projectId?: string;
-  nodeId?: string;
-  tutorial?: boolean;
-};
+  return (
+    <div
+      className={cn(
+        "rounded-[28px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-2xl",
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-sky-200">
+            <Sparkles className="h-3.5 w-3.5" />
+            {projectId}
+          </span>
 
-const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
+            Nodo: {nodeId}
+          </span>
 
-function normalizeProjectId(value: string): string {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-_]/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 64);
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200">
+            {tutorial ? "Guía activa" : "Modo libre"}
+          </span>
+        </div>
 
-  return normalized || DEFAULT_PROJECT_ID;
-}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTutorial}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.06]"
+          >
+            {tutorial ? "Desactivar guía" : "Activar guía"}
+          </button>
 
-function normalizeNodeId(value: string): string {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-_]/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 64);
-
-  return normalized || DEFAULT_NODE_ID;
-}
-
-function readStoredState(): WorkspaceStoredState {
-  if (typeof window === "undefined") return {};
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as WorkspaceStoredState;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeStoredState(state: WorkspaceStoredState): void {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore storage errors
-  }
-}
-
-export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [projectId, setProjectIdState] = useState(DEFAULT_PROJECT_ID);
-  const [nodeId, setNodeIdState] = useState(DEFAULT_NODE_ID);
-  const [tutorial, setTutorialState] = useState(true);
-
-  useEffect(() => {
-    const stored = readStoredState();
-    setProjectIdState(normalizeProjectId(stored.projectId ?? DEFAULT_PROJECT_ID));
-    setNodeIdState(normalizeNodeId(stored.nodeId ?? DEFAULT_NODE_ID));
-    setTutorialState(typeof stored.tutorial === "boolean" ? stored.tutorial : true);
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    writeStoredState({ projectId, nodeId, tutorial });
-  }, [ready, projectId, nodeId, tutorial]);
-
-  const setProjectId = useCallback((value: string) => {
-    setProjectIdState(normalizeProjectId(value));
-  }, []);
-
-  const setNodeId = useCallback((value: string) => {
-    setNodeIdState(normalizeNodeId(value));
-  }, []);
-
-  const setTutorial = useCallback((value: boolean) => {
-    setTutorialState(Boolean(value));
-  }, []);
-
-  const toggleTutorial = useCallback(() => {
-    setTutorialState((current) => !current);
-  }, []);
-
-  const resetWorkspace = useCallback(() => {
-    setProjectIdState(DEFAULT_PROJECT_ID);
-    setNodeIdState(DEFAULT_NODE_ID);
-    setTutorialState(true);
-  }, []);
-
-  const value = useMemo<WorkspaceContextValue>(
-    () => ({
-      ready,
-      projectId,
-      nodeId,
-      tutorial,
-      setProjectId,
-      setNodeId,
-      setTutorial,
-      toggleTutorial,
-      resetWorkspace,
-    }),
-    [ready, projectId, nodeId, tutorial, setProjectId, setNodeId, setTutorial, toggleTutorial, resetWorkspace],
+          <button
+            type="button"
+            onClick={resetWorkspace}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.06]"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Reiniciar
+          </button>
+        </div>
+      </div>
+    </div>
   );
-
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
-}
-
-export function useWorkspace(): WorkspaceContextValue {
-  const context = useContext(WorkspaceContext);
-  if (!context) {
-    throw new Error("useWorkspace must be used within a WorkspaceProvider");
-  }
-  return context;
 }
