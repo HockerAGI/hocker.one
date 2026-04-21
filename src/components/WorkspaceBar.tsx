@@ -2,12 +2,22 @@
 
 import { RefreshCcw, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
+import { cn } from "@/lib/cn";
 
-export default function WorkspaceBar() {
+type WorkspaceBarProps = {
+  className?: string;
+};
+
+export default function WorkspaceBar({ className }: WorkspaceBarProps) {
   const { projectId, nodeId, tutorial, toggleTutorial, resetWorkspace } = useWorkspace();
 
   return (
-    <div className="rounded-[28px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-2xl">
+    <div
+      className={cn(
+        "rounded-[28px] border border-white/5 bg-white/[0.03] px-4 py-3 shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-2xl",
+        className,
+      )}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-sky-200">
