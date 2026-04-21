@@ -1,38 +1,81 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: ["class"],
   content: [
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './lib/**/*.{js,ts,jsx,tsx,mdx}'
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-orbitron)", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
+      },
       colors: {
-        brand: {
-          green: '#9bc53d',
-          'green-strong': '#7fa428',
-          'green-soft': '#f3f9e8',
-          ink: '#0f1115',
-          'ink-2': '#171b22',
-          muted: '#66726c',
-          line: '#e2ecda'
-        }
-      },
-      boxShadow: {
-        brand: '0 20px 60px rgba(15, 17, 21, 0.08)',
-        'brand-soft': '0 12px 32px rgba(15, 17, 21, 0.05)'
-      },
-      borderRadius: {
-        '4xl': '2rem'
+        hocker: {
+          bg: "var(--hocker-bg)",
+          surface: "var(--hocker-surface)",
+          panel: "var(--hocker-panel)",
+          cyan: "var(--hocker-cyan)",
+          blue: "var(--hocker-blue)",
+          white: "var(--hocker-white)",
+          muted: "var(--hocker-muted)",
+          line: "var(--hocker-line)",
+          alert: "var(--hocker-alert)",
+          success: "var(--hocker-success)",
+        },
       },
       backgroundImage: {
-        'brand-dark':
-          'radial-gradient(circle at top right, rgba(155,197,61,0.18), transparent 25%), linear-gradient(135deg, #171b22 0%, #1f2530 100%)'
-      }
-    }
+        "hocker-aurora":
+          "radial-gradient(circle at 20% 20%, rgba(14,165,233,0.18), transparent 28%), radial-gradient(circle at 80% 0%, rgba(56,189,248,0.14), transparent 22%), radial-gradient(circle at 80% 80%, rgba(59,130,246,0.12), transparent 25%), linear-gradient(180deg, #020617 0%, #020617 100%)",
+        "hocker-glass":
+          "linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.42) 100%)",
+        "hocker-grid":
+          "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+        "hocker-scan":
+          "linear-gradient(180deg, rgba(14,165,233,0) 0%, rgba(14,165,233,0.10) 50%, rgba(14,165,233,0) 100%)",
+      },
+      boxShadow: {
+        "hocker-glow": "0 0 0 1px rgba(14,165,233,0.12), 0 18px 60px rgba(2,6,23,0.45)",
+        "hocker-glow-strong":
+          "0 0 0 1px rgba(14,165,233,0.18), 0 0 30px rgba(14,165,233,0.20), 0 24px 100px rgba(2,6,23,0.55)",
+      },
+      animation: {
+        "hocker-enter": "hocker-enter 520ms ease both",
+        "hocker-float": "hocker-float 7s ease-in-out infinite",
+        "hocker-pulse": "hocker-pulse 5s ease-in-out infinite",
+        "hocker-scan": "hocker-scan 8s linear infinite",
+      },
+      keyframes: {
+        "hocker-enter": {
+          from: {
+            opacity: "0",
+            transform: "translate3d(0, 16px, 0) scale(0.98)",
+          },
+          to: {
+            opacity: "1",
+            transform: "translate3d(0, 0, 0) scale(1)",
+          },
+        },
+        "hocker-float": {
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "hocker-pulse": {
+          "50%": { opacity: "0.8", transform: "scale(1.02)" },
+        },
+        "hocker-scan": {
+          "0%": { transform: "translateY(-110%)" },
+          "100%": { transform: "translateY(110%)" },
+        },
+      },
+    },
   },
-  plugins: []
-}
+  plugins: [],
+};
 
-export default config
+export default config;
