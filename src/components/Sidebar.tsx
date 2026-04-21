@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
   Workflow,
+  Zap,
 } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import { useWorkspace } from "@/components/WorkspaceContext";
