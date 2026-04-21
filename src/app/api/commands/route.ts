@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { Langfuse } from "langfuse-node";
+import { auditTrailEvent } from "@/lib/audit-chain";
 import { defaultNodeId, normalizeNodeId } from "@/lib/project";
 import { signCommand } from "@/lib/security";
 import type { JsonObject, CommandRow } from "@/lib/types";
@@ -24,9 +25,6 @@ const langfuse = new Langfuse({
   baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
 });
 
-// ==========================
-// HELPERS
-// ==========================
 function asBool(value: unknown, fallback = false): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -45,9 +43,10 @@ function asJsonObject(value: unknown): JsonObject {
   return {};
 }
 
-// ==========================
-// TYPES
-// ==========================
+function isCloudNode(nodeId: string): boolean {
+  return nodeId.startsWith("cloud-");
+}
+
 type CommandInsert = Pick<
   CommandRow,
   | "id"
@@ -67,29 +66,31 @@ type CommandInsert = Pick<
   | "created_at"
 >;
 
-// ==========================
-// GET
-// ==========================
+async function triggerCloudExecutor(baseUrl: string, internalSecret: string) {
+  const res = await fetch(`${baseUrl}/api/orchestrator/run`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${internalSecret}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`No se pudo disparar el orquestador cloud: HTTP ${res.status}`);
+  }
+}
+
 export async function GET(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
-
-    const project_id = String(
-      url.searchParams.get("project_id") ??
-        url.searchParams.get("projectId") ??
-        "",
-    ).trim();
+    const project_id = String(url.searchParams.get("project_id") ?? url.searchParams.get("projectId") ?? "").trim();
 
     if (!project_id) {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-      "viewer",
-    ]);
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
     const { data, error } = await ctx.sb
       .from("commands")
@@ -99,9 +100,7 @@ export async function GET(req: Request): Promise<Response> {
       .limit(100);
 
     if (error) {
-      throw new ApiError(500, {
-        error: "No se pudo leer la cola de comandos.",
-      });
+      throw new ApiError(500, { error: "No se pudo leer la cola de comandos." });
     }
 
     return json({ ok: true, items: data ?? [] });
@@ -111,9 +110,6 @@ export async function GET(req: Request): Promise<Response> {
   }
 }
 
-// ==========================
-// POST
-// ==========================
 export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({
     name: "Ingreso_Orden_Tactica",
@@ -128,38 +124,38 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const parsed = commandSchema.parse(body);
+    const parsed = commandSchema.parse({
+      command: body.command,
+      node_id: body.node_id || defaultNodeId,
+      payload: body.payload ?? {},
+    });
 
     const command = parsed.command;
     const node_id = normalizeNodeId(parsed.node_id || defaultNodeId);
     const payload = asJsonObject(parsed.payload);
 
-    const ctx = await requireProjectRole(project_id, [
-      "owner",
-      "admin",
-      "operator",
-    ]);
-
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
     const controls = await getControls(ctx.sb, ctx.project_id);
 
     if (controls.kill_switch) {
-      throw new ApiError(423, {
-        error: "SISTEMA BLOQUEADO: Kill Switch activo.",
-      });
+      throw new ApiError(423, { error: "SISTEMA BLOQUEADO: Kill Switch activo." });
     }
 
     if (!controls.allow_write) {
-      throw new ApiError(403, {
-        error: "MODO SEGURO: solo lectura.",
-      });
+      throw new ApiError(403, { error: "MODO SEGURO: solo lectura." });
     }
 
     const needsApproval = asBool(body.needs_approval ?? body.needsApproval, false);
 
-    const secret = String(process.env.COMMAND_HMAC_SECRET ?? "").trim();
+    const secret = String(
+      process.env.HOCKER_COMMAND_HMAC_SECRET ??
+      process.env.COMMAND_HMAC_SECRET ??
+      "",
+    ).trim();
+
     if (!secret) {
       throw new ApiError(500, {
-        error: "COMMAND_HMAC_SECRET no está configurado en el entorno.",
+        error: "HOCKER_COMMAND_HMAC_SECRET / COMMAND_HMAC_SECRET no está configurado.",
       });
     }
 
@@ -196,40 +192,60 @@ export async function POST(req: Request): Promise<Response> {
       created_at,
     };
 
-    const { data, error } = await ctx.sb
-      .from("commands")
-      .insert(row)
-      .select("*")
-      .single();
+    const { data, error } = await ctx.sb.from("commands").insert(row).select("*").single();
 
-    if (error) {
-      throw new ApiError(500, { error: error.message });
+    if (error || !data) {
+      throw new ApiError(500, { error: error?.message ?? "No se pudo registrar la orden." });
     }
+
+    await ctx.sb.from("events").insert({
+      project_id: ctx.project_id,
+      node_id,
+      level: "info",
+      type: "command.created",
+      message: `Command ${command} registrada para ${node_id}`,
+      data: {
+        command_id: id,
+        command,
+        needs_approval: needsApproval,
+        node_id,
+      },
+    });
+
+    await auditTrailEvent({
+      project_id: ctx.project_id,
+      event_type: "command.created",
+      entity_type: "command",
+      entity_id: id,
+      actor_type: "user",
+      actor_id: ctx.user.id,
+      role: ctx.role,
+      action: "create_command",
+      severity: "info",
+      payload: {
+        node_id,
+        command,
+        needs_approval: needsApproval,
+      },
+    });
 
     if (!needsApproval) {
-      await tasks.trigger("hocker-core-executor", {
-        commandId: id,
-        projectId: ctx.project_id,
-      });
-    }
+      if (isCloudNode(node_id)) {
+        const baseUrl = new URL(req.url).origin.replace(/\/+$/, "");
+        const internalSecret = String(
+          process.env.HOCKER_ONE_INTERNAL_TOKEN ??
+          process.env.CRON_SECRET ??
+          "",
+        ).trim();
 
-    trace.event({
-      name: "ORDEN_INGRESADA",
-      input: { commandId: id, node_id, needsApproval },
-    });
+        if (!internalSecret) {
+          throw new ApiError(500, {
+            error: "HOCKER_ONE_INTERNAL_TOKEN / CRON_SECRET no configurado para despachar cloud.",
+          });
+        }
 
-    return json({ ok: true, item: data }, 201);
-  } catch (err: unknown) {
-    const apiErr = toApiError(err);
-
-    trace.event({
-      name: "FALLA_INGRESO",
-      level: "ERROR",
-      output: { error: apiErr.payload },
-    });
-
-    return json(apiErr.payload, apiErr.status);
-  } finally {
-    await langfuse.flushAsync();
-  }
-}
+        await triggerCloudExecutor(baseUrl, internalSecret);
+      } else {
+        try {
+          await tasks.trigger("hocker-core-executor", {
+            command
