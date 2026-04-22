@@ -144,3 +144,48 @@ body {
     transition: none !important;
   }
 }
+
+@layer components {
+  .hocker-panel-pro {
+    @apply rounded-[28px] border border-white/5 bg-slate-950/45 shadow-[0_14px_50px_rgba(2,6,23,0.18)] backdrop-blur-xl;
+  }
+
+  .hocker-panel-strong {
+    @apply rounded-[36px] border border-white/5 bg-slate-950/55 shadow-[0_30px_120px_rgba(2,6,23,0.28)] backdrop-blur-2xl;
+  }
+
+  .hocker-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/15 bg-sky-500 px-4 py-3 text-[10px] font-black uppercase tracking-[0.34em] text-slate-950 transition-all hover:scale-[1.01] active:scale-[0.99];
+  }
+
+  .hocker-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-3 text-[10px] font-black uppercase tracking-[0.34em] text-slate-200 transition-all hover:bg-white/[0.07];
+  }
+
+  .hocker-title-line {
+    @apply text-[10px] font-black uppercase tracking-[0.34em] text-sky-300/85;
+  }
+
+  .hocker-page-enter {
+    @apply animate-none;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
