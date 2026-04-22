@@ -25,14 +25,31 @@ type HealthPayload = {
   timestamp: string;
 };
 
+function hasRealValue(value: string | undefined | null): boolean {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return false;
+
+  const placeholders = new Set([
+    "__SET_AFTER_NOVA_DEPLOY__",
+    "_SET_AFTER_NOVA_DEPLOY__",
+    "no-configurado",
+  ]);
+
+  return !placeholders.has(normalized);
+}
+
 function buildEnvChecks(): Omit<HealthChecks, "db"> {
   return {
-    supabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL),
-    supabaseAnon: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-    novaAgi: Boolean(process.env.NOVA_AGI_URL),
-    novaKey: Boolean(process.env.NOVA_ORCHESTRATOR_KEY),
-    commandHmac: Boolean(process.env.COMMAND_HMAC_SECRET),
-    langfuse: Boolean(process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY),
+    supabaseUrl: hasRealValue(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL),
+    supabaseAnon: hasRealValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    novaAgi: hasRealValue(process.env.NOVA_AGI_URL ?? process.env.ORCHESTRATOR_BASE_URL),
+    novaKey: hasRealValue(process.env.NOVA_ORCHESTRATOR_KEY),
+    commandHmac: hasRealValue(
+      process.env.HOCKER_COMMAND_HMAC_SECRET ?? process.env.COMMAND_HMAC_SECRET,
+    ),
+    langfuse:
+      hasRealValue(process.env.LANGFUSE_PUBLIC_KEY) &&
+      hasRealValue(process.env.LANGFUSE_SECRET_KEY),
   };
 }
 
@@ -43,6 +60,7 @@ function buildPayload(
   details?: string,
 ): HealthPayload {
   const online = Object.values(checks).every(Boolean);
+
   return {
     status: online ? "online" : "degraded",
     infrastructure: "Hocker ONE Control Plane",
