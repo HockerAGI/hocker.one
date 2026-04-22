@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
   },
-  description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
+  description: "Centro de control del ecosistema Hocker: NOVA, operaciones, nodos, auditoría y módulos conectados.",
   applicationName: "Hocker ONE",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -27,13 +27,13 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Hocker ONE",
-    description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
+    description: "Centro de control del ecosistema Hocker.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Hocker ONE",
-    description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
+    description: "Centro de control del ecosistema Hocker.",
   },
 };
 
@@ -41,7 +41,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#020617",
+  themeColor: "#08111f",
   colorScheme: "dark",
   viewportFit: "cover",
 };
@@ -53,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="bg-[#020617] text-slate-50 antialiased selection:bg-sky-400/30 selection:text-white">
+      <body className="bg-[#08111f] text-slate-50 antialiased selection:bg-sky-400/25 selection:text-white">
         <WorkspaceProvider>
           <ShellFrame>{children}</ShellFrame>
           <PwaRegister />
