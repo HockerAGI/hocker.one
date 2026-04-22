@@ -19,18 +19,15 @@ export default function ShellFrame({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col bg-[#020617] text-slate-50">
+    <div className="min-h-[100dvh] w-full bg-[#08111f] text-slate-50">
       <Sidebar />
 
-      <div className="relative flex min-h-[100dvh] w-full flex-col lg:pl-[292px]">
+      <div className="min-h-[100dvh] lg:pl-[304px]">
         <Topbar />
 
-        <main className="relative mx-auto flex w-full flex-1 flex-col px-3 pb-28 pt-[94px] sm:px-4 lg:px-5 lg:pb-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <WorkspaceBar className="mb-4" />
-          </div>
-
-          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col">
+        <main className="px-3 pb-28 pt-[90px] sm:px-4 lg:px-6 lg:pb-8 lg:pt-[104px]">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+            <WorkspaceBar />
             {children}
           </div>
         </main>
