@@ -209,7 +209,7 @@ async function executeLocalCloud(
       env: {
         ...process.env,
         HOME: cwd,
-        TMPDIR: path.join(cwd(), ".tmp"),
+        TMPDIR: path.join(cwd, ".tmp"),
       } as NodeJS.ProcessEnv,
     });
 

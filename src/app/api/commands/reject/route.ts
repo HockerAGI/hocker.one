@@ -1,4 +1,4 @@
-import { Langfuse } from "langfuse-node";
+import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
 import {
   ApiError,
@@ -12,11 +12,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
-});
+const langfuse = getLangfuse();
 
 export async function POST(req: Request): Promise<Response> {
   const trace = langfuse.trace({

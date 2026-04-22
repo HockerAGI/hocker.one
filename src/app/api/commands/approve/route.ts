@@ -1,5 +1,5 @@
 import { tasks } from "@trigger.dev/sdk/v3";
-import { Langfuse } from "langfuse-node";
+import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
 import {
   ApiError,
@@ -13,11 +13,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
-});
+const langfuse = getLangfuse();
 
 function asBool(value: unknown, fallback = true): boolean {
   if (typeof value === "boolean") return value;

@@ -1,4 +1,4 @@
-import { Langfuse } from "langfuse-node";
+import { getLangfuse } from "@/lib/langfuse-safe";
 import { NextResponse } from "next/server";
 import { getErrorMessage } from "@/lib/errors";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -6,11 +6,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY || "dummy",
-  secretKey: process.env.LANGFUSE_SECRET_KEY || "dummy",
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
-});
+const langfuse = getLangfuse();
 
 export async function POST(req: Request): Promise<NextResponse> {
   const trace = langfuse.trace({

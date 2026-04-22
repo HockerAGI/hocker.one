@@ -1,4 +1,4 @@
-import { Langfuse } from "langfuse-node";
+import { getLangfuse } from "@/lib/langfuse-safe";
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeSupplyOrderStatus } from "@/lib/types";
 import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError } from "../../../_lib";
@@ -6,11 +6,7 @@ import { ApiError, getControls, json, parseBody, requireProjectRole, toApiError 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const langfuse = new Langfuse({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
-});
+const langfuse = getLangfuse();
 
 function asJsonObject(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object" && !Array.isArray(value)) {
