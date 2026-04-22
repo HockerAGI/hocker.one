@@ -1,55 +1,99 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Activity, Cpu, ShieldCheck } from "lucide-react";
 import Hint from "@/components/Hint";
 import PageShell from "@/components/PageShell";
 import NodesPanel from "@/components/NodesPanel";
 
 export const metadata: Metadata = {
   title: "Nodos",
-  description: "Supervisión de activos en vivo.",
+  description: "Estado operativo, heartbeat y lectura clara de infraestructura.",
 };
+
+function SignalCard({
+  title,
+  text,
+  icon: Icon,
+}: {
+  title: string;
+  text: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="shell-card p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-white/[0.03] text-sky-300">
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+
+        <div>
+          <p className="text-sm font-bold text-white">{title}</p>
+          <p className="text-xs text-slate-500">Infraestructura</p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-sm leading-relaxed text-slate-400">{text}</p>
+    </div>
+  );
+}
 
 export default function NodesPage() {
   return (
     <PageShell
+      eyebrow="Infraestructura · Heartbeat y disponibilidad"
       title="Nodos"
-      subtitle="Todo lo conectado y activo."
+      description="Todo lo conectado al ecosistema debe verse simple: quién está vivo, quién está degradado y qué necesita atención."
       actions={
-        <Link href="/dashboard" className="hocker-button-primary">
-          Volver
-        </Link>
+        <>
+          <Link href="/dashboard" className="shell-button-secondary">
+            Inicio
+          </Link>
+          <Link href="/commands" className="shell-button-primary">
+            Ir a operaciones
+          </Link>
+        </>
       }
     >
-      <div className="flex flex-col gap-6 sm:gap-8">
-        <Hint title="Visibilidad">
-          Mira quién está activo y cuándo fue su última señal.
+      <div className="space-y-6">
+        <Hint title="Qué debes leer primero">
+          No empieces por el detalle técnico. Empieza por el estado: online, degradado u offline.
+          Después entra al nodo específico si algo se ve raro.
         </Hint>
 
-        <div className="hocker-panel-pro relative overflow-hidden border-sky-500/10 hocker-page-enter">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage: "radial-gradient(circle at center, #0ea5e9 2px, transparent 2px)",
-              backgroundSize: "40px 40px",
-            }}
+        <section className="grid gap-4 md:grid-cols-3">
+          <SignalCard
+            title="Heartbeat"
+            text="El indicador más útil no es el diseño bonito: es saber si el nodo realmente reportó vida hace poco."
+            icon={Activity}
           />
-          <div className="relative z-10 p-4 sm:p-6 sm:p-8">
-            <div className="mb-6 flex flex-col gap-3 border-b border-white/5 pb-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-[10px] sm:text-[12px] font-black uppercase tracking-[0.3em] text-white">
-                Estado en tiempo real
-              </h2>
+          <SignalCard
+            title="Rol del nodo"
+            text="Cada nodo debe dejar claro si es físico, cloud, agente o servicio auxiliar. Sin eso, el mapa se vuelve confuso."
+            icon={Cpu}
+          />
+          <SignalCard
+            title="Control y seguridad"
+            text="La infraestructura también debe leerse desde gobernanza: quién puede escribir, ejecutar o quedar pausado."
+            icon={ShieldCheck}
+          />
+        </section>
 
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Actualizando
-                </span>
-              </div>
+        <section className="shell-panel overflow-hidden p-5">
+          <div className="mb-4 flex flex-col gap-3 border-b border-white/5 pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="section-kicker">Mapa operativo</p>
+              <h2 className="section-title">Estado en tiempo real</h2>
+              <p className="section-copy">
+                Vista pensada para leer rápido en móvil y profundizar en desktop sin perder
+                contexto.
+              </p>
             </div>
 
-            <NodesPanel />
+            <span className="shell-chip-success">Señal activa</span>
           </div>
-        </div>
+
+          <NodesPanel />
+        </section>
       </div>
     </PageShell>
   );
