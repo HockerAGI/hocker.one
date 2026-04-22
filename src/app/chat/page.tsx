@@ -1,50 +1,101 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Bot, MemoryStick, Sparkles } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 import NovaChat from "@/components/NovaChat";
 
 export const metadata: Metadata = {
-  title: "Nova AGI",
-  description: "Canal privado de conversación con NOVA.",
+  title: "NOVA",
+  description: "Asistencia operativa, memoria y contexto del ecosistema Hocker.",
 };
+
+function NovaGuideCard({
+  title,
+  text,
+  icon: Icon,
+}: {
+  title: string;
+  text: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="shell-card p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-white/[0.03] text-sky-300">
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+
+        <div>
+          <p className="text-sm font-bold text-white">{title}</p>
+          <p className="text-xs text-slate-500">Asistencia central</p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-sm leading-relaxed text-slate-400">{text}</p>
+    </div>
+  );
+}
 
 export default function ChatPage() {
   return (
     <PageShell
-      title="Nova AGI"
-      subtitle="Habla con NOVA. Claro y directo."
+      eyebrow="NOVA · Asistencia y contexto"
+      title="NOVA"
+      description="Este espacio sirve para conversar, decidir, contextualizar y convertir ideas del ecosistema en acciones concretas."
       actions={
-        <Link href="/dashboard" className="hocker-button-primary">
-          Panel
-        </Link>
+        <>
+          <Link href="/dashboard" className="shell-button-secondary">
+            Inicio
+          </Link>
+          <Link href="/commands" className="shell-button-primary">
+            Ver operaciones
+          </Link>
+        </>
       }
     >
-      <div className="flex min-h-[calc(100dvh-220px)] flex-col gap-4 sm:min-h-[calc(100dvh-200px)] sm:gap-6">
-        <Hint title="Entrada directa">
-          Mensajes breves. Respuestas claras.
+      <div className="space-y-6">
+        <Hint title="Cómo hablar con NOVA">
+          Mensajes breves, contexto claro y una sola intención principal por turno. Primero
+          entendimiento. Después ejecución.
         </Hint>
 
-        <div className="hocker-panel-pro flex min-h-[68dvh] flex-1 flex-col overflow-hidden border-sky-500/25 shadow-[0_0_40px_rgba(14,165,233,0.1)] hocker-page-enter lg:min-h-0">
-          <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/50 px-4 py-3 sm:px-6">
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-sky-500" />
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">
-                Conexión segura establecida
-              </span>
+        <section className="grid gap-4 md:grid-cols-3">
+          <NovaGuideCard
+            title="Contexto"
+            text="NOVA debe saber qué proyecto estás viendo y qué quieres resolver antes de sugerir acciones."
+            icon={Bot}
+          />
+          <NovaGuideCard
+            title="Memoria"
+            text="La conversación debe mantenerse útil, no sentimental ni decorativa. Todo lo importante debe poder recuperarse."
+            icon={MemoryStick}
+          />
+          <NovaGuideCard
+            title="Acción"
+            text="La meta no es responder bonito; la meta es ayudarte a tomar decisiones y mover el sistema."
+            icon={Sparkles}
+          />
+        </section>
+
+        <section className="shell-panel overflow-hidden p-0">
+          <div className="border-b border-white/5 bg-slate-950/45 px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-kicker">Canal privado</p>
+                <h2 className="section-title mt-1">Conversación operativa</h2>
+              </div>
+
+              <span className="shell-chip-brand">Privado</span>
             </div>
-            <span className="text-[9px] sm:text-[10px] font-mono uppercase text-slate-500">
-              Privado
-            </span>
           </div>
 
-          <div className="flex-1 overflow-hidden bg-slate-950/20 p-2 sm:p-3">
-            <NovaChat />
+          <div className="p-3 sm:p-4">
+            <div className="min-h-[68dvh] rounded-[28px] border border-white/5 bg-slate-950/35 p-2 sm:p-3">
+              <NovaChat />
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </PageShell>
   );
