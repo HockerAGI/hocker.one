@@ -70,3 +70,4 @@ coverage/
 _backup_*/
 _prep_backup_*/
 _ready_backup_*/
+!env.example
