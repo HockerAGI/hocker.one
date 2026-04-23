@@ -67,3 +67,5 @@ coverage/
 # =========================
 *.log
 .env*.local
+
+_backup_*/
