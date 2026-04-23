@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, TerminalSquare } from "lucide-react";
+import {
+  CheckCircle2,
+  PlayCircle,
+  ShieldCheck,
+  TerminalSquare,
+  Waypoints,
+} from "lucide-react";
 import PageShell from "@/components/PageShell";
 import Hint from "@/components/Hint";
 import CommandBox from "@/components/CommandBox";
@@ -11,7 +17,7 @@ export const metadata: Metadata = {
   description: "Cola, aprobaciones y ejecución de comandos del ecosistema.",
 };
 
-function QuickTip({
+function SignalCard({
   title,
   text,
   icon: Icon,
@@ -21,19 +27,37 @@ function QuickTip({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="shell-card p-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-white/[0.03] text-sky-300">
-          <Icon className="h-4.5 w-4.5" />
+    <div className="shell-card relative overflow-hidden p-4">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.08),transparent_34%)]" />
+      <div className="relative">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/8 bg-slate-950/70 text-sky-300">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white">{title}</p>
+            <p className="text-xs text-slate-500">operación clara</p>
+          </div>
         </div>
-
-        <div>
-          <p className="text-sm font-bold text-white">{title}</p>
-          <p className="text-xs text-slate-500">Operación clara</p>
-        </div>
+        <p className="mt-3 text-sm leading-relaxed text-slate-400">{text}</p>
       </div>
+    </div>
+  );
+}
 
-      <p className="mt-3 text-sm leading-relaxed text-slate-400">{text}</p>
+function StatPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/6 bg-white/[0.035] px-4 py-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-black text-white sm:text-base">{value}</p>
     </div>
   );
 }
@@ -41,76 +65,97 @@ function QuickTip({
 export default function CommandsPage() {
   return (
     <PageShell
-      eyebrow="Operaciones · Cola y aprobaciones"
-      title="Comandos y ejecución"
-      description="Aquí se crean tareas, se revisan aprobaciones y se sigue el estado real de cada instrucción del sistema."
+      eyebrow="Operaciones · Runtime y control"
+      title="Comandos"
+      description="Desde aquí se crea, aprueba, ejecuta y revisa cada instrucción del sistema sin perder contexto."
       actions={
         <>
           <Link href="/dashboard" className="shell-button-secondary">
-            Volver al inicio
+            Dashboard
           </Link>
           <Link href="/governance" className="shell-button-primary">
-            Ver control
+            Governance
           </Link>
         </>
       }
     >
       <div className="space-y-6">
-        <Hint title="Cómo usar esta vista">
-          Primero escribe una instrucción simple y concreta. Después valida en la cola si quedó en
-          revisión, ejecución o cierre. Aquí no se trata de “mandar mucho”, sino de “mandar bien”.
+        <Hint title="Lectura rápida">
+          Primero crea la instrucción. Después confirma si quedó en cola, en revisión o en
+          ejecución. Aquí todo debe leerse fácil y sin ruido.
         </Hint>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <QuickTip
-            title="Una tarea por comando"
-            text="Evita mezclar varias acciones en una sola instrucción. Eso reduce errores y hace más clara la trazabilidad."
+          <SignalCard
+            title="Una intención por comando"
+            text="Instrucciones cortas y concretas dan mejor trazabilidad y menos errores."
             icon={TerminalSquare}
           />
-          <QuickTip
+          <SignalCard
             title="Aprobación cuando importa"
-            text="Los cambios sensibles deben pasar por revisión antes de ejecutarse. El panel ya soporta ese flujo."
+            text="Los cambios sensibles deben pasar por control antes de ejecutarse."
             icon={ShieldCheck}
           />
-          <QuickTip
+          <SignalCard
             title="Cierre visible"
-            text="Un comando bueno no solo se envía: también debe terminar con estado claro, resultado y tiempo de ejecución."
+            text="La tarea no termina al enviarse. Termina cuando su estado queda claro."
             icon={CheckCircle2}
           />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4">
-            <div className="shell-panel p-5">
-              <div className="mb-4">
-                <p className="section-kicker">Nueva instrucción</p>
-                <h2 className="section-title">Crear comando</h2>
-                <p className="section-copy">
-                  Usa lenguaje simple. Define el nodo cuando aplique y evita ambigüedad en el
-                  payload.
-                </p>
-              </div>
+            <div className="shell-panel relative overflow-hidden p-5">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.08),transparent_30%)]" />
+              <div className="relative">
+                <div className="mb-5 flex flex-col gap-4">
+                  <div>
+                    <p className="section-kicker">Nueva instrucción</p>
+                    <h2 className="section-title">Crear comando</h2>
+                    <p className="section-copy">
+                      Define la acción, el destino y el contexto con lenguaje simple.
+                    </p>
+                  </div>
 
-              <CommandBox />
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <StatPill label="flujo" value="crear" />
+                    <StatPill label="control" value="validar" />
+                    <StatPill label="salida" value="seguir" />
+                  </div>
+                </div>
+
+                <CommandBox />
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="shell-panel p-5">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="section-kicker">Seguimiento</p>
-                  <h2 className="section-title">Cola operativa</h2>
-                  <p className="section-copy">
-                    Aquí se concentra lo que requiere aprobación, lo que está corriendo y lo que ya
-                    terminó.
-                  </p>
+            <div className="shell-panel relative overflow-hidden p-5">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_28%)]" />
+              <div className="relative">
+                <div className="mb-5 flex flex-col gap-4 border-b border-white/6 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="section-kicker">Seguimiento</p>
+                    <h2 className="section-title">Cola operativa</h2>
+                    <p className="section-copy">
+                      Aquí se ve lo que espera aprobación, lo que corre y lo que ya cerró.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="shell-chip-brand flex items-center gap-1.5">
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      runtime
+                    </span>
+                    <span className="shell-chip flex items-center gap-1.5">
+                      <Waypoints className="h-3.5 w-3.5" />
+                      trazable
+                    </span>
+                  </div>
                 </div>
 
-                <span className="shell-chip-brand">Runtime real</span>
+                <CommandsQueue />
               </div>
-
-              <CommandsQueue />
             </div>
           </div>
         </section>
