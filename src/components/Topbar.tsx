@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Bot, Menu, ShieldCheck, Sparkles } from "lucide-react";
+import { Bot, ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const titles: Record<string, string> = {
@@ -12,7 +12,7 @@ const titles: Record<string, string> = {
   "/nodes": "Nodos",
   "/governance": "Guardia",
   "/supply": "Supply",
-  "/agis": "AGIs"
+  "/agis": "AGIs",
 };
 
 function getTitle(pathname: string) {
@@ -20,19 +20,21 @@ function getTitle(pathname: string) {
 }
 
 export default function Topbar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
   const title = getTitle(pathname);
 
   return (
-    <header className="hkr-v2-topbar">
-      <Link href="/" className="hkr-v2-brand" aria-label="Ir al inicio">
-        <span>
-          <img src="/brand/hocker-one-logo.png" alt="" />
-        </span>
-        <strong>{title}</strong>
+    <header className="hkr3-topbar">
+      <Link href="/" className="hkr3-topbrand" aria-label="Ir al inicio">
+        <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
       </Link>
 
-      <nav className="hkr-v2-topnav" aria-label="Navegación principal">
+      <div className="hkr3-current">
+        <span />
+        <strong>{title}</strong>
+      </div>
+
+      <nav className="hkr3-toplinks" aria-label="Acciones rápidas">
         <Link href="/chat">
           <Bot size={17} />
           NOVA
@@ -42,20 +44,6 @@ export default function Topbar() {
           Guardia
         </Link>
       </nav>
-
-      <div className="hkr-v2-top-actions">
-        <button type="button" aria-label="Notificaciones">
-          <Bell size={18} />
-        </button>
-
-        <Link href="/dashboard" aria-label="Panel activo">
-          <Sparkles size={18} />
-        </Link>
-
-        <button type="button" aria-label="Menú">
-          <Menu size={18} />
-        </button>
-      </div>
     </header>
   );
 }
