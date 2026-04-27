@@ -1459,3 +1459,242 @@ body::after {
     transition: none !important;
   }
 }
+
+/* =========================================================
+   HOCKER ONE V2 · INTERNAL ROUTES SAFE POLISH
+   CSS only. No APIs, no Supabase, no route logic touched.
+========================================================= */
+
+main:not(.hkr-v2-page) {
+  position: relative;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 42px 0 128px;
+  color: var(--hkr-text);
+}
+
+main:not(.hkr-v2-page)::before {
+  content: "";
+  position: fixed;
+  inset: 78px 0 auto 0;
+  height: 340px;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(103, 232, 249, 0.14), transparent 34%),
+    radial-gradient(circle at 82% 8%, rgba(192, 132, 252, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(8, 18, 35, .42), transparent);
+}
+
+main:not(.hkr-v2-page) > section,
+main:not(.hkr-v2-page) > div:not([class*="fixed"]):not([class*="absolute"]) {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--hkr-line);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at top left, rgba(103,232,249,.10), transparent 34%),
+    linear-gradient(135deg, rgba(8, 18, 35, .84), rgba(9, 10, 28, .78));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .32);
+}
+
+main:not(.hkr-v2-page) > section::before,
+main:not(.hkr-v2-page) > div:not([class*="fixed"]):not([class*="absolute"])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255,255,255,.06) 42%, transparent 58%);
+  transform: translateX(-120%);
+  animation: hkr-route-glint 7s ease-in-out infinite;
+}
+
+main:not(.hkr-v2-page) h1,
+main:not(.hkr-v2-page) h2,
+main:not(.hkr-v2-page) h3 {
+  color: var(--hkr-text);
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+main:not(.hkr-v2-page) h1 {
+  max-width: 820px;
+  font-size: clamp(42px, 7vw, 86px);
+  line-height: .94;
+  margin-bottom: 18px;
+}
+
+main:not(.hkr-v2-page) h1 strong,
+main:not(.hkr-v2-page) h1 span,
+main:not(.hkr-v2-page) h2 strong,
+main:not(.hkr-v2-page) h2 span {
+  color: transparent;
+  background: linear-gradient(90deg, var(--hkr-cyan), #93c5fd, var(--hkr-violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+main:not(.hkr-v2-page) p,
+main:not(.hkr-v2-page) li {
+  color: var(--hkr-muted);
+  line-height: 1.55;
+}
+
+main:not(.hkr-v2-page) a {
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+main:not(.hkr-v2-page) a:hover {
+  transform: translateY(-1px);
+}
+
+main:not(.hkr-v2-page) button,
+main:not(.hkr-v2-page) a[class*="button"],
+main:not(.hkr-v2-page) a[class*="btn"],
+main:not(.hkr-v2-page) [role="button"] {
+  border-radius: 999px !important;
+  border: 1px solid var(--hkr-line) !important;
+  background:
+    linear-gradient(135deg, rgba(103,232,249,.16), rgba(192,132,252,.10)) !important;
+  color: var(--hkr-text) !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,.20);
+}
+
+main:not(.hkr-v2-page) button:hover,
+main:not(.hkr-v2-page) a[class*="button"]:hover,
+main:not(.hkr-v2-page) a[class*="btn"]:hover,
+main:not(.hkr-v2-page) [role="button"]:hover {
+  border-color: rgba(103,232,249,.46) !important;
+  background:
+    linear-gradient(135deg, rgba(103,232,249,.24), rgba(192,132,252,.16)) !important;
+}
+
+main:not(.hkr-v2-page) input,
+main:not(.hkr-v2-page) textarea,
+main:not(.hkr-v2-page) select {
+  border: 1px solid var(--hkr-line) !important;
+  border-radius: 20px !important;
+  background: rgba(2, 6, 23, .64) !important;
+  color: var(--hkr-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+main:not(.hkr-v2-page) input::placeholder,
+main:not(.hkr-v2-page) textarea::placeholder {
+  color: rgba(159, 177, 199, .65);
+}
+
+main:not(.hkr-v2-page) table {
+  width: 100%;
+  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--hkr-line);
+  border-radius: 24px;
+  background: rgba(2, 6, 23, .42);
+}
+
+main:not(.hkr-v2-page) th {
+  color: #b8f6ff;
+  background: rgba(103,232,249,.10);
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+main:not(.hkr-v2-page) td,
+main:not(.hkr-v2-page) th {
+  border-bottom: 1px solid rgba(148, 221, 255, .10);
+  padding: 14px 16px;
+}
+
+main:not(.hkr-v2-page) tr:last-child td {
+  border-bottom: 0;
+}
+
+main:not(.hkr-v2-page) code,
+main:not(.hkr-v2-page) pre {
+  border: 1px solid var(--hkr-line);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, .76);
+  color: #b8f6ff;
+}
+
+main:not(.hkr-v2-page) [class*="card"],
+main:not(.hkr-v2-page) [class*="panel"],
+main:not(.hkr-v2-page) [class*="box"],
+main:not(.hkr-v2-page) [class*="item"] {
+  border-color: var(--hkr-line) !important;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, .22);
+}
+
+main:not(.hkr-v2-page) [class*="grid"] > * {
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+main:not(.hkr-v2-page) [class*="grid"] > *:hover {
+  transform: translateY(-2px);
+  border-color: rgba(103,232,249,.34) !important;
+  box-shadow: 0 22px 64px rgba(56,189,248,.08);
+}
+
+main:not(.hkr-v2-page) svg {
+  filter: drop-shadow(0 0 12px rgba(103,232,249,.16));
+}
+
+main:not(.hkr-v2-page) hr {
+  border-color: rgba(148, 221, 255, .14);
+}
+
+main:not(.hkr-v2-page) ::selection {
+  color: #02111f;
+  background: var(--hkr-cyan);
+}
+
+@keyframes hkr-route-glint {
+  0%, 65%, 100% { transform: translateX(-130%); opacity: 0; }
+  72% { opacity: 1; }
+  90% { transform: translateX(130%); opacity: 0; }
+}
+
+@media (min-width: 1260px) {
+  main:not(.hkr-v2-page) {
+    padding-left: 86px;
+  }
+}
+
+@media (max-width: 760px) {
+  main:not(.hkr-v2-page) {
+    width: calc(100% - 24px);
+    padding-top: 24px;
+    padding-bottom: 112px;
+  }
+
+  main:not(.hkr-v2-page) > section,
+  main:not(.hkr-v2-page) > div:not([class*="fixed"]):not([class*="absolute"]) {
+    border-radius: 26px;
+  }
+
+  main:not(.hkr-v2-page) h1 {
+    font-size: clamp(38px, 14vw, 64px);
+  }
+
+  main:not(.hkr-v2-page) table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main:not(.hkr-v2-page) > section::before,
+  main:not(.hkr-v2-page) > div:not([class*="fixed"]):not([class*="absolute"])::before {
+    animation: none !important;
+  }
+
+  main:not(.hkr-v2-page) a,
+  main:not(.hkr-v2-page) [class*="grid"] > * {
+    transition: none !important;
+  }
+}
