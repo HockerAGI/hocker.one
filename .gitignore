@@ -71,3 +71,6 @@ _backup_*/
 _prep_backup_*/
 _ready_backup_*/
 !env.example
+android/local.properties
+HOCKER_AUDIT_TOPOLOGY_*
+hocker_topology_audit_*.zip
