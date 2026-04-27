@@ -4,9 +4,22 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+function createJurixClient() {
+  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const supabaseKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase no está configurado para exportar auditoría.");
+  }
+
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+function csvValue(value: unknown): string {
+  if (value == null) return "";
+  const raw = typeof value === "object" ? JSON.stringify(value) : String(value);
+  return '"' + raw.replace(/"/g, '""') + '"';
+}
 
 export default function JurixExportDashboard() {
   const router = useRouter();
@@ -16,10 +29,11 @@ export default function JurixExportDashboard() {
 
   const handleExport = async () => {
     setIsExporting(true);
-    setExportStatus("Iniciando extracción de la matriz de auditoría...");
+    setExportStatus("Preparando exportación...");
 
     try {
-      // Obtenemos los logs transaccionales y de auditoría
+      const supabase = createJurixClient();
+
       const { data, error } = await supabase
         .from("transactions_audit")
         .select("*")
@@ -27,102 +41,98 @@ export default function JurixExportDashboard() {
 
       if (error) throw error;
 
-      setExportStatus(`Procesando ${data?.length || 0} registros...`);
+      setExportStatus("Procesando registros...");
 
       let content = "";
-      let mimeType = "";
-      let extension = "";
+      let mimeType = "application/json";
+      let extension = "json";
 
       if (selectedFormat === "JSON") {
-        content = JSON.stringify(data, null, 2);
-        mimeType = "application/json";
-        extension = "json";
+        content = JSON.stringify(data ?? [], null, 2);
       } else {
-        // Conversión a CSV básica
-        if (data && data.length > 0) {
-          const headers = Object.keys(data[0]).join(",");
-          const rows = data.map(row => 
-            Object.values(row).map(val => 
-              typeof val === 'object' ? `"${JSON.stringify(val).replace(/"/g, '""')}"` : `"${val}"`
-            ).join(",")
-          );
-          content = [headers, ...rows].join("\n");
-        }
-        mimeType = "text/csv";
         extension = "csv";
+        mimeType = "text/csv";
+
+        if (data && data.length > 0) {
+          const headers = Object.keys(data[0]);
+          const rows = data.map((row) => headers.map((key) => csvValue(row[key])).join(","));
+          content = [headers.join(","), ...rows].join("\n");
+        }
       }
 
-      // Descarga en el navegador
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
+
       link.href = url;
-      link.download = `hkr_supply_audit_export_${new Date().toISOString().split('T')[0]}.${extension}`;
+      link.download = "hocker_audit_export_" + new Date().toISOString().slice(0, 10) + "." + extension;
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportStatus("Exportación completada. Protocolo de seguridad ejecutado.");
-    } catch (err: any) {
-      console.error(err);
-      setExportStatus(`Falla crítica en la exportación: ${err.message}`);
+      setExportStatus("Exportación completada.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setExportStatus("No se pudo exportar: " + message);
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-mono p-8 flex items-center justify-center">
-      <div className="w-full max-w-2xl bg-[#0a0a0a] border border-[#00bfff]/30 p-8 rounded-md shadow-[0_0_20px_rgba(0,191,255,0.05)]">
-        
-        <div className="flex items-center justify-between mb-8 border-b border-[#00bfff]/30 pb-4">
-          <h1 className="text-2xl font-bold text-[#00bfff] tracking-widest">EXPORTACIÓN JURIX</h1>
-          <button 
-            onClick={() => router.push("/admin/jurix")}
-            className="text-sm opacity-60 hover:opacity-100 hover:text-[#00bfff] transition-colors"
-          >
-            [ VOLVER AL PANEL ]
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          <p className="text-sm opacity-80 leading-relaxed">
-            Este módulo permite la extracción de la cadena de auditoría de HKR Supply y nodos asociados. 
-            Toda la información exportada lleva un sello criptográfico implícito. Úselo con responsabilidad.
-          </p>
-
-          <div className="flex flex-col space-y-2">
-            <label className="text-[#00bfff] text-sm tracking-widest">FORMATO DE EXTRACCIÓN</label>
-            <select 
-              value={selectedFormat}
-              onChange={(e) => setSelectedFormat(e.target.value as "JSON" | "CSV")}
-              className="bg-transparent border border-[#00bfff]/50 text-white p-3 rounded outline-none focus:border-[#00bfff] focus:ring-1 focus:ring-[#00bfff]"
-            >
-              <option value="JSON" className="bg-[#050505]">JSON (Recomendado para Máquinas)</option>
-              <option value="CSV" className="bg-[#050505]">CSV (Lectura Humana/Excel)</option>
-            </select>
+    <div className="min-h-screen bg-[#050505] p-6 text-white sm:p-8">
+      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-sky-400/20 bg-slate-950/80 p-6 shadow-[0_0_40px_rgba(14,165,233,0.10)]">
+        <div className="mb-8 flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-sky-300">JURIX</p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight">Exportar auditoría</h1>
           </div>
 
           <button
+            type="button"
+            onClick={() => router.push("/admin/jurix")}
+            className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-slate-300 hover:border-sky-400/30 hover:text-white"
+          >
+            Volver
+          </button>
+        </div>
+
+        <div className="space-y-5">
+          <p className="text-sm leading-relaxed text-slate-400">
+            Descarga registros de auditoría para revisión interna. Usa JSON para sistemas y CSV para lectura rápida.
+          </p>
+
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-[0.28em] text-sky-300">Formato</span>
+            <select
+              value={selectedFormat}
+              onChange={(event) => setSelectedFormat(event.target.value as "JSON" | "CSV")}
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-sky-400/50"
+            >
+              <option value="JSON">JSON</option>
+              <option value="CSV">CSV</option>
+            </select>
+          </label>
+
+          <button
+            type="button"
             onClick={handleExport}
             disabled={isExporting}
-            className={`w-full py-4 mt-4 font-bold tracking-widest transition-all rounded shadow-md ${
-              isExporting 
-                ? "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700" 
-                : "bg-[#00bfff] text-black hover:bg-white border border-[#00bfff] hover:shadow-[0_0_15px_rgba(0,191,255,0.8)]"
-            }`}
+            className="w-full rounded-2xl bg-sky-400 px-5 py-4 text-sm font-black uppercase tracking-[0.28em] text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
           >
-            {isExporting ? "PROCESANDO EXTRACCIÓN..." : "INICIAR DESCARGA SEGURA"}
+            {isExporting ? "Exportando..." : "Descargar"}
           </button>
 
-          {exportStatus && (
-            <div className={`p-4 mt-4 text-sm rounded ${exportStatus.includes('Falla') ? 'bg-red-900/20 border border-red-500 text-red-400' : 'bg-[#00bfff]/10 border border-[#00bfff]/30 text-[#00bfff]'}`}>
-              {"> "} {exportStatus}
+          {exportStatus ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+              {exportStatus}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
+

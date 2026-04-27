@@ -4,131 +4,151 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
-// Configuración de cliente Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+type RecentLog = {
+  id?: string;
+  action?: string;
+  message?: string;
+  created_at?: string;
+};
+
+function createJurixClient() {
+  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const supabaseKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase no está configurado para JURIX.");
+  }
+
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export default function JurixAdminDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const [systemStats, setSystemStats] = useState({
     activeNodes: 0,
     pendingCommands: 0,
     totalProjects: 0,
   });
-  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [recentLogs, setRecentLogs] = useState<RecentLog[]>([]);
 
   useEffect(() => {
+    let mounted = true;
+
     async function fetchJurixData() {
       try {
         setLoading(true);
-        // Extracción de datos maestros
-        const [{ count: nodesCount }, { count: cmdsCount }, { data: logsData }] = await Promise.all([
+        setErrorMessage("");
+
+        const supabase = createJurixClient();
+
+        const [
+          nodesResult,
+          queuedResult,
+          approvalResult,
+          projectsResult,
+          logsResult,
+        ] = await Promise.all([
           supabase.from("nodes").select("*", { count: "exact", head: true }).eq("status", "online"),
-          supabase.from("commands").select("*", { count: "exact", head: true }).eq("status", "pending"),
-          supabase.from("command_logs").select("*").order("created_at", { ascending: false }).limit(10)
+          supabase.from("commands").select("*", { count: "exact", head: true }).eq("status", "queued"),
+          supabase.from("commands").select("*", { count: "exact", head: true }).eq("status", "needs_approval"),
+          supabase.from("projects").select("*", { count: "exact", head: true }),
+          supabase.from("command_logs").select("*").order("created_at", { ascending: false }).limit(10),
         ]);
 
+        if (!mounted) return;
+
         setSystemStats({
-          activeNodes: nodesCount || 0,
-          pendingCommands: cmdsCount || 0,
-          totalProjects: 3, // hocker-one, hkr-supply, chido-casino
+          activeNodes: nodesResult.count ?? 0,
+          pendingCommands: (queuedResult.count ?? 0) + (approvalResult.count ?? 0),
+          totalProjects: projectsResult.count ?? 0,
         });
 
-        setRecentLogs(logsData || []);
+        setRecentLogs((logsResult.data ?? []) as RecentLog[]);
       } catch (error) {
-        console.error("[NOVA:Jurix] Error de sincronización con la matriz:", error);
+        if (!mounted) return;
+        const message = error instanceof Error ? error.message : String(error);
+        setErrorMessage(message);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
-    fetchJurixData();
+    void fetchJurixData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-mono p-8">
-      <header className="mb-8 border-b border-[#00bfff]/30 pb-4 flex justify-between items-center">
+    <div className="min-h-screen bg-[#050505] p-6 text-white sm:p-8">
+      <header className="mb-8 flex flex-col gap-4 border-b border-sky-400/20 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-widest text-[#00bfff]">JURIX_ADMIN_PANEL</h1>
-          <p className="text-sm opacity-60">Operando bajo jurisdicción de HKR Supply - God Mode Activo</p>
+          <p className="text-xs font-black uppercase tracking-[0.35em] text-sky-300">JURIX</p>
+          <h1 className="mt-2 text-3xl font-black tracking-tight">Panel de auditoría</h1>
+          <p className="mt-2 text-sm text-slate-400">Control legal, trazabilidad y revisión operativa.</p>
         </div>
-        <button 
+
+        <button
+          type="button"
           onClick={() => router.push("/admin/jurix/export")}
-          className="bg-[#00bfff] text-black px-6 py-2 rounded-sm font-bold shadow-[0_0_10px_rgba(0,191,255,0.5)] hover:bg-white hover:text-black transition-all"
+          className="rounded-2xl bg-sky-400 px-5 py-3 text-xs font-black uppercase tracking-[0.25em] text-slate-950 hover:bg-white"
         >
-          EXPORTAR AUDITORÍA
+          Exportar
         </button>
       </header>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <span className="animate-pulse text-[#00bfff]">Sincronizando con nodos físicos...</span>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm text-slate-400">
+          Cargando lectura JURIX...
+        </div>
+      ) : errorMessage ? (
+        <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-6 text-sm text-rose-200">
+          {errorMessage}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Tarjeta de Estadísticas: Nodos */}
-          <div className="bg-[#0a0a0a] border border-[#00bfff]/30 p-6 rounded-md shadow-lg">
-            <h3 className="text-lg text-[#00bfff] mb-2">Nodos Activos</h3>
-            <p className="text-4xl font-bold">{systemStats.activeNodes}</p>
-            <span className="text-xs text-green-400 mt-2 block">Conexión Estable</span>
-          </div>
-
-          {/* Tarjeta de Estadísticas: Comandos */}
-          <div className="bg-[#0a0a0a] border border-[#00bfff]/30 p-6 rounded-md shadow-lg">
-            <h3 className="text-lg text-[#00bfff] mb-2">Comandos en Cola</h3>
-            <p className="text-4xl font-bold">{systemStats.pendingCommands}</p>
-            <span className="text-xs text-yellow-400 mt-2 block">Esperando ejecución</span>
-          </div>
-
-          {/* Tarjeta de Estadísticas: Proyectos */}
-          <div className="bg-[#0a0a0a] border border-[#00bfff]/30 p-6 rounded-md shadow-lg">
-            <h3 className="text-lg text-[#00bfff] mb-2">Proyectos (Topología)</h3>
-            <p className="text-4xl font-bold">{systemStats.totalProjects}</p>
-            <span className="text-xs opacity-50 mt-2 block">Ecosistema Centralizado</span>
-          </div>
-
-          {/* Panel de Logs */}
-          <div className="col-span-1 md:col-span-3 mt-6">
-            <div className="bg-[#0a0a0a] border border-[#00bfff]/30 p-6 rounded-md">
-              <h3 className="text-xl text-[#00bfff] mb-4 border-b border-[#00bfff]/20 pb-2">Registro de Comandos (Live)</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-[#00bfff]/70">
-                      <th className="py-2">ID_LOG</th>
-                      <th className="py-2">NIVEL</th>
-                      <th className="py-2">MENSAJE</th>
-                      <th className="py-2">TIMESTAMP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentLogs.length > 0 ? (
-                      recentLogs.map((log) => (
-                        <tr key={log.id} className="border-b border-gray-800 hover:bg-[#00bfff]/5">
-                          <td className="py-3 font-mono text-xs opacity-60">{log.id.substring(0, 8)}...</td>
-                          <td className="py-3">
-                            <span className={`px-2 py-1 text-xs rounded-sm ${log.level === 'error' ? 'bg-red-900/50 text-red-400' : 'bg-[#00bfff]/20 text-[#00bfff]'}`}>
-                              {log.level.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="py-3">{log.message}</td>
-                          <td className="py-3 opacity-60">{new Date(log.created_at).toLocaleString()}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4} className="py-4 text-center opacity-50">No hay registros recientes en la matriz.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+        <main className="space-y-6">
+          <section className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Nodos activos</p>
+              <p className="mt-3 text-4xl font-black">{systemStats.activeNodes}</p>
             </div>
-          </div>
-        </div>
+            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Comandos pendientes</p>
+              <p className="mt-3 text-4xl font-black">{systemStats.pendingCommands}</p>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Proyectos</p>
+              <p className="mt-3 text-4xl font-black">{systemStats.totalProjects}</p>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-black">Últimos registros</h2>
+              <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400">
+                {recentLogs.length} items
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {recentLogs.length === 0 ? (
+                <p className="text-sm text-slate-500">Sin registros recientes.</p>
+              ) : (
+                recentLogs.map((log, index) => (
+                  <div key={log.id ?? index} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <p className="text-sm font-bold text-white">{log.action ?? log.message ?? "Registro"}</p>
+                    <p className="mt-1 text-xs text-slate-500">{log.created_at ?? "sin fecha"}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </main>
       )}
     </div>
   );
 }
+

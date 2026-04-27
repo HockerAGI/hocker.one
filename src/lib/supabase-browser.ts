@@ -1,9 +1,34 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-// PATRÓN SINGLETON: Previene la saturación de WebSockets y fugas de RAM en el cliente
-let supabaseClientInstance: ReturnType<typeof createBrowserClient> | null = null;
+type BrowserSupabaseClient = ReturnType<typeof createBrowserClient>;
 
-export function createBrowserSupabase() {
+let supabaseClientInstance: BrowserSupabaseClient | null = null;
+let missingClientInstance: BrowserSupabaseClient | null = null;
+
+function createMissingClient(): BrowserSupabaseClient {
+  if (missingClientInstance) return missingClientInstance;
+
+  missingClientInstance = new Proxy(
+    {},
+    {
+      get() {
+        throw new Error(
+          "Supabase no está configurado en el cliente. Revisa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+        );
+      },
+    },
+  ) as BrowserSupabaseClient;
+
+  return missingClientInstance;
+}
+
+export function hasBrowserSupabaseEnv(): boolean {
+  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const anonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+  return Boolean(url && anonKey);
+}
+
+export function createBrowserSupabase(): BrowserSupabaseClient {
   if (supabaseClientInstance) {
     return supabaseClientInstance;
   }
@@ -12,11 +37,10 @@ export function createBrowserSupabase() {
   const anonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
 
   if (!url || !anonKey) {
-    console.warn("[NOVA] Advertencia de Entorno: Variables de Supabase no detectadas en el cliente.");
+    return createMissingClient();
   }
 
-  // Se crea y se sella la conexión para uso continuo en toda la aplicación
   supabaseClientInstance = createBrowserClient(url, anonKey);
-  
   return supabaseClientInstance;
 }
+

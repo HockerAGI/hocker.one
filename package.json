@@ -13,15 +13,16 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
-    "android:sync": "npm run build && cap sync android",
+    "android:sync": "cap sync android",
     "android:open": "cap open android",
     "android:debug": "cap run android",
     "android:apk": "cd android && ./gradlew assembleDebug",
-    "android:aab": "cd android && ./gradlew bundleRelease"
+    "android:aab": "cd android && ./gradlew bundleRelease",
+    "android:sync:web": "npm run build && cap sync android"
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.1",
-    "@capacitor/core": "^8.3.1",
+    "@capacitor/android": "8.3.1",
+    "@capacitor/core": "8.3.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "@trigger.dev/sdk": "3.3.17",
@@ -39,7 +40,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.6.2",
+    "@capacitor/cli": "8.3.1",
     "@next/eslint-plugin-next": "^16.2.1",
     "@types/node": "^22.13.1",
     "@types/node-cron": "^3.0.11",
