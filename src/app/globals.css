@@ -1150,3 +1150,14 @@ main:not(.hkr3-page) :where(button, [role="button"], a):hover {
     transition: none !important;
   }
 }
+
+
+.hkr3-hero-kicker {
+  max-width: 460px;
+  margin: 0;
+  color: var(--hkr3-text);
+  font-size: clamp(22px, 3.4vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+}

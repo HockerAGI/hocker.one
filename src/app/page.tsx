@@ -124,8 +124,9 @@ export default function HomePage() {
             Ecosistema online
           </div>
 
-          <h1>Hocker ONE</h1>
-          <p>Control del ecosistema en tiempo real.</p>
+          <p className="hkr3-hero-kicker">
+            Control del ecosistema en tiempo real.
+          </p>
 
           <div className="hkr3-actions">
             <Link href="/dashboard" className="hkr3-primary">
