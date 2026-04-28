@@ -111,7 +111,7 @@ function SignalMap() {
 
 export default function HomePage() {
   return (
-    <main className="hkr3-page">
+    <main data-hkr-phase-b="dashboard" className="hkr3-page">
       <section className="hkr3-hero">
         <div className="hkr3-logo-stage">
 
