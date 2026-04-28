@@ -114,6 +114,19 @@ export default function HomePage() {
     <main className="hkr3-page">
       <section className="hkr3-hero">
         <div className="hkr3-logo-stage">
+
+        <span className="hkr3-hero-ambient" aria-hidden="true" />
+        <span className="hkr3-hero-grid" aria-hidden="true" />
+        <span className="hkr3-hero-scan" aria-hidden="true" />
+        <span className="hkr3-hero-ring hkr3-hero-ring-a" aria-hidden="true" />
+        <span className="hkr3-hero-ring hkr3-hero-ring-b" aria-hidden="true" />
+        <span className="hkr3-hero-ring hkr3-hero-ring-c" aria-hidden="true" />
+        <span className="hkr3-hero-particles" aria-hidden="true">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span key={i} className="hkr3-particle" />
+          ))}
+        </span>
+
           <div className="hkr3-logo-aura" />
           <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
         </div>
