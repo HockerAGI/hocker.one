@@ -10,27 +10,26 @@ import {
   type KeyboardEvent,
 } from "react";
 import {
-  ArrowUpRight,
   Bot,
   Brain,
   FileText,
-  Github,
   Image as ImageIcon,
   Loader2,
   Paperclip,
+  Search,
   Send,
   Sparkles,
-  Trash2,
   Video,
   Wand2,
   X,
-  Search,
-  Plug,
+  type LucideIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 type Role = "user" | "nova" | "system";
+type Mode = "auto" | "fast" | "pro";
+type IntentKey = "chat" | "files" | "image" | "video" | "research" | "reason";
 
 type Message = {
   id: string;
@@ -39,84 +38,88 @@ type Message = {
   createdAt: number;
 };
 
-type Provider = "auto" | "openai" | "gemini";
-type Mode = "auto" | "fast" | "pro";
-type ToolKey =
-  | "chat"
-  | "files"
-  | "image"
-  | "video"
-  | "research"
-  | "reason"
-  | "apps"
-  | "github";
-
 type AttachmentItem = {
   id: string;
   file: File;
 };
 
-const PROVIDERS: Array<{ value: Provider; label: string; hint: string }> = [
-  { value: "auto", label: "Auto", hint: "elige la mejor ruta" },
-  { value: "openai", label: "ChatGPT", hint: "redacción y razonamiento" },
-  { value: "gemini", label: "Gemini", hint: "contexto y documentos" },
-];
+type IntentOption = {
+  key: IntentKey;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  starter?: string;
+};
 
 const MODES: Array<{ value: Mode; label: string; hint: string }> = [
-  { value: "auto", label: "Auto", hint: "ajuste inteligente" },
-  { value: "fast", label: "Rápido", hint: "respuestas cortas" },
-  { value: "pro", label: "Profundo", hint: "más detalle" },
+  { value: "auto", label: "Auto", hint: "mejor ruta" },
+  { value: "fast", label: "Rápido", hint: "directo" },
+  { value: "pro", label: "Profundo", hint: "quirúrgico" },
 ];
 
-const ACTIONS: Array<{
-  key: ToolKey;
-  label: string;
-  icon: typeof Paperclip;
-  hint: string;
-}> = [
-  { key: "files", label: "Subir archivo", icon: Paperclip, hint: "PDF, imagen, código" },
-  { key: "image", label: "Generar imagen", icon: ImageIcon, hint: "concepto visual" },
-  { key: "video", label: "Generar video", icon: Video, hint: "pieza corta" },
-  { key: "research", label: "Investigar", icon: Search, hint: "búsqueda profunda" },
-  { key: "reason", label: "Razonar", icon: Brain, hint: "análisis paso a paso" },
-  { key: "apps", label: "Conectar apps", icon: Plug, hint: "flujo y automatización" },
-  { key: "github", label: "Importar GitHub", icon: Github, hint: "repos y código" },
+const INTENTS: IntentOption[] = [
+  {
+    key: "chat",
+    label: "Criterio",
+    hint: "decisión clara",
+    icon: Sparkles,
+    starter: "Analiza esto con criterio ejecutivo y dime la mejor ruta.",
+  },
+  {
+    key: "files",
+    label: "Archivo",
+    hint: "revisión real",
+    icon: Paperclip,
+    starter: "Voy a subir un archivo. Analízalo sin romper nada y dime qué corregir.",
+  },
+  {
+    key: "research",
+    label: "Investigar",
+    hint: "conclusiones",
+    icon: Search,
+    starter: "Investiga a fondo y dame hallazgos, estrategia y acciones concretas.",
+  },
+  {
+    key: "reason",
+    label: "Razonar",
+    hint: "paso lógico",
+    icon: Brain,
+    starter: "Razonemos esto con calma: identifica el problema, riesgos y solución real.",
+  },
+  {
+    key: "image",
+    label: "Imagen",
+    hint: "concepto visual",
+    icon: ImageIcon,
+    starter: "Estructura un concepto visual premium para HOCKER ONE.",
+  },
+  {
+    key: "video",
+    label: "Video",
+    hint: "guion corto",
+    icon: Video,
+    starter: "Crea un guion breve, cinematográfico y vendible para HOCKER ONE.",
+  },
 ];
 
-const QUICK_STARTS: Array<{
-  label: string;
-  text: string;
-  tool?: ToolKey;
-  provider?: Provider;
-  mode?: Mode;
-}> = [
-  {
-    label: "Diseña una propuesta",
-    text: "Necesito una propuesta clara, elegante y fácil de entender para un cliente.",
-    mode: "pro",
-  },
-  {
-    label: "Revisa un archivo",
-    text: "Voy a subir un archivo. Quiero que lo analices y me digas qué mejorar.",
-    tool: "files",
-    provider: "gemini",
-    mode: "pro",
-  },
-  {
-    label: "Investiga a fondo",
-    text: "Haz una investigación profunda y dame conclusiones claras, accionables y sin relleno.",
-    tool: "research",
-    provider: "gemini",
-    mode: "pro",
-  },
+const QUICK_STARTS = [
+  "Corrige este flujo para que sea más claro y vendible.",
+  "Dame una estrategia de ejecución por fases.",
+  "Detecta errores, riesgos y mejoras sin inventar.",
 ];
 
 function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function makeId(): string {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (char) => {
+    const value = Number(char);
+    const random = Math.floor(Math.random() * 16);
+    return (value ^ (random & (15 >> (value / 4)))).toString(16);
+  });
 }
 
 function fileKind(file: File): string {
@@ -140,60 +143,42 @@ export default function NovaChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [provider, setProvider] = useState<Provider>("auto");
   const [mode, setMode] = useState<Mode>("auto");
-  const [selectedTool, setSelectedTool] = useState<ToolKey>("chat");
+  const [intent, setIntent] = useState<IntentKey>("chat");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [threadId] = useState(() => crypto.randomUUID());
+  const [threadId] = useState(makeId);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const activeProvider = useMemo(
-    () => PROVIDERS.find((item) => item.value === provider) ?? PROVIDERS[0],
-    [provider],
+  const activeMode = useMemo(() => MODES.find((item) => item.value === mode) ?? MODES[0], [mode]);
+  const activeIntent = useMemo(
+    () => INTENTS.find((item) => item.key === intent) ?? INTENTS[0],
+    [intent],
   );
-
-  const activeMode = useMemo(
-    () => MODES.find((item) => item.value === mode) ?? MODES[0],
-    [mode],
-  );
-
-  const toolLabel = useMemo(() => {
-    const item = ACTIONS.find((a) => a.key === selectedTool);
-    return item ? item.label : "Chat";
-  }, [selectedTool]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isTyping]);
 
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
+  useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
-    el.style.height = `${Math.max(el.scrollHeight, 58)}px`;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 54), 150)}px`;
   }, [input]);
 
   const clearComposer = () => {
     setInput("");
     setAttachments([]);
-    setSelectedTool("chat");
-    fileInputRef.current && (fileInputRef.current.value = "");
-  };
-
-  const handleOpenFiles = () => {
-    fileInputRef.current?.click();
+    setIntent("chat");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleFiles = (event: ChangeEvent<HTMLInputElement>) => {
@@ -203,23 +188,26 @@ export default function NovaChat() {
     setAttachments((prev) => [
       ...prev,
       ...list.map((file) => ({
-        id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
+        id: `${file.name}-${file.size}-${makeId()}`,
         file,
       })),
     ]);
-
-    setSelectedTool("files");
+    setIntent("files");
   };
 
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const addQuickPrompt = (item: (typeof QUICK_STARTS)[number]) => {
-    setInput(item.text);
-    if (item.provider) setProvider(item.provider);
-    if (item.mode) setMode(item.mode);
-    if (item.tool) setSelectedTool(item.tool);
+  const applyIntent = (item: IntentOption) => {
+    if (item.key === "files") {
+      fileInputRef.current?.click();
+      setIntent("files");
+      return;
+    }
+
+    setIntent(item.key);
+    if (!input.trim() && item.starter) setInput(item.starter);
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
@@ -227,20 +215,6 @@ export default function NovaChat() {
     if (!input.trim() || isTyping) return;
 
     const prompt = input.trim();
-    const outgoing: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: prompt,
-      createdAt: Date.now(),
-    };
-
-    setMessages((prev) => [...prev, outgoing]);
-    setIsTyping(true);
-    setInput("");
-
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
-
     const attachmentMeta = attachments.map((item) => ({
       name: item.file.name,
       type: item.file.type,
@@ -248,25 +222,32 @@ export default function NovaChat() {
       kind: fileKind(item.file),
     }));
 
+    setMessages((prev) => [
+      ...prev,
+      { id: makeId(), role: "user", content: prompt, createdAt: Date.now() },
+    ]);
+    setIsTyping(true);
+    setInput("");
+
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     try {
       const res = await fetch("/api/nova/chat", {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         signal: abortControllerRef.current.signal,
         body: JSON.stringify({
           project_id: projectId,
           thread_id: threadId,
           message: prompt,
-          prefer: provider,
+          prefer: "auto",
           mode,
           allow_actions: true,
           context_data: {
-            selected_tool: selectedTool,
+            selected_intent: intent,
             attachments: attachmentMeta,
-            provider_ui: activeProvider.label,
             mode_ui: activeMode.label,
             client: "hocker.one",
           },
@@ -274,34 +255,31 @@ export default function NovaChat() {
       });
 
       const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };
-
-      if (!res.ok) {
-        throw new Error(data.error || "No se pudo conectar con NOVA.");
-      }
+      if (!res.ok) throw new Error(data.error || "No se pudo conectar con NOVA.");
 
       setMessages((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: makeId(),
           role: "nova",
-          content: data.reply || "Respuesta vacía.",
+          content: data.reply || "NOVA recibió la solicitud, pero no devolvió contenido.",
           createdAt: Date.now(),
         },
       ]);
 
       if (attachments.length > 0) {
         setAttachments([]);
-        fileInputRef.current && (fileInputRef.current.value = "");
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
-      setSelectedTool("chat");
+      setIntent("chat");
     } catch (error) {
       if ((error as { name?: string } | null)?.name !== "AbortError") {
         setMessages((prev) => [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: makeId(),
             role: "system",
-            content: "La conexión con NOVA falló. Vuelve a intentarlo.",
+            content: error instanceof Error ? error.message : "La conexión con NOVA falló.",
             createdAt: Date.now(),
           },
         ]);
@@ -327,8 +305,8 @@ export default function NovaChat() {
     <div
       className={cx(
         "flex h-full w-full flex-col overflow-hidden rounded-[30px] border border-white/5",
-        "bg-slate-950/35 backdrop-blur-2xl",
-        isDragOver && "ring-1 ring-sky-400/20",
+        "bg-slate-950/30 shadow-[0_22px_90px_rgba(2,6,23,0.28)] backdrop-blur-2xl",
+        isDragOver && "ring-1 ring-sky-400/30",
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -340,157 +318,86 @@ export default function NovaChat() {
         setIsDragOver(false);
         const files = Array.from(e.dataTransfer.files ?? []);
         if (files.length === 0) return;
-
         setAttachments((prev) => [
           ...prev,
-          ...files.map((file) => ({
-            id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
-            file,
-          })),
+          ...files.map((file) => ({ id: `${file.name}-${file.size}-${makeId()}`, file })),
         ]);
-        setSelectedTool("files");
+        setIntent("files");
       }}
     >
-      <div className="border-b border-white/5 bg-white/[0.02] px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10">
-                <Sparkles className="h-5 w-5 text-sky-300" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-sm font-black text-white">NOVA</p>
-                <p className="truncate text-xs text-slate-400">
-                  Habla, adjunta o elige una acción. Todo en un solo lugar.
-                </p>
-              </div>
+      <header className="shrink-0 border-b border-white/5 bg-white/[0.025] px-4 py-4 sm:px-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative grid h-12 w-12 place-items-center rounded-2xl border border-sky-300/20 bg-sky-400/10 shadow-[0_0_30px_rgba(56,189,248,0.12)]">
+              <span className="absolute h-2.5 w-2.5 translate-x-4 -translate-y-4 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.8)]" />
+              <Sparkles className="h-5 w-5 text-sky-200" />
             </div>
-
-            <button
-              type="button"
-              onClick={clearComposer}
-              className="hidden rounded-full border border-white/5 bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300 transition-all hover:border-sky-400/20 hover:bg-sky-400/10 sm:inline-flex"
-            >
-              Limpiar
-            </button>
+            <div className="min-w-0">
+              <p className="text-sm font-black tracking-tight text-white">NOVA</p>
+              <p className="truncate text-xs text-slate-400">AGI nativa · criterio, contexto y ejecución</p>
+            </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-3">
-            {PROVIDERS.map((item) => {
-              const active = provider === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setProvider(item.value)}
-                  className={cx(
-                    "rounded-[18px] border px-3 py-3 text-left transition-all",
-                    active
-                      ? "border-sky-400/20 bg-sky-400/10 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
-                      : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]",
-                  )}
-                >
-                  <p className="text-xs font-black uppercase tracking-[0.28em] text-white">
-                    {item.label}
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-400">{item.hint}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {MODES.map((item) => {
-              const active = mode === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setMode(item.value)}
-                  className={cx(
-                    "rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] transition-all",
-                    active
-                      ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
-                      : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.05]",
-                  )}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {ACTIONS.map((item) => {
-              const Icon = item.icon;
-              const active = selectedTool === item.key;
-
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => {
-                    if (item.key === "files") {
-                      handleOpenFiles();
-                      setSelectedTool("files");
-                      return;
-                    }
-                    setSelectedTool(item.key);
-                  }}
-                  className={cx(
-                    "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-all",
-                    active
-                      ? "border-sky-400/20 bg-sky-400/10 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
-                      : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]",
-                  )}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-slate-950/50">
-                    <Icon className={cx("h-4.5 w-4.5", active ? "text-sky-300" : "text-slate-300")} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white">{item.label}</p>
-                    <p className="text-[11px] text-slate-400">{item.hint}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            onClick={clearComposer}
+            className="rounded-full border border-white/5 bg-white/[0.035] px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-300 transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
+          >
+            Limpiar
+          </button>
         </div>
-      </div>
+
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {INTENTS.map((item) => {
+            const Icon = item.icon;
+            const active = intent === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => applyIntent(item)}
+                className={cx(
+                  "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-left transition-all",
+                  active
+                    ? "border-sky-300/25 bg-sky-400/12 text-sky-100 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
+                    : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.055]",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-[0.22em]">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </header>
 
       {attachments.length > 0 ? (
-        <div className="border-b border-white/5 px-4 py-3 sm:px-5">
+        <div className="shrink-0 border-b border-white/5 px-4 py-3 sm:px-5">
           <div className="flex flex-wrap gap-2">
-            {attachments.map((item) => {
-              const kind = fileKind(item.file);
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.04] px-3 py-2"
+            {attachments.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.04] px-3 py-2"
+              >
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-300">
+                  {fileKind(item.file)}
+                </span>
+                <span className="max-w-[180px] truncate text-xs text-slate-200">{item.file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(item.id)}
+                  className="rounded-full p-1 text-slate-400 hover:bg-white/[0.05] hover:text-white"
+                  aria-label={`Quitar ${item.file.name}`}
                 >
-                  <span className="text-[10px] font-black uppercase tracking-[0.26em] text-sky-300">
-                    {kind}
-                  </span>
-                  <span className="max-w-[180px] truncate text-xs text-slate-200">
-                    {item.file.name}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(item.id)}
-                    className="rounded-full p-1 text-slate-400 hover:bg-white/[0.05] hover:text-white"
-                    aria-label={`Quitar ${item.file.name}`}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              );
-            })}
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
 
-      <div ref={scrollRef} className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+      <div ref={scrollRef} className="custom-scrollbar flex-1 overflow-y-auto px-4 py-5 sm:px-5">
         <AnimatePresence initial={false}>
           {messages.length === 0 ? (
             <motion.div
@@ -499,91 +406,63 @@ export default function NovaChat() {
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
+              className="mx-auto flex min-h-[42dvh] max-w-2xl flex-col justify-center gap-4 text-center"
             >
-              <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-400/15 bg-sky-400/10">
-                    <Bot className="h-5 w-5 text-sky-300" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-white">Listo para empezar</p>
-                    <p className="text-sm text-slate-400">
-                      Escribe lo que necesitas y NOVA lo convierte en una respuesta clara.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {QUICK_STARTS.map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => addQuickPrompt(item)}
-                      className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-200 transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-[24px] border border-sky-300/20 bg-sky-400/10 shadow-[0_0_40px_rgba(56,189,248,0.16)]">
+                <Bot className="h-7 w-7 text-sky-200" />
               </div>
-
-              <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-400">
-                  Acciones sugeridas
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                  ¿Qué necesitas resolver?
+                </h2>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-400">
+                  Escribe una intención clara. NOVA convierte contexto en decisión, plan o ejecución.
                 </p>
-                <div className="mt-4 space-y-2">
-                  {[
-                    "Sube un archivo y pide un resumen.",
-                    "Pide una idea visual y te la estructuro.",
-                    "Solicita una investigación profunda con conclusiones.",
-                  ].map((text) => (
-                    <div
-                      key={text}
-                      className="rounded-2xl border border-white/5 bg-slate-950/50 px-4 py-3 text-sm text-slate-300"
-                    >
-                      {text}
-                    </div>
-                  ))}
-                </div>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {QUICK_STARTS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setInput(item);
+                      requestAnimationFrame(() => textareaRef.current?.focus());
+                    }}
+                    className="rounded-full border border-white/5 bg-white/[0.035] px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:border-sky-300/20 hover:bg-sky-400/10 hover:text-sky-100"
+                  >
+                    {item}
+                  </button>
+                ))}
               </div>
             </motion.div>
           ) : (
             <div className="space-y-4">
-              {messages.map((msg) => {
-                const isUser = msg.role === "user";
-                const isNova = msg.role === "nova";
-
+              {messages.map((message) => {
+                const isUser = message.role === "user";
+                const isSystem = message.role === "system";
                 return (
                   <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, y: 8 }}
-                    transition={{ duration: 0.28, ease: "easeOut" }}
-                    className={cx("flex w-full", isUser ? "justify-end" : "justify-start")}
+                    key={message.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22 }}
+                    className={cx("flex", isUser ? "justify-end" : "justify-start")}
                   >
                     <div
                       className={cx(
-                        "max-w-[92%] rounded-[24px] px-4 py-3.5 shadow-[0_18px_60px_rgba(2,6,23,0.22)] sm:max-w-[82%]",
-                        isUser
-                          ? "border border-sky-400/20 bg-sky-400/10 text-sky-50"
-                          : isNova
-                            ? "border border-white/5 bg-white/[0.04] text-slate-100"
-                            : "border border-amber-400/15 bg-amber-400/10 text-amber-50",
+                        "max-w-[88%] rounded-[24px] border px-4 py-3 text-sm leading-relaxed sm:max-w-[76%]",
+                        isUser && "border-sky-300/20 bg-sky-400/12 text-sky-50",
+                        !isUser && !isSystem && "border-white/5 bg-white/[0.045] text-slate-100",
+                        isSystem && "border-rose-300/15 bg-rose-500/10 text-rose-100",
                       )}
                     >
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
-                          {isUser ? "Tú" : isNova ? "NOVA" : "Sistema"}
-                        </span>
-                        <span className="text-[10px] font-medium uppercase tracking-[0.28em] text-slate-500">
-                          {formatTime(msg.createdAt)}
-                        </span>
-                      </div>
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {msg.content}
-                      </div>
+                      {!isUser ? (
+                        <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-sky-300">
+                          {isSystem ? <FileText className="h-3.5 w-3.5 text-rose-200" /> : <Sparkles className="h-3.5 w-3.5" />}
+                          {isSystem ? "Sistema" : "NOVA"}
+                        </div>
+                      ) : null}
+                      <p className="whitespace-pre-wrap">{message.content}</p>
                     </div>
                   </motion.div>
                 );
@@ -594,137 +473,82 @@ export default function NovaChat() {
 
         {isTyping ? (
           <div className="mt-4 flex justify-start">
-            <div className="rounded-[24px] border border-white/5 bg-white/[0.04] px-4 py-3 text-sm text-slate-200">
+            <div className="rounded-[24px] border border-white/5 bg-white/[0.045] px-4 py-3 text-sm text-slate-200">
               <div className="flex items-center gap-3">
                 <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-                <span>Procesando la respuesta...</span>
+                <span>NOVA está procesando...</span>
               </div>
             </div>
           </div>
         ) : null}
       </div>
 
-      <div className="border-t border-white/5 bg-slate-950/40 p-3 sm:p-4">
+      <div className="shrink-0 border-t border-white/5 bg-slate-950/45 p-3 sm:p-4">
         <form onSubmit={handleSubmit} className="space-y-3">
           <div
             className={cx(
               "rounded-[28px] border p-3 shadow-[0_18px_70px_rgba(2,6,23,0.20)] backdrop-blur-2xl",
-              isDragOver ? "border-sky-400/30 bg-sky-400/[0.09]" : "border-white/5 bg-white/[0.03]",
+              isDragOver ? "border-sky-400/30 bg-sky-400/[0.09]" : "border-white/5 bg-white/[0.035]",
             )}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">
                 <Wand2 className="h-4 w-4 text-sky-300" />
-                {activeProvider.label} · {activeMode.label} · {toolLabel}
+                <span className="truncate">NOVA · {activeMode.label} · {activeIntent.label}</span>
               </div>
 
+              <div className="hidden gap-1 sm:flex">
+                {MODES.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setMode(item.value)}
+                    title={item.hint}
+                    className={cx(
+                      "rounded-full border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.18em]",
+                      mode === item.value
+                        ? "border-sky-300/25 bg-sky-400/12 text-sky-100"
+                        : "border-white/5 bg-white/[0.03] text-slate-400 hover:text-slate-200",
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-end gap-2">
               <button
                 type="button"
-                onClick={handleOpenFiles}
-                className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-200 transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
+                onClick={() => fileInputRef.current?.click()}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/5 bg-white/[0.035] text-slate-300 hover:border-sky-300/20 hover:bg-sky-400/10 hover:text-sky-100"
+                aria-label="Subir archivo"
               >
-                <Paperclip className="h-3.5 w-3.5" />
-                Adjuntar
+                <Paperclip className="h-5 w-5" />
+              </button>
+
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Escribe aquí. Enter envía, Shift+Enter baja línea."
+                rows={1}
+                className="custom-scrollbar min-h-[54px] flex-1 resize-none rounded-2xl border border-white/5 bg-slate-950/45 px-4 py-4 text-sm leading-relaxed text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-300/25"
+              />
+
+              <button
+                type="submit"
+                disabled={!input.trim() || isTyping}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-sky-300/20 bg-sky-400 text-slate-950 shadow-[0_18px_48px_rgba(14,165,233,0.20)] transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:scale-100"
+                aria-label="Enviar mensaje"
+              >
+                {isTyping ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </button>
             </div>
-
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Escribe aquí lo que necesitas, o elige una acción arriba..."
-              rows={1}
-              className={cx(
-                "mt-3 w-full resize-none rounded-[22px] border border-white/5 bg-slate-950/55 px-4 py-4",
-                "text-sm leading-relaxed text-white placeholder:text-slate-500 outline-none transition-all",
-                "focus:border-sky-400/25 focus:ring-1 focus:ring-sky-400/20",
-              )}
-              disabled={isTyping}
-              autoComplete="off"
-              spellCheck={false}
-            />
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-                  {attachments.length} archivo{attachments.length === 1 ? "" : "s"}
-                </span>
-                <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-                  Enter para enviar
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={clearComposer}
-                  className="inline-flex items-center gap-2 rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-[10px] font-black uppercase tracking-[0.32em] text-slate-200 transition-all hover:bg-white/[0.06]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Limpiar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isTyping}
-                  className={cx(
-                    "inline-flex items-center gap-2 rounded-[18px] px-4 py-3 text-[10px] font-black uppercase tracking-[0.32em] transition-all",
-                    !input.trim() || isTyping
-                      ? "cursor-not-allowed border border-white/5 bg-white/[0.03] text-slate-500"
-                      : "border border-sky-400/20 bg-sky-400 px-4 py-3 text-slate-950 shadow-[0_0_24px_rgba(14,165,233,0.18)] hover:-translate-y-0.5",
-                  )}
-                >
-                  Enviar
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFiles}
-            accept=".pdf,.txt,.md,.csv,.json,.js,.jsx,.ts,.tsx,.html,.css,.png,.jpg,.jpeg,.webp,.mp4,.mov,.zip"
-          />
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => addQuickPrompt(QUICK_STARTS[0])}
-              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
-                Rápido
-              </p>
-              <p className="mt-1">Propuesta clara y elegante</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedTool("reason")}
-              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
-                Profundo
-              </p>
-              <p className="mt-1">Analiza paso a paso</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedTool("github")}
-              className="rounded-[18px] border border-white/5 bg-white/[0.03] px-4 py-3 text-left text-sm text-white transition-all hover:border-sky-400/20 hover:bg-sky-400/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-sky-300">
-                Código
-              </p>
-              <p className="mt-1">Trae repos y archivos</p>
-            </button>
-          </div>
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFiles} />
         </form>
       </div>
     </div>

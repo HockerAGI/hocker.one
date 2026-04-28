@@ -9,7 +9,7 @@ const ChatSchema = z.object({
   project_id: z.string().min(1).default(process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one"),
   thread_id: z.string().uuid().nullable().optional(),
   message: z.string().min(1),
-  prefer: z.enum(["auto", "openai", "gemini", "anthropic", "ollama"]).default("auto"),
+  prefer: z.string().optional().transform(() => "auto"),
   mode: z.enum(["auto", "fast", "pro"]).default("auto"),
   allow_actions: z.boolean().default(false),
   user_id: z.string().nullable().optional(),
@@ -44,7 +44,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (!baseUrl || !key) {
     return NextResponse.json(
-      { ok: false, error: "Fallo crítico: NOVA_AGI_URL o NOVA_ORCHESTRATOR_KEY no configurados." },
+      { ok: false, error: "NOVA no está configurada en el entorno de producción." },
       { status: 500 },
     );
   }
@@ -54,7 +54,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: "Payload inválido para nova.agi.", issues: parsed.error.flatten() },
+      { ok: false, error: "Payload inválido para NOVA.", issues: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -87,10 +87,10 @@ export async function POST(req: Request): Promise<Response> {
       {
         ok: false,
         error: isTimeout
-          ? "Timeout: nova.agi excedió la ventana de 55s."
+          ? "Timeout: NOVA excedió la ventana de respuesta de 55s."
           : error instanceof Error
             ? error.message
-            : "Fallo de conexión con nova.agi.",
+            : "Fallo de conexión con NOVA.",
       },
       { status: 502 },
     );

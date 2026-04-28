@@ -54,7 +54,7 @@ export default function PageShell({
                   </p>
                 ) : null}
 
-                {ready ? (
+                {showWorkspaceBar && ready ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="shell-chip-brand">{projectId}</span>
                     <span className="shell-chip">{nodeId}</span>

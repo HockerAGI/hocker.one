@@ -31,34 +31,13 @@ export default function Sidebar() {
   const pathname = usePathname() || "/";
 
   return (
-    <>
-      <aside className="hkr3-sidebar" aria-label="Menú lateral">
-        <Link href="/" className="hkr3-side-logo" aria-label="Inicio">
-          <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
-        </Link>
+    <aside className="hkr3-sidebar" aria-label="Menú lateral">
+      <Link href="/" className="hkr3-side-logo" aria-label="Inicio">
+        <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
+      </Link>
 
-        <nav>
-          {nav.map((item) => {
-            const Icon = item.icon;
-            const isActive = active(pathname, item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={isActive ? "is-active" : ""}
-                title={item.label}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <nav className="hkr3-bottomnav" aria-label="Menú móvil">
-        {nav.slice(0, 5).map((item) => {
+      <nav>
+        {nav.map((item) => {
           const Icon = item.icon;
           const isActive = active(pathname, item.href);
 
@@ -67,13 +46,14 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={isActive ? "is-active" : ""}
+              title={item.label}
             >
-              <Icon size={21} />
+              <Icon size={20} />
               <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
-    </>
+    </aside>
   );
 }

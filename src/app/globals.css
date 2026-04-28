@@ -1938,3 +1938,113 @@ main:not(.hkr3-page) :where(button, [role="button"], a):hover {
   }
 }
 /* === HOCKER ONE PHASE B DASHBOARD END === */
+
+/* =========================================================
+   HOCKER ONE · SURGICAL POLISH 2026-04-28
+   Cleaner mobile hierarchy, visible VFX, stronger 3D logo.
+========================================================= */
+body {
+  font-family:
+    Inter,
+    "SF Pro Display",
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.hkr3-logo-stage {
+  border-color: rgba(82, 225, 255, 0.18);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(82, 225, 255, 0.22), transparent 28%),
+    radial-gradient(circle at 70% 22%, rgba(66, 99, 255, 0.14), transparent 30%),
+    linear-gradient(145deg, rgba(13, 24, 42, 0.88), rgba(5, 8, 17, 0.96));
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -30px 70px rgba(0,0,0,0.18);
+  transform: translateZ(0);
+}
+
+.hkr3-logo-stage img {
+  filter:
+    contrast(1.08)
+    saturate(1.12)
+    drop-shadow(0 34px 54px rgba(0, 0, 0, 0.58))
+    drop-shadow(0 10px 20px rgba(0, 135, 255, 0.20))
+    drop-shadow(0 0 32px rgba(82, 225, 255, 0.22));
+}
+
+.hkr3-logo-stage::after {
+  background:
+    linear-gradient(132deg, rgba(255,255,255,0.05), transparent 38%, rgba(82,225,255,0.10)),
+    radial-gradient(circle at 50% 115%, rgba(82,225,255,0.16), transparent 42%);
+}
+
+.hkr3-particle {
+  opacity: 0.58;
+  box-shadow:
+    0 0 16px rgba(84, 220, 255, 0.80),
+    0 0 34px rgba(84, 220, 255, 0.26);
+}
+
+@media (max-width: 768px) {
+  .hkr3-page {
+    padding-bottom: 108px;
+  }
+
+  .hkr3-logo-stage {
+    min-height: 360px;
+    border-radius: 34px;
+  }
+
+  .hkr3-logo-stage img {
+    width: min(86%, 430px);
+  }
+
+  .hkr3-hero-ambient {
+    opacity: 1;
+    filter: blur(14px);
+  }
+
+  .hkr3-hero-scan {
+    background: linear-gradient(
+      102deg,
+      transparent 34%,
+      rgba(126, 233, 255, 0.08) 45%,
+      rgba(126, 233, 255, 0.30) 50%,
+      rgba(126, 233, 255, 0.08) 55%,
+      transparent 66%
+    );
+  }
+
+  .hkr3-particle {
+    width: 4px;
+    height: 4px;
+    opacity: 0.72;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell-panel-strong {
+    border-radius: 26px;
+    padding: 1rem !important;
+  }
+
+  .section-kicker {
+    letter-spacing: 0.26em;
+  }
+
+  .h1-title {
+    font-size: 1.75rem;
+    line-height: 1.05;
+  }
+
+  .section-copy {
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+}
