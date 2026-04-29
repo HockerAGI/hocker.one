@@ -81,3 +81,10 @@ hocker_topology_audit_*.zip
 .env.development
 .env.production
 .env*.local
+
+# HOCKER local secrets
+.env
+.env.local
+.env.development
+.env.production
+.env*.local

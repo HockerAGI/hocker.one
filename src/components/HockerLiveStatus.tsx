@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Globe2, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Activity,
+  Cpu,
+  Database,
+  Globe2,
+  Rocket,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+} from "lucide-react";
 
 type Check = {
   active: boolean;
@@ -11,74 +20,69 @@ type Check = {
 
 type StatusResponse = {
   ok: boolean;
-  checks: {
-    web: Check;
-    vercel: Check;
-    supabase: Check;
-    nova: Check;
-  };
+  checks: Record<string, Check>;
 };
 
 type ViewCheck = Check & {
   key: string;
 };
 
-const icons = {
+const ORDER = ["web", "vercel", "supabase", "nova", "pwa", "android", "api"];
+
+const ICONS = {
   web: Globe2,
-  vercel: Activity,
-  supabase: ShieldCheck,
-  nova: Sparkles
+  vercel: Rocket,
+  supabase: Database,
+  nova: Sparkles,
+  pwa: Smartphone,
+  android: ShieldCheck,
+  api: Cpu,
 };
 
-const fallbackChecks: ViewCheck[] = [
-  { key: "web", label: "Web", detail: "Verificando", active: false },
-  { key: "vercel", label: "Vercel", detail: "Verificando", active: false },
-  { key: "supabase", label: "Supabase", detail: "Verificando", active: false },
-  { key: "nova", label: "NOVA", detail: "Verificando", active: false }
-];
+const FALLBACK: ViewCheck[] = ORDER.map((key) => ({
+  key,
+  label: key.toUpperCase(),
+  detail: "Verificando",
+  active: false,
+}));
 
 export default function HockerLiveStatus() {
-  const [checks, setChecks] = useState<ViewCheck[]>(fallbackChecks);
-  const [loaded, setLoaded] = useState(false);
+  const [items, setItems] = useState<ViewCheck[]>(FALLBACK);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let alive = true;
 
     async function loadStatus() {
       try {
-        const response = await fetch("/api/system/status", {
+        const res = await fetch("/api/system/status", {
           cache: "no-store",
-          headers: {
-            accept: "application/json"
-          }
+          headers: { accept: "application/json" },
         });
 
-        if (!response.ok) {
-          throw new Error("status_unavailable");
-        }
+        if (!res.ok) throw new Error("status_unavailable");
 
-        const data = (await response.json()) as StatusResponse;
+        const data = (await res.json()) as StatusResponse;
 
-        const nextChecks: ViewCheck[] = [
-          { key: "web", ...data.checks.web },
-          { key: "vercel", ...data.checks.vercel },
-          { key: "supabase", ...data.checks.supabase },
-          { key: "nova", ...data.checks.nova }
-        ];
+        const next = ORDER.map((key) => ({
+          key,
+          ...data.checks[key],
+        })).filter((item) => item.label);
 
         if (alive) {
-          setChecks(nextChecks);
-          setLoaded(true);
+          setItems(next);
+          setReady(true);
         }
       } catch {
         if (alive) {
-          setChecks([
-            { key: "web", label: "Web", detail: "Sin respuesta", active: false },
-            { key: "vercel", label: "Vercel", detail: "Sin respuesta", active: false },
-            { key: "supabase", label: "Supabase", detail: "Sin respuesta", active: false },
-            { key: "nova", label: "NOVA", detail: "Sin respuesta", active: false }
-          ]);
-          setLoaded(true);
+          setItems(
+            FALLBACK.map((item) => ({
+              ...item,
+              detail: "Sin respuesta",
+              active: false,
+            })),
+          );
+          setReady(true);
         }
       }
     }
@@ -95,39 +99,66 @@ export default function HockerLiveStatus() {
     };
   }, []);
 
-  const summary = useMemo(() => {
-    const activeCount = checks.filter((item) => item.active).length;
-    return `${activeCount}/${checks.length} activos`;
-  }, [checks]);
+  const activeCount = useMemo(() => items.filter((item) => item.active).length, [items]);
+  const allActive = ready && activeCount === items.length;
 
   return (
-    <section className="hkr-real-status" aria-label="Estado real del sistema">
-      <div className="hkr-real-status-head">
+    <section className="hko-status-suite" aria-label="Estado real de Hocker ONE">
+      <div className="hko-status-head">
         <div>
           <p>Estado real</p>
-          <strong>{loaded ? summary : "Verificando..."}</strong>
+          <strong>{ready ? `${activeCount}/${items.length} activos` : "Verificando..."}</strong>
         </div>
-        <span className={checks.every((item) => item.active) ? "is-green" : "is-red"} />
+        <span className={allActive ? "is-active" : "is-inactive"} />
       </div>
 
-      <div className="hkr-real-status-grid">
-        {checks.map((item) => {
-          const Icon = icons[item.key as keyof typeof icons] || Activity;
+      <div className="hko-status-grid">
+        {items.map((item) => {
+          const Icon = ICONS[item.key as keyof typeof ICONS] || Activity;
 
           return (
-            <div
-              className={`hkr-real-status-card ${item.active ? "is-active" : "is-inactive"}`}
+            <article
               key={item.key}
+              className={`hko-status-card ${item.active ? "is-active" : "is-inactive"}`}
             >
-              <Icon size={19} />
+              <Icon size={20} />
               <div>
                 <p>{item.label}</p>
                 <strong>{item.detail}</strong>
               </div>
               <span />
-            </div>
+            </article>
           );
         })}
+      </div>
+
+      <div className="hko-map-card">
+        <div className="hko-section-title">
+          <p>Mapa vivo</p>
+          <h2>Conexiones</h2>
+        </div>
+
+        <div className="hko-orbit-map">
+          <div className="hko-orbit hko-orbit-a" />
+          <div className="hko-orbit hko-orbit-b" />
+          <div className="hko-orbit hko-orbit-c" />
+
+          <div className="hko-map-center">
+            <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
+          </div>
+
+          {items.map((item) => (
+            <div
+              key={`map-${item.key}`}
+              className={`hko-map-node hko-map-node-${item.key} ${
+                item.active ? "is-active" : "is-inactive"
+              }`}
+            >
+              <span />
+              <strong>{item.label}</strong>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -1,26 +1,116 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function hasEnv(name: string): boolean {
-  return typeof process.env[name] === "string" && process.env[name]!.trim().length > 0;
+type Check = {
+  active: boolean;
+  label: string;
+  detail: string;
+};
+
+function env(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function cleanUrl(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+async function probe(url: string, headers?: HeadersInit): Promise<boolean> {
+  if (!url) return false;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers,
+      signal: controller.signal,
+    });
+
+    return res.status > 0 && res.status < 500;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function checkSupabase(): Promise<Check> {
+  const url = env("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL");
+  const anon = env("NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY");
+
+  if (!url || !anon) {
+    return {
+      active: false,
+      label: "Supabase",
+      detail: "Sin variables",
+    };
+  }
+
+  const active = await probe(`${cleanUrl(url)}/rest/v1/`, {
+    apikey: anon,
+    authorization: `Bearer ${anon}`,
+  });
+
+  return {
+    active,
+    label: "Supabase",
+    detail: active ? "Online" : "Sin respuesta",
+  };
+}
+
+async function checkNova(): Promise<Check> {
+  const url = env("NOVA_AGI_HEALTH_URL", "NOVA_HEALTH_URL", "NOVA_AGI_URL", "NOVA_URL");
+  const key = env("NOVA_ORCHESTRATOR_KEY", "NOVA_API_KEY");
+
+  if (!url) {
+    return {
+      active: false,
+      label: "NOVA",
+      detail: "Sin endpoint",
+    };
+  }
+
+  const base = cleanUrl(url);
+  const headers: HeadersInit = key ? { authorization: `Bearer ${key}` } : {};
+
+  const active =
+    (await probe(`${base}/api/health`, headers)) ||
+    (await probe(`${base}/health`, headers)) ||
+    (await probe(base, headers));
+
+  return {
+    active,
+    label: "NOVA",
+    detail: active ? "Online" : "Sin respuesta",
+  };
+}
+
+function fileExists(...parts: string[]): boolean {
+  return existsSync(join(process.cwd(), ...parts));
 }
 
 export async function GET() {
-  const supabaseReady =
-    hasEnv("NEXT_PUBLIC_SUPABASE_URL") &&
-    hasEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const vercelActive = Boolean(env("VERCEL", "VERCEL_ENV", "VERCEL_URL"));
+  const pwaActive =
+    fileExists("public", "manifest.webmanifest") ||
+    fileExists("public", "manifest.json");
 
-  const novaReady =
-    hasEnv("NOVA_AGI_URL") &&
-    hasEnv("NOVA_ORCHESTRATOR_KEY");
+  const androidShellReady =
+    fileExists("android", "app", "src", "main", "AndroidManifest.xml") ||
+    env("ANDROID_APP_READY", "NEXT_PUBLIC_ANDROID_APP_READY") === "1";
 
-  const vercelReady =
-    hasEnv("VERCEL") ||
-    hasEnv("VERCEL_ENV") ||
-    process.env.NODE_ENV === "production";
-
-  const nodeRuntime = process.version;
+  const [supabase, nova] = await Promise.all([checkSupabase(), checkNova()]);
 
   return NextResponse.json(
     {
@@ -28,36 +118,43 @@ export async function GET() {
       service: "hocker.one",
       timestamp: new Date().toISOString(),
       runtime: {
-        node: nodeRuntime,
-        environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown"
+        node: process.version,
+        environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown",
       },
       checks: {
         web: {
           active: true,
           label: "Web",
-          detail: "Online"
+          detail: "Online",
         },
         vercel: {
-          active: vercelReady,
+          active: vercelActive,
           label: "Vercel",
-          detail: vercelReady ? "Activo" : "No detectado"
+          detail: vercelActive ? "Activo" : "Local",
         },
-        supabase: {
-          active: supabaseReady,
-          label: "Supabase",
-          detail: supabaseReady ? "Conectado" : "Sin variables"
+        supabase,
+        nova,
+        pwa: {
+          active: pwaActive,
+          label: "PWA",
+          detail: pwaActive ? "Lista" : "Sin manifest",
         },
-        nova: {
-          active: novaReady,
-          label: "NOVA",
-          detail: novaReady ? "Configurada" : "Sin conexión"
-        }
-      }
+        android: {
+          active: androidShellReady,
+          label: "Android",
+          detail: androidShellReady ? "Shell listo" : "No detectado",
+        },
+        api: {
+          active: true,
+          label: "API",
+          detail: "Online",
+        },
+      },
     },
     {
       headers: {
-        "Cache-Control": "no-store, max-age=0"
-      }
-    }
+        "Cache-Control": "no-store, max-age=0",
+      },
+    },
   );
 }

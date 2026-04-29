@@ -1,182 +1,107 @@
-import type { ComponentType } from "react";
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight, Bot, Command, LayoutDashboard, Sparkles } from "lucide-react";
 import HockerLiveStatus from "@/components/HockerLiveStatus";
-import {
-  ArrowRight,
-  Bot,
-  Command,
-  Gauge,
-  Network,
-  ShieldCheck,
-  Store,
-  Zap,
-} from "lucide-react";
 
-type Module = {
-  title: string;
-  label: string;
-  status: string;
-  href: string;
-  icon: ComponentType<{ className?: string; size?: number }>;
+export const metadata: Metadata = {
+  title: "Hocker ONE · Centro de control",
+  description:
+    "Centro operativo de Hocker ONE para NOVA, web, PWA, Android, APIs y servicios conectados.",
 };
 
-const modules: Module[] = [
+const access = [
   {
-    title: "NOVA",
-    label: "IA central",
-    status: "Activa",
     href: "/chat",
-    icon: Bot,
+    title: "NOVA",
+    detail: "AGI central",
+    icon: Sparkles,
   },
   {
-    title: "Panel",
-    label: "Estado general",
-    status: "Online",
     href: "/dashboard",
-    icon: Gauge,
+    title: "Panel",
+    detail: "Estado general",
+    icon: LayoutDashboard,
   },
   {
-    title: "Comandos",
-    label: "Acciones",
-    status: "Listo",
     href: "/commands",
+    title: "Tareas",
+    detail: "Acciones y cola",
     icon: Command,
-  },
-  {
-    title: "Nodos",
-    label: "Infraestructura",
-    status: "Sync",
-    href: "/nodes",
-    icon: Network,
-  },
-  {
-    title: "Guardia",
-    label: "Seguridad",
-    status: "Seguro",
-    href: "/governance",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Supply",
-    label: "Operación",
-    status: "Visible",
-    href: "/supply",
-    icon: Store,
   },
 ];
 
-
-function ModuleCard({ item }: { item: Module }) {
-  const Icon = item.icon;
-
-  return (
-    <Link href={item.href} className="hkr3-module-card">
-      <div className="hkr3-module-icon">
-        <Icon size={22} />
-      </div>
-
-      <div>
-        <p>{item.label}</p>
-        <h3>{item.title}</h3>
-      </div>
-
-      <span>{item.status}</span>
-    </Link>
-  );
-}
-
-function SignalMap() {
-  return (
-    <div className="hkr3-map" aria-label="Mapa visual de Hocker ONE">
-      <div className="hkr3-map-line hkr3-map-line-a" />
-      <div className="hkr3-map-line hkr3-map-line-b" />
-      <div className="hkr3-map-line hkr3-map-line-c" />
-
-      <div className="hkr3-map-core">
-        <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
-      </div>
-
-      <div className="hkr3-map-node hkr3-map-node-a">NOVA</div>
-      <div className="hkr3-map-node hkr3-map-node-b">PWA</div>
-      <div className="hkr3-map-node hkr3-map-node-c">APK</div>
-      <div className="hkr3-map-node hkr3-map-node-d">API</div>
-    </div>
-  );
-}
-
 export default function HomePage() {
   return (
-    <main data-hkr-phase-b="dashboard" className="hkr3-page">
-      <section className="hkr3-hero">
-        <div className="hkr3-logo-stage">
+    <main className="hko-home">
+      <section className="hko-hero" aria-label="Hocker ONE">
+        <div className="hko-hero-bg" aria-hidden="true" />
+        <div className="hko-hero-orb hko-hero-orb-a" aria-hidden="true" />
+        <div className="hko-hero-orb hko-hero-orb-b" aria-hidden="true" />
 
-        <span className="hkr3-hero-ambient" aria-hidden="true" />
-        <span className="hkr3-hero-grid" aria-hidden="true" />
-        <span className="hkr3-hero-scan" aria-hidden="true" />
-        <span className="hkr3-hero-ring hkr3-hero-ring-a" aria-hidden="true" />
-        <span className="hkr3-hero-ring hkr3-hero-ring-b" aria-hidden="true" />
-        <span className="hkr3-hero-ring hkr3-hero-ring-c" aria-hidden="true" />
-        <span className="hkr3-hero-particles" aria-hidden="true">
-          {Array.from({ length: 14 }).map((_, i) => (
-            <span key={i} className="hkr3-particle" />
-          ))}
-        </span>
-
-          <div className="hkr3-logo-aura" />
-          <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
+        <div className="hko-logo-stage">
+          <div className="hko-logo-depth" aria-hidden="true" />
+          <Image
+            src="/brand/hocker-one-logo.png"
+            alt="Hocker ONE"
+            width={500}
+            height={500}
+            priority
+            sizes="(max-width: 640px) 92vw, 560px"
+            className="hko-hero-logo"
+          />
+          <div className="hko-logo-light" aria-hidden="true" />
         </div>
 
-        <div className="hkr3-hero-copy">
-          <div className="hkr3-status-pill">
+        <div className="hko-hero-content">
+          <div className="hko-live-pill">
             <span />
             Ecosistema online
           </div>
 
-          <p className="hkr3-hero-kicker">
-            Control del ecosistema en tiempo real.
+          <h1>Control real. Sin ruido.</h1>
+
+          <p>
+            NOVA concentra señales, acciones, nodos y operación en una vista clara.
           </p>
 
-          <div className="hkr3-actions">
-            <Link href="/dashboard" className="hkr3-primary">
+          <div className="hko-actions">
+            <Link href="/dashboard" className="hko-primary-action">
               Abrir panel
-              <ArrowRight size={18} />
+              <ArrowRight size={20} />
             </Link>
 
-            <Link href="/chat" className="hkr3-secondary">
+            <Link href="/chat" className="hko-secondary-action">
               Hablar con NOVA
-              <Bot size={18} />
+              <Bot size={19} />
             </Link>
           </div>
         </div>
       </section>
+
       <HockerLiveStatus />
 
-      <section className="hkr3-layout">
-        <div className="hkr3-panel hkr3-panel-map">
-          <div className="hkr3-section-head">
-            <div>
-              <p>Mapa vivo</p>
-              <h2>Conexiones</h2>
-            </div>
-            <Zap size={20} />
-          </div>
-
-          <SignalMap />
+      <section className="hko-access-section">
+        <div className="hko-section-title">
+          <p>Módulos</p>
+          <h2>Accesos</h2>
         </div>
 
-        <div className="hkr3-panel">
-          <div className="hkr3-section-head">
-            <div>
-              <p>Módulos</p>
-              <h2>Accesos</h2>
-            </div>
-          </div>
+        <div className="hko-access-grid">
+          {access.map((item) => {
+            const Icon = item.icon;
 
-          <div className="hkr3-modules">
-            {modules.map((item) => (
-              <ModuleCard key={item.title} item={item} />
-            ))}
-          </div>
+            return (
+              <Link href={item.href} className="hko-access-card" key={item.href}>
+                <Icon size={25} />
+                <div>
+                  <p>{item.title}</p>
+                  <span>{item.detail}</span>
+                </div>
+                <strong>Entrar</strong>
+              </Link>
+            );
+          })}
         </div>
       </section>
     </main>
