@@ -55,14 +55,14 @@ export default function HockerLiveStatus() {
 
     async function loadStatus() {
       try {
-        const res = await fetch("/api/system/status", {
+        const response = await fetch("/api/system/status", {
           cache: "no-store",
           headers: { accept: "application/json" },
         });
 
-        if (!res.ok) throw new Error("status_unavailable");
+        if (!response.ok) throw new Error("status_unavailable");
 
-        const data = (await res.json()) as StatusResponse;
+        const data = (await response.json()) as StatusResponse;
 
         const next = ORDER.map((key) => ({
           key,
@@ -103,61 +103,65 @@ export default function HockerLiveStatus() {
   const allActive = ready && activeCount === items.length;
 
   return (
-    <section className="hko-status-suite" aria-label="Estado real de Hocker ONE">
-      <div className="hko-status-head">
+    <section className="hko-safe-status" aria-label="Estado real de Hocker ONE">
+      <header className="hko-safe-status-head">
         <div>
-          <p>Estado real</p>
+          <span>Estado real</span>
           <strong>{ready ? `${activeCount}/${items.length} activos` : "Verificando..."}</strong>
         </div>
-        <span className={allActive ? "is-active" : "is-inactive"} />
-      </div>
 
-      <div className="hko-status-grid">
+        <i className={allActive ? "is-active" : "is-inactive"} aria-hidden="true" />
+      </header>
+
+      <div className="hko-safe-status-grid">
         {items.map((item) => {
           const Icon = ICONS[item.key as keyof typeof ICONS] || Activity;
 
           return (
             <article
               key={item.key}
-              className={`hko-status-card ${item.active ? "is-active" : "is-inactive"}`}
+              className={`hko-safe-status-card ${item.active ? "is-active" : "is-inactive"}`}
             >
-              <Icon size={20} />
-              <div>
-                <p>{item.label}</p>
+              <div className="hko-safe-status-icon">
+                <Icon size={20} />
+              </div>
+
+              <div className="hko-safe-status-copy">
+                <span>{item.label}</span>
                 <strong>{item.detail}</strong>
               </div>
-              <span />
+
+              <i aria-hidden="true" />
             </article>
           );
         })}
       </div>
 
-      <div className="hko-map-card">
-        <div className="hko-section-title">
-          <p>Mapa vivo</p>
-          <h2>Conexiones</h2>
+      <div className="hko-safe-map">
+        <div className="hko-safe-map-copy">
+          <span>Mapa vivo</span>
+          <strong>Conexiones</strong>
         </div>
 
-        <div className="hko-orbit-map">
-          <div className="hko-orbit hko-orbit-a" />
-          <div className="hko-orbit hko-orbit-b" />
-          <div className="hko-orbit hko-orbit-c" />
+        <div className="hko-safe-map-stage">
+          <div className="hko-safe-map-orbit hko-safe-map-orbit-a" />
+          <div className="hko-safe-map-orbit hko-safe-map-orbit-b" />
 
-          <div className="hko-map-center">
+          <div className="hko-safe-map-core">
             <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
           </div>
 
-          {items.map((item) => (
-            <div
-              key={`map-${item.key}`}
-              className={`hko-map-node hko-map-node-${item.key} ${
-                item.active ? "is-active" : "is-inactive"
-              }`}
-            >
-              <span />
-              <strong>{item.label}</strong>
-            </div>
-          ))}
+          <div className="hko-safe-map-list">
+            {items.map((item) => (
+              <div
+                key={`chip-${item.key}`}
+                className={`hko-safe-map-chip ${item.active ? "is-active" : "is-inactive"}`}
+              >
+                <span />
+                {item.label}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
