@@ -69,19 +69,6 @@ body {
   outline-offset: 2px;
 }
 
-/* =========================
-   SCANLINE FX
-========================= */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(14,165,233,0.2), transparent);
-  animation: scanline 8s linear infinite;
-  pointer-events: none;
-  z-index: 50;
-}
 
 /* =========================
    COMPONENTS
@@ -200,22 +187,6 @@ body::after {
   }
 }
 
-@keyframes scanline {
-  0% {
-    transform: translateY(-20vh);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 0.2;
-  }
-  100% {
-    transform: translateY(120vh);
-    opacity: 0;
-  }
-}
 
 @keyframes nova-float {
   50% {
@@ -2362,14 +2333,7 @@ body {
 
 /* === HOCKER ONE REAL STATUS + LOGO PERFORMANCE END === */
 
-/* === HOCKER ONE HARD KILL VISUAL ARTIFACTS START === */
-
-/*
-  Bloque quirúrgico:
-  - Mata scanlines/noise/glitch anteriores.
-  - No toca navegación, rutas ni lógica.
-  - Usa clases nuevas h1-status-clean para evitar herencia rota.
-*/
+/* === HOCKER ONE STATUS CLEAN FINAL START === */
 
 html,
 body {
@@ -2379,7 +2343,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Kill global de pseudo-capas que estaban provocando bandas horizontales */
 body::before,
 body::after,
 #__next::before,
@@ -2405,15 +2368,7 @@ main::after,
 .hko-safe-status::before,
 .hko-safe-status::after,
 .hko-safe-map::before,
-.hko-safe-map::after,
-[class*="glitch"],
-[class*="matrix"],
-[class*="crt"],
-[class*="scanline"],
-[class*="scan-line"],
-[class*="noise"],
-[class*="static"],
-[class*="grain"] {
+.hko-safe-map::after {
   display: none !important;
   visibility: hidden !important;
   content: none !important;
@@ -2426,7 +2381,6 @@ main::after,
   pointer-events: none !important;
 }
 
-/* Neutraliza clases viejas de estado/mapa que aún puedan estar en CSS cacheada */
 .hko-status-suite,
 .hko-status-grid,
 .hko-status-card,
@@ -2443,7 +2397,6 @@ main::after,
   backdrop-filter: none !important;
 }
 
-/* Estado real estable */
 .h1-status-clean {
   position: relative;
   isolation: isolate;
@@ -2466,6 +2419,7 @@ main::after,
   box-sizing: border-box;
   text-shadow: none !important;
   mix-blend-mode: normal !important;
+  animation: none !important;
 }
 
 .h1-status-clean-head {
@@ -2744,13 +2698,4 @@ main::after,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .h1-status-clean *,
-  .h1-status-clean *::before,
-  .h1-status-clean *::after {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* === HOCKER ONE HARD KILL VISUAL ARTIFACTS END === */
+/* === HOCKER ONE STATUS CLEAN FINAL END === */

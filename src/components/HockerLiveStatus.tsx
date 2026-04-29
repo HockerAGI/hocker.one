@@ -7,6 +7,7 @@ import {
   Cpu,
   Database,
   Globe2,
+  Network,
   Rocket,
   ShieldCheck,
   Smartphone,
@@ -33,13 +34,14 @@ type IconType = ComponentType<{
   className?: string;
 }>;
 
-const ORDER = ["web", "vercel", "supabase", "nova", "pwa", "android", "api"] as const;
+const ORDER = ["web", "vercel", "supabase", "nova", "agent", "pwa", "android", "api"] as const;
 
 const ICONS: Record<string, IconType> = {
   web: Globe2,
   vercel: Rocket,
   supabase: Database,
   nova: Sparkles,
+  agent: Network,
   pwa: Smartphone,
   android: ShieldCheck,
   api: Cpu,

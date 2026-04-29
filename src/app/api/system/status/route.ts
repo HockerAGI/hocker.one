@@ -96,12 +96,37 @@ async function checkNova(): Promise<Check> {
   };
 }
 
+async function checkAgent(): Promise<Check> {
+  const url = env("HOCKER_NODE_AGENT_HEALTH_URL", "HOCKER_NODE_AGENT_URL");
+
+  if (!url) {
+    return {
+      active: false,
+      label: "Agente",
+      detail: "Sin endpoint",
+    };
+  }
+
+  const base = cleanUrl(url);
+  const active =
+    (await probe(`${base}/health`)) ||
+    (await probe(`${base}/ready`)) ||
+    (await probe(base));
+
+  return {
+    active,
+    label: "Agente",
+    detail: active ? "Online" : "Sin respuesta",
+  };
+}
+
 function fileExists(...parts: string[]): boolean {
   return existsSync(join(process.cwd(), ...parts));
 }
 
 export async function GET() {
   const vercelActive = Boolean(env("VERCEL", "VERCEL_ENV", "VERCEL_URL"));
+
   const pwaActive =
     fileExists("public", "manifest.webmanifest") ||
     fileExists("public", "manifest.json");
@@ -110,7 +135,11 @@ export async function GET() {
     fileExists("android", "app", "src", "main", "AndroidManifest.xml") ||
     env("ANDROID_APP_READY", "NEXT_PUBLIC_ANDROID_APP_READY") === "1";
 
-  const [supabase, nova] = await Promise.all([checkSupabase(), checkNova()]);
+  const [supabase, nova, agent] = await Promise.all([
+    checkSupabase(),
+    checkNova(),
+    checkAgent(),
+  ]);
 
   return NextResponse.json(
     {
@@ -134,6 +163,7 @@ export async function GET() {
         },
         supabase,
         nova,
+        agent,
         pwa: {
           active: pwaActive,
           label: "PWA",
