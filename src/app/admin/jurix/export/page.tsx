@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { ArrowLeft, Download } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 function createJurixClient() {
   const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
@@ -82,34 +84,32 @@ export default function JurixExportDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] p-6 text-white sm:p-8">
-      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-sky-400/20 bg-slate-950/80 p-6 shadow-[0_0_40px_rgba(14,165,233,0.10)]">
-        <div className="mb-8 flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-sky-300">JURIX</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight">Exportar auditoría</h1>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => router.push("/admin/jurix")}
-            className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-slate-300 hover:border-sky-400/30 hover:text-white"
-          >
-            Volver
-          </button>
-        </div>
-
+    <PageShell
+      eyebrow="JURIX"
+      title="Exportar auditoría"
+      description="Descarga registros para revisión interna. JSON para sistemas, CSV para lectura rápida."
+      actions={
+        <button
+          type="button"
+          onClick={() => router.push("/admin/jurix")}
+          className="hocker-button-ghost"
+        >
+          <ArrowLeft size={16} />
+          Volver
+        </button>
+      }
+    >
+      <section className="mx-auto w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#07101f] p-5">
         <div className="space-y-5">
-          <p className="text-sm leading-relaxed text-slate-400">
-            Descarga registros de auditoría para revisión interna. Usa JSON para sistemas y CSV para lectura rápida.
-          </p>
-
           <label className="block">
-            <span className="text-xs font-black uppercase tracking-[0.28em] text-sky-300">Formato</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-300">
+              Formato
+            </span>
+
             <select
               value={selectedFormat}
               onChange={(event) => setSelectedFormat(event.target.value as "JSON" | "CSV")}
-              className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-sky-400/50"
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none focus:border-sky-400/50"
             >
               <option value="JSON">JSON</option>
               <option value="CSV">CSV</option>
@@ -120,19 +120,19 @@ export default function JurixExportDashboard() {
             type="button"
             onClick={handleExport}
             disabled={isExporting}
-            className="w-full rounded-2xl bg-sky-400 px-5 py-4 text-sm font-black uppercase tracking-[0.28em] text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            className="hocker-button-brand min-h-[54px] w-full"
           >
+            <Download size={17} />
             {isExporting ? "Exportando..." : "Descargar"}
           </button>
 
           {exportStatus ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+            <div className="rounded-[22px] border border-white/10 bg-[#0b1526] p-4 text-sm text-slate-300">
               {exportStatus}
             </div>
           ) : null}
         </div>
-      </div>
-    </div>
+      </section>
+    </PageShell>
   );
 }
-

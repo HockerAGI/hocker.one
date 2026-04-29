@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { Download, FileText, ShieldCheck } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 type RecentLog = {
   id?: string;
@@ -20,6 +22,25 @@ function createJurixClient() {
   }
 
   return createClient(supabaseUrl, supabaseKey);
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <article className="rounded-[24px] border border-white/10 bg-[#0b1526] p-5">
+      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-3 text-4xl font-black tracking-tight text-white">
+        {value}
+      </p>
+    </article>
+  );
 }
 
 export default function JurixAdminDashboard() {
@@ -83,51 +104,54 @@ export default function JurixAdminDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050505] p-6 text-white sm:p-8">
-      <header className="mb-8 flex flex-col gap-4 border-b border-sky-400/20 pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.35em] text-sky-300">JURIX</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">Panel de auditoría</h1>
-          <p className="mt-2 text-sm text-slate-400">Control legal, trazabilidad y revisión operativa.</p>
-        </div>
-
+    <PageShell
+      eyebrow="JURIX"
+      title="Panel de auditoría"
+      description="Control legal, trazabilidad y revisión operativa con datos reales de Supabase."
+      actions={
         <button
           type="button"
           onClick={() => router.push("/admin/jurix/export")}
-          className="rounded-2xl bg-sky-400 px-5 py-3 text-xs font-black uppercase tracking-[0.25em] text-slate-950 hover:bg-white"
+          className="hocker-button-brand"
         >
+          <Download size={16} />
           Exportar
         </button>
-      </header>
-
+      }
+    >
       {loading ? (
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm text-slate-400">
+        <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-5 text-sm text-slate-400">
           Cargando lectura JURIX...
         </div>
       ) : errorMessage ? (
-        <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-6 text-sm text-rose-200">
+        <div className="rounded-[24px] border border-rose-400/20 bg-rose-500/10 p-5 text-sm text-rose-200">
           {errorMessage}
         </div>
       ) : (
-        <main className="space-y-6">
+        <div className="space-y-5">
           <section className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Nodos activos</p>
-              <p className="mt-3 text-4xl font-black">{systemStats.activeNodes}</p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Comandos pendientes</p>
-              <p className="mt-3 text-4xl font-black">{systemStats.pendingCommands}</p>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Proyectos</p>
-              <p className="mt-3 text-4xl font-black">{systemStats.totalProjects}</p>
-            </div>
+            <StatCard label="Nodos activos" value={systemStats.activeNodes} />
+            <StatCard label="Comandos pendientes" value={systemStats.pendingCommands} />
+            <StatCard label="Proyectos" value={systemStats.totalProjects} />
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-black">Últimos registros</h2>
+          <section className="rounded-[28px] border border-white/10 bg-[#07101f] p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl border border-sky-300/20 bg-sky-400/10 text-sky-200">
+                  <ShieldCheck size={19} />
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-300">
+                    Registro
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight text-white">
+                    Últimos registros
+                  </h2>
+                </div>
+              </div>
+
               <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400">
                 {recentLogs.length} items
               </span>
@@ -135,20 +159,36 @@ export default function JurixAdminDashboard() {
 
             <div className="space-y-3">
               {recentLogs.length === 0 ? (
-                <p className="text-sm text-slate-500">Sin registros recientes.</p>
+                <div className="rounded-[22px] border border-white/10 bg-[#0b1526] p-4 text-sm text-slate-500">
+                  Sin registros recientes.
+                </div>
               ) : (
                 recentLogs.map((log, index) => (
-                  <div key={log.id ?? index} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                    <p className="text-sm font-bold text-white">{log.action ?? log.message ?? "Registro"}</p>
-                    <p className="mt-1 text-xs text-slate-500">{log.created_at ?? "sin fecha"}</p>
-                  </div>
+                  <article
+                    key={log.id ?? index}
+                    className="rounded-[22px] border border-white/10 bg-[#0b1526] p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.035] text-sky-200">
+                        <FileText size={17} />
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-black text-white">
+                          {log.action ?? log.message ?? "Registro"}
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {log.created_at ?? "sin fecha"}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
                 ))
               )}
             </div>
           </section>
-        </main>
+        </div>
       )}
-    </div>
+    </PageShell>
   );
 }
-
