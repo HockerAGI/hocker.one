@@ -81,7 +81,7 @@ export default function HockerLiveStatus() {
           .filter(Boolean) as ViewCheck[];
 
         if (alive) {
-          setItems(next.length > 0 ? next : FALLBACK);
+          setItems(next.length ? next : FALLBACK);
           setReady(true);
         }
       } catch {
@@ -111,33 +111,37 @@ export default function HockerLiveStatus() {
   }, []);
 
   const activeCount = useMemo(() => items.filter((item) => item.active).length, [items]);
-  const allActive = ready && items.length > 0 && activeCount === items.length;
+  const allActive = ready && activeCount === items.length;
 
   return (
-    <section className="h1-status-clean" aria-label="Estado real de Hocker ONE">
-      <header className="h1-status-clean-head">
+    <section className="hko-status-panel" aria-label="Estado real de Hocker ONE">
+      <div className="hko-status-head">
         <div>
-          <span>Estado real</span>
-          <strong>{ready ? `${activeCount}/${items.length} activos` : "Verificando..."}</strong>
+          <p>Estado real</p>
+          <h2>{ready ? `${activeCount}/${items.length} activos` : "Verificando..."}</h2>
         </div>
-        <i className={allActive ? "is-active" : "is-inactive"} aria-hidden="true" />
-      </header>
 
-      <div className="h1-status-clean-grid">
+        <div className={`hko-status-master ${allActive ? "is-active" : "is-inactive"}`}>
+          <span />
+          {allActive ? "Todo conectado" : "Revisión activa"}
+        </div>
+      </div>
+
+      <div className="hko-status-grid">
         {items.map((item) => {
           const Icon = ICONS[item.key] || Activity;
 
           return (
             <article
               key={item.key}
-              className={`h1-status-clean-card ${item.active ? "is-active" : "is-inactive"}`}
+              className={`hko-status-card ${item.active ? "is-active" : "is-inactive"}`}
             >
-              <div className="h1-status-clean-icon">
+              <div className="hko-status-icon">
                 <Icon size={20} />
               </div>
 
-              <div className="h1-status-clean-copy">
-                <span>{item.label}</span>
+              <div>
+                <p>{item.label}</p>
                 <strong>{item.detail}</strong>
               </div>
 
@@ -147,30 +151,21 @@ export default function HockerLiveStatus() {
         })}
       </div>
 
-      <div className="h1-status-clean-map">
-        <div className="h1-status-clean-map-title">
-          <span>Mapa vivo</span>
-          <strong>Conexiones</strong>
+      <div className="hko-status-map">
+        <div className="hko-status-core">
+          <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
         </div>
 
-        <div className="h1-status-clean-map-stage">
-          <div className="h1-status-clean-core">
-            <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
-          </div>
-
-          <div className="h1-status-clean-lines" aria-hidden="true" />
-
-          <div className="h1-status-clean-chip-grid">
-            {items.map((item) => (
-              <div
-                key={`chip-${item.key}`}
-                className={`h1-status-clean-chip ${item.active ? "is-active" : "is-inactive"}`}
-              >
-                <span />
-                <strong>{item.label}</strong>
-              </div>
-            ))}
-          </div>
+        <div className="hko-status-nodes">
+          {items.map((item) => (
+            <div
+              key={`node-${item.key}`}
+              className={`hko-status-node ${item.active ? "is-active" : "is-inactive"}`}
+            >
+              <span />
+              {item.label}
+            </div>
+          ))}
         </div>
       </div>
     </section>
