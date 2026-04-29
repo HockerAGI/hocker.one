@@ -23,7 +23,7 @@ export async function middleware(req: NextRequest) {
   if (!url || !anon) return NextResponse.next();
 
   // Clonamos la respuesta para sincronizar las cookies internamente y externamente
-  let res = NextResponse.next({
+  const res = NextResponse.next({
     request: {
       headers: req.headers,
     },

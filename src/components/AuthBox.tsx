@@ -1,3 +1,4 @@
+import Link from "next/link";
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
@@ -156,12 +157,12 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
           <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">
             Acceso privado
           </p>
-          <a
+          <Link
             href="/"
             className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-300 transition hover:text-sky-200"
           >
             Volver
-          </a>
+          </Link>
         </div>
       </div>
     </section>

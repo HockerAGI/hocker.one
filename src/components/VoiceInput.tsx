@@ -1,101 +1,143 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
 import { Mic, MicOff } from "lucide-react";
+import { useRef, useState } from "react";
 
-interface VoiceInputProps {
+type SpeechAlternative = {
+  transcript: string;
+  confidence: number;
+};
+
+type SpeechResult = {
+  readonly isFinal: boolean;
+  readonly length: number;
+  item(index: number): SpeechAlternative;
+  [index: number]: SpeechAlternative;
+};
+
+type SpeechResultList = {
+  readonly length: number;
+  item(index: number): SpeechResult;
+  [index: number]: SpeechResult;
+};
+
+type SpeechRecognitionEventLike = Event & {
+  readonly resultIndex: number;
+  readonly results: SpeechResultList;
+};
+
+type SpeechRecognitionErrorEventLike = Event & {
+  readonly error: string;
+  readonly message?: string;
+};
+
+type SpeechRecognitionLike = EventTarget & {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives?: number;
+
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+
+  start(): void;
+  stop(): void;
+  abort(): void;
+};
+
+type SpeechRecognitionConstructorLike = new () => SpeechRecognitionLike;
+
+type SpeechWindow = Window &
+  typeof globalThis & {
+    SpeechRecognition?: SpeechRecognitionConstructorLike;
+    webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
+  };
+
+type VoiceInputProps = {
   onTranscript: (text: string) => void;
   disabled?: boolean;
-}
+};
 
-export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
-  const [isListening, setIsListening] = useState(false);
-  const [supported, setSupported] = useState(false);
-  
-  // Referencia utilizando los tipos globales declarados en global.d.ts
-  const recognitionRef = useRef<ISpeechRecognition | null>(null);
+export default function VoiceInput({ onTranscript, disabled = false }: VoiceInputProps) {
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const [supported, setSupported] = useState(true);
+  const [listening, setListening] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  function getRecognition(): SpeechRecognitionLike | null {
+    if (typeof window === "undefined") return null;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const speechWindow = window as SpeechWindow;
+    const SpeechRecognition =
+      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       setSupported(false);
-      return;
+      return null;
     }
 
     const recognition = new SpeechRecognition();
+
+    recognition.lang = "es-MX";
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = "es-MX";
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      setIsListening(true);
+      setListening(true);
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      setListening(false);
     };
 
-    recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
-      console.error("[NOVA] Error de entrada de voz:", event.error);
-      setIsListening(false);
+    recognition.onerror = () => {
+      setListening(false);
     };
 
-    recognition.onresult = (event: ISpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) {
-        onTranscript(transcript);
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+      const result = event.results[event.resultIndex];
+      const alternative = result?.[0];
+
+      if (alternative?.transcript) {
+        onTranscript(alternative.transcript.trim());
       }
     };
+
+    return recognition;
+  }
+
+  function toggleListening() {
+    if (disabled) return;
+
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    const recognition = getRecognition();
+
+    if (!recognition) return;
 
     recognitionRef.current = recognition;
-    setSupported(true);
+    recognition.start();
+  }
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-    };
-  }, [onTranscript]);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      try {
-        recognitionRef.current.start();
-      } catch (err) {
-        console.error("[NOVA] Anomalía al iniciar el micrófono:", err);
-      }
-    }
-  };
-
-  if (!supported) return null;
+  if (!supported) {
+    return null;
+  }
 
   return (
     <button
       type="button"
       onClick={toggleListening}
       disabled={disabled}
-      className={`relative flex items-center justify-center p-2 rounded-full transition-all duration-300 ${
-        isListening
-          ? "bg-red-500/20 text-red-400 ring-2 ring-red-500/50"
-          : "bg-slate-800/40 text-slate-400 hover:bg-slate-700/60 hover:text-sky-400"
-      } disabled:opacity-30 disabled:cursor-not-allowed`}
-      title={isListening ? "Detener micrófono" : "Dictar orden"}
+      aria-label={listening ? "Detener voz" : "Dictar mensaje"}
+      className={`nova-voice-button ${listening ? "is-listening" : ""}`}
     >
-      {isListening ? (
-        <>
-          <span className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
-          <MicOff className="w-5 h-5 relative z-10" />
-        </>
-      ) : (
-        <Mic className="w-5 h-5" />
-      )}
+      {listening ? <MicOff size={18} /> : <Mic size={18} />}
     </button>
   );
 }
