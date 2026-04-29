@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ComponentType } from "react";
 import {
   Activity,
   Cpu,
@@ -27,9 +28,14 @@ type ViewCheck = Check & {
   key: string;
 };
 
-const ORDER = ["web", "vercel", "supabase", "nova", "pwa", "android", "api"];
+type IconType = ComponentType<{
+  size?: number;
+  className?: string;
+}>;
 
-const ICONS = {
+const ORDER = ["web", "vercel", "supabase", "nova", "pwa", "android", "api"] as const;
+
+const ICONS: Record<string, IconType> = {
   web: Globe2,
   vercel: Rocket,
   supabase: Database,
@@ -64,13 +70,16 @@ export default function HockerLiveStatus() {
 
         const data = (await response.json()) as StatusResponse;
 
-        const next = ORDER.map((key) => ({
-          key,
-          ...data.checks[key],
-        })).filter((item) => item.label);
+        const next = ORDER
+          .map((key) => {
+            const check = data.checks[key];
+            if (!check) return null;
+            return { key, ...check };
+          })
+          .filter(Boolean) as ViewCheck[];
 
         if (alive) {
-          setItems(next);
+          setItems(next.length > 0 ? next : FALLBACK);
           setReady(true);
         }
       } catch {
@@ -100,33 +109,32 @@ export default function HockerLiveStatus() {
   }, []);
 
   const activeCount = useMemo(() => items.filter((item) => item.active).length, [items]);
-  const allActive = ready && activeCount === items.length;
+  const allActive = ready && items.length > 0 && activeCount === items.length;
 
   return (
-    <section className="hko-safe-status" aria-label="Estado real de Hocker ONE">
-      <header className="hko-safe-status-head">
+    <section className="h1-status-clean" aria-label="Estado real de Hocker ONE">
+      <header className="h1-status-clean-head">
         <div>
           <span>Estado real</span>
           <strong>{ready ? `${activeCount}/${items.length} activos` : "Verificando..."}</strong>
         </div>
-
         <i className={allActive ? "is-active" : "is-inactive"} aria-hidden="true" />
       </header>
 
-      <div className="hko-safe-status-grid">
+      <div className="h1-status-clean-grid">
         {items.map((item) => {
-          const Icon = ICONS[item.key as keyof typeof ICONS] || Activity;
+          const Icon = ICONS[item.key] || Activity;
 
           return (
             <article
               key={item.key}
-              className={`hko-safe-status-card ${item.active ? "is-active" : "is-inactive"}`}
+              className={`h1-status-clean-card ${item.active ? "is-active" : "is-inactive"}`}
             >
-              <div className="hko-safe-status-icon">
+              <div className="h1-status-clean-icon">
                 <Icon size={20} />
               </div>
 
-              <div className="hko-safe-status-copy">
+              <div className="h1-status-clean-copy">
                 <span>{item.label}</span>
                 <strong>{item.detail}</strong>
               </div>
@@ -137,28 +145,27 @@ export default function HockerLiveStatus() {
         })}
       </div>
 
-      <div className="hko-safe-map">
-        <div className="hko-safe-map-copy">
+      <div className="h1-status-clean-map">
+        <div className="h1-status-clean-map-title">
           <span>Mapa vivo</span>
           <strong>Conexiones</strong>
         </div>
 
-        <div className="hko-safe-map-stage">
-          <div className="hko-safe-map-orbit hko-safe-map-orbit-a" />
-          <div className="hko-safe-map-orbit hko-safe-map-orbit-b" />
-
-          <div className="hko-safe-map-core">
+        <div className="h1-status-clean-map-stage">
+          <div className="h1-status-clean-core">
             <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
           </div>
 
-          <div className="hko-safe-map-list">
+          <div className="h1-status-clean-lines" aria-hidden="true" />
+
+          <div className="h1-status-clean-chip-grid">
             {items.map((item) => (
               <div
                 key={`chip-${item.key}`}
-                className={`hko-safe-map-chip ${item.active ? "is-active" : "is-inactive"}`}
+                className={`h1-status-clean-chip ${item.active ? "is-active" : "is-inactive"}`}
               >
                 <span />
-                {item.label}
+                <strong>{item.label}</strong>
               </div>
             ))}
           </div>

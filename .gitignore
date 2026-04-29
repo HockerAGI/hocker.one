@@ -96,3 +96,11 @@ hocker_topology_audit_*.zip
 .env.production
 .env*.local
 .env.example
+
+# HOCKER protected env files
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+.env.example
