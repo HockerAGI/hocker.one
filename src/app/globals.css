@@ -912,3 +912,294 @@ svg {
     display: none;
   }
 }
+
+/* HOCKER ONE STABLE UI */
+
+html {
+  background: #030711;
+}
+
+body {
+  background:
+    radial-gradient(circle at 16% 0%, rgba(85, 220, 255, 0.12), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(139, 92, 246, 0.10), transparent 34%),
+    linear-gradient(180deg, #030711 0%, #070b14 52%, #030711 100%);
+  text-rendering: geometricPrecision;
+}
+
+.hocker-panel-pro,
+.shell-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 30px;
+  box-shadow: 0 18px 70px rgba(2, 6, 23, 0.18);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.hocker-panel-strong,
+.shell-panel-strong {
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(2, 6, 23, 0.72);
+  border-radius: 34px;
+  box-shadow: 0 28px 100px rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.hocker-surface-soft,
+.shell-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 28px;
+  box-shadow: 0 18px 60px rgba(2, 6, 23, 0.16);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.hocker-card-float,
+.hocker-glass-vfx {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.55);
+  border-radius: 32px;
+  box-shadow: 0 28px 110px rgba(2, 6, 23, 0.34);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.hocker-button-brand,
+.hocker-button-primary,
+.shell-button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(85, 220, 255, 0.24);
+  border-radius: 1rem;
+  background: linear-gradient(90deg, #64eaff, #38bdf8);
+  padding: 0.7rem 1rem;
+  color: #031018;
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+}
+
+.hocker-button-brand:hover,
+.hocker-button-primary:hover,
+.shell-button-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 14px 30px rgba(85, 220, 255, 0.18);
+}
+
+.hocker-button-ghost,
+.shell-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.7rem 1rem;
+  color: rgb(226 232 240);
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.hocker-button-ghost:hover,
+.shell-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.hocker-chip,
+.shell-chip,
+.shell-chip-brand,
+.shell-chip-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.hocker-chip,
+.shell-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgb(203 213 225);
+}
+
+.shell-chip-brand {
+  border: 1px solid rgba(85, 220, 255, 0.20);
+  background: rgba(85, 220, 255, 0.10);
+  color: rgb(186 230 253);
+}
+
+.shell-chip-success {
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: rgba(34, 197, 94, 0.10);
+  color: rgb(209 250 229);
+}
+
+.hocker-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.75rem 1rem;
+  color: white;
+  outline: none;
+}
+
+.hocker-input::placeholder {
+  color: rgb(71 85 105);
+}
+
+.hocker-input:focus {
+  border-color: rgba(85, 220, 255, 0.34);
+}
+
+.section-kicker,
+.hocker-title-line {
+  color: rgb(125 211 252);
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.30em;
+  text-transform: uppercase;
+}
+
+.hocker-kicker {
+  margin-top: 0.35rem;
+  color: rgb(148 163 184);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.section-title {
+  color: white;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.section-copy {
+  color: rgb(148 163 184);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.surface-grid {
+  background-image:
+    radial-gradient(circle at top right, rgba(85, 220, 255, 0.08), transparent 28%),
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: auto, 44px 44px, 44px 44px;
+}
+
+.hocker-fade-up {
+  animation: hocker-enter 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #55dcff, #38bdf8);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nova-mini-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: 0 14px 50px rgba(2, 6, 23, 0.18);
+}
+
+.nova-voice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(85, 220, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(85, 220, 255, 0.10);
+  color: rgb(186 230 253);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.nova-voice-button.is-listening {
+  border-color: rgba(34, 197, 94, 0.38);
+  background: rgba(34, 197, 94, 0.14);
+  color: rgb(209 250 229);
+}
+
+.bg-hocker-aurora {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.24), transparent 22%),
+    radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.16), transparent 24%),
+    radial-gradient(circle at 50% 80%, rgba(34, 197, 94, 0.08), transparent 26%),
+    linear-gradient(180deg, #020617 0%, #020617 100%);
+}
+
+.hocker-grid-soft {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+@keyframes hocker-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+    filter: blur(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .shell-panel-strong {
+    border-radius: 26px;
+    padding: 1rem !important;
+  }
+
+  .section-kicker {
+    letter-spacing: 0.22em;
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+  }
+
+  .section-copy {
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+}
