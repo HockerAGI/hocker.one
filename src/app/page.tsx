@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
+import HockerLiveStatus from "@/components/HockerLiveStatus";
 import {
   ArrowRight,
   Bot,
@@ -64,12 +65,6 @@ const modules: Module[] = [
   },
 ];
 
-const signals = [
-  { name: "NOVA", value: "Activa" },
-  { name: "Web", value: "Live" },
-  { name: "PWA", value: "Lista" },
-  { name: "APK", value: "OK" },
-];
 
 function ModuleCard({ item }: { item: Module }) {
   const Icon = item.icon;
@@ -154,15 +149,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <section className="hkr3-signal-strip" aria-label="Estado rápido">
-        {signals.map((item) => (
-          <div key={item.name}>
-            <p>{item.name}</p>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
-      </section>
+      <HockerLiveStatus />
 
       <section className="hkr3-layout">
         <div className="hkr3-panel hkr3-panel-map">

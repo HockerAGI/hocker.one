@@ -2148,3 +2148,216 @@ body {
   }
 }
 /* === HOCKER ONE FINAL POLISH END === */
+
+/* === HOCKER ONE REAL STATUS + LOGO PERFORMANCE START === */
+
+/* Contenedor del logo más compacto y con más impacto */
+.hkr3-logo-stage,
+.hkr3-hero-media,
+.hkr3-hero-logo {
+  min-height: clamp(250px, 42vh, 390px) !important;
+  border-color: rgba(92, 214, 255, 0.14) !important;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(70, 225, 255, 0.20), transparent 28%),
+    radial-gradient(circle at 50% 55%, rgba(62, 92, 255, 0.15), transparent 48%),
+    linear-gradient(145deg, rgba(9, 16, 31, 0.92), rgba(4, 7, 14, 0.96)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -46px 80px rgba(0,0,0,0.34),
+    0 26px 80px rgba(0,0,0,0.40),
+    0 0 78px rgba(50, 198, 255, 0.13) !important;
+}
+
+/* Logo con efecto 3D más evidente */
+.hkr3-logo-stage img,
+.hkr3-hero-media img,
+.hkr3-hero-logo img {
+  width: min(88%, 560px) !important;
+  max-height: 76% !important;
+  object-fit: contain;
+  transform: perspective(900px) rotateX(4deg) rotateY(-2deg) translateY(-2px);
+  filter:
+    contrast(1.22)
+    saturate(1.16)
+    drop-shadow(0 22px 30px rgba(0, 0, 0, 0.46))
+    drop-shadow(0 0 20px rgba(105, 232, 255, 0.36))
+    drop-shadow(0 0 62px rgba(43, 120, 255, 0.24)) !important;
+}
+
+/* Reduce VFX costoso sin quitar vida */
+.hkr3-logo-stage::before,
+.hkr3-hero-media::before,
+.hkr3-hero-logo::before {
+  filter: blur(14px) !important;
+  opacity: 0.78;
+}
+
+.hkr3-hero-ring-c {
+  display: none !important;
+}
+
+.hkr3-hero-grid {
+  opacity: 0.06 !important;
+}
+
+.hkr3-particle:nth-child(n + 9) {
+  display: none !important;
+}
+
+/* Estados reales */
+.hkr-real-status {
+  margin-top: 18px;
+  border: 1px solid rgba(92, 214, 255, 0.12);
+  border-radius: 26px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012)),
+    rgba(7, 13, 25, 0.74);
+  box-shadow: 0 18px 56px rgba(0,0,0,0.28);
+  padding: 14px;
+}
+
+.hkr-real-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 4px 4px 12px;
+}
+
+.hkr-real-status-head p,
+.hkr-real-status-card p {
+  margin: 0;
+  color: rgba(168, 181, 201, 0.92);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hkr-real-status-head strong {
+  display: block;
+  margin-top: 3px;
+  color: #f7fbff;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.hkr-real-status-head > span {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+}
+
+.hkr-real-status-head > span.is-green {
+  background: #22c55e;
+  box-shadow: 0 0 22px rgba(34, 197, 94, 0.78);
+}
+
+.hkr-real-status-head > span.is-red {
+  background: #ef4444;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.78);
+}
+
+.hkr-real-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hkr-real-status-card {
+  display: grid;
+  grid-template-columns: 34px 1fr 10px;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  border-radius: 18px;
+  border: 1px solid rgba(120, 160, 255, 0.10);
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+}
+
+.hkr-real-status-card svg {
+  color: rgba(220, 234, 255, 0.92);
+}
+
+.hkr-real-status-card strong {
+  display: block;
+  margin-top: 2px;
+  color: #f7fbff;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+
+.hkr-real-status-card > span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.hkr-real-status-card.is-active {
+  border-color: rgba(34, 197, 94, 0.24);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(34,197,94,0.12), transparent 35%),
+    rgba(255,255,255,0.03);
+}
+
+.hkr-real-status-card.is-active > span {
+  background: #22c55e;
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.78);
+}
+
+.hkr-real-status-card.is-inactive {
+  border-color: rgba(239, 68, 68, 0.24);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(239,68,68,0.10), transparent 35%),
+    rgba(255,255,255,0.025);
+}
+
+.hkr-real-status-card.is-inactive > span {
+  background: #ef4444;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.72);
+}
+
+/* Móvil: que sí se vea, pero más ligero */
+@media (max-width: 768px) {
+  .hkr3-logo-stage,
+  .hkr3-hero-media,
+  .hkr3-hero-logo {
+    min-height: 260px !important;
+    border-radius: 28px !important;
+  }
+
+  .hkr3-logo-stage img,
+  .hkr3-hero-media img,
+  .hkr3-hero-logo img {
+    width: min(92%, 420px) !important;
+    filter:
+      contrast(1.24)
+      saturate(1.14)
+      drop-shadow(0 18px 28px rgba(0,0,0,0.46))
+      drop-shadow(0 0 24px rgba(105,232,255,0.40))
+      drop-shadow(0 0 54px rgba(43,120,255,0.26)) !important;
+  }
+
+  .hkr3-hero-scan {
+    opacity: 0.92 !important;
+  }
+
+  .hkr3-particle {
+    opacity: 0.56 !important;
+  }
+
+  .hkr-real-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .hkr-real-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hkr-real-status-card {
+    min-height: 58px;
+  }
+}
+
+/* === HOCKER ONE REAL STATUS + LOGO PERFORMANCE END === */

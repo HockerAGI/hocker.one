@@ -74,3 +74,10 @@ _ready_backup_*/
 android/local.properties
 HOCKER_AUDIT_TOPOLOGY_*
 hocker_topology_audit_*.zip
+
+# HOCKER local secrets
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
