@@ -114,59 +114,41 @@ export default function HockerLiveStatus() {
   const allActive = ready && activeCount === items.length;
 
   return (
-    <section className="hko-status-panel" aria-label="Estado real de Hocker ONE">
-      <div className="hko-status-head">
+    <section className="hko-live-status" aria-label="Estado real de Hocker ONE">
+      <header className="hko-live-status-head">
         <div>
           <p>Estado real</p>
           <h2>{ready ? `${activeCount}/${items.length} activos` : "Verificando..."}</h2>
         </div>
 
-        <div className={`hko-status-master ${allActive ? "is-active" : "is-inactive"}`}>
+        <div className={allActive ? "hko-live-status-pill is-active" : "hko-live-status-pill is-inactive"}>
           <span />
           {allActive ? "Todo conectado" : "Revisión activa"}
         </div>
-      </div>
+      </header>
 
-      <div className="hko-status-grid">
+      <div className="hko-live-status-grid">
         {items.map((item) => {
           const Icon = ICONS[item.key] || Activity;
 
           return (
             <article
               key={item.key}
-              className={`hko-status-card ${item.active ? "is-active" : "is-inactive"}`}
+              className={item.active ? "hko-live-status-card is-active" : "hko-live-status-card is-inactive"}
             >
-              <div className="hko-status-icon">
-                <Icon size={20} />
+              <div className="hko-live-status-icon">
+                <Icon size={19} />
               </div>
 
-              <div>
+              <div className="hko-live-status-copy">
                 <p>{item.label}</p>
                 <strong>{item.detail}</strong>
               </div>
 
-              <i aria-hidden="true" />
+              <span className="hko-live-status-dot" aria-hidden="true" />
             </article>
           );
         })}
-      </div>
-
-      <div className="hko-status-map">
-        <div className="hko-status-core">
-          <img src="/brand/hocker-one-logo.png" alt="Hocker ONE" />
-        </div>
-
-        <div className="hko-status-nodes">
-          {items.map((item) => (
-            <div
-              key={`node-${item.key}`}
-              className={`hko-status-node ${item.active ? "is-active" : "is-inactive"}`}
-            >
-              <span />
-              {item.label}
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );

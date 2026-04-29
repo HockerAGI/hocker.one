@@ -37,9 +37,7 @@ export default function LoginPage() {
         password: cleanPassword,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       router.replace("/dashboard");
       router.refresh();
@@ -51,74 +49,52 @@ export default function LoginPage() {
   }
 
   return (
-    <main className={`relative min-h-screen overflow-hidden ${styles.scene}`}>
-      <div className={styles.grid} />
-      <div className={styles.noise} />
-      <div className={styles.scan} />
-      <div className={styles.orbOne} />
-      <div className={styles.orbTwo} />
-      <div className={styles.orbThree} />
+    <main className={styles.scene}>
+      <section className={styles.card} aria-label="Acceso Hocker ONE">
+        <div className={styles.logoBox}>
+          <Image
+            src="/brand/hocker-one-logo.png"
+            alt="Hocker ONE"
+            width={1200}
+            height={320}
+            priority
+            className={styles.logo}
+          />
+        </div>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
-        <section className={`w-full max-w-[440px] rounded-[32px] p-5 sm:p-6 ${styles.panel}`}>
-          <div className="relative mb-6 rounded-[28px] p-5 sm:p-6">
-            <div className={styles.logoWrap}>
-              <div className="relative px-4 py-6 sm:px-5 sm:py-7">
-                <div className={styles.logoGlow} />
-                <div className="relative mx-auto w-full max-w-[320px]">
-                  <Image
-                    src="/brand/hocker-one-logo.png"
-                    alt="Hocker ONE"
-                    width={1200}
-                    height={320}
-                    priority
-                    className="h-auto w-full object-contain"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className={styles.copy}>
+          <p>Centro de control</p>
+          <h1>Acceso operativo</h1>
+          <span>Entra con credenciales reales del ecosistema.</span>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="Correo"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={styles.field}
-              />
-            </div>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="Correo"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={styles.field}
+          />
 
-            <div>
-              <input
-                type="password"
-                autoComplete="current-password"
-                placeholder="Contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={styles.field}
-              />
-            </div>
+          <input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={styles.field}
+          />
 
-            {errorText ? (
-              <div className={`rounded-2xl px-4 py-3 text-sm ${styles.statusError}`}>
-                {errorText}
-              </div>
-            ) : null}
+          {errorText ? <div className={styles.statusError}>{errorText}</div> : null}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full rounded-[18px] px-4 py-4 text-sm uppercase ${styles.primaryBtn}`}
-            >
-              {loading ? "Entrando..." : "Entrar"}
-            </button>
-          </form>
-        </section>
-      </div>
+          <button type="submit" disabled={loading} className={styles.primaryBtn}>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

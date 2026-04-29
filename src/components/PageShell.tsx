@@ -32,44 +32,30 @@ export default function PageShell({
   const body = description ?? subtitle;
 
   return (
-    <section
-      className={cn(
-        "mx-auto w-full max-w-7xl",
-        className,
-      )}
-    >
-      <div className="shell-panel-strong surface-grid relative overflow-hidden p-5 sm:p-6">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_30%)]" />
-        <div className="relative flex flex-col gap-5">
-          <div className={compact ? "space-y-3" : "space-y-4"}>
-            {eyebrow ? <p className="section-kicker">{eyebrow}</p> : null}
+    <section className={cn("hko-page-shell", className)}>
+      <div className="hko-page-card">
+        <header className={compact ? "hko-page-head is-compact" : "hko-page-head"}>
+          <div className="hko-page-title-block">
+            {eyebrow ? <p className="hko-page-eyebrow">{eyebrow}</p> : null}
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <h1 className="h1-title">{title}</h1>
+            <h1>{title}</h1>
 
-                {body ? (
-                  <p className="section-copy max-w-2xl">
-                    {body}
-                  </p>
-                ) : null}
+            {body ? <p>{body}</p> : null}
 
-                {showWorkspaceBar && ready ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="shell-chip-brand">{projectId}</span>
-                    <span className="shell-chip">{nodeId}</span>
-                  </div>
-                ) : null}
+            {showWorkspaceBar && ready ? (
+              <div className="hko-page-chips">
+                <span>{projectId}</span>
+                <span>{nodeId}</span>
               </div>
-
-              {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
-            </div>
+            ) : null}
           </div>
 
-          {showWorkspaceBar ? <WorkspaceBar /> : null}
+          {actions ? <div className="hko-page-actions">{actions}</div> : null}
+        </header>
 
-          <div>{children}</div>
-        </div>
+        {showWorkspaceBar ? <WorkspaceBar /> : null}
+
+        <div className="hko-page-body">{children}</div>
       </div>
     </section>
   );
