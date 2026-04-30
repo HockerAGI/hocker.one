@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getErrorMessage } from "@/lib/errors";
 import { verifyCommandSignature } from "@/lib/security";
 import { auditTrailEvent } from "@/lib/audit-chain";
+import { runGithubCommand } from "@/lib/github-actions";
 
 const exec = promisify(execCb);
 
@@ -15,6 +16,7 @@ const READONLY_COMMANDS = new Set([
   "status",
   "read_dir",
   "read_file_head",
+  "github.read_file",
 ]);
 
 const WRITE_COMMANDS = new Set([
@@ -23,6 +25,9 @@ const WRITE_COMMANDS = new Set([
   "run_sql",
   "stripe.charge",
   "meta.send_msg",
+  "github.create_branch",
+  "github.upsert_file",
+  "github.create_pr",
 ]);
 
 export type CloudQueueOptions = {
@@ -169,6 +174,18 @@ async function executeLocalCloud(
         data: { lines, totalLines: content.split("\n").length },
       };
     }
+  }
+
+  if (cmd === "github.read_file") {
+    return await runGithubCommand(cmd, p);
+  }
+
+  if (cmd.startsWith("github.") && WRITE_COMMANDS.has(cmd)) {
+    if (!allowWriteExecution()) {
+      throw new Error(`Ejecución de escritura bloqueada por política para: ${cmd}`);
+    }
+
+    return await runGithubCommand(cmd, p);
   }
 
   if (!WRITE_COMMANDS.has(cmd)) {

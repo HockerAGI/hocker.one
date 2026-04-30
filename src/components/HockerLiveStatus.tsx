@@ -99,10 +99,7 @@ export default function HockerLiveStatus() {
     }
 
     void loadStatus();
-
-    const timer = window.setInterval(() => {
-      void loadStatus();
-    }, 30000);
+    const timer = window.setInterval(() => void loadStatus(), 30000);
 
     return () => {
       alive = false;

@@ -263,7 +263,7 @@ export default function CommandsQueue() {
   }
 
   return (
-    <section className="flex h-full flex-col rounded-[34px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_20px_80px_rgba(2,6,23,0.22)] backdrop-blur-2xl sm:p-6">
+    <section className="flex h-full flex-col rounded-[34px] border border-white/5 bg-white/[0.03] p-5 shadow-[0_20px_80px_rgba(2,6,23,0.22)] sm:p-6">
       <div className="mb-5 flex flex-col gap-4 border-b border-white/5 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-400">

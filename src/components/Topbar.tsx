@@ -24,7 +24,7 @@ export default function Topbar() {
   const title = getTitle(pathname);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[90] border-b border-white/10 bg-[#030711]/88 px-4 py-3 text-white shadow-[0_18px_70px_rgba(0,0,0,0.22)] backdrop-blur-2xl lg:left-[290px]">
+    <header className="fixed inset-x-0 top-0 z-[90] border-b border-white/10 bg-[#030711]/88 px-4 py-3 text-white shadow-[0_18px_70px_rgba(0,0,0,0.22)] lg:left-[290px]">
       <div className="mx-auto flex min-h-[56px] w-full max-w-[1800px] items-center justify-between gap-3">
         <Link
           href="/"

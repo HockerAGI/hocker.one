@@ -24,7 +24,6 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
 type Role = "user" | "nova" | "system";
@@ -305,7 +304,7 @@ export default function NovaChat() {
     <div
       className={cx(
         "flex h-full w-full flex-col overflow-hidden rounded-[30px] border border-white/5",
-        "bg-slate-950/30 shadow-[0_22px_90px_rgba(2,6,23,0.28)] backdrop-blur-2xl",
+        "bg-slate-950/30 shadow-[0_22px_90px_rgba(2,6,23,0.28)]",
         isDragOver && "ring-1 ring-sky-400/30",
       )}
       onDragOver={(e) => {
@@ -398,14 +397,10 @@ export default function NovaChat() {
       ) : null}
 
       <div ref={scrollRef} className="custom-scrollbar flex-1 overflow-y-auto px-4 py-5 sm:px-5">
-        <AnimatePresence initial={false}>
+        <>
           {messages.length === 0 ? (
-            <motion.div
+            <div
               key="empty"
-              initial={{ opacity: 0, y: 12, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
               className="mx-auto flex min-h-[42dvh] max-w-2xl flex-col justify-center gap-4 text-center"
             >
               <div className="mx-auto grid h-16 w-16 place-items-center rounded-[24px] border border-sky-300/20 bg-sky-400/10 shadow-[0_0_40px_rgba(56,189,248,0.16)]">
@@ -434,18 +429,15 @@ export default function NovaChat() {
                   </button>
                 ))}
               </div>
-            </motion.div>
+            </div>
           ) : (
             <div className="space-y-4">
               {messages.map((message) => {
                 const isUser = message.role === "user";
                 const isSystem = message.role === "system";
                 return (
-                  <motion.div
+                  <div
                     key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.22 }}
                     className={cx("flex", isUser ? "justify-end" : "justify-start")}
                   >
                     <div
@@ -464,12 +456,12 @@ export default function NovaChat() {
                       ) : null}
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
           )}
-        </AnimatePresence>
+        </>
 
         {isTyping ? (
           <div className="mt-4 flex justify-start">
@@ -487,7 +479,7 @@ export default function NovaChat() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div
             className={cx(
-              "rounded-[28px] border p-3 shadow-[0_18px_70px_rgba(2,6,23,0.20)] backdrop-blur-2xl",
+              "rounded-[28px] border p-3 shadow-[0_18px_70px_rgba(2,6,23,0.20)]",
               isDragOver ? "border-sky-400/30 bg-sky-400/[0.09]" : "border-white/5 bg-white/[0.035]",
             )}
           >

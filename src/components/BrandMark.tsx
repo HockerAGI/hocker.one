@@ -19,10 +19,10 @@ export default function BrandMark({
   className = "",
 }: BrandMarkProps) {
   const shellClass = hero
-    ? "rounded-[28px] border border-white/5 bg-white/[0.02] px-4 py-3 shadow-[0_18px_60px_rgba(2,6,23,0.25)] backdrop-blur-2xl"
+    ? "rounded-[28px] border border-white/5 bg-white/[0.02] px-4 py-3 shadow-[0_18px_60px_rgba(2,6,23,0.25)]"
     : compact
-      ? "rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_12px_40px_rgba(2,6,23,0.18)] backdrop-blur-xl"
-      : "rounded-[26px] border border-white/5 bg-white/[0.03] px-3 py-2.5 shadow-[0_16px_50px_rgba(2,6,23,0.2)] backdrop-blur-xl";
+      ? "rounded-[22px] border border-white/5 bg-white/[0.03] px-3 py-2 shadow-[0_12px_40px_rgba(2,6,23,0.18)]"
+      : "rounded-[26px] border border-white/5 bg-white/[0.03] px-3 py-2.5 shadow-[0_16px_50px_rgba(2,6,23,0.2)]";
 
   const isotypeSize = hero ? 58 : compact ? 30 : 36;
   const wordmarkWidth = hero ? 360 : 220;

@@ -60,7 +60,7 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
     <section
       className={[
         "relative w-full max-w-[34rem] overflow-hidden rounded-[36px] border border-white/5",
-        "bg-slate-950/82 p-5 shadow-[0_30px_120px_rgba(2,6,23,0.5)] backdrop-blur-3xl sm:p-7",
+        "bg-slate-950/82 p-5 shadow-[0_30px_120px_rgba(2,6,23,0.5)] sm:p-7",
         className,
       ].join(" ")}
     >

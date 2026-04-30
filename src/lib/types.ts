@@ -41,7 +41,11 @@ export type CommandName =
   | "node.deactivate"
   | "restart_db"
   | "restart_nova"
-  | "restart_telemetry";
+  | "restart_telemetry"
+  | "github.read_file"
+  | "github.create_branch"
+  | "github.upsert_file"
+  | "github.create_pr";
 
 // ==========================
 // EVENTS

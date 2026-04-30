@@ -32,7 +32,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-4 top-4 z-[95] hidden h-[calc(100dvh-2rem)] w-[258px] flex-col overflow-hidden rounded-[34px] border border-white/10 bg-slate-950/72 p-4 text-white shadow-[0_30px_110px_rgba(0,0,0,0.36)] backdrop-blur-2xl lg:flex"
+      className="fixed left-4 top-4 z-[95] hidden h-[calc(100dvh-2rem)] w-[258px] flex-col overflow-hidden rounded-[34px] border border-white/10 bg-slate-950/72 p-4 text-white shadow-[0_30px_110px_rgba(0,0,0,0.36)] lg:flex"
       aria-label="Menú lateral"
     >
       <Link

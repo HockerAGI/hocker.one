@@ -14,7 +14,7 @@ export default function WorkspaceBar({ className }: WorkspaceBarProps) {
   return (
     <div
       className={cn(
-        "rounded-[28px] border border-white/10 bg-slate-950/52 px-4 py-3 shadow-[0_14px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl",
+        "rounded-[28px] border border-white/10 bg-slate-950/52 px-4 py-3 shadow-[0_14px_50px_rgba(0,0,0,0.18)]",
         className,
       )}
     >

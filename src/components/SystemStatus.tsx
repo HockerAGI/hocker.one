@@ -124,30 +124,18 @@ export default function SystemStatus({ summary }: Props) {
 
     const channel = supabase
       .channel("system-status-live")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "commands" },
-        () => {
-          setState("syncing");
-          void load();
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "nodes" },
-        () => {
-          setState("syncing");
-          void load();
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "events" },
-        () => {
-          setState("syncing");
-          void load();
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "commands" }, () => {
+        setState("syncing");
+        void load();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nodes" }, () => {
+        setState("syncing");
+        void load();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "events" }, () => {
+        setState("syncing");
+        void load();
+      })
       .subscribe();
 
     return () => {
@@ -155,7 +143,7 @@ export default function SystemStatus({ summary }: Props) {
     };
   }, [load, supabase]);
 
-  const tone = {
+  const toneClass = {
     online: "bg-emerald-400",
     syncing: "bg-sky-400",
     error: "bg-rose-400",
@@ -168,14 +156,11 @@ export default function SystemStatus({ summary }: Props) {
   }[state];
 
   return (
-    <div className="relative overflow-hidden rounded-[32px] border border-white/5 bg-white/[0.03] px-4 py-4 shadow-[0_18px_70px_rgba(2,6,23,0.18)] backdrop-blur-2xl">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.09),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.08),transparent_24%)]" />
-
-      <div className="relative flex items-center gap-4">
-        <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/5 bg-slate-950/70">
-          <span className={`absolute inset-0 rounded-2xl opacity-70 blur-md ${tone}`} />
+    <div className="rounded-[28px] border border-white/10 bg-[#0b1526] p-4">
+      <div className="flex items-center gap-4">
+        <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-[#07101f]">
           <CircleDot
-            className={`relative z-10 h-5 w-5 ${
+            className={`h-5 w-5 ${
               state === "error"
                 ? "text-rose-300"
                 : state === "syncing"
@@ -186,51 +171,35 @@ export default function SystemStatus({ summary }: Props) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
             Estado del sistema
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span
-              className={`text-sm font-black uppercase tracking-[0.24em] ${
-                state === "error"
-                  ? "text-rose-200"
-                  : state === "syncing"
-                    ? "text-sky-200"
-                    : "text-emerald-200"
-              }`}
-            >
+            <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-100">
+              <span className={`h-2.5 w-2.5 rounded-full ${toneClass}`} />
               {label}
             </span>
             {loading ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.03] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.28em] text-slate-300">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.20em] text-slate-300">
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                 Actualizando
               </span>
             ) : null}
           </div>
         </div>
-
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-            {snapshot.onlineNodes} nodos
-          </span>
-          <span className="rounded-full border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-300">
-            {snapshot.runningCommands} en curso
-          </span>
-        </div>
       </div>
 
-      <div className="relative mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-[22px] border border-white/10 bg-[#07101f] p-4">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-500">
             <SignalHigh className="h-4 w-4 text-sky-300" />
             Nodos vivos
           </div>
           <p className="mt-2 text-2xl font-black text-white">{snapshot.onlineNodes}</p>
         </div>
 
-        <div className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+        <div className="rounded-[22px] border border-white/10 bg-[#07101f] p-4">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-500">
             <Sparkles className="h-4 w-4 text-sky-300" />
             Comandos
           </div>
@@ -239,8 +208,8 @@ export default function SystemStatus({ summary }: Props) {
           </p>
         </div>
 
-        <div className="rounded-[24px] border border-white/5 bg-slate-950/45 p-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+        <div className="rounded-[22px] border border-white/10 bg-[#07101f] p-4">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-500">
             <ShieldAlert className="h-4 w-4 text-sky-300" />
             Última señal
           </div>
@@ -250,7 +219,7 @@ export default function SystemStatus({ summary }: Props) {
         </div>
       </div>
 
-      <div className="relative mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+      <div className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
         Eventos 24h: {snapshot.recentEvents}
       </div>
     </div>

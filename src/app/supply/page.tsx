@@ -84,7 +84,7 @@ export default function SupplyPage() {
           {supply.map((card) => (
             <article
               key={card.title}
-              className={`rounded-[26px] border p-5 shadow-[0_18px_60px_rgba(2,6,23,0.14)] backdrop-blur-xl ${accentClass(
+              className={`rounded-[26px] border p-5 shadow-[0_18px_60px_rgba(2,6,23,0.14)] ${accentClass(
                 card.accent,
               )}`}
             >
