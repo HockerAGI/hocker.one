@@ -23,6 +23,12 @@ function safeHexEqual(a: string, b: string): boolean {
   }
 }
 
+function normalizeSignedTimestamp(value: string): string {
+  const ms = new Date(value).getTime();
+  if (!Number.isFinite(ms)) return value;
+  return new Date(ms).toISOString();
+}
+
 export function getCommandHmacSecret(): string {
   return getSecretFromEnv(["HOCKER_COMMAND_HMAC_SECRET", "COMMAND_HMAC_SECRET"]);
 }
@@ -45,7 +51,8 @@ export function signCommand(
   payload: unknown,
   created_at: string,
 ): string {
-  const base = [id, project_id, node_id, command, created_at, canonicalJson(payload)].join("|");
+  const signedCreatedAt = normalizeSignedTimestamp(created_at);
+  const base = [id, project_id, node_id, command, signedCreatedAt, canonicalJson(payload)].join("|");
   return crypto.createHmac("sha256", secret).update(base).digest("hex");
 }
 
@@ -65,7 +72,8 @@ export function verifyCommandSignature(
   if (!secret) return false;
   if (!signature) return false;
 
-  const commandTime = new Date(created_at).getTime();
+  const signedCreatedAt = normalizeSignedTimestamp(created_at);
+  const commandTime = new Date(signedCreatedAt).getTime();
   const now = Date.now();
 
   if (!Number.isFinite(commandTime) || Math.abs(now - commandTime) > MAX_TIME_DRIFT_MS) {
