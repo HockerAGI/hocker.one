@@ -2,17 +2,17 @@
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 20px;
   background: #030711;
   color: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .card {
   width: min(100%, 460px);
   border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 34px;
+  border-radius: 28px;
   background: #07101f;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
   padding: clamp(20px, 5vw, 28px);
 }
 
@@ -20,13 +20,13 @@
   display: grid;
   place-items: center;
   border: 1px solid rgba(85, 220, 255, 0.14);
-  border-radius: 28px;
+  border-radius: 22px;
   background: #081526;
-  padding: clamp(24px, 6vw, 36px);
+  padding: 24px;
 }
 
 .logo {
-  width: min(100%, 330px);
+  width: min(100%, 300px);
   height: auto;
   object-fit: contain;
 }
@@ -39,18 +39,18 @@
   margin: 0;
   color: #7dd3fc;
   font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.28em;
+  font-weight: 900;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
 .copy h1 {
   margin: 8px 0 0;
   color: #ffffff;
-  font-size: clamp(34px, 8vw, 48px);
-  line-height: 0.96;
-  font-weight: 950;
-  letter-spacing: -0.055em;
+  font-size: clamp(32px, 8vw, 44px);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.04em;
 }
 
 .copy span {
@@ -69,7 +69,7 @@
 
 .field {
   width: 100%;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: #0b1526;
   color: #ffffff;
@@ -90,12 +90,12 @@
 .primaryBtn {
   min-height: 54px;
   border: 1px solid rgba(85, 220, 255, 0.34);
-  border-radius: 18px;
-  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 52%, #7dd3fc 100%);
+  border-radius: 16px;
+  background: #38bdf8;
   color: #03111f;
   font-size: 0.82rem;
-  font-weight: 950;
-  letter-spacing: 0.18em;
+  font-weight: 900;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -106,7 +106,7 @@
 
 .statusError {
   border: 1px solid rgba(248, 113, 113, 0.20);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(248, 113, 113, 0.10);
   color: #fecaca;
   padding: 0.9rem 1rem;
@@ -117,15 +117,15 @@
 @media (max-width: 520px) {
   .scene {
     align-items: start;
-    padding: 18px;
+    padding: 16px;
   }
 
   .card {
-    margin-top: 22px;
-    border-radius: 30px;
+    margin-top: 18px;
+    border-radius: 24px;
   }
 
   .logoBox {
-    border-radius: 24px;
+    border-radius: 20px;
   }
 }

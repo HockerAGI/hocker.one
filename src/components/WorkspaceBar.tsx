@@ -14,7 +14,7 @@ export default function WorkspaceBar({ className }: WorkspaceBarProps) {
   return (
     <div
       className={cn(
-        "rounded-[28px] border border-white/10 bg-slate-950/52 px-4 py-3 shadow-[0_14px_50px_rgba(0,0,0,0.18)]",
+        "rounded-[28px] border border-white/10 bg-[#07101f] px-4 py-3",
         className,
       )}
     >
@@ -25,7 +25,7 @@ export default function WorkspaceBar({ className }: WorkspaceBarProps) {
             {projectId}
           </span>
 
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300">
             Nodo: {nodeId}
           </span>
 
@@ -38,7 +38,7 @@ export default function WorkspaceBar({ className }: WorkspaceBarProps) {
           <button
             type="button"
             onClick={toggleTutorial}
-            className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200 transition hover:bg-white/[0.06]"
+            className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200"
           >
             {tutorial ? "Desactivar guía" : "Activar guía"}
           </button>
@@ -46,7 +46,7 @@ export default function WorkspaceBar({ className }: WorkspaceBarProps) {
           <button
             type="button"
             onClick={resetWorkspace}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200 transition hover:bg-white/[0.06]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-2 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200"
           >
             <RefreshCcw className="h-4 w-4" />
             Reiniciar

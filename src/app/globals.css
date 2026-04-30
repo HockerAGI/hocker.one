@@ -742,3 +742,213 @@ svg {
     display: none;
   }
 }
+
+/* =========================================================
+   HOCKER ONE · MOBILE NATIVE SAFE FINAL
+   Prioridad: estabilidad real en Android/Chrome/WebView.
+========================================================= */
+
+.hko-native-status {
+  margin-top: 24px;
+  border: 1px solid rgba(85, 220, 255, 0.14);
+  border-radius: 28px;
+  background: #07101f;
+  padding: clamp(18px, 3vw, 28px);
+  contain: strict;
+  isolation: isolate;
+}
+
+.hko-native-status-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.hko-native-status-head p,
+.hko-native-status-row p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hko-native-status-head h2 {
+  margin: 8px 0 0;
+  color: #ffffff;
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.hko-native-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  gap: 9px;
+  border-radius: 999px;
+  padding: 10px 13px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hko-native-status-pill span,
+.hko-native-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.hko-native-status-pill.is-active {
+  border: 1px solid rgba(34, 197, 94, 0.30);
+  background: rgba(34, 197, 94, 0.10);
+  color: #bbf7d0;
+}
+
+.hko-native-status-pill.is-inactive {
+  border: 1px solid rgba(239, 68, 68, 0.30);
+  background: rgba(239, 68, 68, 0.10);
+  color: #fecdd3;
+}
+
+.hko-native-status-pill.is-active span,
+.hko-native-status-row.is-active .hko-native-status-dot {
+  background: #22c55e;
+}
+
+.hko-native-status-pill.is-inactive span,
+.hko-native-status-row.is-inactive .hko-native-status-dot {
+  background: #ef4444;
+}
+
+.hko-native-status-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.hko-native-status-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  background: #0b1526;
+  padding: 14px;
+}
+
+.hko-native-status-row.is-active {
+  border-color: rgba(34, 197, 94, 0.30);
+}
+
+.hko-native-status-row.is-inactive {
+  border-color: rgba(239, 68, 68, 0.30);
+}
+
+.hko-native-status-row strong {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    background: #030711 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+
+  body *,
+  body *::before,
+  body *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+    mix-blend-mode: normal !important;
+    will-change: auto !important;
+  }
+
+  .hko-home {
+    width: min(100% - 20px, 1160px) !important;
+    padding: 16px 0 118px !important;
+  }
+
+  .hko-hero {
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  .hko-logo-stage {
+    min-height: 180px !important;
+    border-radius: 24px !important;
+    background: #07101f !important;
+  }
+
+  .hko-hero-logo {
+    width: min(78%, 320px) !important;
+  }
+
+  .hko-hero-content {
+    margin-top: 18px !important;
+  }
+
+  .hko-hero-content h1 {
+    font-size: clamp(38px, 13vw, 58px) !important;
+    line-height: 0.96 !important;
+    letter-spacing: -0.04em !important;
+  }
+
+  .hko-hero-content p {
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+  }
+
+  .hko-native-status {
+    border-radius: 24px !important;
+    background: #07101f !important;
+    padding: 16px !important;
+    contain: strict !important;
+  }
+
+  .hko-native-status-head {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .hko-native-status-pill {
+    width: 100% !important;
+  }
+
+  .hko-native-status-row {
+    border-radius: 16px !important;
+    background: #0b1526 !important;
+  }
+
+  .hko-access-section {
+    border-radius: 24px !important;
+    background: #07101f !important;
+  }
+
+  .hko-access-card {
+    border-radius: 18px !important;
+    background: #0b1526 !important;
+  }
+}
