@@ -16,6 +16,8 @@ const READONLY_COMMANDS = new Set([
   "status",
   "read_dir",
   "read_file_head",
+  "github.get_repo",
+  "github.list_tree",
   "github.read_file",
 ]);
 
@@ -176,7 +178,7 @@ async function executeLocalCloud(
     }
   }
 
-  if (cmd === "github.read_file") {
+  if (cmd.startsWith("github.") && READONLY_COMMANDS.has(cmd)) {
     return await runGithubCommand(cmd, p);
   }
 
@@ -302,7 +304,29 @@ export async function processCloudQueue(
       "",
   ).trim();
 
-  if (secret) {
+  if (!secret) {
+    await sb
+      .from("commands")
+      .update({
+        status: "error",
+        error: "HOCKER_COMMAND_HMAC_SECRET / COMMAND_HMAC_SECRET no configurado en Cloud Executor.",
+        finished_at: nowIso(),
+      })
+      .eq("id", row.id);
+
+    await sb.from("events").insert({
+      project_id: row.project_id,
+      node_id: row.node_id,
+      level: "error",
+      type: "command.missing_hmac_secret",
+      message: `Cloud executor rechazó ${row.command}: falta secreto HMAC`,
+      data: { command_id: row.id },
+    });
+
+    return;
+  }
+
+  {
     const isValid = verifyCommandSignature(
       secret,
       row.signature,

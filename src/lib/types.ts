@@ -42,6 +42,8 @@ export type CommandName =
   | "restart_db"
   | "restart_nova"
   | "restart_telemetry"
+  | "github.get_repo"
+  | "github.list_tree"
   | "github.read_file"
   | "github.create_branch"
   | "github.upsert_file"

@@ -103,6 +103,18 @@ async function getRefSha(owner: string, repo: string, branch: string, token: str
   return sha;
 }
 
+async function resolveTreeRef(owner: string, repo: string, ref: string, token: string): Promise<string> {
+  const value = String(ref || "").trim();
+  if (!value) throw new Error("Ref GitHub inválido.");
+  if (/^[0-9a-f]{40}$/i.test(value)) return value;
+
+  try {
+    return await getRefSha(owner, repo, value, token);
+  } catch {
+    return value;
+  }
+}
+
 async function branchExists(owner: string, repo: string, branch: string, token: string): Promise<boolean> {
   try {
     await getRefSha(owner, repo, branch, token);
@@ -158,6 +170,84 @@ async function getFileSha(
 
 export async function runGithubCommand(command: string, payload: JsonRecord): Promise<GithubCommandResult> {
   const { token, owner, repo, baseBranch } = repoConfig(payload);
+
+  if (command === "github.get_repo") {
+    const repoInfo = await githubFetch<{
+      id?: number;
+      name?: string;
+      full_name?: string;
+      private?: boolean;
+      default_branch?: string;
+      html_url?: string;
+      description?: string | null;
+      visibility?: string;
+      updated_at?: string;
+    }>(
+      `/repos/${owner}/${repo}`,
+      { method: "GET" },
+      token,
+    );
+
+    return {
+      command,
+      ok: true,
+      data: {
+        owner,
+        repo,
+        id: repoInfo.id,
+        name: repoInfo.name,
+        fullName: repoInfo.full_name,
+        private: repoInfo.private,
+        defaultBranch: repoInfo.default_branch,
+        url: repoInfo.html_url,
+        description: repoInfo.description,
+        visibility: repoInfo.visibility,
+        updatedAt: repoInfo.updated_at,
+      },
+    };
+  }
+
+  if (command === "github.list_tree") {
+    const ref = asString(payload.ref, baseBranch);
+    const treeRef = await resolveTreeRef(owner, repo, ref, token);
+    const recursive = payload.recursive !== false;
+
+    const tree = await githubFetch<{
+      sha?: string;
+      truncated?: boolean;
+      tree?: Array<{
+        path?: string;
+        mode?: string;
+        type?: string;
+        sha?: string;
+        size?: number;
+        url?: string;
+      }>;
+    }>(
+      `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(treeRef)}${recursive ? "?recursive=1" : ""}`,
+      { method: "GET" },
+      token,
+    );
+
+    return {
+      command,
+      ok: true,
+      data: {
+        owner,
+        repo,
+        ref,
+        treeRef,
+        sha: tree.sha,
+        truncated: Boolean(tree.truncated),
+        files: (tree.tree ?? []).map((item) => ({
+          path: item.path,
+          type: item.type,
+          size: item.size ?? null,
+          sha: item.sha,
+        })),
+      },
+    };
+  }
 
   if (command === "github.read_file") {
     const filePath = safePath(payload.path);

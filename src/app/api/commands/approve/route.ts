@@ -1,6 +1,7 @@
 import { tasks } from "@trigger.dev/sdk/v3";
 import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
+import { getCommandHmacSecret, signCommand } from "@/lib/security";
 import {
   ApiError,
   getControls,
@@ -116,12 +117,45 @@ export async function POST(req: Request): Promise<Response> {
       return json({ ok: true, item: data });
     }
 
+    const approvedAt = new Date().toISOString();
+    const commandSecret = getCommandHmacSecret();
+
+    if (!commandSecret) {
+      throw new ApiError(500, {
+        error: "HOCKER_COMMAND_HMAC_SECRET / COMMAND_HMAC_SECRET no configurado para aprobar comandos.",
+      });
+    }
+
+    const commandRow = cmd as {
+      id: string;
+      project_id: string;
+      node_id?: string | null;
+      command?: string | null;
+      payload?: unknown;
+    };
+
+    const nodeId = String(commandRow.node_id ?? "");
+    const commandName = String(commandRow.command ?? "");
+    const payload = commandRow.payload ?? {};
+
+    const signature = signCommand(
+      commandSecret,
+      commandRow.id,
+      commandRow.project_id,
+      nodeId,
+      commandName,
+      payload,
+      approvedAt,
+    );
+
     const { data, error } = await ctx.sb
       .from("commands")
       .update({
         status: "queued",
         needs_approval: false,
-        approved_at: new Date().toISOString(),
+        approved_at: approvedAt,
+        created_at: approvedAt,
+        signature,
         error: null,
       })
       .eq("project_id", ctx.project_id)
