@@ -19,6 +19,7 @@ const ChatSchema = z.object({
 
 type NovaChatResponse = {
   ok: boolean;
+  project_id?: string;
   thread_id?: string;
   reply?: string;
   provider?: string;
@@ -26,6 +27,7 @@ type NovaChatResponse = {
   intent?: string;
   agi_id?: string;
   actions?: unknown[];
+  trace_id?: string | null;
   meta?: Record<string, unknown>;
   error?: string;
 };
@@ -36,6 +38,45 @@ function getNovaBaseUrl(): string {
 
 function getNovaKey(): string {
   return String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
+}
+
+function sanitizeNovaPayload(payload: NovaChatResponse): Record<string, unknown> {
+  if (!payload.ok) {
+    return {
+      ok: false,
+      error: payload.error ?? "NOVA no pudo completar la solicitud.",
+      trace_id: payload.trace_id ?? null,
+    };
+  }
+
+  const controls =
+    payload.meta &&
+    typeof payload.meta.controls === "object" &&
+    payload.meta.controls !== null &&
+    !Array.isArray(payload.meta.controls)
+      ? (payload.meta.controls as Record<string, unknown>)
+      : {};
+
+  return {
+    ok: true,
+    project_id: payload.project_id,
+    thread_id: payload.thread_id,
+    reply: payload.reply ?? "",
+    intent: payload.intent,
+    agi_id: payload.agi_id,
+    actions: Array.isArray(payload.actions) ? payload.actions : [],
+    trace_id: payload.trace_id ?? null,
+    meta: {
+      reason: payload.meta?.reason,
+      controls: {
+        allow_write: controls.allow_write,
+        requested_actions: controls.requested_actions,
+        enqueued_actions: controls.enqueued_actions,
+        action_policy: controls.action_policy,
+      },
+      context_data: payload.meta?.context_data ?? {},
+    },
+  };
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -76,8 +117,9 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
+    const safePayload = sanitizeNovaPayload(responseJson);
 
-    return NextResponse.json(responseJson, {
+    return NextResponse.json(safePayload, {
       status: res.status,
       headers: { "Cache-Control": "no-store, max-age=0" },
     });
