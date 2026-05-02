@@ -135,7 +135,7 @@ async function checkAgentBySupabase(): Promise<Check> {
   const supabaseUrl = env("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
   const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY");
   const projectId = env("HOCKER_PROJECT_ID", "NEXT_PUBLIC_HOCKER_PROJECT_ID") || "hocker-one";
-  const nodeId = env("HOCKER_DEFAULT_NODE_ID", "DEFAULT_COMMAND_NODE_ID") || "hocker-node-1";
+  const nodeId = env("HOCKER_LOCAL_AGENT_NODE_ID", "HOCKER_NODE_AGENT_ID", "HOCKER_DEFAULT_NODE_ID", "DEFAULT_COMMAND_NODE_ID") || "hocker-node-1";
 
   if (!supabaseUrl || !serviceKey) {
     return {
