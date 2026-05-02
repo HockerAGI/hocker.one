@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, ArrowRight, Bot, Command, GitBranch, LayoutDashboard, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  Bot,
+  Command,
+  GitBranch,
+  LayoutDashboard,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import HockerLiveStatus from "@/components/HockerLiveStatus";
 
 export const metadata: Metadata = {
@@ -29,7 +38,7 @@ const access = [
     detail: "Acciones y cola",
     icon: Command,
   },
-
+];
 
 const operationalStatus = [
   {
