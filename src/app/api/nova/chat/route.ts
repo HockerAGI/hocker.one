@@ -69,6 +69,8 @@ function sanitizeNovaPayload(payload: NovaChatResponse): Record<string, unknown>
     meta: {
       reason: payload.meta?.reason,
       agi_registry: payload.meta?.agi_registry,
+      syntia_memory: payload.meta?.syntia_memory,
+      syntia_memory_items: payload.meta?.syntia_memory_items,
       controls: {
         allow_write: controls.allow_write,
         requested_actions: controls.requested_actions,
