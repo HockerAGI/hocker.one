@@ -120,25 +120,51 @@ async function checkAgent(): Promise<Check> {
   };
 }
 
+async function checkPwa(request: Request): Promise<Check> {
+  const origin = new URL(request.url).origin;
+
+  const manifestActive = await probe(`${origin}/manifest.webmanifest`);
+  const swActive = await probe(`${origin}/sw.js`);
+
+  if (manifestActive && swActive) {
+    return {
+      active: true,
+      label: "PWA",
+      detail: "Lista",
+    };
+  }
+
+  if (manifestActive) {
+    return {
+      active: true,
+      label: "PWA",
+      detail: "Manifest activo",
+    };
+  }
+
+  return {
+    active: false,
+    label: "PWA",
+    detail: "Sin manifest",
+  };
+}
+
 function fileExists(...parts: string[]): boolean {
   return existsSync(join(process.cwd(), ...parts));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const vercelActive = Boolean(env("VERCEL", "VERCEL_ENV", "VERCEL_URL"));
-
-  const pwaActive =
-    fileExists("public", "manifest.webmanifest") ||
-    fileExists("public", "manifest.json");
 
   const androidShellReady =
     fileExists("android", "app", "src", "main", "AndroidManifest.xml") ||
     env("ANDROID_APP_READY", "NEXT_PUBLIC_ANDROID_APP_READY") === "1";
 
-  const [supabase, nova, agent] = await Promise.all([
+  const [supabase, nova, agent, pwa] = await Promise.all([
     checkSupabase(),
     checkNova(),
     checkAgent(),
+    checkPwa(request),
   ]);
 
   return NextResponse.json(
@@ -164,11 +190,7 @@ export async function GET() {
         supabase,
         nova,
         agent,
-        pwa: {
-          active: pwaActive,
-          label: "PWA",
-          detail: pwaActive ? "Lista" : "Sin manifest",
-        },
+        pwa,
         android: {
           active: androidShellReady,
           label: "Android",
