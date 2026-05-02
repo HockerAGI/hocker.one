@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Bot, Command, LayoutDashboard, Sparkles } from "lucide-react";
+import { Activity, ArrowRight, Bot, Command, GitBranch, LayoutDashboard, ShieldCheck, Sparkles } from "lucide-react";
 import HockerLiveStatus from "@/components/HockerLiveStatus";
 
 export const metadata: Metadata = {
@@ -28,6 +28,33 @@ const access = [
     title: "Tareas",
     detail: "Acciones y cola",
     icon: Command,
+  },
+
+
+const operationalStatus = [
+  {
+    title: "NOVA",
+    detail: "orquestación, criterio y continuidad operativa",
+    status: "Online",
+    icon: Sparkles,
+  },
+  {
+    title: "GitHub",
+    detail: "lectura, ramas seguras y Pull Requests",
+    status: "Activo",
+    icon: GitBranch,
+  },
+  {
+    title: "Cloud",
+    detail: "cloud-hocker-one ejecutando acciones reales",
+    status: "Real",
+    icon: Activity,
+  },
+  {
+    title: "Control",
+    detail: "escritura protegida con aprobación",
+    status: "Seguro",
+    icon: ShieldCheck,
   },
 ];
 
@@ -80,6 +107,30 @@ export default function HomePage() {
       </section>
 
       <HockerLiveStatus />
+
+      <section className="hko-access-section" aria-label="Estado operativo real">
+        <div className="hko-section-title">
+          <p>Estado operativo real</p>
+          <h2>Señales activas</h2>
+        </div>
+
+        <div className="hko-access-grid">
+          {operationalStatus.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <div className="hko-access-card" key={item.title}>
+                <Icon size={25} />
+                <div>
+                  <p>{item.title}</p>
+                  <span>{item.detail}</span>
+                </div>
+                <strong>{item.status}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="hko-access-section">
         <div className="hko-section-title">
