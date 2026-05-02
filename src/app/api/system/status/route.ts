@@ -11,6 +11,14 @@ type Check = {
   detail: string;
 };
 
+type NodePresence = {
+  id?: string;
+  project_id?: string;
+  status?: string;
+  last_seen_at?: string;
+  updated_at?: string;
+};
+
 function env(...names: string[]): string {
   for (const name of names) {
     const value = process.env[name]?.trim();
@@ -21,6 +29,15 @@ function env(...names: string[]): string {
 
 function cleanUrl(value: string): string {
   return value.replace(/\/+$/, "");
+}
+
+function secondsSince(value?: string): number | null {
+  if (!value) return null;
+
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return null;
+
+  return Math.max(0, Math.floor((Date.now() - time) / 1000));
 }
 
 async function probe(url: string, headers?: HeadersInit): Promise<boolean> {
@@ -96,16 +113,10 @@ async function checkNova(): Promise<Check> {
   };
 }
 
-async function checkAgent(): Promise<Check> {
+async function checkAgentByUrl(): Promise<Check | null> {
   const url = env("HOCKER_NODE_AGENT_HEALTH_URL", "HOCKER_NODE_AGENT_URL");
 
-  if (!url) {
-    return {
-      active: false,
-      label: "Agente",
-      detail: "Sin endpoint",
-    };
-  }
+  if (!url) return null;
 
   const base = cleanUrl(url);
   const active =
@@ -118,6 +129,86 @@ async function checkAgent(): Promise<Check> {
     label: "Agente",
     detail: active ? "Online" : "Sin respuesta",
   };
+}
+
+async function checkAgentBySupabase(): Promise<Check> {
+  const supabaseUrl = env("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
+  const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  const projectId = env("HOCKER_PROJECT_ID", "NEXT_PUBLIC_HOCKER_PROJECT_ID") || "hocker-one";
+  const nodeId = env("HOCKER_DEFAULT_NODE_ID", "DEFAULT_COMMAND_NODE_ID") || "hocker-node-1";
+
+  if (!supabaseUrl || !serviceKey) {
+    return {
+      active: false,
+      label: "Agente",
+      detail: "Sin Supabase server key",
+    };
+  }
+
+  const query = new URLSearchParams({
+    id: `eq.${nodeId}`,
+    project_id: `eq.${projectId}`,
+    select: "id,project_id,status,last_seen_at,updated_at",
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+
+  try {
+    const res = await fetch(`${cleanUrl(supabaseUrl)}/rest/v1/nodes?${query.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`,
+      },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      return {
+        active: false,
+        label: "Agente",
+        detail: "Supabase sin respuesta",
+      };
+    }
+
+    const rows = (await res.json()) as NodePresence[];
+    const node = rows[0];
+
+    if (!node) {
+      return {
+        active: false,
+        label: "Agente",
+        detail: "Sin registro",
+      };
+    }
+
+    const age = secondsSince(node.last_seen_at || node.updated_at);
+    const fresh = age !== null && age <= 120;
+    const online = node.status === "online" || node.status === "degraded";
+
+    return {
+      active: Boolean(fresh && online),
+      label: "Agente",
+      detail: fresh && online ? "Online" : `Última señal hace ${age ?? "?"}s`,
+    };
+  } catch {
+    return {
+      active: false,
+      label: "Agente",
+      detail: "Sin respuesta",
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function checkAgent(): Promise<Check> {
+  const direct = await checkAgentByUrl();
+  if (direct) return direct;
+
+  return checkAgentBySupabase();
 }
 
 async function checkPwa(request: Request): Promise<Check> {
