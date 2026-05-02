@@ -68,6 +68,7 @@ function sanitizeNovaPayload(payload: NovaChatResponse): Record<string, unknown>
     trace_id: payload.trace_id ?? null,
     meta: {
       reason: payload.meta?.reason,
+      agi_registry: payload.meta?.agi_registry,
       controls: {
         allow_write: controls.allow_write,
         requested_actions: controls.requested_actions,
