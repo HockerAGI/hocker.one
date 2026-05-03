@@ -231,6 +231,7 @@ export default async function ChidoOpsPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           <Link href="/chido" className="hocker-button-secondary">Chido</Link>
+          <Link href="/chido/actions" className="hocker-button-secondary">Acciones</Link>
           <Link href="/agis" className="hocker-button-secondary">AGIs</Link>
           <Link href="/dashboard" className="hocker-button-primary">Panel</Link>
         </div>
