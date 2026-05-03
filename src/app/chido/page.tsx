@@ -5,6 +5,9 @@ import PageShell from "@/components/PageShell";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { JsonObject } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Chido Casino · Hocker ONE",
   description: "Monitoreo read-only de Chido Casino dentro del ecosistema HOCKER.",
