@@ -192,6 +192,9 @@ export default async function ChidoPage() {
       subtitle="Monitoreo read-only del casino y sus AGIs responsables dentro del ecosistema HOCKER."
       actions={
         <div className="flex flex-wrap gap-2">
+          <Link href="/chido/research-gate" className="hocker-button-secondary">
+            Research Gate
+          </Link>
           <Link href="/chido/actions" className="hocker-button-secondary">
             Acciones
           </Link>

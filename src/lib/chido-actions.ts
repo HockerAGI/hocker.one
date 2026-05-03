@@ -10,6 +10,7 @@ export type ChidoActionContract = {
   dryRunAvailable: boolean;
   realExecutionEnabled: false;
   sensitive: boolean;
+  researchGateRequired: true;
 };
 
 export const CHIDO_ACTION_CONTRACT_VERSION = "chido-actions-v0.1.0";
@@ -21,10 +22,11 @@ export const CHIDO_ACTIONS_CONTRACT: ChidoActionContract[] = [
     description: "Intención futura para aprobar una solicitud KYC. Actualmente solo dry-run.",
     riskLevel: "high",
     guardianAgis: ["jurix", "vertx", "chido_gerente"],
-    requiredBeforeRealExecution: ["explicit_approval", "audit_log", "hmac_signature", "jurix_guardian", "vertx_guardian"],
+    requiredBeforeRealExecution: ["research_gate", "explicit_approval", "audit_log", "hmac_signature", "jurix_guardian", "vertx_guardian"],
     dryRunAvailable: true,
     realExecutionEnabled: false,
     sensitive: true,
+    researchGateRequired: true,
   },
   {
     id: "confirm_deposit",
@@ -32,10 +34,11 @@ export const CHIDO_ACTIONS_CONTRACT: ChidoActionContract[] = [
     description: "Intención futura para confirmar depósito manual. Actualmente solo dry-run.",
     riskLevel: "critical",
     guardianAgis: ["numia", "vertx", "chido_gerente"],
-    requiredBeforeRealExecution: ["explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "vertx_guardian"],
+    requiredBeforeRealExecution: ["research_gate", "explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "vertx_guardian"],
     dryRunAvailable: true,
     realExecutionEnabled: false,
     sensitive: true,
+    researchGateRequired: true,
   },
   {
     id: "reject_deposit",
@@ -43,10 +46,11 @@ export const CHIDO_ACTIONS_CONTRACT: ChidoActionContract[] = [
     description: "Intención futura para rechazar depósito manual. Actualmente solo dry-run.",
     riskLevel: "high",
     guardianAgis: ["numia", "jurix", "chido_gerente"],
-    requiredBeforeRealExecution: ["explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "jurix_guardian"],
+    requiredBeforeRealExecution: ["research_gate", "explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "jurix_guardian"],
     dryRunAvailable: true,
     realExecutionEnabled: false,
     sensitive: true,
+    researchGateRequired: true,
   },
   {
     id: "pay_withdrawal",
@@ -54,10 +58,11 @@ export const CHIDO_ACTIONS_CONTRACT: ChidoActionContract[] = [
     description: "Intención futura para procesar retiro. Actualmente solo dry-run.",
     riskLevel: "critical",
     guardianAgis: ["numia", "vertx", "jurix", "chido_gerente"],
-    requiredBeforeRealExecution: ["explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "vertx_guardian", "jurix_guardian"],
+    requiredBeforeRealExecution: ["research_gate", "explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "vertx_guardian", "jurix_guardian"],
     dryRunAvailable: true,
     realExecutionEnabled: false,
     sensitive: true,
+    researchGateRequired: true,
   },
   {
     id: "modify_balance",
@@ -65,10 +70,11 @@ export const CHIDO_ACTIONS_CONTRACT: ChidoActionContract[] = [
     description: "Intención futura para ajuste de balance. Actualmente solo dry-run.",
     riskLevel: "critical",
     guardianAgis: ["numia", "vertx", "jurix", "chido_gerente"],
-    requiredBeforeRealExecution: ["explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "vertx_guardian", "jurix_guardian"],
+    requiredBeforeRealExecution: ["research_gate", "explicit_approval", "audit_log", "hmac_signature", "numia_guardian", "vertx_guardian", "jurix_guardian"],
     dryRunAvailable: true,
     realExecutionEnabled: false,
     sensitive: true,
+    researchGateRequired: true,
   },
 ];
 

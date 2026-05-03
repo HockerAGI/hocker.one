@@ -32,6 +32,7 @@ export default function ChidoActionsPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           <Link href="/chido" className="hocker-button-secondary">Chido</Link>
+          <Link href="/chido/research-gate" className="hocker-button-secondary">Research Gate</Link>
           <Link href="/chido/ops" className="hocker-button-secondary">Operación</Link>
           <Link href="/dashboard" className="hocker-button-primary">Panel</Link>
         </div>
