@@ -5,6 +5,9 @@ import PageShell from "@/components/PageShell";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { JsonObject } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Memoria · Hocker ONE",
   description: "Memoria operativa viva de SYNTIA para continuidad del ecosistema HOCKER.",

@@ -135,6 +135,47 @@ async function loadTable(table: string, label: string, owner: string): Promise<T
   };
 }
 
+
+async function recordChidoOpsView(tables: TableState[], eventsCount: number, node: JsonObject | null): Promise<void> {
+  const sb = createAdminSupabase();
+
+  const { data: latest } = await sb
+    .from("events")
+    .select("id,created_at")
+    .eq("project_id", "chido-casino")
+    .eq("type", "chido.ops.view")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const latestAt = asText((latest as JsonObject | null)?.created_at, "");
+  const latestTime = latestAt ? new Date(latestAt).getTime() : 0;
+  const fiveMinutes = 5 * 60 * 1000;
+
+  if (latestTime && Date.now() - latestTime < fiveMinutes) return;
+
+  await sb.from("events").insert({
+    project_id: "chido-casino",
+    level: "info",
+    type: "chido.ops.view",
+    message: "Hocker ONE consultó Operación Chido en modo read-only.",
+    data: {
+      source: "hocker.one",
+      route: "/chido/ops",
+      mode: "read_only",
+      node_status: asText(node?.status, "unknown"),
+      tables: tables.map((table) => ({
+        table: table.table,
+        ok: table.ok,
+        count: table.count,
+        owner: table.owner
+      })),
+      events_count: eventsCount,
+      responsible_agis: ["chido_gerente", "numia", "jurix", "vertx", "syntia"]
+    }
+  });
+}
+
 async function loadOps() {
   const sb = createAdminSupabase();
 
@@ -155,11 +196,15 @@ async function loadOps() {
       .maybeSingle(),
   ]);
 
-  return {
+  const result = {
     tables,
     events: (events.data ?? []) as JsonObject[],
     node: (node.data ?? null) as JsonObject | null,
   };
+
+  await recordChidoOpsView(result.tables, result.events.length, result.node).catch(() => undefined);
+
+  return result;
 }
 
 function rowSummary(row: JsonObject) {
