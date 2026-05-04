@@ -195,6 +195,9 @@ export default async function ChidoPage() {
           <Link href="/chido/research-gate" className="hocker-button-secondary">
             Research Gate
           </Link>
+          <Link href="/chido/preflight" className="hocker-button-secondary">
+            Preflight
+          </Link>
           <Link href="/chido/signatures" className="hocker-button-secondary">
             Firmas
           </Link>

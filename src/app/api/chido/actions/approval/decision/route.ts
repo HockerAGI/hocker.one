@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
     .eq("project_id", "chido-casino")
     .eq("type", CHIDO_APPROVAL_EVENTS.decision)
     .filter("data->>approval_request_id", "eq", approvalRequestId)
+    .filter("data->>guardian_agi", "eq", guardianAgi)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -161,7 +162,7 @@ export async function POST(req: NextRequest) {
       executed: false,
       trace_id: traceId,
       status: asText(existing.decision, "decided"),
-      error: "La solicitud ya tiene una decisión registrada.",
+      error: "Esta guardian AGI ya registró una decisión para esta solicitud.",
       existing_event_id: existingDecision.id,
     }, { status: 409 });
   }
