@@ -24,6 +24,7 @@ export default function ChidoResearchGatePage() {
       subtitle="Capa obligatoria de fuentes, validación, auditoría y guardianes para Chido Casino y todas las AGIs."
       actions={
         <div className="flex flex-wrap gap-2">
+          <Link href="/chido/signatures" className="hocker-button-secondary">Firmas</Link>
           <Link href="/chido/approvals" className="hocker-button-secondary">Aprobaciones</Link>
           <Link href="/chido/actions" className="hocker-button-secondary">Acciones</Link>
           <Link href="/chido/ops" className="hocker-button-secondary">Operación</Link>
