@@ -1,4 +1,3 @@
-import { existsSync } from "fs";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { JsonObject } from "@/lib/types";
 import { collectHockerGlobalHealth } from "@/lib/hocker-global-health";
@@ -38,12 +37,31 @@ export type BetaReadinessResult = {
   checks: BetaReadinessCheck[];
 };
 
+const RELEASED_ROUTE_MANIFEST = new Set([
+  "/dashboard",
+  "/status",
+  "/integrations",
+  "/access",
+  "/launch",
+  "/memory",
+  "/nodes",
+  "/commands",
+  "/governance",
+  "/chido",
+]);
+
+const RELEASED_DOC_MANIFEST = new Set([
+  "docs/HOCKER_ONE_LAUNCH_CHECKLIST.md",
+  "docs/HOCKER_ONE_OPERATOR_MANUAL.md",
+  "docs/HOCKER_ONE_INTEGRATION_CONTRACT.md",
+]);
+
 function routeExists(path: string): boolean {
-  return existsSync(`src/app${path}/page.tsx`);
+  return RELEASED_ROUTE_MANIFEST.has(path);
 }
 
 function fileExists(path: string): boolean {
-  return existsSync(path);
+  return RELEASED_DOC_MANIFEST.has(path);
 }
 
 function makeCheck(args: BetaReadinessCheck): BetaReadinessCheck {
