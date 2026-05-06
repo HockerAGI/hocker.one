@@ -51,6 +51,12 @@ const coreLinks = [
     tag: "hardening",
   },
   {
+    title: "Tenant RLS",
+    href: "/security/rls",
+    description: "Modelo de aislamiento por tenant, portal, grant, módulo y permiso.",
+    tag: "rls",
+  },
+  {
     title: "Access Policy",
     href: "/access",
     description: "Roles base, permisos y bloqueo global de ejecución real.",
