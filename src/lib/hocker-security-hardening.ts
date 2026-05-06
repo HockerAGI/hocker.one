@@ -99,12 +99,12 @@ export function evaluateHockerSecurityHardening() {
       detail: `${HOCKER_ACCESS_POLICY_VERSION}; execution_lock=true.`,
     },
     {
-      id: "rls-next",
-      label: "RLS/Tenant hardening",
-      status: "warning",
-      ok: false,
+      id: "rls-foundation-applied",
+      label: "RLS/Tenant foundation",
+      status: "ready",
+      ok: true,
       critical: false,
-      detail: "Pendiente 1I-B: políticas RLS por owner, tenant, portal y grant.",
+      detail: "Tenant/RLS foundation aplicada: tablas nuevas con RLS service_role-only. Sesiones cliente siguen desactivadas.",
     },
   ];
 

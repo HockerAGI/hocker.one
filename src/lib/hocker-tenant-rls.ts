@@ -114,12 +114,12 @@ export function evaluateTenantRlsReadiness() {
       detail: "Grants siguen lógicos. No se crean JWTs, sesiones reales ni tenants activos todavía.",
     },
     {
-      id: "migration-prepared",
-      label: "Migration prepared",
-      status: "warning",
-      ok: false,
+      id: "migration-applied",
+      label: "Migration applied",
+      status: "ready",
+      ok: true,
       critical: false,
-      detail: "Migration SQL versionada preparada; pendiente aplicar a DB después de validación final.",
+      detail: "Migration SQL aplicada en Supabase: hocker_tenants y hocker_portal_grants creadas con RLS service_role-only.",
     },
   ];
 
@@ -144,7 +144,7 @@ export function evaluateTenantRlsReadiness() {
     policy_fields: HOCKER_TENANT_POLICY_FIELDS,
     portal_rls_model: HOCKER_PORTAL_RLS_MODEL,
     real_client_sessions_enabled: false,
-    rls_live_enforced: false,
+    rls_live_enforced: true,
     execution_lock: true,
   };
 }
