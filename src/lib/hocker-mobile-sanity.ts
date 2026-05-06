@@ -34,6 +34,7 @@ export type MobileSanityResult = {
 
 const MOBILE_ROUTE_MANIFEST = [
   "/owner",
+  "/security/hardening",
   "/dashboard",
   "/status",
   "/launch",
@@ -195,7 +196,7 @@ export async function collectHockerMobileSanity(args?: { emitEvent?: boolean }):
       critical: false,
       detail: "Rutas principales disponibles desde paneles: Dashboard, Status, Launch, Integrations, Access y Chido.",
       data: {
-        primary_paths: ["/dashboard", "/status", "/launch", "/integrations", "/access", "/chido"],
+        primary_paths: ["/dashboard", "/status", "/launch", "/security/hardening", "/integrations", "/access", "/chido"],
       },
     }),
   ];

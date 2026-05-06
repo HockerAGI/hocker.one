@@ -45,6 +45,12 @@ const coreLinks = [
     tag: "security",
   },
   {
+    title: "Security Hardening",
+    href: "/security/hardening",
+    description: "Owner API Gate, rutas privadas y preparación Auth/RLS.",
+    tag: "hardening",
+  },
+  {
     title: "Access Policy",
     href: "/access",
     description: "Roles base, permisos y bloqueo global de ejecución real.",
