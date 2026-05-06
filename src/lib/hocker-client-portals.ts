@@ -185,7 +185,11 @@ export function getOwnerSecurityMatrix(): JsonObject {
 
 export function evaluateSecurityReadiness() {
   const portalsControlledByHockerOne = HOCKER_CLIENT_PORTALS.every((portal) => portal.controlled_by === "hocker-one");
-  const noPortalRealExecution = HOCKER_CLIENT_PORTALS.every((portal) => portal.blocked_permissions.includes("chido:real_execute") || portal.risk_level !== "critical");
+  const realExecutionPermissionPattern = /(real_execute|execute_bet|modify_balance|pay_withdrawal|force_modify|covert_control|killswitch)/i;
+  const noPortalRealExecution = HOCKER_CLIENT_PORTALS.every((portal) =>
+    portal.allowed_permissions.every((permission) => !realExecutionPermissionPattern.test(permission)) &&
+    (portal.risk_level !== "critical" || portal.blocked_permissions.some((permission) => realExecutionPermissionPattern.test(permission))),
+  );
   const rolesLocked = HOCKER_ROLE_DEFINITIONS.every((role) => role.can_execute_real_actions === false);
 
   const checks = [
