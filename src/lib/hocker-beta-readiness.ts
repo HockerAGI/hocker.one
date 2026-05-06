@@ -38,6 +38,7 @@ export type BetaReadinessResult = {
 };
 
 const RELEASED_ROUTE_MANIFEST = new Set([
+  "/owner",
   "/dashboard",
   "/status",
   "/integrations",

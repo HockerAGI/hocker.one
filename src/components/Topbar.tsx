@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, ShieldCheck } from "lucide-react";
+import { Bot, Crown, ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const titles: Record<string, string> = {
   "/": "Inicio",
+  "/owner": "Owner Console",
   "/dashboard": "Panel",
   "/chat": "NOVA",
   "/commands": "Tareas",
@@ -46,6 +47,13 @@ export default function Topbar() {
         </div>
 
         <nav className="flex items-center gap-2" aria-label="Acciones rápidas">
+          <Link
+            href="/owner"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.24em] text-slate-200"
+          >
+            <Crown size={16} />
+            <span>Owner</span>
+          </Link>
           <Link
             href="/chat"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.24em] text-slate-200"

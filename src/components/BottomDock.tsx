@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Brain, Command, Cpu, LayoutDashboard, Workflow } from "lucide-react";
+import { Brain,
+  Crown, Command, Cpu, LayoutDashboard, Workflow } from "lucide-react";
 
 const ITEMS = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/owner", label: "Owner", icon: Crown },
+  { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
   { href: "/chat", label: "NOVA", icon: Brain },
   { href: "/commands", label: "Tareas", icon: Command },
   { href: "/nodes", label: "Equipo", icon: Cpu },

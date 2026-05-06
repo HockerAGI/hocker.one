@@ -9,6 +9,16 @@ const PROTECTED_PATHS = [
   "/agis",
   "/supply",
   "/governance",
+  "/memory",
+  "/status",
+  "/integrations",
+  "/access",
+  "/launch",
+  "/mobile",
+  "/security",
+  "/owner",
+  "/chido",
+  "/admin",
 ];
 
 function isProtected(pathname: string): boolean {
@@ -22,7 +32,6 @@ export async function middleware(req: NextRequest) {
 
   if (!url || !anon) return NextResponse.next();
 
-  // Clonamos la respuesta para sincronizar las cookies internamente y externamente
   const res = NextResponse.next({
     request: {
       headers: req.headers,
@@ -34,9 +43,7 @@ export async function middleware(req: NextRequest) {
       getAll: () => req.cookies.getAll(),
       setAll: (cookiesToSet) => {
         cookiesToSet.forEach(({ name, value, options }) => {
-          // 1. Sincronizamos para los Server Components
           req.cookies.set(name, value);
-          // 2. Sincronizamos para el Cliente/Navegador
           res.cookies.set(name, value, options);
         });
       },
@@ -50,7 +57,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/login") && data.user) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(new URL("/owner", req.url));
   }
 
   if (isProtected(pathname) && !data.user) {
@@ -70,5 +77,15 @@ export const config = {
     "/agis/:path*",
     "/supply/:path*",
     "/governance/:path*",
+    "/memory/:path*",
+    "/status/:path*",
+    "/integrations/:path*",
+    "/access/:path*",
+    "/launch/:path*",
+    "/mobile/:path*",
+    "/security/:path*",
+    "/owner/:path*",
+    "/chido/:path*",
+    "/admin/:path*",
   ],
 };

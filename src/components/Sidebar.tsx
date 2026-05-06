@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Bot,
+  Crown,
   Command,
   Gauge,
   Grid2X2,
@@ -14,6 +15,7 @@ import { usePathname } from "next/navigation";
 
 const nav = [
   { href: "/", label: "Inicio", icon: Grid2X2 },
+  { href: "/owner", label: "Owner", icon: Crown },
   { href: "/dashboard", label: "Panel", icon: Gauge },
   { href: "/chat", label: "NOVA", icon: Bot },
   { href: "/commands", label: "Tareas", icon: Command },

@@ -33,6 +33,7 @@ export type MobileSanityResult = {
 };
 
 const MOBILE_ROUTE_MANIFEST = [
+  "/owner",
   "/dashboard",
   "/status",
   "/launch",
