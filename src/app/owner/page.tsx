@@ -51,6 +51,12 @@ const coreLinks = [
     tag: "access",
   },
   {
+    title: "Access Grants",
+    href: "/security/grants",
+    description: "Solicitudes, decisiones y revocaciones lógicas para portales derivados.",
+    tag: "grants",
+  },
+  {
     title: "Integration Registry",
     href: "/integrations",
     description: "Módulos canónicos y eventos de integración del ecosistema.",

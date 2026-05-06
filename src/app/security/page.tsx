@@ -37,6 +37,7 @@ export default function SecurityPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           <Link href="/launch" className="hocker-button-secondary">Launch</Link>
+          <Link href="/security/grants" className="hocker-button-secondary">Grants</Link>
           <Link href="/access" className="hocker-button-secondary">Access</Link>
           <Link href="/mobile" className="hocker-button-secondary">Mobile</Link>
           <Link href="/dashboard" className="hocker-button-primary">Dashboard</Link>
