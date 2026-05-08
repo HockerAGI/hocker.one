@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { CHIDO_APPROVAL_EVENTS } from "@/lib/chido-approvals";
 import {
@@ -64,6 +65,8 @@ async function auditSignatureCheck(data: JsonObject, ok: boolean) {
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
+  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
+  if (ownerGateResponse) return ownerGateResponse;
   const input = await readInput(req);
 
   const approvalRequestId = asText(input.approval_request_id);

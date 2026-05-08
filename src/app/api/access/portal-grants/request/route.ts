@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
   HOCKER_CLIENT_PORTAL_VERSION,
@@ -35,6 +36,8 @@ function cleanArray(value: unknown): string[] {
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
+  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
+  if (ownerGateResponse) return ownerGateResponse;
   const input = (await req.json().catch(() => ({}))) as Input;
 
   const portalId = cleanText(input.portal_id);

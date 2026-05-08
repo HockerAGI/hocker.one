@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { getChidoActionContract } from "@/lib/chido-actions";
 import {
@@ -34,6 +35,8 @@ async function readInput(req: NextRequest): Promise<DecisionInput> {
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
+  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
+  if (ownerGateResponse) return ownerGateResponse;
   const input = await readInput(req);
 
   const approvalRequestId = asText(input.approval_request_id);

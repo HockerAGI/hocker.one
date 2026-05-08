@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
   CHIDO_ACTION_CONTRACT_VERSION,
@@ -84,6 +85,8 @@ async function auditDryRun(data: JsonObject) {
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
+  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
+  if (ownerGateResponse) return ownerGateResponse;
   const input = await readInput(req);
   const actionId = asText(input.action);
   const targetId = asText(input.target_id);
