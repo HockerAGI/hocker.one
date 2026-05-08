@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Brain,
-  Crown, Command, Cpu, LayoutDashboard, Workflow } from "lucide-react";
+import { Brain, CheckSquare, Grid2X2, Home, Menu } from "lucide-react";
 
 const ITEMS = [
-  { href: "/owner", label: "Owner", icon: Crown },
-  { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
+  { href: "/owner", label: "Inicio", icon: Home },
   { href: "/chat", label: "NOVA", icon: Brain },
-  { href: "/commands", label: "Tareas", icon: Command },
-  { href: "/nodes", label: "Equipo", icon: Cpu },
-  { href: "/supply", label: "Tienda", icon: Workflow },
+  { href: "/apps", label: "Apps", icon: Grid2X2 },
+  { href: "/commands", label: "Tareas", icon: CheckSquare },
+  { href: "/dashboard", label: "Más", icon: Menu },
 ];
 
 export default function BottomDock() {
@@ -19,7 +17,7 @@ export default function BottomDock() {
 
   return (
     <div className="hko-bottom-dock-wrap">
-      <nav className="hko-bottom-dock" aria-label="Navegación inferior">
+      <nav className="hko-bottom-dock" aria-label="Navegación principal">
         {ITEMS.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);

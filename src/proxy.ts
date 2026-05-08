@@ -7,6 +7,8 @@ const PROTECTED_PATHS = [
   "/commands",
   "/nodes",
   "/agis",
+  "/servicios",
+  "/apps",
   "/supply",
   "/governance",
   "/memory",
@@ -25,12 +27,17 @@ function isProtected(pathname: string): boolean {
   return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-  if (!url || !anon) return NextResponse.next();
+  const protectedRoute = isProtected(pathname);
+
+  if (!url || !anon) {
+    if (protectedRoute) return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.next();
+  }
 
   const res = NextResponse.next({
     request: {
@@ -52,7 +59,7 @@ export async function middleware(req: NextRequest) {
 
   const { data, error } = await supabase.auth.getUser();
 
-  if (error && isProtected(pathname)) {
+  if (error && protectedRoute) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -60,7 +67,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/owner", req.url));
   }
 
-  if (isProtected(pathname) && !data.user) {
+  if (protectedRoute && !data.user) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -70,22 +77,43 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/dashboard",
     "/dashboard/:path*",
+    "/chat",
     "/chat/:path*",
+    "/commands",
     "/commands/:path*",
+    "/nodes",
     "/nodes/:path*",
+    "/agis",
     "/agis/:path*",
+    "/servicios",
+    "/servicios/:path*",
+    "/apps",
+    "/apps/:path*",
+    "/supply",
     "/supply/:path*",
+    "/governance",
     "/governance/:path*",
+    "/memory",
     "/memory/:path*",
+    "/status",
     "/status/:path*",
+    "/integrations",
     "/integrations/:path*",
+    "/access",
     "/access/:path*",
+    "/launch",
     "/launch/:path*",
+    "/mobile",
     "/mobile/:path*",
+    "/security",
     "/security/:path*",
+    "/owner",
     "/owner/:path*",
+    "/chido",
     "/chido/:path*",
+    "/admin",
     "/admin/:path*",
   ],
 };

@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { CHIDO_ACTION_CONTRACT_VERSION, getChidoActionContract } from "@/lib/chido-actions";
 import { CHIDO_APPROVAL_EVENTS } from "@/lib/chido-approvals";
@@ -65,6 +66,8 @@ async function auditPreflight(data: JsonObject) {
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
+  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
+  if (ownerGateResponse) return ownerGateResponse;
   const input = await readInput(req);
 
   const approvalRequestId = asText(input.approval_request_id);

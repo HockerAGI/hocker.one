@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { randomUUID } from "crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
@@ -57,6 +58,8 @@ async function checkHealth(endpoint: string) {
 
 export async function GET(req: NextRequest) {
   const traceId = randomUUID();
+  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
+  if (ownerGateResponse) return ownerGateResponse;
   const url = new URL(req.url);
   const moduleId = asText(url.searchParams.get("module_id"), "chido-casino");
   const emitEvent = asText(url.searchParams.get("emit_event"), "1") !== "0";
