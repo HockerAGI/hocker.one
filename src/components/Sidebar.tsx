@@ -3,29 +3,30 @@
 import Link from "next/link";
 import {
   Bot,
-  Crown,
-  Command,
+  CheckSquare,
+  Gamepad2,
   Gauge,
   Grid2X2,
-  Network,
+  Home,
+  Layers3,
   ShieldCheck,
-  Store,
+  Sparkles,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/", label: "Inicio", icon: Grid2X2 },
-  { href: "/owner", label: "Owner", icon: Crown },
-  { href: "/dashboard", label: "Panel", icon: Gauge },
+  { href: "/owner", label: "Inicio", icon: Home },
   { href: "/chat", label: "NOVA", icon: Bot },
-  { href: "/commands", label: "Tareas", icon: Command },
-  { href: "/nodes", label: "Nodos", icon: Network },
-  { href: "/governance", label: "Guardia", icon: ShieldCheck },
-  { href: "/supply", label: "Supply", icon: Store },
+  { href: "/apps", label: "Apps", icon: Grid2X2 },
+  { href: "/agis", label: "AGIs", icon: Sparkles },
+  { href: "/commands", label: "Tareas", icon: CheckSquare },
+  { href: "/chido", label: "Chido", icon: Gamepad2 },
+  { href: "/security", label: "Seguridad", icon: ShieldCheck },
+  { href: "/servicios", label: "Servicios", icon: Layers3 },
+  { href: "/dashboard", label: "Sistema", icon: Gauge },
 ];
 
 function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -38,9 +39,9 @@ export default function Sidebar() {
       aria-label="Menú lateral"
     >
       <Link
-        href="/"
+        href="/owner"
         className="flex h-[74px] items-center justify-center rounded-[26px] border border-white/10 bg-white/[0.035]"
-        aria-label="Inicio"
+        aria-label="Inicio privado"
       >
         <img
           src="/brand/hocker-one-logo.png"
@@ -75,10 +76,10 @@ export default function Sidebar() {
 
       <div className="mt-auto rounded-[26px] border border-emerald-400/15 bg-emerald-400/8 p-4">
         <p className="text-[10px] font-black uppercase tracking-[0.30em] text-emerald-200">
-          Sistema
+          Acceso privado
         </p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
-          Estados reales. Sin simulación visual.
+          El núcleo Hocker ONE solo abre con sesión autorizada.
         </p>
       </div>
     </aside>

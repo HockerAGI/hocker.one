@@ -6,7 +6,7 @@ import Topbar from "@/components/Topbar";
 import BottomDock from "@/components/BottomDock";
 import WorkspaceBar from "@/components/WorkspaceBar";
 
-const PUBLIC_ROUTES = ["/", "/login", "/auth/callback"];
+const PUBLIC_ROUTES = ["/", "/empresa", "/login", "/auth/callback"];
 
 export default function ShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
