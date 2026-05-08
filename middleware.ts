@@ -32,7 +32,12 @@ export async function middleware(req: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-  if (!url || !anon) return NextResponse.next();
+  const protectedRoute = isProtected(pathname);
+
+  if (!url || !anon) {
+    if (protectedRoute) return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.next();
+  }
 
   const res = NextResponse.next({
     request: {
@@ -54,7 +59,7 @@ export async function middleware(req: NextRequest) {
 
   const { data, error } = await supabase.auth.getUser();
 
-  if (error && isProtected(pathname)) {
+  if (error && protectedRoute) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -62,7 +67,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/owner", req.url));
   }
 
-  if (isProtected(pathname) && !data.user) {
+  if (protectedRoute && !data.user) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
