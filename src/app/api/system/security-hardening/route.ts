@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
   evaluateHockerSecurityHardening,
@@ -10,12 +11,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const emitEvent = url.searchParams.get("emit_event") !== "0";
+  const emitEvent = url.searchParams.get("emit_event") === "1";
 
   const result = evaluateHockerSecurityHardening();
   let eventId: string | undefined;
 
   if (emitEvent) {
+    const ownerGateResponse = requireOwnerOrInternal(req);
+    if (ownerGateResponse) return ownerGateResponse;
+
     try {
       const sb = createAdminSupabase();
 
