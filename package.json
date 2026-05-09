@@ -21,7 +21,9 @@
     "android:sync:web": "npm run build && cap sync android",
     "ops:supabase:guard": "bash scripts/ops/hocker-supabase-production-guard.sh",
     "ops:supabase:scan": "bash scripts/ops/hocker-forbidden-supabase-command-scan.sh",
-    "ops:prod:smoke": "bash scripts/ops/hocker-production-smoke-test.sh"
+    "ops:prod:smoke": "bash scripts/ops/hocker-production-smoke-test.sh",
+    "ops:nova": "bash scripts/ops/hocker-nova-command-center.sh",
+    "ops:validate": "bash scripts/ops/hocker-total-validation.sh"
   },
   "dependencies": {
     "@capacitor/android": "8.3.1",
