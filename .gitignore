@@ -104,3 +104,4 @@ hocker_topology_audit_*.zip
 .env.production
 .env*.local
 .env.example
+supabase/.temp/
