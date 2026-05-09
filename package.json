@@ -18,7 +18,9 @@
     "android:debug": "cap run android",
     "android:apk": "cd android && ./gradlew assembleDebug",
     "android:aab": "cd android && ./gradlew bundleRelease",
-    "android:sync:web": "npm run build && cap sync android"
+    "android:sync:web": "npm run build && cap sync android",
+    "ops:supabase:guard": "bash scripts/ops/hocker-supabase-production-guard.sh",
+    "ops:supabase:scan": "bash scripts/ops/hocker-forbidden-supabase-command-scan.sh"
   },
   "dependencies": {
     "@capacitor/android": "8.3.1",
