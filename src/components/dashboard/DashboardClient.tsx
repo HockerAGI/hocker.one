@@ -242,7 +242,7 @@ export default function DashboardClient({ summary, className }: Props) {
       className={className}
       eyebrow="Hocker ONE · Centro de control"
       title="Estado ejecutivo"
-      description="Lectura operativa, servicios reales, apps, AGIs, repositorios, comandos y señales recientes en una sola vista."
+      description="Lectura ejecutiva de producción, seguridad, apps, AGIs, repositorios y señales recientes en una sola vista."
       actions={
         <div className="flex flex-wrap gap-2">
           <span className="shell-chip-brand">
@@ -255,7 +255,9 @@ export default function DashboardClient({ summary, className }: Props) {
         </div>
       }
     >
-      <div className="grid gap-4 xl:grid-cols-3">
+      <NovaExecutiveSurface summary={summary} liveApps={liveApps} liveAgis={liveAgis} liveServices={liveServices} />
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <HeroStat label="Apps activas" value={String(liveApps)} hint="módulos listos o en vivo" />
         <HeroStat label="AGIs listas" value={String(liveAgis)} hint="núcleos con señal útil" />
         <HeroStat label="Servicios vivos" value={String(liveServices)} hint="conexiones externas saludables" />
@@ -349,7 +351,7 @@ export default function DashboardClient({ summary, className }: Props) {
             icon={ShieldCheck}
             kicker="Sistema"
             title="Estado real"
-            copy="Nodos, comandos y señales recientes sin salir del dashboard."
+            copy="Nodos, acciones internas y señales recientes sin exponer detalles técnicos innecesarios."
           >
             <SystemStatus summary={summary} />
           </SectionBlock>
@@ -379,9 +381,9 @@ export default function DashboardClient({ summary, className }: Props) {
 
           <SectionBlock
             icon={TerminalSquare}
-            kicker="Runtime"
-            title="Comandos recientes"
-            copy="Lectura de cola, ejecución y cierre sin artefactos visuales."
+            kicker="Control interno"
+            title="Acciones recientes"
+            copy="Traducción ejecutiva de la actividad interna supervisada por NOVA."
           >
             <div className="space-y-3">
               {summary.recentCommands.length ? (
@@ -393,10 +395,10 @@ export default function DashboardClient({ summary, className }: Props) {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-sm font-black text-white">
-                          {command.command}
+                          {describeOperationalAction(command.command)}
                         </h3>
                         <p className="mt-1 text-sm text-slate-400">
-                          {command.projectId}
+                          {getExecutiveStatusLabel(command.status)} · {command.projectId}
                         </p>
                       </div>
 
@@ -410,7 +412,7 @@ export default function DashboardClient({ summary, className }: Props) {
                   </article>
                 ))
               ) : (
-                <EmptyState text="Sin comandos recientes." />
+                <EmptyState text="Sin acciones recientes." />
               )}
             </div>
           </SectionBlock>
