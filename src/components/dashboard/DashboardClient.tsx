@@ -1,5 +1,7 @@
 "use client";
 
+import { LiveOperationsCenter } from "@/components/dashboard/LiveOperationsCenter";
+
 import { NovaExecutiveSurface } from "@/components/dashboard/NovaExecutiveSurface";
 import {
   describeOperationalAction,
@@ -262,6 +264,8 @@ export default function DashboardClient({ summary, className }: Props) {
       }
     >
       <NovaExecutiveSurface summary={summary} liveApps={liveApps} liveAgis={liveAgis} liveServices={liveServices} />
+
+      <LiveOperationsCenter />
 
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <HeroStat label="Apps activas" value={String(liveApps)} hint="módulos listos o en vivo" />
