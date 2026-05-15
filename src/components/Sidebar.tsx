@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   Bot,
   CheckSquare,
-  Gamepad2,
+  Database,
   Gauge,
   Grid2X2,
   Home,
@@ -19,11 +19,11 @@ const nav = [
   { href: "/chat", label: "NOVA", icon: Bot },
   { href: "/apps", label: "Apps", icon: Grid2X2 },
   { href: "/agis", label: "AGIs", icon: Sparkles },
-  { href: "/commands", label: "Tareas", icon: CheckSquare },
-  { href: "/chido", label: "Chido", icon: Gamepad2 },
   { href: "/security", label: "Seguridad", icon: ShieldCheck },
-  { href: "/servicios", label: "Servicios", icon: Layers3 },
-  { href: "/dashboard", label: "Sistema", icon: Gauge },
+  { href: "/memory", label: "Memoria", icon: Database },
+  { href: "/integrations", label: "Integraciones", icon: Layers3 },
+  { href: "/commands", label: "Tareas", icon: CheckSquare },
+  { href: "/dashboard", label: "Estado", icon: Gauge },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -79,7 +79,7 @@ export default function Sidebar() {
           Acceso privado
         </p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
-          El núcleo Hocker ONE solo abre con sesión autorizada.
+          Chido, Wallet y módulos sensibles se abren desde Apps con protección activa.
         </p>
       </div>
     </aside>

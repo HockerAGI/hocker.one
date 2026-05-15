@@ -120,20 +120,14 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
   const commands = (commandsRes.data ?? []) as CommandRow[];
   const orders = (ordersRes.data ?? []) as OrderRow[];
 
-  const projectIds = new Set(projects.map((p) => p.id));
-  const activeNodeProjects = new Set(nodes.map((n) => n.project_id));
-
   const apps = APP_REGISTRY.map((item) => ({
     ...item,
-    status: projectIds.has(item.projectId) ? "live" : getAppStatus(item.status),
+    status: getAppStatus(item.status),
   }));
 
   const agis = AGI_REGISTRY.map((item) => ({
     ...item,
-    status:
-      activeNodeProjects.has(item.key) || activeNodeProjects.has(item.nodeId)
-        ? "live"
-        : getNodeStatus(item.status),
+    status: getNodeStatus(item.status),
   }));
 
   const totalOrdersCents =

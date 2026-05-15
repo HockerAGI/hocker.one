@@ -1,0 +1,189 @@
+{
+  "hocker-one": {
+    "logo": {
+      "source": "LOGOS APPS/HOCKER ONE/01_logo_horizontal/01_logo_horizontal/hocker-one-logo-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-one/logo.png",
+      "sha256": "db18ce82c862531a14f7fc989dbd24b0e4cdb2db3657b7b33325853d7b45d3f2"
+    },
+    "icon": {
+      "source": "LOGOS APPS/HOCKER ONE/02_isotype_icon/02_isotype_icon/hocker-one-isotype-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-one/icon.png",
+      "sha256": "3665758a4f993785e155b61b377da3a4cbb1bf9bfe90c307762586aa3615cece"
+    },
+    "cover": {
+      "source": "LOGOS APPS/HOCKER ONE/04_social_preview/04_social_preview/hocker-one-og-image.png",
+      "dest": "ecosystem/apps/hocker-one/cover.png",
+      "sha256": "7c260a2c46482c5b625fbcc26b41f6380c856eb0f712606e70aa4618163d84f0"
+    }
+  },
+  "hocker-ads": {
+    "logo": {
+      "source": "LOGOS APPS/HOCKER_ADS_IMAGENES_OFICIALES_LISTAS_USO/hocker_ads_official_assets/01_logo_primary/hocker-ads-logo-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-ads/logo.png",
+      "sha256": "3d901ee578c5cb13851e85c783918b3135b4ea36ce6699e821ff027db5eb4d29"
+    },
+    "icon": {
+      "source": "LOGOS APPS/HOCKER_ADS_IMAGENES_OFICIALES_LISTAS_USO/hocker_ads_official_assets/02_icon_isotype/hocker-ads-icon-transparent-512.png",
+      "dest": "ecosystem/apps/hocker-ads/icon.png",
+      "sha256": "02c8bbc6511e63f2126b6a9466fe85d31643ee29e34d7d6d9fe0b2573233d92d"
+    },
+    "cover": {
+      "source": "LOGOS APPS/HOCKER_ADS_IMAGENES_OFICIALES_LISTAS_USO/hocker_ads_official_assets/04_social_preview/hocker-ads-og-image-1200x630.png",
+      "dest": "ecosystem/apps/hocker-ads/cover.png",
+      "sha256": "a2c81aaa424f8c019b76006ed454eef9d83302414b0d6c1dcfbe53d8cc7ad132"
+    }
+  },
+  "chido-casino": {
+    "logo": {
+      "source": "LOGOS APPS/CHIDO_CASINO_IMAGENES_OFICIALES_LISTAS_USO/chido_casino_official_assets/01_logo_primary/chido-casino-logo-preserved-master.png",
+      "dest": "ecosystem/apps/chido-casino/logo.png",
+      "sha256": "ddf0c093f1931cad537f5c3aa4f7ba6ff08f202c9d6909236c27885be08c40a0"
+    },
+    "icon": {
+      "source": "LOGOS APPS/CHIDO_CASINO_IMAGENES_OFICIALES_LISTAS_USO/chido_casino_official_assets/02_icon_isotype/chido-casino-isotype-rounded-512.png",
+      "dest": "ecosystem/apps/chido-casino/icon.png",
+      "sha256": "e8e7e7616723116754911d3453da56e1cd123315eade18dcb8d37bc18ceb8af7"
+    },
+    "cover": {
+      "source": "LOGOS APPS/CHIDO_CASINO_IMAGENES_OFICIALES_LISTAS_USO/chido_casino_official_assets/04_social_preview/chido-casino-og-image-1200x630.png",
+      "dest": "ecosystem/apps/chido-casino/cover.png",
+      "sha256": "f80831fc591203a5382983db37822d417620f4b25d1bece521b262990ac29042"
+    }
+  },
+  "trackhok": {
+    "logo": {
+      "source": "LOGOS APPS/TRACKHOK_IMAGENES_OFICIALES_LISTAS_USO/01_logo_primary/trackhok-logo-transparent-master.png",
+      "dest": "ecosystem/apps/trackhok/logo.png",
+      "sha256": "2f40d7fb6ebf5f6d16315b2de797b6740f322eb5f78693556718059f9e204a25"
+    },
+    "icon": {
+      "source": "LOGOS APPS/TRACKHOK_IMAGENES_OFICIALES_LISTAS_USO/02_isotype_icon/trackhok-isotype-transparent-master.png",
+      "dest": "ecosystem/apps/trackhok/icon.png",
+      "sha256": "068784ee7cce79ec98d90666b9bf030104e7eb85a08f87353630519b5a2fe21c"
+    },
+    "cover": {
+      "source": "LOGOS APPS/TRACKHOK_IMAGENES_OFICIALES_LISTAS_USO/04_social_preview/trackhok-og-image-1200x630.png",
+      "dest": "ecosystem/apps/trackhok/cover.png",
+      "sha256": "522328e1760ad57f40bbb24a786094abf701c7a48147fb1e792b8bdfc928ecf9"
+    }
+  },
+  "hocker-wallet": {
+    "logo": {
+      "source": "LOGOS APPS/hocker_wallet_official_assets/01_logo_primary/hocker-wallet-logo-horizontal-2400x900.png",
+      "dest": "ecosystem/apps/hocker-wallet/logo.png",
+      "sha256": "c57e8b51156e8287bcacc9cbee3fbfd7efa292655ac61cd6ed5a2a517e606303"
+    },
+    "icon": {
+      "source": "LOGOS APPS/hocker_wallet_official_assets/02_isotype_icon/hocker-wallet-isotype-1024.png",
+      "dest": "ecosystem/apps/hocker-wallet/icon.png",
+      "sha256": "40f7cd102bc0bfbfbfe2f6114b8ff0b3fd98910c46bc2e35a662d46ad061bfc2"
+    },
+    "cover": {
+      "source": "LOGOS APPS/hocker_wallet_official_assets/04_social_preview/hocker-wallet-card-cover-1600x900.png",
+      "dest": "ecosystem/apps/hocker-wallet/cover.png",
+      "sha256": "e890a13f32db71ccdec7139636e02fc56801ab0ae05140805beedd0978137ef0"
+    }
+  },
+  "nexpa-app": {
+    "logo": {
+      "source": "LOGOS APPS/nexpa_app_official_assets/01_logo_primary/nexpa-app-logo-primary-transparent-2048.png",
+      "dest": "ecosystem/apps/nexpa-app/logo.png",
+      "sha256": "57481aa7594410f6653a9de6554386b33c93b38d65e3f770c0fba811ee7047d9"
+    },
+    "icon": {
+      "source": "LOGOS APPS/nexpa_app_official_assets/02_isotype_icon/nexpa-app-isotype-transparent-512.png",
+      "dest": "ecosystem/apps/nexpa-app/icon.png",
+      "sha256": "d090d9b9e44f58d266088588a2dd2625160c87f619712d82759010f90e0fbe98"
+    },
+    "cover": {
+      "source": "LOGOS APPS/nexpa_app_official_assets/04_social_preview/nexpa-app-card-cover-1600x900.png",
+      "dest": "ecosystem/apps/nexpa-app/cover.png",
+      "sha256": "e6bfb3053456536ebf9202ecea606cd5f68a0039fcc18e97d79e3a01d68222ba"
+    }
+  },
+  "hocker-drive-cloud": {
+    "logo": {
+      "source": "LOGOS APPS/hocker_drive_cloud_official_assets/01_logo_primary/hocker-drive-cloud-logo-horizontal-2400x900.png",
+      "dest": "ecosystem/apps/hocker-drive-cloud/logo.png",
+      "sha256": "86567806ce8b133c8a92f7fff992426eee78bff56880acc4521289961f74c4ed"
+    },
+    "icon": {
+      "source": "LOGOS APPS/hocker_drive_cloud_official_assets/02_isotype_icon/hocker-drive-cloud-isotype-512.png",
+      "dest": "ecosystem/apps/hocker-drive-cloud/icon.png",
+      "sha256": "41ce207b8a77a4d9fd8cd40fa8bcb8019dddb3a55f80c4fc351ba141cc6ab4cb"
+    },
+    "cover": {
+      "source": "LOGOS APPS/hocker_drive_cloud_official_assets/04_social_preview/hocker-drive-cloud-card-cover-1600x900.png",
+      "dest": "ecosystem/apps/hocker-drive-cloud/cover.png",
+      "sha256": "720653ecf681a24662cac1a0d4e00db7448e97d298318a2a71ed491de2352acb"
+    }
+  },
+  "hocker-hub": {
+    "logo": {
+      "source": "LOGOS APPS/HOCKER_HUB_BRAND_ASSETS_OFFICIAL/01_logo_horizontal/hocker-hub-logo-horizontal-transparent.png",
+      "dest": "ecosystem/apps/hocker-hub/logo.png",
+      "sha256": "3b9b670f9d817d6967a46991df03adefdb500bf4359e213a13821f414976ca8e"
+    },
+    "icon": {
+      "source": "LOGOS APPS/HOCKER_HUB_BRAND_ASSETS_OFFICIAL/02_isotype_icon/hocker-hub-isotype-transparent.png",
+      "dest": "ecosystem/apps/hocker-hub/icon.png",
+      "sha256": "8aba8175c52e592bc9e9dc9bfe36a293ab411a19738d4e8a3ef2685d6137bddf"
+    },
+    "cover": {
+      "source": "LOGOS APPS/HOCKER_HUB_BRAND_ASSETS_OFFICIAL/04_social_preview/og-image.png",
+      "dest": "ecosystem/apps/hocker-hub/cover.png",
+      "sha256": "2e20ef498638f5c81feb390d12fd1e7f4899215c4eb122788a21252340d41dc6"
+    }
+  },
+  "hocker-up": {
+    "logo": {
+      "source": "LOGOS APPS/hocker_up_official_assets/01_logo_primary/hocker-up-logo-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-up/logo.png",
+      "sha256": "c90f325a28bd57d570004cf30c2ae0c2db48bd96c99241608338182591f12076"
+    },
+    "icon": {
+      "source": "LOGOS APPS/hocker_up_official_assets/02_isotype_icon/hocker-up-isotype-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-up/icon.png",
+      "sha256": "9c8b64a27507b084b7ef8e68e57c473aa821a0bc2fa842c4433b10128adeceb3"
+    },
+    "cover": {
+      "source": "LOGOS APPS/hocker_up_official_assets/04_social_preview/card-cover.png",
+      "dest": "ecosystem/apps/hocker-up/cover.png",
+      "sha256": "2c0d9212f34fbab8f8b9035289bab1e4cf6107d1408b3270a0524d4d84784724"
+    }
+  },
+  "hocker-supply": {
+    "logo": {
+      "source": "LOGOS APPS/hkr_supply_official_assets/01_logo_primary/hocker-supply-logo-primary-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-supply/logo.png",
+      "sha256": "35ba10562f16508988b36d5e235eb6e4bf9eb419d49915dd92da66a5749809b5"
+    },
+    "icon": {
+      "source": "LOGOS APPS/hkr_supply_official_assets/03_isotype_icon/hkr-supply-isotype-transparent-master.png",
+      "dest": "ecosystem/apps/hocker-supply/icon.png",
+      "sha256": "3c8e8954deb65f0e3a3b15e95d4b8e64e5dc73c7f3204a081d11dfa091b80b58"
+    },
+    "cover": {
+      "source": "LOGOS APPS/hkr_supply_official_assets/05_social_preview/hocker-supply-card-cover-1600x900.png",
+      "dest": "ecosystem/apps/hocker-supply/cover.png",
+      "sha256": "3c379fa2d3e40accbab6d793571a55e35be7f808b24d0bde2990d1566de2c5b1"
+    }
+  },
+  "nova": {
+    "logo": {
+      "source": "LOGOS APPS/NOVA_IMAGENES_OFICIALES_LISTAS_USO/NOVA_IMAGENES_OFICIALES_LISTAS_USO/01_logo_primary/nova-logo-transparent-master.png",
+      "dest": "ecosystem/agis/nova/logo.png",
+      "sha256": "9f625f4cff3afc44a862c1de50834d6ba3d0d40ad86caf81a38b60495058b4b0"
+    },
+    "icon": {
+      "source": "LOGOS APPS/NOVA_IMAGENES_OFICIALES_LISTAS_USO/NOVA_IMAGENES_OFICIALES_LISTAS_USO/02_isotype_icon/nova-isotype-transparent-master.png",
+      "dest": "ecosystem/agis/nova/icon.png",
+      "sha256": "c4376a7a8ac9ae52fd6de54aad3db1ab2c6ff3e4b661cc8673e9d0c735ee0c33"
+    },
+    "cover": {
+      "source": "LOGOS APPS/NOVA_IMAGENES_OFICIALES_LISTAS_USO/NOVA_IMAGENES_OFICIALES_LISTAS_USO/04_social_preview/nova-og-image.png",
+      "dest": "ecosystem/agis/nova/cover.png",
+      "sha256": "8e903a160268f37a60baabf5cb28eb9cecacf991257ee8cf1012ab51903e4f5d"
+    }
+  }
+}
