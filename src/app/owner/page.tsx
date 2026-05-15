@@ -1,140 +1,93 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Hint from "@/components/Hint";
 import PageShell from "@/components/PageShell";
-import { collectHockerGlobalHealth } from "@/lib/hocker-global-health";
-import { collectHockerBetaReadiness } from "@/lib/hocker-beta-readiness";
-import { collectHockerMobileSanity } from "@/lib/hocker-mobile-sanity";
-import { evaluateSecurityReadiness } from "@/lib/hocker-client-portals";
-import { HOCKER_GLOBAL_REAL_EXECUTION_LOCK } from "@/lib/hocker-roles";
+import { APP_REGISTRY, AGI_REGISTRY, getStatusLabel, getStatusTone } from "@/lib/hocker-dashboard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Inicio privado · Hocker ONE",
-  description: "Panel maestro privado de Armando/Hocker.",
+  description: "Centro privado del ecosistema Hocker.",
 };
 
-const mainSections = [
-  { title: "Apps", href: "/apps", description: "Hocker ONE, Hocker Ads, Chido Casino, TrackHok, Wallet, Drive, Hub, Up y Supply.", tag: "Ecosistema" },
-  { title: "AGIs", href: "/agis", description: "NOVA, Tridente estratégico, creativas, soporte, ventas y operación.", tag: "Inteligencias" },
-  { title: "Seguridad", href: "/security", description: "Accesos, rutas privadas, bloqueo de ejecución y protección del sistema.", tag: "Control" },
-  { title: "Estado", href: "/status", description: "Lectura simple del sistema, app móvil, integraciones y salud general.", tag: "Sistema" },
-];
-
-const quickLinks = [
-  { title: "Memoria", href: "/memory", description: "Syntia, contexto y continuidad." },
-  { title: "Integraciones", href: "/integrations", description: "Conexiones y servicios externos." },
-  { title: "Tareas", href: "/commands", description: "Acciones pendientes y comandos." },
-  { title: "Portales", href: "/security/grants", description: "Permisos y accesos derivados." },
-];
-
-function statusClass(status: string): string {
-  if (status === "online" || status === "ready") return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
-  if (status === "warning" || status === "degraded") return "border-amber-400/20 bg-amber-500/10 text-amber-300";
-  return "border-rose-400/20 bg-rose-500/10 text-rose-300";
+function MiniLogo({ src, name }: { src?: string; name: string }) {
+  return (
+    <div className="hko-logo-tile h-11 w-11 shrink-0">
+      {src ? <img src={src} alt="" className="h-9 w-9 object-contain" /> : <span className="text-xs font-black text-cyan-200">{name.slice(0, 2).toUpperCase()}</span>}
+    </div>
+  );
 }
 
-function statusText(status: string): string {
-  if (status === "online" || status === "ready") return "Activo";
-  if (status === "warning" || status === "degraded") return "Revisión";
-  return "Requiere revisión";
+function QuickCard({ href, title, text }: { href: string; title: string; text: string }) {
+  return (
+    <Link href={href} className="hocker-panel-pro block p-5 transition hover:border-cyan-400/25 hover:bg-white/[0.03]">
+      <h2 className="text-xl font-black text-white">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Abrir</p>
+    </Link>
+  );
 }
 
-export default async function OwnerPage() {
-  const [globalHealth, beta, mobile] = await Promise.all([
-    collectHockerGlobalHealth({ emitEvent: false }),
-    collectHockerBetaReadiness({ emitEvent: false }),
-    collectHockerMobileSanity({ emitEvent: false }),
-  ]);
-
-  const security = evaluateSecurityReadiness();
+export default function OwnerPage() {
+  const topApps = APP_REGISTRY.slice(0, 4);
+  const topAgis = AGI_REGISTRY.slice(0, 4);
 
   return (
     <PageShell
-      eyebrow="Privado"
-      title="Inicio"
-      subtitle="Panel maestro de Hocker ONE. Todo está agrupado para operar sin ruido y sin mezclar apps con AGIs."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <Link href="/apps" className="hocker-button-secondary">Apps</Link>
-          <Link href="/agis" className="hocker-button-secondary">AGIs</Link>
-          <Link href="/security" className="hocker-button-secondary">Seguridad</Link>
-          <Link href="/status" className="hocker-button-primary">Estado</Link>
-        </div>
-      }
+      eyebrow="Inicio privado"
+      title="Tu centro de control privado"
+      subtitle="Desde aquí ves apps, AGIs, seguridad, estado y tareas sin ruido técnico."
     >
-      <div className="flex flex-col gap-6">
-        <Hint title="NOVA sincronizada">
-          El ecosistema se mantiene bajo supervisión. Las acciones sensibles siguen bloqueadas hasta tener autorización real.
-        </Hint>
-
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Estado general</p>
-            <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(globalHealth.status)}`}>{statusText(globalHealth.status)}</p>
-          </div>
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Lanzamiento</p>
-            <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(beta.status)}`}>{statusText(beta.status)}</p>
-          </div>
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">App móvil</p>
-            <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(mobile.status)}`}>{statusText(mobile.status)}</p>
-          </div>
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Ejecución real</p>
-            <p className={HOCKER_GLOBAL_REAL_EXECUTION_LOCK ? "mt-2 inline-flex rounded-full border border-rose-400/20 bg-rose-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-rose-300" : "mt-2 inline-flex rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-300"}>
-              {HOCKER_GLOBAL_REAL_EXECUTION_LOCK ? "Bloqueada" : "Abierta"}
-            </p>
+      <div className="space-y-6">
+        <section className="hocker-panel-pro overflow-hidden p-6">
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">NOVA</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-5xl">NOVA está sincronizada.</h2>
+              <p className="mt-4 text-base leading-7 text-slate-300">El ecosistema se mantiene bajo supervisión. Las acciones sensibles siguen protegidas y la ejecución real continúa bloqueada.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-3xl border border-emerald-400/15 bg-emerald-400/10 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Sistema</p><p className="mt-2 text-xl font-black text-white">Activo</p></div>
+              <div className="rounded-3xl border border-sky-400/15 bg-sky-400/10 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-sky-200">Acceso</p><p className="mt-2 text-xl font-black text-white">Protegido</p></div>
+              <div className="rounded-3xl border border-amber-400/15 bg-amber-400/10 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-amber-200">Ejecución</p><p className="mt-2 text-xl font-black text-white">Bloqueada</p></div>
+            </div>
           </div>
         </section>
 
-        <details open className="hocker-panel-pro overflow-hidden">
-          <summary className="cursor-pointer list-none border-b border-white/5 p-5 transition hover:bg-white/[0.025]">
-            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">Principal</p>
-            <h2 className="mt-2 text-xl font-black text-white">Secciones del ecosistema</h2>
-            <p className="mt-2 text-sm text-slate-500">Chido Casino está dentro de Apps.</p>
-          </summary>
-          <div className="grid grid-cols-1 gap-4 p-5 xl:grid-cols-2">
-            {mainSections.map((item) => (
-              <Link key={item.href} href={item.href} className="hocker-panel-pro block p-5 transition hover:border-cyan-400/30 hover:bg-white/[0.03]">
-                <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">{item.tag}</p>
-                <h3 className="mt-2 text-xl font-black text-white">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
-              </Link>
-            ))}
-          </div>
-        </details>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <QuickCard href="/apps" title="Apps" text="Aplicaciones del ecosistema con logos, estado y acceso." />
+          <QuickCard href="/agis" title="AGIs" text="Mapa de inteligencias por jerarquía y función." />
+          <QuickCard href="/status" title="Estado" text="Salud general explicada en lenguaje claro." />
+          <QuickCard href="/commands" title="Tareas" text="Instrucciones, aprobaciones y seguimiento." />
+        </section>
 
-        <details className="hocker-panel-pro overflow-hidden">
-          <summary className="cursor-pointer list-none border-b border-white/5 p-5 transition hover:bg-white/[0.025]">
-            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">Accesos rápidos</p>
-            <h2 className="mt-2 text-xl font-black text-white">Módulos secundarios</h2>
-            <p className="mt-2 text-sm text-slate-500">Se mantienen cerrados para no saturar.</p>
-          </summary>
-          <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
-            {quickLinks.map((item) => (
-              <Link key={item.href} href={item.href} className="block rounded-[22px] border border-white/10 bg-[#0b1526] p-5 transition hover:border-cyan-400/25 hover:bg-white/[0.03]">
-                <h3 className="text-base font-black text-white">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
-              </Link>
-            ))}
-          </div>
-        </details>
+        <section className="grid gap-4 xl:grid-cols-2">
+          <details open className="hocker-panel-pro overflow-hidden">
+            <summary className="cursor-pointer list-none border-b border-white/5 p-5"><p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">Apps principales</p><h2 className="mt-2 text-xl font-black text-white">Acceso rápido</h2></summary>
+            <div className="divide-y divide-white/5">
+              {topApps.map((app) => (
+                <Link key={app.key} href={app.href} className="flex items-center gap-3 p-4 transition hover:bg-white/[0.025]">
+                  <MiniLogo src={app.logoSrc} name={app.title} />
+                  <div className="min-w-0 flex-1"><p className="font-black text-white">{app.title}</p><p className="text-sm text-slate-400">{app.subtitle}</p></div>
+                  <span className={["rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest", getStatusTone(app.status)].join(" ")}>{getStatusLabel(app.status)}</span>
+                </Link>
+              ))}
+            </div>
+          </details>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Link href="/security/grants" className="hocker-panel-pro block p-5">
-            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">Portales</p>
-            <h2 className="mt-2 text-xl font-black text-white">Portales de clientes</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-400">Permisos, solicitudes y accesos derivados. Estado: {security.status}.</p>
-          </Link>
-          <Link href="/empresa" className="hocker-panel-pro block p-5">
-            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">Empresa</p>
-            <h2 className="mt-2 text-xl font-black text-white">Sitio público preparado</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-400">Base pública de Hocker AGI Technologies sin datos privados.</p>
-          </Link>
+          <details open className="hocker-panel-pro overflow-hidden">
+            <summary className="cursor-pointer list-none border-b border-white/5 p-5"><p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">AGIs principales</p><h2 className="mt-2 text-xl font-black text-white">Núcleo y Tridente</h2></summary>
+            <div className="divide-y divide-white/5">
+              {topAgis.map((agi) => (
+                <Link key={agi.key} href={agi.href} className="flex items-center gap-3 p-4 transition hover:bg-white/[0.025]">
+                  <MiniLogo src={agi.logoSrc} name={agi.title} />
+                  <div className="min-w-0 flex-1"><p className="font-black text-white">{agi.title}</p><p className="text-sm text-slate-400">{agi.subtitle}</p></div>
+                  <span className={["rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest", getStatusTone(agi.status)].join(" ")}>{getStatusLabel(agi.status)}</span>
+                </Link>
+              ))}
+            </div>
+          </details>
         </section>
       </div>
     </PageShell>

@@ -952,3 +952,41 @@ svg {
     background: #0b1526 !important;
   }
 }
+
+/* HOCKER UX V2 BACKDROP: fondo vivo sutil, sin animación pesada */
+.hko-page-card,
+.hocker-panel-pro,
+.shell-panel,
+.shell-card {
+  position: relative;
+}
+
+.hko-page-card::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(85, 220, 255, 0.08), transparent 28%),
+    radial-gradient(circle at 84% 12%, rgba(168, 85, 247, 0.07), transparent 30%),
+    linear-gradient(180deg, rgba(255,255,255,0.022), transparent 34%);
+  opacity: 0.9;
+}
+
+.hko-page-head,
+.hko-page-body,
+.hko-page-actions,
+.hko-page-title-block {
+  position: relative;
+  z-index: 1;
+}
+
+.hko-logo-tile {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(2, 6, 23, 0.62);
+}

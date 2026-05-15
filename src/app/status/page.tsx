@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Hint from "@/components/Hint";
 import PageShell from "@/components/PageShell";
-import {
-  collectHockerGlobalHealth,
-  HOCKER_GLOBAL_HEALTH_VERSION,
-  type HockerGlobalHealthCheck,
-} from "@/lib/hocker-global-health";
+import { collectHockerGlobalHealth, HOCKER_GLOBAL_HEALTH_VERSION, type HockerGlobalHealthCheck } from "@/lib/hocker-global-health";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Global Health · Hocker ONE",
-  description: "Cockpit global de salud operativa de Hocker ONE.",
+  title: "Estado general · Hocker ONE",
+  description: "Salud operativa de Hocker ONE en lenguaje claro.",
 };
 
 function statusClass(status: string): string {
@@ -23,17 +18,23 @@ function statusClass(status: string): string {
   return "border-slate-400/20 bg-slate-500/10 text-slate-300";
 }
 
+function statusLabel(status: string): string {
+  if (status === "online") return "Activo";
+  if (status === "degraded") return "Requiere revisión";
+  if (status === "offline") return "Sin conexión";
+  return "Pendiente";
+}
+
 function categoryLabel(category: HockerGlobalHealthCheck["category"]): string {
   const labels: Record<HockerGlobalHealthCheck["category"], string> = {
-    core: "Core",
-    infra: "Infra",
+    core: "Sistema",
+    infra: "Infraestructura",
     memory: "Memoria",
-    agi: "AGI",
-    queue: "Queue",
-    integration: "Integración",
+    agi: "AGIs",
+    queue: "Tareas",
+    integration: "Integraciones",
     module: "Módulo",
   };
-
   return labels[category] ?? category;
 }
 
@@ -43,105 +44,32 @@ function safeDate(value: string): string {
 }
 
 export default async function StatusPage() {
-  const health = await collectHockerGlobalHealth({
-    emitEvent: false,
-  });
+  const health = await collectHockerGlobalHealth({ emitEvent: false });
 
   return (
     <PageShell
-      title="Global Health Center"
-      subtitle="Cockpit global para Hocker ONE, NOVA, Supabase, memoria, cola de comandos e integraciones."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <Link href="/integrations" className="hocker-button-secondary">Integraciones</Link>
-          <Link href="/nodes" className="hocker-button-secondary">Nodos</Link>
-          <Link href="/dashboard" className="hocker-button-primary">Dashboard</Link>
-        </div>
-      }
+      title="Estado general"
+      subtitle="Revisión clara de sistema, memoria, tareas, integraciones y módulos."
+      actions={<div className="flex flex-wrap gap-2"><Link href="/integrations" className="hocker-button-ghost">Integraciones</Link><Link href="/dashboard" className="hocker-button-primary">Resumen</Link></div>}
     >
-      <div className="flex flex-col gap-6">
-        <Hint title="Centro de mando">
-          Este panel no ejecuta acciones. Solo verifica salud operativa y mantiene Hocker ONE listo para escalar módulos, AGIs, APIs y endpoints.
-        </Hint>
-
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Estado global</p>
-            <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(health.status)}`}>
-              {health.status}
-            </p>
-          </div>
-
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Checks</p>
-            <p className="mt-1 text-3xl font-black text-white">{health.summary.total}</p>
-          </div>
-
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Online</p>
-            <p className="mt-1 text-3xl font-black text-emerald-300">{health.summary.online}</p>
-          </div>
-
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Degraded</p>
-            <p className="mt-1 text-3xl font-black text-amber-300">{health.summary.degraded}</p>
-          </div>
-
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Offline crítico</p>
-            <p className="mt-1 text-3xl font-black text-rose-300">{health.summary.critical_offline}</p>
-          </div>
+      <div className="space-y-6">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <div className="hocker-panel-pro p-4"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Sistema</p><p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(health.status)}`}>{statusLabel(health.status)}</p></div>
+          <div className="hocker-panel-pro p-4"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Revisiones</p><p className="mt-1 text-3xl font-black text-white">{health.summary.total}</p></div>
+          <div className="hocker-panel-pro p-4"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Activas</p><p className="mt-1 text-3xl font-black text-emerald-300">{health.summary.online}</p></div>
+          <div className="hocker-panel-pro p-4"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Por revisar</p><p className="mt-1 text-3xl font-black text-amber-300">{health.summary.degraded + health.summary.critical_offline}</p></div>
         </section>
 
-        <section className="hocker-panel-pro p-5">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Versión</p>
-              <p className="mt-1 text-sm font-black text-white">{HOCKER_GLOBAL_HEALTH_VERSION}</p>
-            </div>
-            <p className="text-xs font-bold text-slate-500">
-              Última revisión: {safeDate(health.checked_at)}
-            </p>
-          </div>
-        </section>
+        <section className="hocker-panel-pro p-5"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Última revisión</p><p className="mt-1 text-sm font-black text-white">{safeDate(health.checked_at)}</p><details className="mt-3 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3"><summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Detalles técnicos</summary><p className="mt-2 text-xs text-slate-500">Versión: {HOCKER_GLOBAL_HEALTH_VERSION}</p></details></section>
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {health.checks.map((check) => (
-            <article key={check.id} className="hocker-panel-pro overflow-hidden">
-              <div className="border-b border-white/5 p-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">
-                      {categoryLabel(check.category)}
-                    </p>
-                    <h2 className="mt-1 text-lg font-black text-white">{check.label}</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{check.detail}</p>
-                  </div>
-
-                  <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(check.status)}`}>
-                    {check.status}
-                  </span>
-                </div>
+            <article key={check.id} className="hocker-panel-pro overflow-hidden p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div><p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">{categoryLabel(check.category)}</p><h2 className="mt-1 text-lg font-black text-white">{check.label}</h2><p className="mt-2 text-sm leading-6 text-slate-400">{check.detail}</p></div>
+                <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(check.status)}`}>{statusLabel(check.status)}</span>
               </div>
-
-              <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-3">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Critical</p>
-                  <p className={check.critical ? "mt-1 text-xs font-bold text-rose-300" : "mt-1 text-xs font-bold text-slate-300"}>
-                    {String(check.critical)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Latency</p>
-                  <p className="mt-1 text-xs font-bold text-white">
-                    {typeof check.latency_ms === "number" ? `${check.latency_ms}ms` : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Source</p>
-                  <p className="mt-1 break-all text-xs font-bold text-slate-300">{check.source}</p>
-                </div>
-              </div>
+              <details className="mt-4 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3"><summary className="cursor-pointer text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Detalles técnicos</summary><div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-3"><p>Crítico: {check.critical ? "sí" : "no"}</p><p>Tiempo: {typeof check.latency_ms === "number" ? `${check.latency_ms}ms` : "—"}</p><p className="break-all">Origen: {check.source}</p></div></details>
             </article>
           ))}
         </section>
