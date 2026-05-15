@@ -37,18 +37,24 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
     setError(null);
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
+      const response = await fetch("/api/auth/password-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password: cleanPassword,
+        }),
       });
 
-      if (authError) {
-        throw authError;
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "Acceso rechazado.");
       }
 
       toast.success("Acceso concedido.");
-      router.replace("/dashboard");
-      router.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      window.location.assign(result.redirectTo || "/owner");
     } catch (err: unknown) {
       setError(getErrorMessage(err) || "Acceso rechazado.");
     } finally {

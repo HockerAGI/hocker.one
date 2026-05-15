@@ -32,15 +32,23 @@ export default function LoginPage() {
     setErrorText("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
+      const response = await fetch("/api/auth/password-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password: cleanPassword,
+        }),
       });
 
-      if (error) throw error;
+      const result = await response.json().catch(() => ({}));
 
-      router.replace("/dashboard");
-      router.refresh();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "Acceso rechazado.");
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      window.location.assign(result.redirectTo || "/owner");
     } catch (err: unknown) {
       setErrorText(getErrorMessage(err) || "No se pudo iniciar sesión.");
     } finally {
