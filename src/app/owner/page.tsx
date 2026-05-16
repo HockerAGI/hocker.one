@@ -17,22 +17,18 @@ export default function OwnerPage() {
   const topAgis = AGI_REGISTRY.filter((agi) => ["nova", "syntia", "vertx", "curvewind"].includes(agi.key));
 
   return (
-    <div className="space-y-6">
-      <NovaCorePanel />
+    <div className="hko-page-flow space-y-5">
+      <NovaCorePanel variant="owner" />
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="hko-mini-stat"><span>Acceso</span><strong>Protegido</strong></div>
         <div className="hko-mini-stat"><span>Login</span><strong>Activo</strong></div>
         <div className="hko-mini-stat"><span>Ejecución real</span><strong>Bloqueada</strong></div>
       </section>
       <HockerSection title="Apps principales" text="Accesos rápidos a las plataformas más importantes." defaultOpen>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {topApps.map((app) => <AppCard key={app.key} app={app} />)}
-        </div>
+        <div className="grid gap-4 lg:grid-cols-3">{topApps.map((app) => <AppCard key={app.key} app={app} />)}</div>
       </HockerSection>
       <HockerSection title="NOVA y Tridente" text="La jerarquía central que mantiene ordenado el ecosistema." defaultOpen>
-        <div className="grid gap-4 lg:grid-cols-4">
-          {topAgis.map((agi) => <AgiCard key={agi.key} agi={agi} featured={agi.key === "nova"} />)}
-        </div>
+        <div className="grid gap-4 lg:grid-cols-4">{topAgis.map((agi) => <AgiCard key={agi.key} agi={agi} featured={agi.key === "nova"} />)}</div>
       </HockerSection>
       <HockerSection title="Qué revisar ahora" text="Atajos para operar sin entrar a detalles técnicos." defaultOpen={false}>
         <div className="grid gap-3 md:grid-cols-3">

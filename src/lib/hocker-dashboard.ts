@@ -26,6 +26,7 @@ export type AppRegistryItem = {
   group: "control" | "business" | "operation" | "special";
   href: string;
   logoSrc?: string;
+  iconSrc?: string;
   accent: string;
 };
 
@@ -40,6 +41,7 @@ export type AgiRegistryItem = {
   group: "core" | "trident" | "creative" | "operative";
   href: string;
   logoSrc?: string;
+  iconSrc?: string;
   accent: string;
 };
 
@@ -134,6 +136,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Activo y protegido como centro privado.",
     group: "control",
     href: "/owner",
+    iconSrc: "/ecosystem/apps/hocker-one/icon.png",
     logoSrc: "/ecosystem/apps/hocker-one/logo.png",
     accent: "cyan",
   },
@@ -147,6 +150,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Base visual lista; conexión operativa en integración.",
     group: "business",
     href: "/apps#hocker-ads",
+    iconSrc: "/ecosystem/apps/hocker-ads/icon.png",
     logoSrc: "/ecosystem/apps/hocker-ads/logo.png",
     accent: "sky",
   },
@@ -160,6 +164,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Planeado para gestión comercial y atención.",
     group: "business",
     href: "/apps#hocker-hub",
+    iconSrc: "/ecosystem/apps/hocker-hub/icon.png",
     logoSrc: "/ecosystem/apps/hocker-hub/logo.png",
     accent: "violet",
   },
@@ -173,6 +178,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Identidad visual cerrada; operación en integración.",
     group: "business",
     href: "/supply",
+    iconSrc: "/ecosystem/apps/hocker-supply/icon.png",
     logoSrc: "/ecosystem/apps/hocker-supply/logo.png",
     accent: "amber",
   },
@@ -186,6 +192,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Base visual lista; backend pendiente.",
     group: "operation",
     href: "/memory",
+    iconSrc: "/ecosystem/apps/hocker-drive-cloud/icon.png",
     logoSrc: "/ecosystem/apps/hocker-drive-cloud/logo.png",
     accent: "cyan",
   },
@@ -199,6 +206,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Debe activarse solo con cumplimiento y pasarela real.",
     group: "operation",
     href: "/apps#hocker-wallet",
+    iconSrc: "/ecosystem/apps/hocker-wallet/icon.png",
     logoSrc: "/ecosystem/apps/hocker-wallet/logo.png",
     accent: "emerald",
   },
@@ -212,6 +220,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Ruta sensible. Monitoreo y revisión sin ejecución real desde Hocker ONE.",
     group: "special",
     href: "/chido",
+    iconSrc: "/ecosystem/apps/chido-casino/icon.png",
     logoSrc: "/ecosystem/apps/chido-casino/logo.png",
     accent: "rose",
   },
@@ -225,6 +234,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "En desarrollo. Debe usarse solo con autorización.",
     group: "special",
     href: "/apps#trackhok",
+    iconSrc: "/ecosystem/apps/trackhok/icon.png",
     logoSrc: "/ecosystem/apps/trackhok/logo.png",
     accent: "sky",
   },
@@ -238,6 +248,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "En desarrollo con enfoque legal y ético.",
     group: "special",
     href: "/apps#nexpa-app",
+    iconSrc: "/ecosystem/apps/nexpa-app/icon.png",
     logoSrc: "/ecosystem/apps/nexpa-app/logo.png",
     accent: "violet",
   },
@@ -251,6 +262,7 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     note: "Planeado como red educativa y comunidad IA.",
     group: "special",
     href: "/apps#hocker-up",
+    iconSrc: "/ecosystem/apps/hocker-up/icon.png",
     logoSrc: "/ecosystem/apps/hocker-up/logo.png",
     accent: "cyan",
   },
@@ -267,6 +279,7 @@ export const AGI_REGISTRY: AgiRegistryItem[] = [
     note: "Orquesta apps, AGIs, seguridad y decisiones.",
     group: "core",
     href: "/chat",
+    iconSrc: "/ecosystem/agis/nova/icon.png",
     logoSrc: "/ecosystem/agis/nova/logo.png",
     accent: "cyan",
   },

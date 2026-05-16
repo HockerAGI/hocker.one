@@ -1100,3 +1100,93 @@ svg {
   .hko-live-orb, .hko-fade-up, .hko-orb-pulse { animation: none !important; }
   .hko-module-card:hover, .hko-action-primary:hover, .hko-action-secondary:hover { transform: none !important; }
 }
+
+/* HOCKER ONE UX v3.1 — isotype contrast polish */
+.hko-page-flow { padding-bottom: 9.5rem; }
+@media (min-width: 768px) { .hko-page-flow { padding-bottom: 2rem; } }
+.hko-live-orb { opacity: 0.28; filter: blur(44px); }
+.hko-live-orb-a { width: 190px; height: 190px; }
+.hko-live-orb-b { width: 220px; height: 220px; }
+.hko-live-orb-c { width: 240px; height: 240px; }
+.hko-logo-frame {
+  isolation: isolate;
+  box-shadow:
+    0 16px 42px rgba(2, 8, 23, .42),
+    inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.hko-logo-stage {
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255,255,255,.16), transparent 44%),
+    linear-gradient(145deg, rgba(2,6,23,.88), rgba(15,23,42,.72));
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow:
+    inset 0 0 22px rgba(2, 8, 23, .55),
+    0 0 24px rgba(34, 211, 238, .10);
+}
+.hko-logo-img {
+  width: auto;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.35)) drop-shadow(0 0 10px rgba(125,211,252,.20));
+}
+.hko-logo-aura {
+  position: absolute;
+  inset: -34%;
+  opacity: .92;
+  background: conic-gradient(from 120deg, transparent, rgba(34,211,238,.18), transparent, rgba(168,85,247,.16), transparent);
+  animation: hko-spin-slow 16s linear infinite;
+}
+.hko-logo-cyan { background: linear-gradient(135deg, rgba(34,211,238,.30), rgba(15,23,42,.78) 52%, rgba(8,47,73,.72)); color: rgb(207 250 254); }
+.hko-logo-sky { background: linear-gradient(135deg, rgba(56,189,248,.30), rgba(15,23,42,.78) 52%, rgba(30,58,138,.70)); color: rgb(224 242 254); }
+.hko-logo-violet { background: linear-gradient(135deg, rgba(167,139,250,.32), rgba(15,23,42,.80) 52%, rgba(76,29,149,.68)); color: rgb(237 233 254); }
+.hko-logo-emerald { background: linear-gradient(135deg, rgba(52,211,153,.30), rgba(15,23,42,.78) 52%, rgba(6,78,59,.68)); color: rgb(209 250 229); }
+.hko-logo-amber { background: linear-gradient(135deg, rgba(251,191,36,.30), rgba(15,23,42,.78) 52%, rgba(120,53,15,.68)); color: rgb(254 243 199); }
+.hko-logo-rose { background: linear-gradient(135deg, rgba(251,113,133,.32), rgba(15,23,42,.80) 52%, rgba(136,19,55,.68)); color: rgb(255 228 230); }
+.hko-logo-pink { background: linear-gradient(135deg, rgba(244,114,182,.32), rgba(15,23,42,.80) 52%, rgba(112,26,117,.68)); color: rgb(252 231 243); }
+.hko-nova-panel { border-radius: 34px; }
+.hko-module-card.hko-card-tight { padding: 1.15rem; }
+.hko-card-tight .hko-action-primary,
+.hko-card-tight .hko-action-secondary,
+.hko-action-primary,
+.hko-action-secondary {
+  min-height: 44px;
+  align-items: center;
+  letter-spacing: .12em;
+  font-size: 11px;
+}
+.hko-mini-stat strong { font-size: 1.15rem; }
+.hko-map-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: linear-gradient(145deg, rgba(15,23,42,.64), rgba(2,6,23,.52));
+  padding: 1.25rem;
+}
+.hko-hierarchy-map { display: grid; gap: .75rem; }
+.hko-map-node {
+  border-radius: 22px;
+  border: 1px solid rgba(125,211,252,.18);
+  background: rgba(15,23,42,.58);
+  padding: .9rem 1rem;
+  text-align: center;
+  color: rgb(224 242 254);
+  font-weight: 900;
+}
+.hko-map-node-primary {
+  background: linear-gradient(135deg, rgba(34,211,238,.18), rgba(168,85,247,.12));
+  color: white;
+  box-shadow: 0 0 28px rgba(34,211,238,.12);
+}
+.hko-map-line {
+  height: 22px;
+  width: 1px;
+  margin: 0 auto;
+  background: linear-gradient(to bottom, rgba(125,211,252,.35), rgba(168,85,247,.22));
+}
+@keyframes hko-spin-slow { to { transform: rotate(360deg); } }
+@media (max-width: 520px) {
+  .hko-kicker { letter-spacing: .20em; }
+  .hko-module-card { border-radius: 28px; }
+  .hko-nova-panel { padding: 1.15rem; }
+}
