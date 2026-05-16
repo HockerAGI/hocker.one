@@ -138,7 +138,7 @@ async function countTable(table: string, label: string): Promise<HockerLiveSumma
 
 export async function getHockerLiveSummary(): Promise<HockerLiveSummary> {
   const sb = createAdminSupabase();
-  const nodeId = process.env.HOCKER_LOCAL_AGENT_NODE_ID || process.env.HOCKER_DEFAULT_NODE_ID || "hocker-node-1";
+  const nodeId = process.env.HOCKER_PHYSICAL_AGENT_NODE_ID || process.env.HOCKER_LOCAL_AGENT_NODE_ID || "hocker-node-1";
 
   const counts = await Promise.all([
     countTable("projects", "Proyectos"),
