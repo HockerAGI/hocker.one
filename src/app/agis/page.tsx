@@ -1,72 +1,40 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import PageShell from "@/components/PageShell";
-import { AGI_REGISTRY, getStatusLabel, getStatusTone, type AgiCategory } from "@/lib/hocker-dashboard";
+import { AGI_GROUP_LABELS, AGI_REGISTRY } from "@/lib/hocker-dashboard";
+import AgiCard from "@/components/ui-hocker/AgiCard";
+import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
+import HockerSection from "@/components/ui-hocker/HockerSection";
+import NovaCorePanel from "@/components/ui-hocker/NovaCorePanel";
 
 export const metadata: Metadata = {
-  title: "AGIs · Hocker ONE",
-  description: "Mapa simple de inteligencias del ecosistema Hocker.",
+  title: "AGIs | Hocker ONE",
+  description: "Mapa jerárquico de inteligencias del ecosistema HOCKER.",
 };
-
-const groups: Array<{ key: AgiCategory; title: string; text: string; open?: boolean }> = [
-  { key: "nucleo", title: "Núcleo", text: "NOVA coordina todo el ecosistema.", open: true },
-  { key: "tridente", title: "Tridente estratégico", text: "Memoria, seguridad y predicción.", open: true },
-  { key: "creativas", title: "Creativas y clientes", text: "Contenido, campañas, producción, atención y ventas.", open: true },
-  { key: "operativas", title: "Operativas", text: "Infraestructura, legal, finanzas, casino y monitoreo." },
-];
-
-function AgiCard({ agi }: { agi: (typeof AGI_REGISTRY)[number] }) {
-  return (
-    <article className="rounded-[24px] border border-white/10 bg-[#0b1526] p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="hko-logo-tile h-12 w-12 shrink-0">
-            {agi.logoSrc ? <img src={agi.logoSrc} alt={`${agi.title} logo`} className="h-10 w-10 object-contain" loading="lazy" /> : <span className="text-sm font-black text-cyan-200">{agi.title.slice(0, 2).toUpperCase()}</span>}
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-base font-black text-white">{agi.title}</h3>
-            <p className="mt-1 text-sm leading-5 text-slate-300">{agi.subtitle}</p>
-          </div>
-        </div>
-        <span className={["shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest", getStatusTone(agi.status)].join(" ")}>{getStatusLabel(agi.status)}</span>
-      </div>
-
-      <p className="mt-4 text-sm leading-6 text-slate-500">{agi.note}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href={agi.href} className="hocker-button-ghost">Abrir</Link>
-        <span className="rounded-full border border-cyan-400/15 bg-cyan-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.20em] text-cyan-200">{agi.integration}</span>
-      </div>
-    </article>
-  );
-}
 
 export default function AgisPage() {
   return (
-    <PageShell
-      eyebrow="Inteligencias"
-      title="AGIs"
-      subtitle="NOVA arriba, Tridente después y módulos por función. Sin tecnicismos innecesarios."
-    >
-      <div className="space-y-4">
-        {groups.map((group) => {
-          const items = AGI_REGISTRY.filter((agi) => agi.category === group.key);
-          if (items.length === 0) return null;
-
-          return (
-            <details key={group.key} open={group.open} className="hocker-panel-pro overflow-hidden">
-              <summary className="cursor-pointer list-none border-b border-white/5 p-5 transition hover:bg-white/[0.025]">
-                <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">{group.title}</p>
-                <h2 className="mt-2 text-xl font-black text-white">{group.text}</h2>
-                <p className="mt-2 text-sm text-slate-500">{items.length} inteligencias</p>
-              </summary>
-
-              <div className="grid grid-cols-1 gap-4 p-5 xl:grid-cols-2">
-                {items.map((agi) => <AgiCard key={agi.key} agi={agi} />)}
-              </div>
-            </details>
-          );
-        })}
-      </div>
-    </PageShell>
+    <div className="space-y-6">
+      <HockerPageHeader eyebrow="Inteligencias" title="AGIs" text="Las AGIs no son apps. Son inteligencias internas con roles, niveles y conexiones dentro del ecosistema." />
+      <NovaCorePanel />
+      <section className="rounded-[34px] border border-white/8 bg-white/[0.035] p-5 sm:p-6">
+        <p className="hko-kicker">Mapa rápido</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <div className="rounded-3xl border border-cyan-300/20 bg-cyan-300/8 p-4 text-center text-sm font-black text-cyan-100">NOVA</div>
+          <div className="rounded-3xl border border-sky-300/15 bg-sky-300/8 p-4 text-center text-sm font-black text-sky-100">Syntia · Vertx · Curvewind</div>
+          <div className="rounded-3xl border border-violet-300/15 bg-violet-300/8 p-4 text-center text-sm font-black text-violet-100">Creativas y clientes</div>
+          <div className="rounded-3xl border border-emerald-300/15 bg-emerald-300/8 p-4 text-center text-sm font-black text-emerald-100">Operativas</div>
+        </div>
+      </section>
+      {(Object.keys(AGI_GROUP_LABELS) as Array<keyof typeof AGI_GROUP_LABELS>).filter((group) => group !== "core").map((group, index) => {
+        const meta = AGI_GROUP_LABELS[group];
+        const items = AGI_REGISTRY.filter((agi) => agi.group === group);
+        return (
+          <HockerSection key={group} title={meta.title} text={meta.text} defaultOpen={index < 2}>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {items.map((agi) => <AgiCard key={agi.key} agi={agi} />)}
+            </div>
+          </HockerSection>
+        );
+      })}
+    </div>
   );
 }

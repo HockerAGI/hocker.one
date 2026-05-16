@@ -1,13 +1,19 @@
 import type { ExternalServiceItem } from "@/lib/external-services";
 
-export type AppStatus = "live" | "ready" | "protected" | "in_development" | "pending" | "blocked" | "not_created";
-export type NodeStatus = "live" | "ready" | "protected" | "in_development" | "pending" | "blocked" | "not_created";
+export type AppStatus =
+  | "live"
+  | "protected"
+  | "integration"
+  | "development"
+  | "pending"
+  | "blocked"
+  | "not_created";
+
+export type NodeStatus = AppStatus;
 export type RepoStatus = "connected" | "pending";
 export type CommandStatus = "done" | "running" | "queued" | "needs_approval" | "error" | "canceled";
 export type EventLevel = "info" | "warn" | "error";
-
-export type AppCategory = "control" | "negocio" | "operacion" | "especiales";
-export type AgiCategory = "nucleo" | "tridente" | "creativas" | "operativas";
+export type ModuleKind = "app" | "agi" | "nova";
 
 export type AppRegistryItem = {
   key: string;
@@ -17,9 +23,10 @@ export type AppRegistryItem = {
   projectId: string;
   status: AppStatus;
   note: string;
+  group: "control" | "business" | "operation" | "special";
   href: string;
-  category: AppCategory;
   logoSrc?: string;
+  accent: string;
 };
 
 export type AgiRegistryItem = {
@@ -30,9 +37,10 @@ export type AgiRegistryItem = {
   integration: string;
   status: NodeStatus;
   note: string;
+  group: "core" | "trident" | "creative" | "operative";
   href: string;
-  category: AgiCategory;
   logoSrc?: string;
+  accent: string;
 };
 
 export type RepoRegistryItem = {
@@ -77,6 +85,44 @@ export type DashboardSummary = {
   recentCommands: DashboardCommandItem[];
 };
 
+export const APP_GROUP_LABELS: Record<AppRegistryItem["group"], { title: string; text: string }> = {
+  control: {
+    title: "Control",
+    text: "Paneles que ordenan y supervisan el ecosistema.",
+  },
+  business: {
+    title: "Negocio",
+    text: "Herramientas para vender, atender clientes y operar marcas.",
+  },
+  operation: {
+    title: "Operación",
+    text: "Sistemas internos para datos, pagos y respaldo.",
+  },
+  special: {
+    title: "Apps especiales",
+    text: "Productos sensibles o en expansión que requieren control claro.",
+  },
+};
+
+export const AGI_GROUP_LABELS: Record<AgiRegistryItem["group"], { title: string; text: string }> = {
+  core: {
+    title: "Núcleo",
+    text: "La inteligencia central que coordina todo.",
+  },
+  trident: {
+    title: "Tridente estratégico",
+    text: "Memoria, seguridad y predicción trabajando bajo NOVA.",
+  },
+  creative: {
+    title: "Creativas y clientes",
+    text: "Contenido, campañas, soporte, ventas y experiencia del cliente.",
+  },
+  operative: {
+    title: "Operativas",
+    text: "Infraestructura, legal, finanzas, Chido, seguridad y rastreo.",
+  },
+};
+
 export const APP_REGISTRY: AppRegistryItem[] = [
   {
     key: "hocker-one",
@@ -85,10 +131,11 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     integration: "NOVA + Syntia + Vertx",
     projectId: "hocker-one",
     status: "live",
-    note: "Activo. Es el centro privado para operar apps, AGIs, seguridad y estado general.",
+    note: "Activo y protegido como centro privado.",
+    group: "control",
     href: "/owner",
-    category: "control",
-    logoSrc: "/ecosystem/apps/hocker-one/icon.png",
+    logoSrc: "/ecosystem/apps/hocker-one/logo.png",
+    accent: "cyan",
   },
   {
     key: "hocker-ads",
@@ -96,59 +143,38 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     subtitle: "Publicidad y contenido con IA.",
     integration: "Nova Ads + Candy Ads + PRO IA",
     projectId: "hocker-ads",
-    status: "ready",
-    note: "Marca y base visual listas. Falta cerrar operación automatizada completa.",
-    href: "/servicios",
-    category: "negocio",
-    logoSrc: "/ecosystem/apps/hocker-ads/icon.png",
+    status: "integration",
+    note: "Base visual lista; conexión operativa en integración.",
+    group: "business",
+    href: "/apps#hocker-ads",
+    logoSrc: "/ecosystem/apps/hocker-ads/logo.png",
+    accent: "sky",
   },
   {
-    key: "chido-casino",
-    title: "Chido Casino",
-    subtitle: "Casino IA en revisión segura.",
-    integration: "Chido Gerente + Chido Wins",
-    projectId: "chido-casino",
-    status: "protected",
-    note: "Existe código sensible. Hocker ONE solo debe revisar; no ejecutar acciones reales.",
-    href: "/chido",
-    category: "especiales",
-    logoSrc: "/ecosystem/apps/chido-casino/icon.png",
-  },
-  {
-    key: "trackhok",
-    title: "TrackHok",
-    subtitle: "Rastreo y monitoreo autorizado.",
-    integration: "TrackHok AGI + Vertx",
-    projectId: "trackhok",
-    status: "in_development",
-    note: "Línea en desarrollo. Todo rastreo debe ser autorizado y visible para el owner.",
-    href: "/integrations",
-    category: "especiales",
-    logoSrc: "/ecosystem/apps/trackhok/icon.png",
-  },
-  {
-    key: "hocker-wallet",
-    title: "Hocker Wallet",
-    subtitle: "Pagos y control financiero.",
-    integration: "Numia + Jurix",
-    projectId: "hocker-wallet",
+    key: "hocker-hub",
+    title: "Hocker Hub",
+    subtitle: "CRM para ventas y clientes.",
+    integration: "Revia AGI + Numia",
+    projectId: "hocker-hub",
     status: "pending",
-    note: "Identidad lista. Módulo financiero productivo pendiente.",
-    href: "/dashboard",
-    category: "operacion",
-    logoSrc: "/ecosystem/apps/hocker-wallet/icon.png",
+    note: "Planeado para gestión comercial y atención.",
+    group: "business",
+    href: "/apps#hocker-hub",
+    logoSrc: "/ecosystem/apps/hocker-hub/logo.png",
+    accent: "violet",
   },
   {
-    key: "nexpa-app",
-    title: "NEXPA App",
-    subtitle: "Seguridad y control familiar.",
-    integration: "NEXPA AGI + TrackHok AGI",
-    projectId: "nexpa-app",
-    status: "in_development",
-    note: "Debe mantenerse bajo diseño ético, consentimiento y autorización explícita.",
-    href: "/security",
-    category: "especiales",
-    logoSrc: "/ecosystem/apps/nexpa-app/icon.png",
+    key: "hocker-supply",
+    title: "HKR Supply",
+    subtitle: "Tienda y productos del ecosistema.",
+    integration: "Supply + Wallet + Numia",
+    projectId: "hocker-supply",
+    status: "integration",
+    note: "Identidad visual cerrada; operación en integración.",
+    group: "business",
+    href: "/supply",
+    logoSrc: "/ecosystem/apps/hocker-supply/logo.png",
+    accent: "amber",
   },
   {
     key: "hocker-drive-cloud",
@@ -157,22 +183,63 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     integration: "Syntia + Vertx",
     projectId: "hocker-drive-cloud",
     status: "pending",
-    note: "Base visual lista. Falta almacenamiento productivo conectado.",
-    href: "/integrations",
-    category: "operacion",
-    logoSrc: "/ecosystem/apps/hocker-drive-cloud/icon.png",
+    note: "Base visual lista; backend pendiente.",
+    group: "operation",
+    href: "/memory",
+    logoSrc: "/ecosystem/apps/hocker-drive-cloud/logo.png",
+    accent: "cyan",
   },
   {
-    key: "hocker-hub",
-    title: "Hocker Hub",
-    subtitle: "CRM para ventas y clientes.",
-    integration: "Revia AGI + Nova Ads + Numia",
-    projectId: "hocker-hub",
+    key: "hocker-wallet",
+    title: "Hocker Wallet",
+    subtitle: "Pagos y control financiero.",
+    integration: "Numia + Jurix",
+    projectId: "hocker-wallet",
     status: "pending",
-    note: "Marca lista. CRM funcional pendiente de integración.",
-    href: "/access",
-    category: "negocio",
-    logoSrc: "/ecosystem/apps/hocker-hub/icon.png",
+    note: "Debe activarse solo con cumplimiento y pasarela real.",
+    group: "operation",
+    href: "/apps#hocker-wallet",
+    logoSrc: "/ecosystem/apps/hocker-wallet/logo.png",
+    accent: "emerald",
+  },
+  {
+    key: "chido-casino",
+    title: "Chido Casino",
+    subtitle: "Casino IA en revisión segura.",
+    integration: "Chido Wins + Chido Gerente",
+    projectId: "chido-casino",
+    status: "protected",
+    note: "Ruta sensible. Monitoreo y revisión sin ejecución real desde Hocker ONE.",
+    group: "special",
+    href: "/chido",
+    logoSrc: "/ecosystem/apps/chido-casino/logo.png",
+    accent: "rose",
+  },
+  {
+    key: "trackhok",
+    title: "TrackHok",
+    subtitle: "Rastreo y monitoreo autorizado.",
+    integration: "TrackHok AGI + Vertx",
+    projectId: "trackhok",
+    status: "development",
+    note: "En desarrollo. Debe usarse solo con autorización.",
+    group: "special",
+    href: "/apps#trackhok",
+    logoSrc: "/ecosystem/apps/trackhok/logo.png",
+    accent: "sky",
+  },
+  {
+    key: "nexpa-app",
+    title: "NEXPA App",
+    subtitle: "Seguridad y control familiar.",
+    integration: "NEXPA AGI + Jurix",
+    projectId: "nexpa-app",
+    status: "development",
+    note: "En desarrollo con enfoque legal y ético.",
+    group: "special",
+    href: "/apps#nexpa-app",
+    logoSrc: "/ecosystem/apps/nexpa-app/logo.png",
+    accent: "violet",
   },
   {
     key: "hocker-up",
@@ -181,22 +248,11 @@ export const APP_REGISTRY: AppRegistryItem[] = [
     integration: "Syntia + Candy Ads",
     projectId: "hocker-up",
     status: "pending",
-    note: "Marca lista. Plataforma social/eLearning pendiente.",
-    href: "/servicios",
-    category: "especiales",
-    logoSrc: "/ecosystem/apps/hocker-up/icon.png",
-  },
-  {
-    key: "hocker-supply",
-    title: "HKR Supply / Hocker Supply",
-    subtitle: "Tienda y productos del ecosistema.",
-    integration: "Supply + Hocker Store",
-    projectId: "hocker-supply",
-    status: "ready",
-    note: "Pack visual cerrado. Base de tienda en integración.",
-    href: "/supply",
-    category: "negocio",
-    logoSrc: "/ecosystem/apps/hocker-supply/icon.png",
+    note: "Planeado como red educativa y comunidad IA.",
+    group: "special",
+    href: "/apps#hocker-up",
+    logoSrc: "/ecosystem/apps/hocker-up/logo.png",
+    accent: "cyan",
   },
 ];
 
@@ -206,89 +262,97 @@ export const AGI_REGISTRY: AgiRegistryItem[] = [
     title: "NOVA",
     subtitle: "IA madre del ecosistema.",
     nodeId: "nova",
-    integration: "Núcleo",
+    integration: "Core",
     status: "live",
-    note: "Coordina apps, AGIs, seguridad y decisiones del ecosistema.",
+    note: "Orquesta apps, AGIs, seguridad y decisiones.",
+    group: "core",
     href: "/chat",
-    category: "nucleo",
-    logoSrc: "/ecosystem/agis/nova/icon.png",
+    logoSrc: "/ecosystem/agis/nova/logo.png",
+    accent: "cyan",
   },
   {
     key: "syntia",
     title: "Syntia",
     subtitle: "Memoria y sincronización.",
     nodeId: "syntia",
-    integration: "Memoria",
-    status: "ready",
-    note: "Base estratégica definida. Falta cerrar memoria productiva completa.",
-    href: "/memory",
-    category: "tridente",
+    integration: "Hocker Brain + Drive Cloud",
+    status: "integration",
+    note: "Base conceptual y flujo de memoria en integración.",
+    group: "trident",
+    href: "/agis#syntia",
+    accent: "cyan",
   },
   {
     key: "vertx",
     title: "Vertx",
     subtitle: "Seguridad y auditoría.",
     nodeId: "vertx",
-    integration: "Seguridad",
-    status: "ready",
-    note: "Protección, auditoría y control integrados en Hocker ONE.",
+    integration: "Security + Governance",
+    status: "integration",
+    note: "Reglas y protección activas en Hocker ONE.",
+    group: "trident",
     href: "/security",
-    category: "tridente",
+    accent: "emerald",
   },
   {
     key: "curvewind",
     title: "Curvewind",
     subtitle: "Estrategia y predicción.",
     nodeId: "curvewind",
-    integration: "Predicción",
-    status: "in_development",
-    note: "AGI estratégica definida. Módulo operativo pendiente.",
-    href: "/agis",
-    category: "tridente",
+    integration: "NOVA + Numia",
+    status: "development",
+    note: "Capa estratégica en desarrollo.",
+    group: "trident",
+    href: "/agis#curvewind",
+    accent: "violet",
   },
   {
     key: "nova-ads",
     title: "Nova Ads",
     subtitle: "Campañas y anuncios.",
     nodeId: "nova-ads",
-    integration: "Ads",
-    status: "in_development",
-    note: "Rol publicitario definido. Automatización completa pendiente.",
-    href: "/servicios",
-    category: "creativas",
+    integration: "Hocker Ads",
+    status: "development",
+    note: "En desarrollo para pauta y optimización.",
+    group: "creative",
+    href: "/agis#nova-ads",
+    accent: "sky",
   },
   {
     key: "candy-ads",
     title: "Candy Ads",
     subtitle: "Diseño visual y creatividad.",
     nodeId: "candy-ads",
-    integration: "Creatividad",
-    status: "in_development",
-    note: "Rol creativo definido. Sistema visual en expansión.",
-    href: "/agis",
-    category: "creativas",
+    integration: "Candy Studio",
+    status: "development",
+    note: "Creatividad visual en desarrollo.",
+    group: "creative",
+    href: "/agis#candy-ads",
+    accent: "pink",
   },
   {
     key: "pro-ia",
     title: "PRO IA",
     subtitle: "Video, audio y producción.",
     nodeId: "pro-ia",
-    integration: "Producción",
-    status: "in_development",
-    note: "Rol audiovisual definido. Pipeline productivo pendiente.",
-    href: "/agis",
-    category: "creativas",
+    integration: "Contenido + Hocker Ads",
+    status: "development",
+    note: "Producción audiovisual en desarrollo.",
+    group: "creative",
+    href: "/agis#pro-ia",
+    accent: "violet",
   },
   {
     key: "revia",
     title: "Revia AGI",
     subtitle: "Atención, soporte y ventas.",
     nodeId: "revia",
-    integration: "Soporte",
-    status: "in_development",
-    note: "AGI para clientes, soporte comercial y seguimiento de ventas.",
-    href: "/access",
-    category: "creativas",
+    integration: "Hocker Hub + Hocker Ads",
+    status: "development",
+    note: "Orientada a clientes, soporte, ventas y seguimiento.",
+    group: "creative",
+    href: "/agis#revia",
+    accent: "amber",
   },
   {
     key: "hostia",
@@ -296,32 +360,35 @@ export const AGI_REGISTRY: AgiRegistryItem[] = [
     subtitle: "Servidores y conexiones.",
     nodeId: "hostia",
     integration: "Infraestructura",
-    status: "in_development",
-    note: "Base conceptual definida. Automatización de infraestructura pendiente.",
+    status: "development",
+    note: "Infraestructura y enlaces en estabilización.",
+    group: "operative",
     href: "/integrations",
-    category: "operativas",
+    accent: "sky",
   },
   {
     key: "jurix",
     title: "Jurix",
     subtitle: "Legal y contratos.",
     nodeId: "jurix",
-    integration: "Legal",
-    status: "in_development",
-    note: "Rol legal definido. Módulo operativo pendiente.",
+    integration: "Governance",
+    status: "development",
+    note: "Compliance y documentos legales en desarrollo.",
+    group: "operative",
     href: "/governance",
-    category: "operativas",
+    accent: "emerald",
   },
   {
     key: "numia",
     title: "Numia",
     subtitle: "Finanzas y control.",
     nodeId: "numia",
-    integration: "Finanzas",
-    status: "ready",
-    note: "Base financiera visible. Integración completa pendiente.",
-    href: "/dashboard",
-    category: "operativas",
+    integration: "Wallet + Supply",
+    status: "integration",
+    note: "Control financiero en integración.",
+    group: "operative",
+    href: "/supply",
+    accent: "emerald",
   },
   {
     key: "chido-wins",
@@ -330,9 +397,10 @@ export const AGI_REGISTRY: AgiRegistryItem[] = [
     nodeId: "chido-wins",
     integration: "Chido Casino",
     status: "protected",
-    note: "Solo análisis y simulación responsable. Sin ejecución real desde Hocker ONE.",
+    note: "Debe mantenerse bajo revisión segura.",
+    group: "operative",
     href: "/chido",
-    category: "operativas",
+    accent: "rose",
   },
   {
     key: "chido-gerente",
@@ -341,31 +409,34 @@ export const AGI_REGISTRY: AgiRegistryItem[] = [
     nodeId: "chido-gerente",
     integration: "Chido Casino",
     status: "protected",
-    note: "Operación sensible bajo bloqueo y revisión segura.",
-    href: "/chido/ops",
-    category: "operativas",
+    note: "Operación sensible con ejecución real bloqueada desde Hocker ONE.",
+    group: "operative",
+    href: "/chido",
+    accent: "amber",
   },
   {
     key: "nexpa-agi",
     title: "NEXPA AGI",
     subtitle: "Seguridad familiar inteligente.",
     nodeId: "nexpa-agi",
-    integration: "Seguridad",
-    status: "in_development",
-    note: "Funciones sensibles requieren ética, consentimiento y autorización.",
-    href: "/security",
-    category: "operativas",
+    integration: "NEXPA App",
+    status: "development",
+    note: "En desarrollo con enfoque ético.",
+    group: "operative",
+    href: "/agis#nexpa-agi",
+    accent: "violet",
   },
   {
     key: "trackhok-agi",
     title: "TrackHok AGI",
     subtitle: "Rastreo autorizado y monitoreo.",
     nodeId: "trackhok-agi",
-    integration: "Monitoreo",
-    status: "in_development",
-    note: "Rastreo solo autorizado. Módulo predictivo pendiente.",
-    href: "/integrations",
-    category: "operativas",
+    integration: "TrackHok",
+    status: "development",
+    note: "En desarrollo para monitoreo autorizado.",
+    group: "operative",
+    href: "/agis#trackhok-agi",
+    accent: "sky",
   },
 ];
 
@@ -373,10 +444,10 @@ export const REPO_REGISTRY: RepoRegistryItem[] = [
   {
     key: "hocker-one",
     title: "hocker.one",
-    subtitle: "Panel maestro principal.",
+    subtitle: "Panel maestro privado.",
     branch: "main",
     status: "connected",
-    note: "Sincronizado con el flujo de despliegue.",
+    note: "Repositorio activo del panel.",
   },
   {
     key: "nova.agi",
@@ -384,7 +455,7 @@ export const REPO_REGISTRY: RepoRegistryItem[] = [
     subtitle: "Núcleo conversacional.",
     branch: "main",
     status: "connected",
-    note: "API y memoria en evolución.",
+    note: "Repositorio de NOVA.",
   },
   {
     key: "hocker-node-agent",
@@ -392,15 +463,15 @@ export const REPO_REGISTRY: RepoRegistryItem[] = [
     subtitle: "Ejecutor físico seguro.",
     branch: "main",
     status: "connected",
-    note: "Nodo operativo en sandbox.",
+    note: "Agente local bajo sandbox.",
   },
   {
-    key: "chido-casino",
+    key: "chido.casino",
     title: "chido.casino",
     subtitle: "Casino IA protegido.",
     branch: "main",
     status: "connected",
-    note: "Código sensible. Mantener con bloqueo y compliance.",
+    note: "Sistema sensible; requiere compliance.",
   },
 ];
 
@@ -409,10 +480,12 @@ export function getStatusLabel(status: string): string {
     case "live":
     case "connected":
       return "Activo";
-    case "ready":
-      return "En integración";
     case "protected":
       return "Protegido";
+    case "integration":
+    case "ready":
+      return "En integración";
+    case "development":
     case "in_development":
       return "En desarrollo";
     case "pending":
@@ -443,35 +516,64 @@ export function getStatusTone(status: string): string {
     case "live":
     case "connected":
     case "done":
-      return "bg-emerald-500/10 text-emerald-300 border-emerald-400/20";
-    case "ready":
-      return "bg-cyan-500/10 text-cyan-300 border-cyan-400/20";
+      return "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
     case "protected":
-      return "bg-sky-500/10 text-sky-300 border-sky-400/20";
+      return "border-sky-400/25 bg-sky-400/10 text-sky-200";
+    case "integration":
+    case "ready":
+    case "running":
+      return "border-cyan-400/25 bg-cyan-400/10 text-cyan-200";
+    case "development":
     case "in_development":
-      return "bg-violet-500/10 text-violet-300 border-violet-400/20";
+      return "border-violet-400/25 bg-violet-400/10 text-violet-200";
     case "pending":
     case "queued":
-    case "running":
     case "needs_approval":
-      return "bg-amber-500/10 text-amber-300 border-amber-400/20";
+      return "border-amber-400/25 bg-amber-400/10 text-amber-200";
     case "blocked":
     case "error":
-      return "bg-rose-500/10 text-rose-300 border-rose-400/20";
+      return "border-rose-400/25 bg-rose-400/10 text-rose-200";
     case "not_created":
     case "canceled":
-      return "bg-slate-500/10 text-slate-300 border-slate-400/20";
+      return "border-slate-400/20 bg-slate-400/10 text-slate-300";
     default:
-      return "bg-white/5 text-slate-300 border-white/10";
+      return "border-white/10 bg-white/[0.04] text-slate-300";
   }
 }
 
 export function getAppStatus(status: string): AppStatus {
-  if (["live", "ready", "protected", "in_development", "pending", "blocked", "not_created"].includes(status)) return status as AppStatus;
-  return "in_development";
+  if (["live", "protected", "integration", "development", "pending", "blocked", "not_created"].includes(status)) {
+    return status as AppStatus;
+  }
+  if (status === "ready") return "integration";
+  if (status === "in_development") return "development";
+  return "development";
 }
 
 export function getNodeStatus(status: string): NodeStatus {
-  if (["live", "ready", "protected", "in_development", "pending", "blocked", "not_created"].includes(status)) return status as NodeStatus;
-  return "in_development";
+  return getAppStatus(status);
+}
+
+export function getStatusHelp(status: string): string {
+  switch (status) {
+    case "live":
+    case "connected":
+      return "Funciona y puede usarse.";
+    case "protected":
+      return "Existe, pero sus acciones sensibles están cerradas por seguridad.";
+    case "integration":
+    case "ready":
+      return "Tiene base real y está conectándose por etapas.";
+    case "development":
+    case "in_development":
+      return "Está en construcción o ajuste técnico.";
+    case "pending":
+      return "Está planeado o visualmente listo, pero falta conexión funcional.";
+    case "blocked":
+      return "La acción real está detenida intencionalmente.";
+    case "not_created":
+      return "Aún no hay módulo funcional.";
+    default:
+      return "Estado en revisión.";
+  }
 }
