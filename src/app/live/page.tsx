@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePrivateSession } from "@/lib/require-private-session";
 import { getHockerLiveSummary } from "@/lib/hocker-live-summary";
+import PhysicalAgentPanel from "@/components/live/PhysicalAgentPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,10 @@ export default async function LivePage() {
           <div className="mt-4"><span className={badgeClass("protected")}>Protegido</span></div>
         </article>
       </section>
+
+
+
+      <PhysicalAgentPanel agent={summary.agent} />
 
       <Section title="Conteos reales" description="Lectura directa de tablas existentes. Si está en cero, aún no hay registros reales.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
