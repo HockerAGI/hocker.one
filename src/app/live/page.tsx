@@ -2,8 +2,10 @@ import Link from "next/link";
 import { requirePrivateSession } from "@/lib/require-private-session";
 import { getHockerLiveSummary } from "@/lib/hocker-live-summary";
 import { getHockerNodeMirrorSummary } from "@/lib/hocker-node-mirror-summary";
+import { getHockerMemoryMirrorLiveSummary } from "@/lib/hocker-memory-mirror-live-summary";
 import PhysicalAgentPanel from "@/components/live/PhysicalAgentPanel";
 import NodeMirrorPanel from "@/components/live/NodeMirrorPanel";
+import MemoryMirrorPanel from "@/components/live/MemoryMirrorPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,7 @@ export default async function LivePage() {
   await requirePrivateSession();
   const summary = await getHockerLiveSummary();
   const nodeMirror = await getHockerNodeMirrorSummary();
+  const memoryMirror = await getHockerMemoryMirrorLiveSummary();
 
   const visibleCounts = summary.counts.filter((item) =>
     [
@@ -121,6 +124,8 @@ export default async function LivePage() {
       <PhysicalAgentPanel agent={summary.agent} />
 
       <NodeMirrorPanel bridge={nodeMirror} />
+
+      <MemoryMirrorPanel summary={memoryMirror} />
 
       <Section title="Conteos reales" description="Lectura directa de tablas existentes. Si está en cero, aún no hay registros reales.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
