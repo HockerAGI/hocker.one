@@ -22,6 +22,9 @@ import {
   Wallet,
 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Mapa | Hocker ONE",
   description: "Mapa claro del ecosistema HOCKER.",
