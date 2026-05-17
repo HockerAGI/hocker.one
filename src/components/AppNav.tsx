@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Brain, CheckSquare, Gamepad2, Grid2X2, Home, Layers3, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  CheckSquare,
+  Gamepad2,
+  Grid2X2,
+  Home,
+  Layers3,
+  Map,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 
 type NavItem = {
   href: string;
@@ -12,10 +23,12 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/owner", label: "Inicio", icon: Home },
+  { href: "/map", label: "Mapa", icon: Map },
+  { href: "/live", label: "Vivo", icon: Activity },
   { href: "/chat", label: "NOVA", icon: Brain },
+  { href: "/commands", label: "Tareas", icon: CheckSquare },
   { href: "/apps", label: "Apps", icon: Grid2X2 },
   { href: "/agis", label: "AGIs", icon: Sparkles },
-  { href: "/commands", label: "Tareas", icon: CheckSquare },
   { href: "/chido", label: "Chido", icon: Gamepad2 },
   { href: "/security", label: "Seguridad", icon: ShieldCheck },
   { href: "/servicios", label: "Servicios", icon: Layers3 },

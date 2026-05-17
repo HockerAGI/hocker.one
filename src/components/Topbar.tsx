@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, Home, ShieldCheck } from "lucide-react";
+import { Activity, Bot, Map } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const titles: Record<string, string> = {
   "/": "Sitio público",
-  "/owner": "Inicio privado",
+  "/owner": "Inicio",
+  "/map": "Mapa",
+  "/live": "Sistema en vivo",
   "/dashboard": "Sistema",
   "/chat": "NOVA",
   "/apps": "Apps",
@@ -14,19 +16,22 @@ const titles: Record<string, string> = {
   "/commands": "Tareas",
   "/nodes": "Nodos",
   "/governance": "Gobierno",
-  "/supply": "Tienda",
+  "/supply": "Supply",
   "/servicios": "Servicios",
   "/security": "Seguridad",
   "/chido": "Chido Casino",
   "/empresa": "Empresa",
+  "/memory": "Memoria IA",
 };
 
 function getTitle(pathname: string) {
   const exact = titles[pathname];
   if (exact) return exact;
+
   const match = Object.entries(titles)
     .filter(([href]) => href !== "/" && pathname.startsWith(`${href}/`))
     .sort((a, b) => b[0].length - a[0].length)[0];
+
   return match?.[1] || "Hocker ONE";
 }
 
@@ -40,7 +45,7 @@ export default function Topbar() {
         <Link
           href="/owner"
           className="flex h-12 w-[142px] items-center justify-center rounded-2xl border border-white/10 bg-[#07101f]"
-          aria-label="Ir al inicio privado"
+          aria-label="Ir al inicio"
         >
           <img
             src="/brand/hocker-one-logo.png"
@@ -57,17 +62,17 @@ export default function Topbar() {
         </div>
 
         <nav className="flex items-center gap-2" aria-label="Accesos rápidos">
-          <Link href="/owner" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200">
-            <Home size={16} />
-            <span>Inicio</span>
+          <Link href="/map" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200">
+            <Map size={16} />
+            <span>Mapa</span>
+          </Link>
+          <Link href="/live" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200">
+            <Activity size={16} />
+            <span>En vivo</span>
           </Link>
           <Link href="/chat" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200">
             <Bot size={16} />
             <span>NOVA</span>
-          </Link>
-          <Link href="/security" className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#0b1526] px-3 text-[10px] font-black uppercase tracking-[0.20em] text-slate-200">
-            <ShieldCheck size={16} />
-            <span>Seguridad</span>
           </Link>
         </nav>
       </div>

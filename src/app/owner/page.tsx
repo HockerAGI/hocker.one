@@ -24,6 +24,30 @@ export default function OwnerPage() {
         <div className="hko-mini-stat"><span>Login</span><strong>Activo</strong></div>
         <div className="hko-mini-stat"><span>Ejecución real</span><strong>Bloqueada</strong></div>
       </section>
+      <HockerSection title="Entradas rápidas" text="Lo principal siempre visible. Sin buscar rutas." defaultOpen>
+        <div className="grid gap-3 md:grid-cols-4">
+          <Link href="/map" className="hko-module-card">
+            <StatusBadge status="live" />
+            <h3 className="mt-4 text-lg font-black text-white">Mapa</h3>
+            <p className="mt-2 text-sm text-slate-400">Todo el ecosistema ordenado.</p>
+          </Link>
+          <Link href="/live" className="hko-module-card">
+            <StatusBadge status="live" />
+            <h3 className="mt-4 text-lg font-black text-white">Sistema en vivo</h3>
+            <p className="mt-2 text-sm text-slate-400">Agente, nodo espejo y memoria IA.</p>
+          </Link>
+          <Link href="/chat" className="hko-module-card">
+            <StatusBadge status="protected" />
+            <h3 className="mt-4 text-lg font-black text-white">NOVA</h3>
+            <p className="mt-2 text-sm text-slate-400">Canal central para resolver.</p>
+          </Link>
+          <Link href="/commands" className="hko-module-card">
+            <StatusBadge status="pending" />
+            <h3 className="mt-4 text-lg font-black text-white">Tareas</h3>
+            <p className="mt-2 text-sm text-slate-400">Acciones claras y revisadas.</p>
+          </Link>
+        </div>
+      </HockerSection>
       <HockerSection title="Apps principales" text="Accesos rápidos a las plataformas más importantes." defaultOpen>
         <div className="grid gap-4 lg:grid-cols-3">{topApps.map((app) => <AppCard key={app.key} app={app} />)}</div>
       </HockerSection>

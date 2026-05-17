@@ -79,12 +79,12 @@ export default async function LivePage() {
   return (
     <main className="space-y-5 pb-28">
       <section className="rounded-[34px] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_34%),rgba(255,255,255,0.035)] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.35)]">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Live Data</p>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Sistema en vivo</p>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl">
-          Estado real del ecosistema
+          Sistema en vivo
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-          Datos leídos desde Supabase y producción. Sin tokens, sin llaves y sin payloads sensibles.
+          Señales reales del ecosistema. Sin llaves, sin secretos y sin datos inventados.
         </p>
         <p className="mt-4 text-xs text-slate-500">Actualizado: {formatDate(summary.generated_at)}</p>
       </section>
@@ -127,7 +127,7 @@ export default async function LivePage() {
 
       <MemoryMirrorPanel summary={memoryMirror} />
 
-      <Section title="Conteos reales" description="Lectura directa de tablas existentes. Si está en cero, aún no hay registros reales.">
+      <Section title="Números reales" description="Lectura directa del sistema. Si aparece en cero, todavía no hay datos reales.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleCounts.map((item) => (
             <article key={item.table} className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
@@ -177,7 +177,7 @@ export default async function LivePage() {
         </div>
       </Section>
 
-      <Section title="Últimos comandos" description="Muestra el estado histórico de comandos. Los errores viejos no significan fallo actual.">
+      <Section title="Últimas tareas" description="Muestra el estado histórico de comandos. Los errores viejos no significan fallo actual.">
         <div className="space-y-3">
           {summary.recent_commands.map((cmd) => (
             <article key={cmd.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
@@ -195,7 +195,7 @@ export default async function LivePage() {
         </div>
       </Section>
 
-      <Section title="Lectura ejecutiva" description="Interpretación segura de los datos actuales.">
+      <Section title="Lectura clara" description="Interpretación segura de los datos actuales.">
         <ul className="space-y-2">
           {summary.findings.map((finding) => (
             <li key={finding} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
