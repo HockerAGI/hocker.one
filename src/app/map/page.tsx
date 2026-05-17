@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
+import MapLivePulse from "@/components/map/MapLivePulse";
 import {
   Activity,
   Brain,
@@ -224,7 +226,8 @@ function MapNode({ card, featured = false }: { card: MapCard; featured?: boolean
   );
 }
 
-export default function MapPage() {
+export default async function MapPage() {
+  const livePulse = await getHockerLivePulseSummary();
   const central = cards.filter((card) => card.group === "central");
   const liveCard = cards.find((card) => card.href === "/live");
   const novaCard = cards.find((card) => card.href === "/chat");
@@ -232,6 +235,7 @@ export default function MapPage() {
 
   return (
     <main className="space-y-5 pb-28">
+      <MapLivePulse summary={livePulse} />
       <section className="relative overflow-hidden rounded-[36px] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.20),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.13),transparent_30%),rgba(255,255,255,0.035)] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.36)] sm:p-6">
         <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:52px_52px]" />
 
