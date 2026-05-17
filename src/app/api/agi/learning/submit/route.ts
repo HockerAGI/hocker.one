@@ -44,8 +44,96 @@ export async function POST(req: NextRequest) {
   const { data: existing, error: existingError } = await db.from("agi_learning_events").select("id,times_seen,status").eq("project_id", projectId).eq("source_hash", sourceHash).maybeSingle();
   if (existingError) return NextResponse.json({ ok: false, trace_id: traceId, reason: "duplicate_check_failed", error: existingError.message }, { status: 500 });
   if (existing?.id) {
-    await db.from("agi_learning_events").update({ last_seen_at: new Date().toISOString(), times_seen: Number(existing.times_seen || 0) + 1 }).eq("id", existing.id);
-    return NextResponse.json({ ok: true, trace_id: traceId, duplicate: true, learning_event_id: existing.id, status: existing.status, message: "Aprendizaje duplicado detectado. Se actualizó last_seen/times_seen." });
+    const now = new Date().toISOString();
+
+    await db
+      .from("agi_learning_events")
+      .update({
+        last_seen_at: now,
+        times_seen: Number(existing.times_seen || 0) + 1,
+      })
+      .eq("id", existing.id);
+
+    const { data: existingMemory } = await db
+      .from("agi_memory_mirror")
+      .select("id,times_seen")
+      .eq("project_id", projectId)
+      .eq("source_hash", sourceHash);
+
+    for (const memory of existingMemory || []) {
+      await db
+        .from("agi_memory_mirror")
+        .update({
+          last_seen_at: now,
+          times_seen: Number(memory.times_seen || 0) + 1,
+        })
+        .eq("id", memory.id);
+    }
+
+    const { data: existingFeed } = await db
+      .from("agi_update_feed")
+      .select("id,times_seen")
+      .eq("project_id", projectId)
+      .eq("source_hash", sourceHash);
+
+    for (const feed of existingFeed || []) {
+      await db
+        .from("agi_update_feed")
+        .update({
+          last_seen_at: now,
+          times_seen: Number(feed.times_seen || 0) + 1,
+        })
+        .eq("id", feed.id);
+    }
+
+    let errorPatternId: string | null = null;
+    const errorPattern = optText(input.error_pattern, 1000);
+
+    if (bool(input.prevents_error, false) && errorPattern) {
+      errorPatternId = await upsertErrorPattern({
+        projectId,
+        agiId: sourceAgiId,
+        appliesTo: appliesToAgiIds,
+        platform: sourcePlatform,
+        clientId,
+        brandId: optText(input.brand_id, 120),
+        campaignId: optText(input.campaign_id, 160),
+        contentId: optText(input.content_id, 160),
+        profileId: optText(input.profile_id, 160),
+        title,
+        errorPattern,
+        preventionRule: text(input.recommended_action, summary, 1500),
+        severity: riskLevel,
+        canonicalKey: canonicalMemoryKey,
+      });
+    }
+
+    await auditEvent({
+      projectId,
+      type: "memory_mirror.learning.duplicate_seen",
+      message: `Aprendizaje duplicado detectado y propagado: ${sourceAgiId}`,
+      data: {
+        trace_id: traceId,
+        learning_event_id: existing.id,
+        source_agi_id: sourceAgiId,
+        source_hash: sourceHash,
+        memory_touched: (existingMemory || []).length,
+        feed_touched: (existingFeed || []).length,
+        error_pattern_id: errorPatternId,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      trace_id: traceId,
+      duplicate: true,
+      learning_event_id: existing.id,
+      status: existing.status,
+      memory_touched: (existingMemory || []).length,
+      feed_touched: (existingFeed || []).length,
+      error_pattern_id: errorPatternId,
+      message: "Aprendizaje duplicado detectado. Se actualizó last_seen/times_seen en learning, memory, feed y patrón de error si aplica.",
+    });
   }
 
   const { data: inserted, error } = await db.from("agi_learning_events").insert({
