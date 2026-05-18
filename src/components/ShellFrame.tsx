@@ -25,7 +25,7 @@ export default function ShellFrame({ children }: { children: React.ReactNode }) 
       <div className="relative flex min-h-[100dvh] w-full flex-col lg:pl-[290px]">
         <Topbar />
 
-        <main className="relative mx-auto flex w-full flex-1 flex-col px-3 pb-32 pt-4 sm:px-4 lg:px-5 lg:pb-8 lg:pt-[96px]">
+        <main className="relative mx-auto flex w-full flex-1 flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-4 sm:px-4 lg:px-5 lg:pb-8 lg:pt-[96px]">
           <div className="mx-auto mb-4 hidden w-full max-w-[1800px] lg:block">
             <WorkspaceBar />
           </div>

@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
+import { humanAgiName, humanLearningTitle } from "@/lib/hocker-human-labels";
 
 function pct(value: number) {
   return `${Math.max(7, Math.min(100, value * 18))}%`;
@@ -116,7 +117,7 @@ export default function OwnerLiveHome({ summary }: { summary: HockerLivePulseSum
             Inicio vivo
           </span>
 
-          <h1 className="mt-5 max-w-3xl text-4xl font-black leading-[0.96] tracking-[-0.06em] text-white sm:text-5xl">
+          <h1 className="mt-5 max-w-3xl text-3xl font-black leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">
             Lo importante de Hocker ONE, claro y en tiempo real.
           </h1>
 
@@ -187,7 +188,7 @@ export default function OwnerLiveHome({ summary }: { summary: HockerLivePulseSum
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Último aprendizaje</p>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">
-                {latest?.title || "Sin memoria activa todavía"}
+                {humanLearningTitle(latest?.title, latest?.source_agi_id)}
               </h2>
             </div>
             <DatabaseZap className="h-7 w-7 text-emerald-200" />
@@ -195,7 +196,7 @@ export default function OwnerLiveHome({ summary }: { summary: HockerLivePulseSum
 
           <p className="mt-4 text-sm leading-7 text-slate-300">
             {latest
-              ? `${latest.source_agi_id || "Una AGI"} compartió una memoria. ${latest.target_agi_ids.length} AGIs pueden usarla. Veces visto: ${latest.times_seen}.`
+              ? `${humanAgiName(latest.source_agi_id)} compartió una memoria. ${latest.target_agi_ids.length} AGIs pueden usarla. Veces visto: ${latest.times_seen}.`
               : "Cuando NOVA apruebe una memoria, aparecerá aquí sin inventar datos."}
           </p>
 

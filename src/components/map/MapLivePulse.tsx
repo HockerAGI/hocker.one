@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Activity, Brain, DatabaseZap, ShieldCheck, Sparkles } from "lucide-react";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
+import { humanAgiName, humanLearningTitle } from "@/lib/hocker-human-labels";
 
 function Metric({
   label,
@@ -53,7 +54,7 @@ export default function MapLivePulse({ summary }: { summary: HockerLivePulseSumm
             Pulso real
           </span>
 
-          <h2 className="mt-4 text-3xl font-black leading-none tracking-[-0.06em] text-white sm:text-4xl">
+          <h2 className="mt-4 text-2xl font-black leading-none tracking-[-0.05em] text-white sm:text-4xl">
             El sistema ya está contando lo que pasa.
           </h2>
 
@@ -87,12 +88,12 @@ export default function MapLivePulse({ summary }: { summary: HockerLivePulseSumm
           </div>
 
           <h3 className="mt-4 text-xl font-black tracking-[-0.04em] text-white">
-            {latest?.title || "Sin memoria activa todavía"}
+            {humanLearningTitle(latest?.title, latest?.source_agi_id)}
           </h3>
 
           <p className="mt-3 text-sm leading-7 text-slate-300">
             {latest
-              ? `${latest.source_agi_id || "AGI"} compartió una memoria. ${targets} AGIs pueden usarla. Veces visto: ${latest.times_seen}.`
+              ? `${humanAgiName(latest.source_agi_id)} compartió una memoria. ${targets} AGIs pueden usarla. Veces visto: ${latest.times_seen}.`
               : "Cuando NOVA apruebe una memoria, aparecerá aquí con datos reales."}
           </p>
         </div>
