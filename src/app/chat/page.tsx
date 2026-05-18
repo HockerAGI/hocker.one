@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import PageShell from "@/components/PageShell";
-import NovaChat from "@/components/NovaChat";
+import NovaRealtimeChat from "@/components/NovaRealtimeChat";
 
 export const metadata: Metadata = {
   title: "NOVA AGI",
@@ -14,8 +14,8 @@ export default function ChatPage() {
     <PageShell
       compact
       eyebrow="NOVA · Canal privado"
-      title="NOVA"
-      description="Escribe lo que necesitas resolver. NOVA responde claro, sin ruido y con contexto."
+      title="NOVA realtime"
+      description="Chat en vivo con contexto real, herramientas configuradas y acciones protegidas."
       actions={
         <>
           <Link href="/dashboard" className="shell-button-secondary">
@@ -48,7 +48,7 @@ export default function ChatPage() {
         </div>
 
         <div className="relative flex-1 overflow-hidden bg-slate-950/10 p-2 sm:p-3">
-          <NovaChat />
+          <NovaRealtimeChat />
         </div>
       </section>
     </PageShell>

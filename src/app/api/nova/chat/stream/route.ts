@@ -1,0 +1,161 @@
+import { z } from "zod";
+import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+const StreamChatSchema = z.object({
+  project_id: z.string().min(1).default(process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one"),
+  thread_id: z.string().uuid().nullable().optional(),
+  message: z.string().min(1),
+  mode: z.enum(["auto", "fast", "pro"]).default("auto"),
+  allow_actions: z.boolean().default(false),
+  tools_requested: z.array(z.string()).default([]),
+  context_data: z.record(z.unknown()).optional(),
+});
+
+type NovaChatResponse = {
+  ok?: boolean;
+  reply?: string;
+  error?: string;
+  trace_id?: string | null;
+  actions?: unknown[];
+  meta?: Record<string, unknown>;
+};
+
+const encoder = new TextEncoder();
+
+function sse(event: string, data: unknown): Uint8Array {
+  return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+function getNovaBaseUrl(): string {
+  return String(process.env.NOVA_AGI_URL ?? "").trim().replace(/\/$/, "");
+}
+
+function getNovaKey(): string {
+  return String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
+}
+
+function safeContext(body: z.infer<typeof StreamChatSchema>) {
+  const tools = getRuntimeToolCatalog().map((tool) => ({
+    tool_key: tool.tool_key,
+    name: tool.name,
+    provider: tool.provider,
+    status: tool.status,
+    supports_read: tool.supports_read,
+    supports_write: tool.supports_write,
+    supports_realtime: tool.supports_realtime,
+  }));
+
+  return {
+    ...body,
+    context_data: {
+      ...(body.context_data ?? {}),
+      hocker_runtime: {
+        mode: "agi_runtime_core_12_7a",
+        realtime_requested: true,
+        integrations: tools,
+        rule: "No ejecutar acciones sensibles sin Owner Gate, dry-run y auditoría.",
+      },
+    },
+  };
+}
+
+async function emitFallbackChat(controller: ReadableStreamDefaultController<Uint8Array>, payload: z.infer<typeof StreamChatSchema>) {
+  const baseUrl = getNovaBaseUrl();
+  const key = getNovaKey();
+  const res = await fetch(`${baseUrl}/api/v1/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+      "X-Hocker-Source": "hocker.one.realtime-fallback",
+    },
+    body: JSON.stringify(safeContext(payload)),
+    cache: "no-store",
+  });
+
+  const data = (await res.json().catch(() => ({}))) as NovaChatResponse;
+  if (!res.ok || data.error) {
+    controller.enqueue(sse("error", { ok: false, error: data.error ?? `NOVA HTTP ${res.status}`, trace_id: data.trace_id ?? null }));
+    return;
+  }
+
+  controller.enqueue(sse("message", { ok: true, type: "final", content: data.reply ?? "", actions: data.actions ?? [], meta: data.meta ?? {}, transport: "single_response" }));
+}
+
+export async function POST(req: Request): Promise<Response> {
+  const baseUrl = getNovaBaseUrl();
+  const key = getNovaKey();
+
+  if (!baseUrl || !key) {
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(sse("error", { ok: false, error: "NOVA no está configurada en producción." }));
+          controller.enqueue(sse("done", { ok: false }));
+          controller.close();
+        },
+      }),
+      { status: 500, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } },
+    );
+  }
+
+  const parsed = StreamChatSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ ok: false, error: "Payload inválido para NOVA realtime.", issues: parsed.error.flatten() }), { status: 400 });
+  }
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 55_000);
+
+      try {
+        controller.enqueue(sse("meta", { ok: true, transport: "hocker.one.sse", realtime_requested: true }));
+
+        const upstream = await fetch(`${baseUrl}/api/v1/chat/stream`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+            Authorization: `Bearer ${key}`,
+            "X-Hocker-Source": "hocker.one.realtime",
+          },
+          body: JSON.stringify(safeContext(parsed.data)),
+          signal: abort.signal,
+          cache: "no-store",
+        }).catch(() => null);
+
+        const upstreamType = upstream?.headers.get("content-type") || "";
+        if (upstream?.ok && upstream.body && upstreamType.includes("text/event-stream")) {
+          for await (const chunk of upstream.body as unknown as AsyncIterable<Uint8Array>) {
+            controller.enqueue(chunk);
+          }
+        } else {
+          await emitFallbackChat(controller, parsed.data);
+        }
+
+        controller.enqueue(sse("done", { ok: true }));
+      } catch (error) {
+        const isTimeout = error instanceof Error && error.name === "AbortError";
+        controller.enqueue(sse("error", { ok: false, error: isTimeout ? "Timeout: NOVA excedió 55s." : error instanceof Error ? error.message : "Fallo realtime con NOVA." }));
+        controller.enqueue(sse("done", { ok: false }));
+      } finally {
+        clearTimeout(timeout);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
