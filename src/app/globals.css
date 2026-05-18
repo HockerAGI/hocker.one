@@ -1936,3 +1936,440 @@ svg {
     animation: none !important;
   }
 }
+
+/* HOCKER CINEMATIC REAL-DATA UX 12.6I-B START */
+:root {
+  --hko-cine-bg: #030712;
+  --hko-cine-surface: rgba(8, 15, 31, 0.78);
+  --hko-cine-surface-2: rgba(13, 24, 46, 0.74);
+  --hko-cine-line: rgba(148, 163, 184, 0.16);
+  --hko-cine-text: #f8fbff;
+  --hko-cine-muted: #a8b3c7;
+  --hko-cine-cyan: #6ee7ff;
+  --hko-cine-green: #9dffcf;
+  --hko-cine-violet: #b9a7ff;
+  --hko-cine-amber: #ffe999;
+  --hko-dock-space: 126px;
+}
+
+html {
+  background: var(--hko-cine-bg);
+  color-scheme: dark;
+  scroll-padding-bottom: var(--hko-dock-space);
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(34, 211, 238, .16), transparent 34%),
+    radial-gradient(circle at 86% 22%, rgba(139, 92, 246, .16), transparent 38%),
+    linear-gradient(180deg, #030712 0%, #050816 52%, #02040b 100%);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+main, .hko-shell-main, .hko-page, .hko-owner-page {
+  padding-bottom: max(var(--hko-dock-space), calc(108px + env(safe-area-inset-bottom))) !important;
+}
+
+.hko-vfx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+  background: transparent;
+}
+
+.hko-vfx-vignette,
+.hko-vfx-grid,
+.hko-vfx-scan,
+.hko-vfx-noise,
+.hko-vfx-orb,
+.hko-vfx-rift { position: absolute; pointer-events: none; }
+
+.hko-vfx-vignette {
+  inset: -12%;
+  background:
+    radial-gradient(circle at 50% 42%, transparent 0 44%, rgba(0,0,0,.32) 72%, rgba(0,0,0,.78) 100%),
+    linear-gradient(90deg, rgba(3,7,18,.78), transparent 18% 82%, rgba(3,7,18,.78));
+}
+
+.hko-vfx-grid {
+  inset: 0;
+  opacity: .36;
+  background-image:
+    linear-gradient(rgba(103,232,249,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103,232,249,.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black 0 52%, transparent 82%);
+}
+
+.hko-vfx-scan {
+  left: -20%;
+  right: -20%;
+  top: -18%;
+  height: 38%;
+  opacity: .16;
+  background: linear-gradient(180deg, transparent, rgba(103,232,249,.22), transparent);
+  transform: rotate(-8deg);
+  animation: hkoCineScan 11s ease-in-out infinite;
+}
+
+.hko-vfx-orb {
+  border-radius: 999px;
+  filter: blur(42px);
+  opacity: .42;
+  transform: translate3d(0,0,0);
+  will-change: transform;
+  animation: hkoCineOrb 18s ease-in-out infinite alternate;
+}
+
+.hko-vfx-orb-a { width: 46vw; height: 46vw; left: -18vw; top: 12vh; background: rgba(34, 211, 238, .22); }
+.hko-vfx-orb-b { width: 54vw; height: 54vw; right: -22vw; top: 28vh; background: rgba(139, 92, 246, .20); animation-delay: -6s; }
+.hko-vfx-orb-c { width: 48vw; height: 48vw; left: 34vw; bottom: -18vw; background: rgba(14, 165, 233, .13); animation-delay: -10s; }
+
+.hko-vfx-rift {
+  width: 72vw;
+  height: 72vw;
+  border: 1px solid rgba(103,232,249,.10);
+  border-radius: 40% 60% 58% 42%;
+  opacity: .24;
+  animation: hkoCineSpin 34s linear infinite;
+}
+.hko-vfx-rift-a { left: -20vw; top: 10vh; }
+.hko-vfx-rift-b { right: -26vw; top: 38vh; animation-direction: reverse; border-color: rgba(168,85,247,.12); }
+
+.hko-vfx-noise {
+  inset: 0;
+  opacity: .08;
+  mix-blend-mode: screen;
+  background-image: repeating-radial-gradient(circle at 17% 23%, rgba(255,255,255,.4) 0 1px, transparent 1px 3px);
+  background-size: 180px 180px;
+}
+
+.hko-cine-map {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: clamp(18px, 4vw, 34px) auto max(32px, calc(118px + env(safe-area-inset-bottom)));
+  width: min(100%, 1120px);
+  padding: clamp(20px, 4vw, 36px);
+  border: 1px solid rgba(103,232,249,.20);
+  border-radius: clamp(28px, 4vw, 44px);
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, .12), rgba(139, 92, 246, .10) 42%, rgba(3,7,18,.78)),
+    rgba(5,10,22,.74);
+  box-shadow: 0 28px 90px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(20px);
+}
+
+.hko-cine-map::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 16% 24%, rgba(103,232,249,.18), transparent 31%),
+    radial-gradient(circle at 86% 36%, rgba(168,85,247,.16), transparent 36%);
+  opacity: .9;
+}
+
+.hko-cine-head { max-width: 760px; }
+.hko-cine-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid rgba(103,232,249,.28);
+  border-radius: 999px;
+  background: rgba(8, 47, 73, .38);
+  color: var(--hko-cine-cyan);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+}
+.hko-cine-head h2 {
+  margin: 16px 0 0;
+  max-width: 820px;
+  color: var(--hko-cine-text);
+  font-size: clamp(38px, 8vw, 82px);
+  line-height: .9;
+  letter-spacing: -.07em;
+  text-wrap: balance;
+}
+.hko-cine-head p {
+  margin: 18px 0 0;
+  max-width: 680px;
+  color: var(--hko-cine-muted);
+  font-size: clamp(15px, 2.6vw, 20px);
+  line-height: 1.65;
+}
+
+.hko-cine-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 1.15fr) minmax(0, 1fr);
+  grid-template-areas:
+    "memory core agis"
+    "dedup core errors";
+  align-items: center;
+  gap: clamp(12px, 2.4vw, 22px);
+  margin-top: clamp(22px, 5vw, 42px);
+  min-height: clamp(430px, 56vw, 620px);
+  padding: clamp(18px, 4vw, 34px);
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: clamp(26px, 4vw, 40px);
+  background:
+    radial-gradient(circle at center, rgba(103,232,249,.11), transparent 28%),
+    linear-gradient(160deg, rgba(3,7,18,.60), rgba(15,23,42,.42));
+  overflow: hidden;
+}
+.hko-cine-stage::before {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  border-radius: 999px;
+  border: 1px solid rgba(103,232,249,.07);
+  transform: rotate(-11deg);
+}
+.hko-cine-lines {
+  position: absolute;
+  inset: 4%;
+  width: 92%;
+  height: 92%;
+  opacity: .84;
+  z-index: 0;
+}
+.hko-cine-lines path,
+.hko-cine-lines circle {
+  fill: none;
+  stroke: url(#hkoLineA);
+  stroke-width: .38;
+  stroke-dasharray: 3 4;
+  animation: hkoCineDash 9s linear infinite;
+}
+
+.hko-cine-core,
+.hko-cine-node {
+  position: relative;
+  z-index: 1;
+  transform: translate3d(0,0,0);
+}
+.hko-cine-core {
+  grid-area: core;
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px solid rgba(103,232,249,.28);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 38% 28%, rgba(103,232,249,.28), transparent 38%),
+    radial-gradient(circle at 70% 60%, rgba(168,85,247,.24), transparent 42%),
+    rgba(8, 18, 33, .82);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.05) inset, 0 0 55px rgba(103,232,249,.12);
+}
+.hko-cine-core-ring,
+.hko-cine-core-pulse {
+  position: absolute;
+  inset: 15%;
+  border-radius: 999px;
+  border: 1px solid rgba(103,232,249,.24);
+}
+.hko-cine-core-ring { animation: hkoCinePulse 3.4s ease-in-out infinite; }
+.hko-cine-core-pulse { inset: 26%; opacity: .38; animation: hkoCinePulse 2.6s ease-in-out infinite reverse; }
+.hko-cine-core-title {
+  color: #fff;
+  font-size: clamp(36px, 7vw, 68px);
+  font-weight: 950;
+  letter-spacing: -.08em;
+  line-height: .9;
+}
+.hko-cine-core-sub {
+  color: var(--hko-cine-cyan);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .42em;
+  text-transform: uppercase;
+}
+.hko-cine-core-meta {
+  color: rgba(226, 232, 240, .72);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.hko-cine-node {
+  min-height: 144px;
+  padding: 20px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 28px;
+  background: rgba(15, 23, 42, .74);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 42px rgba(0,0,0,.25);
+}
+.hko-cine-node-label {
+  color: rgba(203, 213, 225, .70);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+}
+.hko-cine-node strong {
+  color: var(--hko-cine-text);
+  font-size: clamp(34px, 7vw, 54px);
+  line-height: 1;
+}
+.hko-cine-node span:last-child {
+  color: rgba(226, 232, 240, .86);
+  font-size: 15px;
+  line-height: 1.35;
+}
+.node-memory { grid-area: memory; }
+.node-agis { grid-area: agis; }
+.node-dedup { grid-area: dedup; }
+.node-errors { grid-area: errors; }
+.is-cyan { border-color: rgba(103,232,249,.26); background: rgba(8,47,73,.66); }
+.is-green { border-color: rgba(134,239,172,.24); background: rgba(6,78,59,.50); }
+.is-violet { border-color: rgba(196,181,253,.24); background: rgba(49,46,129,.54); }
+.is-amber { border-color: rgba(253,224,71,.24); background: rgba(71,50,18,.44); }
+
+.hko-cine-route {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  overflow-x: auto;
+  margin-top: 16px;
+  padding: 2px 0 8px;
+  scrollbar-width: none;
+}
+.hko-cine-route::-webkit-scrollbar { display: none; }
+.hko-cine-route span {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(148,163,184,.20);
+  border-radius: 999px;
+  background: rgba(15,23,42,.72);
+  color: #eafcff;
+  font-size: 13px;
+  font-weight: 900;
+}
+.hko-cine-route i { color: var(--hko-cine-cyan); font-style: normal; font-weight: 900; }
+
+.hko-cine-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.hko-cine-signal,
+.hko-cine-latest {
+  border: 1px solid rgba(148,163,184,.15);
+  border-radius: 24px;
+  background: rgba(15,23,42,.54);
+  padding: 16px;
+}
+.hko-cine-signal span,
+.hko-cine-latest span {
+  display: block;
+  color: rgba(148,163,184,.8);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+}
+.hko-cine-signal strong {
+  display: block;
+  margin-top: 8px;
+  color: #d9fbff;
+  font-size: 30px;
+  line-height: 1;
+}
+.hko-cine-latest { margin-top: 14px; }
+.hko-cine-latest strong {
+  display: block;
+  margin-top: 10px;
+  color: white;
+  font-size: clamp(20px, 4vw, 28px);
+  line-height: 1.18;
+}
+.hko-cine-latest p {
+  margin: 10px 0 0;
+  color: var(--hko-cine-muted);
+  line-height: 1.55;
+}
+
+@keyframes hkoCineOrb { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(4vw,-2vh,0) scale(1.08); } }
+@keyframes hkoCineScan { 0%, 100% { transform: translateY(-55vh) rotate(-8deg); } 50% { transform: translateY(120vh) rotate(-8deg); } }
+@keyframes hkoCineSpin { to { transform: rotate(360deg); } }
+@keyframes hkoCineDash { to { stroke-dashoffset: -42; } }
+@keyframes hkoCinePulse { 0%,100% { transform: scale(.94); opacity: .42; } 50% { transform: scale(1.08); opacity: .86; } }
+
+@media (max-width: 760px) {
+  :root { --hko-dock-space: 136px; }
+  .hko-cine-map {
+    margin-top: 18px;
+    padding: 20px;
+    border-radius: 30px;
+  }
+  .hko-cine-head h2 {
+    font-size: clamp(42px, 12vw, 56px);
+    line-height: .92;
+  }
+  .hko-cine-head p { font-size: 16px; line-height: 1.55; }
+  .hko-cine-stage {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "core core"
+      "memory agis"
+      "dedup errors";
+    min-height: auto;
+    padding: 16px;
+    gap: 12px;
+  }
+  .hko-cine-lines { inset: 0; width: 100%; height: 100%; opacity: .34; }
+  .hko-cine-core { min-height: 168px; border-radius: 28px; }
+  .hko-cine-core-title { font-size: 48px; }
+  .hko-cine-core-meta { display: none; }
+  .hko-cine-node {
+    min-height: 116px;
+    padding: 16px;
+    border-radius: 22px;
+  }
+  .hko-cine-node-label { font-size: 9px; letter-spacing: .22em; }
+  .hko-cine-node strong { font-size: 36px; }
+  .hko-cine-node span:last-child { font-size: 13px; }
+  .hko-cine-footer-grid { grid-template-columns: 1fr; }
+  .hko-cine-route { padding-bottom: 10px; margin-bottom: 4px; }
+}
+
+@media (max-width: 390px) {
+  .hko-cine-map { padding: 16px; }
+  .hko-cine-stage { padding: 12px; gap: 10px; }
+  .hko-cine-core { min-height: 150px; }
+  .hko-cine-node { min-height: 104px; padding: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hko-vfx-layer *,
+  .hko-cine-lines path,
+  .hko-cine-lines circle,
+  .hko-cine-core-ring,
+  .hko-cine-core-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hko-vfx-scan { opacity: 0; }
+}
+/* HOCKER CINEMATIC REAL-DATA UX 12.6I-B END */
