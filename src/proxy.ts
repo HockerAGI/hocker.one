@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 const PROTECTED_PATHS = [
+  "/map",
   "/dashboard",
   "/chat",
   "/commands",
