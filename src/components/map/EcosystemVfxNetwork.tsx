@@ -1,131 +1,199 @@
+import Link from "next/link";
+import { Activity, Brain, DatabaseZap, Network, ShieldCheck, Sparkles } from "lucide-react";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
-import { humanAgiName, humanLearningTitle } from "@/lib/hocker-human-labels";
+import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
 
-type Props = {
-  summary: HockerLivePulseSummary;
-};
-
-type MetricTone = "mint" | "cyan" | "violet" | "amber";
-
-type MetricNode = {
-  id: "memory" | "agis" | "dedup" | "errors";
-  label: string;
-  value: number;
-  detail: string;
-  tone: MetricTone;
-};
-
-function cleanNumber(value: unknown) {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+function n(value: unknown) {
+  const number = Number(value ?? 0);
+  return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
 }
 
-function MetricCard({ item }: { item: MetricNode }) {
-  return (
-    <article className={`hko-neo-metric hko-neo-${item.id} is-${item.tone}`}>
-      <span>{item.label}</span>
-      <strong>{item.value}</strong>
-      <p>{item.detail}</p>
-    </article>
-  );
+function cleanTitle(value: unknown) {
+  const text = String(value || "Sin memoria activa todavía");
+  return text
+    .replace(/^Sprint\s+\S+\s+/i, "")
+    .replace(/\d{4}-\d{2}-\d{2}T\S+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function MiniMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <article className="hko-neo-mini">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
+function sourceName(value: unknown) {
+  const raw = String(value || "syntia").replace(/[-_]/g, " ");
+  return raw
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
-export default function EcosystemVfxNetwork({ summary }: Props) {
-  const counts = summary?.counts ?? {
-    approved_learning: 0,
-    active_memory: 0,
-    active_agi_updates: 0,
-    prevented_errors: 0,
-    repeated_seen: 0,
+
+function agiDisplayName(agi: (typeof AGI_REGISTRY)[number]) {
+  const item = agi as unknown as {
+    name?: string;
+    title?: string;
+    label?: string;
+    key?: string;
+    id?: string;
+    slug?: string;
   };
 
-  const learning = cleanNumber(counts.approved_learning);
-  const memory = cleanNumber(counts.active_memory);
-  const agis = cleanNumber(counts.active_agi_updates);
-  const errors = cleanNumber(counts.prevented_errors);
-  const dedup = cleanNumber(counts.repeated_seen);
-  const latest = summary?.latest_memory;
+  const raw = item.name || item.title || item.label || item.key || item.id || item.slug || "AGI";
 
-  const nodes: MetricNode[] = [
-    { id: "memory", label: "Memoria IA", value: memory, detail: "activa", tone: "mint" },
-    { id: "agis", label: "AGIs", value: agis, detail: "actualizadas", tone: "violet" },
-    { id: "dedup", label: "Dedup", value: dedup, detail: "sin duplicar", tone: "cyan" },
-    { id: "errors", label: "Errores", value: errors, detail: "prevenidos", tone: "amber" },
-  ];
+  return String(raw)
+    .replace(/^nova-ads$/i, "Nova Ads")
+    .replace(/^candy-ads$/i, "Candy Ads")
+    .replace(/^pro-ia$/i, "PRO IA")
+    .replace(/^chido-wins$/i, "Chido Wins")
+    .replace(/^chido-gerente$/i, "Chido Gerente")
+    .replace(/^nexpa-agi$/i, "NEXPA")
+    .replace(/^trackhok-agi$/i, "TrackHok")
+    .replace(/[-_]/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => {
+      if (word.toLowerCase() === "ia") return "IA";
+      if (word.toLowerCase() === "agi") return "AGI";
+      if (word.toLowerCase() === "nova") return "NOVA";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
 
-  const latestTitle = latest ? humanLearningTitle(latest.title, latest.source_agi_id) : "Sin memoria activa todavía";
-  const source = latest ? humanAgiName(latest.source_agi_id) : "Syntia";
+function CoreMetric({ label, value, text, tone }: { label: string; value: number; text: string; tone: string }) {
+  return (
+    <article className={`hko-final-map-metric is-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <p>{text}</p>
+    </article>
+  );
+}
+
+export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePulseSummary }) {
+  const counts = summary.counts;
+  const activeMemory = n(counts.active_memory);
+  const activeUpdates = n(counts.active_agi_updates);
+  const preventedErrors = n(counts.prevented_errors);
+  const repeatedSeen = n(counts.repeated_seen);
+  const approved = n(counts.approved_learning);
+  const latest = summary.latest_memory;
+
+  const topAgis = AGI_REGISTRY.slice(0, 16);
 
   return (
-    <article className="hko-neo-map" aria-labelledby="hko-neo-map-title">
-      <header className="hko-neo-hero">
-        <span className="hko-neo-kicker">Mapa vivo</span>
-        <h2 id="hko-neo-map-title">NOVA al centro.</h2>
-        <p>Todo conectado con datos reales. Sin relleno, sin valores inventados.</p>
+    <section className="hko-final-map" aria-labelledby="final-map-title">
+      <div className="hko-final-map-bg" aria-hidden="true" />
+
+      <header className="hko-final-map-head">
+        <span className="hko-final-pill">
+          <Network className="h-4 w-4" />
+          Mapa vivo
+        </span>
+        <h2 id="final-map-title">NOVA controla el ecosistema.</h2>
+        <p>
+          Una vista clara para entender qué está activo, qué aprende y qué protege el sistema. Datos reales, sin valores falsos.
+        </p>
       </header>
 
-      <section className="hko-neo-stage" aria-label="Mapa animado del ecosistema HOCKER con datos reales">
-        <svg className="hko-neo-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <div className="hko-final-stage">
+        <svg className="hko-final-stage-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <defs>
-            <linearGradient id="hkoNeoLine" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0" stopColor="rgba(128,255,219,.12)" />
-              <stop offset=".48" stopColor="rgba(76,229,255,.88)" />
-              <stop offset="1" stopColor="rgba(175,120,255,.18)" />
+            <linearGradient id="hkoFinalLine" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stopColor="rgba(127,249,255,.08)" />
+              <stop offset=".52" stopColor="rgba(127,249,255,.95)" />
+              <stop offset="1" stopColor="rgba(174,130,255,.12)" />
             </linearGradient>
           </defs>
-          <path d="M50 50 C30 20 19 20 13 22" />
-          <path d="M50 50 C72 18 83 20 88 24" />
-          <path d="M50 50 C27 74 18 79 14 84" />
-          <path d="M50 50 C72 74 82 79 87 84" />
-          <circle className="orbit" cx="50" cy="50" r="18" />
-          <circle className="orbit" cx="50" cy="50" r="32" />
-          <circle className="orbit" cx="50" cy="50" r="43" />
-          <circle className="pulse-dot dot-a" cx="13" cy="22" r="1.2" />
-          <circle className="pulse-dot dot-b" cx="88" cy="24" r="1.2" />
-          <circle className="pulse-dot dot-c" cx="14" cy="84" r="1.2" />
-          <circle className="pulse-dot dot-d" cx="87" cy="84" r="1.2" />
+          <path d="M50 50 C31 20 18 18 10 22" />
+          <path d="M50 50 C70 18 84 19 91 24" />
+          <path d="M50 50 C30 80 17 82 11 88" />
+          <path d="M50 50 C72 80 84 82 91 88" />
+          <circle cx="50" cy="50" r="17" />
+          <circle cx="50" cy="50" r="30" />
+          <circle cx="50" cy="50" r="43" />
         </svg>
 
-        <div className="hko-neo-core" aria-label="NOVA núcleo central">
-          <span className="hko-neo-core-orbit orbit-one" />
-          <span className="hko-neo-core-orbit orbit-two" />
-          <span className="hko-neo-core-orbit orbit-three" />
-          <span className="hko-neo-core-glow" />
+        <div className="hko-final-core">
+          <span className="hko-final-core-halo halo-a" />
+          <span className="hko-final-core-halo halo-b" />
+          <span className="hko-final-core-halo halo-c" />
+          <Brain className="hko-final-core-icon" />
           <strong>NOVA</strong>
-          <small>Núcleo</small>
-          <em>ordena · conecta · protege</em>
+          <small>Núcleo central</small>
+          <em>decide · conecta · protege</em>
         </div>
 
-        {nodes.map((item) => <MetricCard key={item.id} item={item} />)}
-      </section>
+        <CoreMetric label="Memoria IA" value={activeMemory} text="aprendizajes activos" tone="mint" />
+        <CoreMetric label="AGIs" value={activeUpdates} text="señales activas" tone="violet" />
+        <CoreMetric label="Dedup" value={repeatedSeen} text="sin duplicar" tone="cyan" />
+        <CoreMetric label="Errores" value={preventedErrors} text="prevenidos" tone="amber" />
+      </div>
 
-      <section className="hko-neo-route" aria-label="Ruta real del aprendizaje">
-        <span>Candy Ads</span><i aria-hidden="true" />
-        <span>Syntia</span><i aria-hidden="true" />
-        <span>NOVA</span><i aria-hidden="true" />
+      <div className="hko-final-route" aria-label="Ruta del aprendizaje">
+        <span>Candy Ads</span>
+        <i />
+        <span>Syntia</span>
+        <i />
+        <span>NOVA</span>
+        <i />
         <span>Memoria IA</span>
-      </section>
+      </div>
 
-      <section className="hko-neo-grid" aria-label="Números reales del sistema">
-        <MiniMetric label="Aprendizajes" value={learning} />
-        <MiniMetric label="Feeds AGI" value={agis} />
-        <MiniMetric label="Errores prevenidos" value={errors} />
-      </section>
+      <div className="hko-final-map-dashboard">
+        <article className="hko-final-panel">
+          <div className="hko-final-panel-title">
+            <DatabaseZap className="h-5 w-5" />
+            <div>
+              <span>Última memoria</span>
+              <strong>{cleanTitle(latest?.title)}</strong>
+            </div>
+          </div>
+          <p>Fuente: {sourceName(latest?.source_agi_id)} · Veces vista: {n(latest?.times_seen)}</p>
+        </article>
 
-      <section className="hko-neo-latest" aria-label="Última memoria real">
-        <span>Última memoria</span>
-        <strong>{latestTitle}</strong>
-        <p>Fuente: {source}. Veces vista: {cleanNumber(latest?.times_seen)}.</p>
-      </section>
-    </article>
+        <article className="hko-final-panel">
+          <div className="hko-final-panel-title">
+            <Activity className="h-5 w-5" />
+            <div>
+              <span>Lectura rápida</span>
+              <strong>{approved} aprendizajes aprobados</strong>
+            </div>
+          </div>
+          <p>La pantalla muestra el estado real guardado en el sistema. Si no hay datos, marca cero.</p>
+        </article>
+
+        <article className="hko-final-panel">
+          <div className="hko-final-panel-title">
+            <ShieldCheck className="h-5 w-5" />
+            <div>
+              <span>Seguridad</span>
+              <strong>Rutas privadas</strong>
+            </div>
+          </div>
+          <p>El mapa vive dentro del acceso owner. Sin sesión, redirige al login.</p>
+        </article>
+      </div>
+
+      <div className="hko-final-agi-board">
+        <div className="hko-final-board-head">
+          <div>
+            <span>16 AGIs</span>
+            <strong>Jerarquía visible</strong>
+          </div>
+          <Link href="/agis" className="hko-final-button">
+            Ver AGIs
+          </Link>
+        </div>
+
+        <div className="hko-final-agi-grid">
+          {topAgis.map((agi, index) => (
+            <Link key={agi.key} href="/agis" className={`hko-final-agi-chip ${index < 4 ? "is-core" : ""}`}>
+              <Sparkles className="h-4 w-4" />
+              <span>{agiDisplayName(agi)}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
