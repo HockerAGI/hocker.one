@@ -73,15 +73,15 @@ const INTENTS: IntentOption[] = [
   },
   {
     key: "research",
-    label: "Investigar",
-    hint: "conclusiones",
+    label: "Buscar",
+    hint: "hallazgos",
     icon: Search,
     starter: "Investiga a fondo y dame hallazgos, estrategia y acciones concretas.",
   },
   {
     key: "reason",
-    label: "Razonar",
-    hint: "paso lógico",
+    label: "Pensar",
+    hint: "lógica",
     icon: Brain,
     starter: "Razonemos esto con calma: identifica el problema, riesgos y solución real.",
   },
@@ -170,7 +170,7 @@ export default function NovaChat() {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 54), 150)}px`;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 46), 120)}px`;
   }, [input]);
 
   const clearComposer = () => {
@@ -324,10 +324,10 @@ export default function NovaChat() {
         setIntent("files");
       }}
     >
-      <header className="shrink-0 border-b border-white/5 bg-white/[0.025] px-4 py-4 sm:px-5">
+      <header className="shrink-0 border-b border-white/5 bg-white/[0.025] px-4 py-3 sm:px-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative grid h-12 w-12 place-items-center rounded-2xl border border-sky-300/20 bg-sky-400/10 shadow-[0_0_30px_rgba(56,189,248,0.12)]">
+            <div className="relative grid h-10 w-10 place-items-center rounded-2xl border border-sky-300/20 bg-sky-400/10 shadow-[0_0_30px_rgba(56,189,248,0.12)]">
               <span className="absolute h-2.5 w-2.5 translate-x-4 -translate-y-4 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.8)]" />
               <Sparkles className="h-5 w-5 text-sky-200" />
             </div>
@@ -346,7 +346,7 @@ export default function NovaChat() {
           </button>
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {INTENTS.map((item) => {
             const Icon = item.icon;
             const active = intent === item.key;
@@ -356,14 +356,14 @@ export default function NovaChat() {
                 type="button"
                 onClick={() => applyIntent(item)}
                 className={cx(
-                  "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-left transition-all",
+                  "inline-flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-2 text-left transition-all",
                   active
                     ? "border-sky-300/25 bg-sky-400/12 text-sky-100 shadow-[0_0_24px_rgba(14,165,233,0.12)]"
                     : "border-white/5 bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.055]",
                 )}
               >
                 <Icon className="h-4 w-4" />
-                <span className="text-[10px] font-black uppercase tracking-[0.22em]">{item.label}</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.12em]">{item.label}</span>
               </button>
             );
           })}
@@ -378,7 +378,7 @@ export default function NovaChat() {
                 key={item.id}
                 className="flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.04] px-3 py-2"
               >
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-300">
+                <span className="text-[10px] font-black uppercase tracking-[0.12em] text-sky-300">
                   {fileKind(item.file)}
                 </span>
                 <span className="max-w-[180px] truncate text-xs text-slate-200">{item.file.name}</span>
@@ -401,13 +401,13 @@ export default function NovaChat() {
           {messages.length === 0 ? (
             <div
               key="empty"
-              className="mx-auto flex min-h-[42dvh] max-w-2xl flex-col justify-center gap-4 text-center"
+              className="mx-auto flex min-h-[28dvh] max-w-2xl flex-col justify-center gap-4 text-center"
             >
               <div className="mx-auto grid h-16 w-16 place-items-center rounded-[24px] border border-sky-300/20 bg-sky-400/10 shadow-[0_0_40px_rgba(56,189,248,0.16)]">
                 <Bot className="h-7 w-7 text-sky-200" />
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                <h2 className="text-xl font-black tracking-tight text-white sm:text-3xl">
                   ¿Qué necesitas resolver?
                 </h2>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-400">
@@ -449,7 +449,7 @@ export default function NovaChat() {
                       )}
                     >
                       {!isUser ? (
-                        <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-sky-300">
+                        <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-sky-300">
                           {isSystem ? <FileText className="h-3.5 w-3.5 text-rose-200" /> : <Sparkles className="h-3.5 w-3.5" />}
                           {isSystem ? "Sistema" : "NOVA"}
                         </div>
@@ -475,11 +475,11 @@ export default function NovaChat() {
         ) : null}
       </div>
 
-      <div className="shrink-0 border-t border-white/5 bg-slate-950/45 p-3 sm:p-4">
+      <div className="shrink-0 border-t border-white/5 bg-slate-950/45 p-2.5 sm:p-4">
         <form onSubmit={handleSubmit} className="space-y-3">
           <div
             className={cx(
-              "rounded-[28px] border p-3 shadow-[0_18px_70px_rgba(2,6,23,0.20)]",
+              "rounded-[24px] border p-2.5 shadow-[0_18px_70px_rgba(2,6,23,0.20)]",
               isDragOver ? "border-sky-400/30 bg-sky-400/[0.09]" : "border-white/5 bg-white/[0.035]",
             )}
           >
@@ -526,7 +526,7 @@ export default function NovaChat() {
                 onKeyDown={handleKeyDown}
                 placeholder="Escribe aquí. Enter envía, Shift+Enter baja línea."
                 rows={1}
-                className="custom-scrollbar min-h-[54px] flex-1 resize-none rounded-2xl border border-white/5 bg-slate-950/45 px-4 py-4 text-sm leading-relaxed text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-300/25"
+                className="custom-scrollbar min-h-[46px] flex-1 resize-none rounded-2xl border border-white/5 bg-slate-950/45 px-3 py-3 text-sm leading-relaxed text-white outline-none transition-all placeholder:text-slate-600 focus:border-sky-300/25"
               />
 
               <button

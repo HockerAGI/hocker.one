@@ -8,6 +8,7 @@ import { useWorkspace } from "@/components/WorkspaceContext";
 import type { CommandRow, CommandStatus } from "@/lib/types";
 import { normalizeCommandStatus } from "@/lib/types";
 import StatusBadge from "@/components/ui-hocker/StatusBadge";
+import { humanCommandLabel, humanStatusLabel } from "@/lib/hocker-human-labels";
 
 type QueueItem = CommandRow;
 
@@ -16,7 +17,7 @@ const FILTERS: Array<{ value: "all" | CommandStatus; label: string }> = [
   { value: "needs_approval", label: "Revisión" },
   { value: "running", label: "En curso" },
   { value: "done", label: "Listas" },
-  { value: "error", label: "Con error" },
+  { value: "error", label: "Histórico" },
 ];
 
 function safeDate(input: string): string {
@@ -29,9 +30,7 @@ function safePayload(value: unknown): string {
 }
 
 function friendlyCommand(value: string): string {
-  const clean = value.replace(/^github\./i, "").replace(/_/g, " ").trim();
-  if (!clean) return "Tarea";
-  return clean.charAt(0).toUpperCase() + clean.slice(1);
+  return humanCommandLabel(value);
 }
 
 export default function CommandsQueue() {
@@ -80,7 +79,7 @@ export default function CommandsQueue() {
   if (error) return <div className="rounded-[28px] border border-rose-400/20 bg-rose-500/10 p-5 text-sm text-rose-200">{error}</div>;
 
   return (
-    <section className="hko-module-card space-y-5">
+    <section className="hko-module-card space-y-4">
       <div>
         <p className="hko-kicker">Seguimiento</p>
         <h3 className="mt-2 text-xl font-black text-white">Tareas</h3>
@@ -90,14 +89,14 @@ export default function CommandsQueue() {
         <div className="hko-mini-stat"><span>Revisión</span><strong>{stats.pending}</strong></div>
         <div className="hko-mini-stat"><span>En curso</span><strong>{stats.running}</strong></div>
         <div className="hko-mini-stat"><span>Listas</span><strong>{stats.done}</strong></div>
-        <div className="hko-mini-stat"><span>Error</span><strong>{stats.errors}</strong></div>
+        <div className="hko-mini-stat"><span>Histórico</span><strong>{stats.errors}</strong></div>
       </div>
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((item) => <button key={item.value} onClick={() => setFilter(item.value)} className={filter === item.value ? "hko-action-primary" : "hko-action-secondary"}>{item.label}</button>)}
       </div>
       <div className="space-y-3">
         {filtered.length === 0 ? <p className="rounded-2xl border border-white/8 bg-slate-950/45 p-4 text-sm text-slate-500">No hay tareas en esta vista.</p> : filtered.map((item) => (
-          <details key={item.id} className="rounded-[24px] border border-white/8 bg-slate-950/45 p-4">
+          <details key={item.id} className="rounded-[22px] border border-white/8 bg-slate-950/45 p-3.5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-black text-white">{friendlyCommand(item.command)}</p>
@@ -106,7 +105,7 @@ export default function CommandsQueue() {
               <StatusBadge status={item.status} compact />
             </summary>
             <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Detalles técnicos</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Detalle guardado</p>
               <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-slate-300">{safePayload({ id: item.id, node_id: item.node_id, payload: item.payload, result: item.result, error: item.error })}</pre>
             </div>
           </details>

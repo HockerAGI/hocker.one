@@ -14,8 +14,8 @@ export default function ChatPage() {
     <PageShell
       compact
       eyebrow="NOVA · Canal privado"
-      title="Chat operativo"
-      description="Conversa con NOVA como núcleo nativo del ecosistema. Contexto claro, respuesta útil y ejecución sin ruido."
+      title="NOVA"
+      description="Escribe lo que necesitas resolver. NOVA responde claro, sin ruido y con contexto."
       actions={
         <>
           <Link href="/dashboard" className="shell-button-secondary">
@@ -27,7 +27,7 @@ export default function ChatPage() {
         </>
       }
     >
-      <section className="hocker-panel-pro relative flex min-h-[72dvh] flex-col overflow-hidden border-sky-500/20 shadow-[0_0_44px_rgba(14,165,233,0.10)]">
+      <section className="hocker-panel-pro relative flex min-h-[64dvh] flex-col overflow-hidden border-sky-500/20 shadow-[0_0_44px_rgba(14,165,233,0.10)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.09),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.06),transparent_28%)]" />
 
         <div className="relative flex shrink-0 items-center justify-between border-b border-white/5 bg-slate-950/48 px-4 py-3 sm:px-6">

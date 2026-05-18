@@ -1391,3 +1391,33 @@ svg {
     display: none !important;
   }
 }
+
+/* HOCKER ONE 12.6H.4C — compact live, NOVA and tasks */
+@media (max-width: 768px) {
+  .hko-module-card details,
+  details.hko-live-collapse {
+    border-radius: 22px !important;
+  }
+
+  .hko-mini-stat {
+    border-radius: 18px !important;
+    padding: 0.78rem !important;
+  }
+
+  .hko-mini-stat span {
+    letter-spacing: 0.14em !important;
+    font-size: 9px !important;
+  }
+
+  .hko-mini-stat strong {
+    font-size: 1rem !important;
+  }
+
+  textarea {
+    font-size: 16px !important;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}

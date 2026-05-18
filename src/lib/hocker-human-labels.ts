@@ -25,7 +25,17 @@ const AGI_NAMES: Record<string, string> = {
   shadows: "Shadows IA",
 };
 
-const UPDATE_LABELS: Record<string, string> = {
+const LABELS: Record<string, string> = {
+  projects: "Proyectos",
+  project_members: "Miembros",
+  commands: "Tareas",
+  events: "Eventos",
+  audit_logs: "Auditoría",
+  agis: "AGIs",
+  nodes: "Nodos",
+  hocker_tenants: "Espacios",
+  hocker_portal_grants: "Permisos",
+
   creative_trend: "Tendencia creativa",
   policy_update: "Regla actualizada",
   metric_learning: "Aprendizaje de métricas",
@@ -35,11 +45,45 @@ const UPDATE_LABELS: Record<string, string> = {
   internal_result: "Resultado interno",
   client_context: "Contexto de cliente",
   agi_observation: "Observación de AGI",
+
   active: "Activo",
+  pending: "Pendiente",
+  done: "Listo",
+  running: "En curso",
+  queued: "En cola",
+  needs_approval: "Revisión",
+  error: "Error histórico",
+  canceled: "Cancelado",
+  info: "Info",
+  warn: "Aviso",
+
   hot: "Alta prioridad",
   warm: "Prioridad media",
   cold: "Baja prioridad",
   archive: "Archivado",
+
+  "memory_mirror.learning.reviewed": "Memoria revisada",
+  "memory_mirror.learning.submitted": "Memoria enviada",
+  "memory_mirror.learning.duplicate": "Memoria repetida",
+  "command.local_policy_loaded": "Regla local cargada",
+  "command.completed": "Tarea completada",
+  "command.failed": "Tarea con error",
+};
+
+const COMMAND_LABELS: Record<string, string> = {
+  status: "Estado",
+  ping: "Conexión",
+  read_dir: "Leer carpeta",
+  read_file: "Leer archivo",
+  write_file: "Guardar archivo",
+  upsert_file: "Guardar archivo",
+  create_pr: "Crear cambio",
+  get_repo: "Leer repo",
+  list_tree: "Ver archivos",
+  dispatch: "Enviar tarea",
+  approve: "Aprobar",
+  reject: "Rechazar",
+  local_policy_loaded: "Regla local cargada",
 };
 
 export function humanAgiName(value?: string | null): string {
@@ -49,7 +93,33 @@ export function humanAgiName(value?: string | null): string {
 
 export function humanLabel(value?: string | null): string {
   if (!value) return "Sin dato";
-  return UPDATE_LABELS[value] ?? UPDATE_LABELS[value.toLowerCase()] ?? value.replace(/[_-]/g, " ");
+  const clean = value.trim();
+  const key = clean.toLowerCase();
+  return LABELS[clean] ?? LABELS[key] ?? clean.replace(/[_-]/g, " ");
+}
+
+export function humanStatusLabel(value?: string | null): string {
+  return humanLabel(value);
+}
+
+export function humanEventLabel(value?: string | null): string {
+  return humanLabel(value || "evento");
+}
+
+export function humanCommandLabel(value?: string | null): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "Tarea";
+
+  const clean = raw
+    .replace(/^github\./i, "")
+    .replace(/^command\./i, "")
+    .replace(/^local\./i, "")
+    .trim();
+
+  const key = clean.toLowerCase().replace(/[.\s-]+/g, "_");
+  const simple = key.split("_").slice(-2).join("_");
+
+  return COMMAND_LABELS[key] ?? COMMAND_LABELS[simple] ?? humanLabel(clean);
 }
 
 export function humanLearningTitle(title?: string | null, sourceAgiId?: string | null): string {

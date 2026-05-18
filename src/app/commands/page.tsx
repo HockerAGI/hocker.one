@@ -11,13 +11,13 @@ export const metadata: Metadata = {
 
 export default function CommandsPage() {
   return (
-    <div className="space-y-6">
-      <HockerPageHeader eyebrow="Operación" title="Tareas" text="Aquí creas y revisas acciones del sistema en lenguaje claro. Los detalles técnicos quedan guardados, pero no saturan la vista." />
-      <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+    <div className="hko-page-flow space-y-4">
+      <HockerPageHeader eyebrow="Operación" title="Tareas" text="Crea acciones cortas, revisa avances y deja lo técnico guardado en detalles." />
+      <section className="grid gap-4 xl:grid-cols-[0.78fr_1.22fr]">
         <CommandBox />
         <CommandsQueue />
       </section>
-      <HockerSection title="Regla de operación" text="Una tarea debe ser corta, clara y fácil de revisar." defaultOpen={false}>
+      <HockerSection title="Regla de operación" text="Las acciones sensibles siempre requieren aprobación." defaultOpen={false}>
         <p className="rounded-[28px] border border-white/8 bg-white/[0.035] p-5 text-sm leading-relaxed text-slate-300">Las acciones sensibles deben quedar protegidas por aprobación, owner gate o ejecución bloqueada cuando corresponda.</p>
       </HockerSection>
     </div>
