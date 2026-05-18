@@ -451,6 +451,18 @@ export const AGI_REGISTRY: AgiRegistryItem[] = [
     href: "/agis#trackhok-agi",
     accent: "sky",
   },
+  {
+    key: "shadows",
+    title: "Shadows IA",
+    subtitle: "Micro-IAs temporales y sandbox.",
+    nodeId: "shadows",
+    integration: "NOVA + Vertx + Syntia",
+    status: "protected",
+    note: "Workers efímeros para pruebas, espejo y tareas acotadas. Sin persistencia propia ni acciones fuera de sandbox.",
+    group: "operative",
+    href: "/agis#shadows",
+    accent: "slate",
+  },
 ];
 
 export const REPO_REGISTRY: RepoRegistryItem[] = [
