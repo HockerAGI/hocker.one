@@ -7,12 +7,20 @@ import HockerSection from "@/components/ui-hocker/HockerSection";
 import NovaCorePanel from "@/components/ui-hocker/NovaCorePanel";
 import StatusBadge from "@/components/ui-hocker/StatusBadge";
 
+import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
+import OwnerLiveHome from "@/components/owner/OwnerLiveHome";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Inicio | Hocker ONE",
   description: "Centro privado de control del ecosistema HOCKER.",
 };
 
-export default function OwnerPage() {
+export default async function OwnerPage() {
+  const livePulse = await getHockerLivePulseSummary();
+
   const topApps = APP_REGISTRY.filter((app) => ["hocker-one", "hocker-ads", "chido-casino"].includes(app.key));
   const topAgis = AGI_REGISTRY.filter((agi) => ["nova", "syntia", "vertx", "curvewind"].includes(agi.key));
 
