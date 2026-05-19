@@ -1,12 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
 
-export type RuntimeToolStatusKind =
-  | "connected"
-  | "partial"
-  | "missing_key"
-  | "missing_code"
-  | "blocked";
+export type RuntimeToolStatusKind = "configured" | "connected" | "partial" | "missing" | "blocked" | "missing_key" | "missing_code";
 
 type JsonObject = Record<string, unknown>;
 
@@ -24,12 +19,7 @@ type RuntimeToolCategory =
   | "observability"
   | "notifications";
 
-type RuntimeToolImplementation =
-  | "executor_ready"
-  | "runtime_ready"
-  | "catalog_only"
-  | "missing_code"
-  | "blocked";
+type RuntimeToolImplementation = "executor_ready" | "code_only" | "partial_env_detected" | "missing_credentials" | "missing_key" | "missing_code" | "configured" | "connected" | "partial" | "missing" | "blocked";
 
 type EnvGroup = {
   label: string;
@@ -68,358 +58,26 @@ export type RuntimeToolStatus = RuntimeTool & {
 };
 
 const TOOL_CATALOG: RuntimeTool[] = [
-  {
-    tool_key: "nova_orchestrator",
-    name: "NOVA Orquestador",
-    provider: "NOVA",
-    category: "core",
-    required_env: ["NOVA_AGI_URL", "NOVA_ORCHESTRATOR_KEY"],
-    optional_env: ["HOCKER_ONE_INTERNAL_TOKEN"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: true,
-    implementation_status: "runtime_ready",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Chat, criterio, ruteo y decisiones bajo control.",
-    next_step: "Probar streaming POST desde /chat y registrar acciones en runtime.",
-  },
-  {
-    tool_key: "supabase",
-    name: "Supabase",
-    provider: "Supabase",
-    category: "data",
-    required_env: ["SUPABASE_SERVICE_ROLE_KEY"],
-    optional_env: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
-    env_groups: [
-      { label: "supabase_url", any_of: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"], required: true },
-      { label: "supabase_admin", any_of: ["SUPABASE_SERVICE_ROLE_KEY"], required: true },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: true,
-    implementation_status: "executor_ready",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Datos, memoria, runtime, tareas, auditoría y estado.",
-    next_step: "Crear executor controlado para consultas seguras y operaciones dry-run.",
-  },
-  {
-    tool_key: "github",
-    name: "GitHub",
-    provider: "GitHub",
-    category: "code",
-    required_env: ["HOCKER_GITHUB_TOKEN"],
-    optional_env: ["GITHUB_TOKEN", "GH_TOKEN", "GITHUB_APP_ID", "GITHUB_INSTALLATION_ID"],
-    env_groups: [
-      { label: "github_token", any_of: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"], required: true },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Repos, commits, ramas, archivos y PRs. Token detectado como HOCKER_GITHUB_TOKEN si existe.",
-    next_step: "12.7B-1: crear GitHub executor real con get_repo, list_tree, read_file, create_branch, upsert_file y create_pr.",
-  },
-  {
-    tool_key: "vercel",
-    name: "Vercel",
-    provider: "Vercel",
-    category: "cloud",
-    required_env: ["VERCEL_TOKEN"],
-    optional_env: ["VERCEL_PROJECT_ID", "VERCEL_ORG_ID", "VERCEL_TEAM_ID", "VERCEL_OIDC_TOKEN", "VERCEL_PROJECT_PRODUCTION_URL"],
-    env_groups: [
-      { label: "vercel_api_token", any_of: ["VERCEL_TOKEN"], required: true },
-      { label: "vercel_project", any_of: ["VERCEL_PROJECT_ID", "VERCEL_ORG_ID", "VERCEL_TEAM_ID"], required: false },
-      { label: "vercel_oidc", any_of: ["VERCEL_OIDC_TOKEN"], required: false },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Deploys, dominios, logs y estado. OIDC ayuda en entorno Vercel, pero no reemplaza VERCEL_TOKEN para control API completo.",
-    next_step: "12.7B-3: inspector de deploys y estado de producción.",
-  },
-  {
-    tool_key: "openai",
-    name: "OpenAI",
-    provider: "OpenAI",
-    category: "core",
-    required_env: ["OPENAI_API_KEY"],
-    supports_read: true,
-    supports_write: false,
-    supports_realtime: true,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Modelo, razonamiento, visión, archivos y herramientas según backend.",
-    next_step: "Agregar OPENAI_API_KEY si NOVA usará modelos OpenAI directamente.",
-  },
-  {
-    tool_key: "gemini",
-    name: "Gemini / Google AI",
-    provider: "Google",
-    category: "core",
-    required_env: ["GEMINI_API_KEY"],
-    optional_env: ["GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"],
-    env_groups: [
-      { label: "gemini_api_key", any_of: ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"], required: true },
-    ],
-    supports_read: true,
-    supports_write: false,
-    supports_realtime: true,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Modelo alterno, análisis multimodal y razonamiento.",
-    next_step: "Agregar llave y definir cuándo NOVA enruta a Gemini.",
-  },
-  {
-    tool_key: "meta_ads",
-    name: "Meta Ads",
-    provider: "Meta",
-    category: "ads",
-    required_env: ["META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID"],
-    optional_env: ["FACEBOOK_ACCESS_TOKEN", "META_APP_ID", "META_APP_SECRET"],
-    env_groups: [
-      { label: "meta_token", any_of: ["META_ACCESS_TOKEN", "FACEBOOK_ACCESS_TOKEN"], required: true },
-      { label: "meta_ad_account", any_of: ["META_AD_ACCOUNT_ID"], required: true },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Campañas, audiencias, anuncios y reportes. No ejecutar campañas sin owner approval.",
-    next_step: "Configurar token y crear executor de reportes primero, acciones después.",
-  },
-  {
-    tool_key: "google_ads",
-    name: "Google Ads",
-    provider: "Google",
-    category: "ads",
-    required_env: ["GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_REFRESH_TOKEN", "GOOGLE_ADS_CUSTOMER_ID"],
-    optional_env: ["GOOGLE_ADS_CLIENT_ID", "GOOGLE_ADS_CLIENT_SECRET"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Campañas, búsqueda, performance y reportes.",
-    next_step: "Configurar OAuth y empezar solo con lectura de performance.",
-  },
-  {
-    tool_key: "tiktok_ads",
-    name: "TikTok Ads",
-    provider: "TikTok",
-    category: "ads",
-    required_env: ["TIKTOK_ACCESS_TOKEN", "TIKTOK_ADVERTISER_ID"],
-    optional_env: ["TIKTOK_APP_ID", "TIKTOK_SECRET"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Campañas TikTok y reportes.",
-    next_step: "Configurar llaves antes de crear executor.",
-  },
-  {
-    tool_key: "linkedin_ads",
-    name: "LinkedIn Ads",
-    provider: "LinkedIn",
-    category: "ads",
-    required_env: ["LINKEDIN_ACCESS_TOKEN"],
-    optional_env: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Campañas B2B y reportes.",
-    next_step: "Configurar OAuth antes de crear executor.",
-  },
-  {
-    tool_key: "stripe",
-    name: "Stripe",
-    provider: "Stripe",
-    category: "payments",
-    required_env: ["STRIPE_SECRET_KEY"],
-    optional_env: ["STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Pagos, clientes, facturación y eventos. Toda acción financiera requiere aprobación.",
-    next_step: "Configurar llave y crear executor de lectura antes de cobros.",
-  },
-  {
-    tool_key: "paypal",
-    name: "PayPal",
-    provider: "PayPal",
-    category: "payments",
-    required_env: ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"],
-    optional_env: ["PAYPAL_WEBHOOK_ID"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Pagos, órdenes, capturas y estado.",
-    next_step: "Configurar llaves y sandbox antes de producción.",
-  },
-  {
-    tool_key: "d24",
-    name: "D24",
-    provider: "D24",
-    category: "payments",
-    required_env: ["D24_API_KEY", "D24_SECRET_KEY", "D24_MERCHANT_ID"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "missing_code",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Pasarela para Chido Casino. Aún no hay implementación ni llaves detectadas.",
-    next_step: "Crear integración desde documentación oficial de D24 cuando se apruebe onboarding.",
-  },
-  {
-    tool_key: "namecheap",
-    name: "Namecheap",
-    provider: "Namecheap",
-    category: "domain",
-    required_env: ["NAMECHEAP_API_USER", "NAMECHEAP_API_KEY"],
-    optional_env: ["NAMECHEAP_USERNAME", "NAMECHEAP_CLIENT_IP"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Dominios y disponibilidad.",
-    next_step: "Configurar llaves y permitir primero consultas de disponibilidad.",
-  },
-  {
-    tool_key: "cloudflare",
-    name: "Cloudflare",
-    provider: "Cloudflare",
-    category: "security",
-    required_env: ["CLOUDFLARE_API_TOKEN"],
-    optional_env: ["CLOUDFLARE_ZONE_ID", "CF_API_TOKEN"],
-    env_groups: [
-      { label: "cloudflare_token", any_of: ["CLOUDFLARE_API_TOKEN", "CF_API_TOKEN"], required: true },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "DNS, seguridad, cache y reglas.",
-    next_step: "Configurar token limitado por zona y crear inspector DNS.",
-  },
-  {
-    tool_key: "hetzner",
-    name: "Hetzner",
-    provider: "Hetzner",
-    category: "cloud",
-    required_env: ["HETZNER_TOKEN"],
-    optional_env: ["HCLOUD_TOKEN", "HETZNER_API_TOKEN"],
-    env_groups: [
-      { label: "hetzner_token", any_of: ["HETZNER_TOKEN", "HCLOUD_TOKEN", "HETZNER_API_TOKEN"], required: true },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Servidores, red, backups y health.",
-    next_step: "Configurar token y crear health inspector antes de acciones.",
-  },
-  {
-    tool_key: "heygen",
-    name: "HeyGen",
-    provider: "HeyGen",
-    category: "media",
-    required_env: ["HEYGEN_API_KEY"],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Videos, avatares y assets para PRO IA.",
-    next_step: "Configurar llave y crear executor de jobs con revisión.",
-  },
-  {
-    tool_key: "trigger",
-    name: "Trigger.dev",
-    provider: "Trigger.dev",
-    category: "jobs",
-    required_env: ["TRIGGER_SECRET_KEY"],
-    optional_env: ["TRIGGER_API_KEY"],
-    env_groups: [
-      { label: "trigger_key", any_of: ["TRIGGER_SECRET_KEY", "TRIGGER_API_KEY"], required: true },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "runtime_ready",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Jobs, tareas y ejecución controlada.",
-    next_step: "Usar solo para colas controladas y trazadas.",
-  },
-  {
-    tool_key: "langfuse",
-    name: "Langfuse",
-    provider: "Langfuse",
-    category: "observability",
-    required_env: ["LANGFUSE_SECRET_KEY"],
-    optional_env: ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_HOST", "LANGFUSE_BASE_URL"],
-    env_groups: [
-      { label: "langfuse_key", any_of: ["LANGFUSE_SECRET_KEY"], required: true },
-      { label: "langfuse_host", any_of: ["LANGFUSE_HOST", "LANGFUSE_BASE_URL"], required: false },
-    ],
-    supports_read: true,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "runtime_ready",
-    owner_gate_required: false,
-    dry_run_first: false,
-    safe_note: "Trazas, auditoría y observabilidad.",
-    next_step: "Conectar runs AGI y acciones a trazas por tool.",
-  },
-  {
-    tool_key: "email",
-    name: "Email / Resend / SMTP",
-    provider: "Email",
-    category: "notifications",
-    required_env: ["RESEND_API_KEY"],
-    optional_env: ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"],
-    env_groups: [
-      { label: "email_provider", any_of: ["RESEND_API_KEY", "SMTP_HOST"], required: true },
-    ],
-    supports_read: false,
-    supports_write: true,
-    supports_realtime: false,
-    implementation_status: "catalog_only",
-    owner_gate_required: true,
-    dry_run_first: true,
-    safe_note: "Alertas owner y correos transaccionales.",
-    next_step: "Elegir proveedor y crear plantillas de alerta.",
-  },
+  { tool_key: "nova_orchestrator", name: "NOVA Orquestador", provider: "NOVA", category: "core", required_env: ["NOVA_AGI_URL", "NOVA_ORCHESTRATOR_KEY"], supports_read: true, supports_write: true, supports_realtime: true, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Chat, criterio, ruteo y decisiones bajo control." },
+  { tool_key: "supabase", name: "Supabase", provider: "Supabase", category: "data", required_env: ["SUPABASE_SERVICE_ROLE_KEY"], optional_env: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"], supports_read: true, supports_write: true, supports_realtime: true, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Datos, memoria, tareas, auditoría y estado." },
+  { tool_key: "github", name: "GitHub", provider: "GitHub", category: "code", required_env: ["HOCKER_GITHUB_TOKEN"], optional_env: ["GITHUB_TOKEN", "GH_TOKEN", "GITHUB_APP_ID", "GITHUB_INSTALLATION_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Repos, commits, ramas y revisión de código. Escritura solo con Owner Gate." },
+  { tool_key: "vercel", name: "Vercel", provider: "Vercel", category: "cloud", required_env: ["VERCEL_TOKEN"], optional_env: ["VERCEL_PROJECT_ID", "VERCEL_ORG_ID", "VERCEL_TEAM_ID", "VERCEL_OIDC_TOKEN"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Deploys, dominios, logs y estado de producción. OIDC cuenta como señal parcial." },
+  { tool_key: "trigger", name: "Trigger.dev", provider: "Trigger.dev", category: "core", required_env: ["TRIGGER_SECRET_KEY"], optional_env: ["TRIGGER_API_KEY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Jobs, tareas programadas y ejecución controlada." },
+  { tool_key: "langfuse", name: "Langfuse", provider: "Langfuse", category: "security", required_env: ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"], optional_env: ["LANGFUSE_HOST", "LANGFUSE_BASE_URL"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Trazas, auditoría, evaluación y observabilidad." },
+  { tool_key: "openai", name: "OpenAI", provider: "OpenAI", category: "core", required_env: ["OPENAI_API_KEY"], supports_read: true, supports_write: false, supports_realtime: true, dry_run_first: false, owner_gate_required: false, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Modelo, razonamiento, visión, archivos y herramientas según backend." },
+  { tool_key: "gemini", name: "Gemini", provider: "Google", category: "core", required_env: ["GEMINI_API_KEY"], optional_env: ["GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"], supports_read: true, supports_write: false, supports_realtime: true, dry_run_first: false, owner_gate_required: false, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Modelo alterno, análisis multimodal y razonamiento según backend." },
+  { tool_key: "meta_ads", name: "Meta Ads", provider: "Meta", category: "ads", required_env: ["META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID"], optional_env: ["FACEBOOK_ACCESS_TOKEN", "META_APP_ID", "META_APP_SECRET"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas, audiencias, anuncios y reportes." },
+  { tool_key: "google_ads", name: "Google Ads", provider: "Google", category: "ads", required_env: ["GOOGLE_ADS_DEVELOPER_TOKEN"], optional_env: ["GOOGLE_ADS_CLIENT_ID", "GOOGLE_ADS_CLIENT_SECRET", "GOOGLE_ADS_REFRESH_TOKEN", "GOOGLE_ADS_CUSTOMER_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas, búsqueda, performance y reportes." },
+  { tool_key: "tiktok_ads", name: "TikTok Ads", provider: "TikTok", category: "ads", required_env: ["TIKTOK_ACCESS_TOKEN"], optional_env: ["TIKTOK_APP_ID", "TIKTOK_SECRET", "TIKTOK_ADVERTISER_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas TikTok, creatividades y reportes." },
+  { tool_key: "linkedin_ads", name: "LinkedIn Ads", provider: "LinkedIn", category: "ads", required_env: ["LINKEDIN_ACCESS_TOKEN"], optional_env: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas B2B, audiencias y reportes." },
+  { tool_key: "stripe", name: "Stripe", provider: "Stripe", category: "payments", required_env: ["STRIPE_SECRET_KEY"], optional_env: ["STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Pagos, clientes, facturación y eventos." },
+  { tool_key: "paypal", name: "PayPal", provider: "PayPal", category: "payments", required_env: ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"], optional_env: ["PAYPAL_WEBHOOK_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Pagos, órdenes, capturas y estado." },
+  { tool_key: "d24", name: "D24", provider: "D24", category: "payments", required_env: ["D24_API_KEY", "D24_SECRET_KEY"], optional_env: ["D24_MERCHANT_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Pasarela de pagos para Chido Casino. Pendiente de credenciales reales." },
+  { tool_key: "namecheap", name: "Namecheap", provider: "Namecheap", category: "domain", required_env: ["NAMECHEAP_API_USER", "NAMECHEAP_API_KEY"], optional_env: ["NAMECHEAP_USERNAME", "NAMECHEAP_CLIENT_IP"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Dominios y disponibilidad." },
+  { tool_key: "cloudflare", name: "Cloudflare", provider: "Cloudflare", category: "security", required_env: ["CLOUDFLARE_API_TOKEN"], optional_env: ["CLOUDFLARE_ZONE_ID", "CF_API_TOKEN"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "DNS, seguridad, cache y reglas." },
+  { tool_key: "hetzner", name: "Hetzner", provider: "Hetzner", category: "cloud", required_env: ["HETZNER_TOKEN"], optional_env: ["HCLOUD_TOKEN", "HETZNER_API_TOKEN"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Servidor, red, backups y health." },
+  { tool_key: "heygen", name: "HeyGen", provider: "HeyGen", category: "media", required_env: ["HEYGEN_API_KEY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Videos, avatares y assets." },
+  { tool_key: "email", name: "Email / Resend / SMTP", provider: "Email", category: "core", required_env: ["RESEND_API_KEY"], optional_env: ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Alertas owner y notificaciones transaccionales." },
 ];
 
 function envValue(key: string): string {
@@ -455,59 +113,38 @@ function labelForStatus(status: RuntimeToolStatusKind): RuntimeToolStatus["statu
 }
 
 function statusFor(tool: RuntimeTool): RuntimeToolStatus {
-  const groups = buildGroups(tool);
-  const requiredGroups = groups.filter((group) => group.required !== false);
-  const aliasHits: Record<string, string[]> = {};
+  const missing = tool.required_env.filter((key) => !hasEnv(key));
+  const configuredRequired = tool.required_env.length - missing.length;
+  const optionalHits = (tool.optional_env ?? []).filter(hasEnv);
+  const configuredOptional = optionalHits.length;
+  const hasRequired = missing.length === 0;
+  const hasAnySignal = configuredRequired > 0 || configuredOptional > 0;
 
-  for (const group of groups) {
-    aliasHits[group.label] = group.any_of.filter(hasEnv);
-  }
-
-  const missingGroups = requiredGroups
-    .filter((group) => group.any_of.every((key) => !hasEnv(key)))
-    .map((group) => group.label);
-
-  const envPresent = allEnvKeys(tool).filter(hasEnv);
-  const missingEnv = requiredGroups
-    .filter((group) => group.any_of.every((key) => !hasEnv(key)))
-    .flatMap((group) => group.any_of);
-
-  let status: RuntimeToolStatusKind;
-
-  if (tool.implementation_status === "blocked") {
-    status = "blocked";
-  } else if (tool.implementation_status === "missing_code") {
-    status = "missing_code";
-  } else if (missingGroups.length > 0) {
-    status = "missing_key";
-  } else if (tool.implementation_status === "catalog_only") {
-    status = "partial";
-  } else {
-    status = "connected";
-  }
-
-  const statusHint =
-    status === "connected"
-      ? "Lista para uso controlado dentro del runtime."
-      : status === "partial"
-        ? "Tiene llave o base real, pero falta executor completo antes de ejecutar acciones."
-        : status === "missing_key"
-          ? "Faltan variables de entorno reales."
-          : status === "missing_code"
-            ? "Falta implementación real en código."
-            : "Bloqueada por seguridad o política.";
+  const status: RuntimeToolStatusKind = hasRequired ? "configured" : hasAnySignal ? "partial" : "missing";
 
   return {
+    status_label: hasRequired ? "Conectado" : hasAnySignal ? "Parcial" : "Falta llave",
+    status_hint: hasRequired ? "Variables mínimas detectadas. Lista para validación controlada." : hasAnySignal ? "Hay señales parciales. Falta completar credenciales o permisos." : "Sin variables reales suficientes para ejecutar.",
+    env_present: [],
+    alias_hits: {},
+    missing_groups: [],
+    execution_enabled: Boolean(hasRequired && ((tool.implementation_status ?? "code_only") === "executor_ready" || (tool.implementation_status ?? "code_only") === "configured" || (tool.implementation_status ?? "code_only") === "connected")),
     ...tool,
     status,
-    status_label: labelForStatus(status),
-    status_hint: statusHint,
-    configured_env_count: envPresent.length,
-    env_present: envPresent,
-    missing_env: Array.from(new Set(missingEnv)),
-    missing_groups: missingGroups,
-    alias_hits: aliasHits,
-    execution_enabled: status === "connected" && tool.owner_gate_required !== false,
+    configured_env_count: configuredRequired + configuredOptional,
+    missing_env: missing,
+    implementation_status:
+      tool.implementation_status ??
+      (hasRequired ? "executor_ready" : hasAnySignal ? "partial_env_detected" : "missing_credentials"),
+    owner_gate_required: tool.owner_gate_required ?? tool.supports_write,
+    dry_run_first: tool.dry_run_first ?? true,
+    next_step:
+      tool.next_step ??
+      (hasRequired
+        ? "Listo para prueba controlada en dry-run."
+        : hasAnySignal
+          ? `Completar configuración faltante: ${missing.join(", ")}.`
+          : `Configurar credenciales: ${tool.required_env.join(", ")}.`),
   };
 }
 
@@ -618,9 +255,9 @@ export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: b
         status_label: tool.status_label,
         status_hint: tool.status_hint,
         implementation_status: tool.implementation_status,
-        owner_gate_required: tool.owner_gate_required,
-        dry_run_first: tool.dry_run_first,
-        next_step: tool.next_step,
+        owner_gate_required: tool.owner_gate_required ?? Boolean(tool.supports_write),
+        dry_run_first: tool.dry_run_first ?? Boolean(tool.supports_write),
+        next_step: tool.next_step ?? "Validar credenciales, permisos y executor real antes de permitir ejecución.",
       },
       created_at: now,
       updated_at: now,
@@ -728,7 +365,7 @@ export async function getAgiRuntimeSummary(project_id: string) {
         missing_env: tool.missing_env,
         missing_groups: tool.missing_groups,
         safe_note: tool.safe_note,
-        next_step: tool.next_step,
+        next_step: tool.next_step ?? "Validar credenciales, permisos y executor real antes de permitir ejecución.",
         execution_enabled: tool.execution_enabled,
       })),
       recent_actions: recentActions ?? [],
