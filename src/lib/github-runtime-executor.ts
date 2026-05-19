@@ -188,18 +188,37 @@ async function getRepo(input: GitHubRuntimeInput) {
 async function listTree(input: GitHubRuntimeInput) {
   const { owner, repo, fullName } = parseRepository(input);
   const ref = safeRef(input.ref || input.head || undefined, "main");
+  const requestedPath = String(input.path || "").trim().replace(/^\/+|\/+$/g, "");
+
+  if (requestedPath && (requestedPath.includes("..") || requestedPath.includes(String.fromCharCode(92)))) {
+    throw new Error("Path no permitido.");
+  }
+
   const data = await githubRequest<GitHubTreeResponse>(`/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
 
-  const tree = (data.tree || [])
+  const allItems = (data.tree || [])
     .filter((item) => item.path)
-    .map((item) => ({ path: item.path, type: item.type, size: item.size ?? null, sha: item.sha ?? null }))
-    .slice(0, Math.max(1, Math.min(Number(input.limit || 500), 1200)));
+    .map((item) => ({ path: item.path, type: item.type, size: item.size ?? null, sha: item.sha ?? null }));
+
+  const pathPrefix = requestedPath.toLowerCase();
+  const filtered = pathPrefix
+    ? allItems.filter((item) => {
+        const itemPath = String(item.path || "").toLowerCase();
+        return itemPath === pathPrefix || itemPath.startsWith(`${pathPrefix}/`);
+      })
+    : allItems;
+
+  const requestedLimit = Math.max(1, Math.min(Number(input.limit || 500), 1200));
+  const tree = filtered.slice(0, requestedLimit);
 
   return {
     repository: fullName,
     ref,
+    path: requestedPath || null,
+    total_seen: allItems.length,
+    filtered_count: filtered.length,
     count: tree.length,
-    truncated: data.truncated,
+    truncated: Boolean(data.truncated) || filtered.length > tree.length,
     tree,
   };
 }
@@ -256,26 +275,37 @@ async function compareRefs(input: GitHubRuntimeInput) {
 }
 
 async function auditPaths(input: GitHubRuntimeInput) {
-  const listed = await listTree({ ...input, limit: input.limit || 1200 });
-  const include = (input.include || []).map((item) => item.toLowerCase()).filter(Boolean);
-  const exclude = (input.exclude || ["node_modules", ".next", "dist", "build"]).map((item) => item.toLowerCase()).filter(Boolean);
+  const { owner, repo, fullName } = parseRepository(input);
+  const ref = safeRef(input.ref || input.head || undefined, "main");
+  const data = await githubRequest<GitHubTreeResponse>(`/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
 
-  const matches = listed.tree.filter((item) => {
+  const include = (input.include || []).map((item) => item.toLowerCase().replace(/^\/+|\/+$/g, "")).filter(Boolean);
+  const exclude = (input.exclude || ["node_modules", ".next", "dist", "build"]).map((item) => item.toLowerCase().replace(/^\/+|\/+$/g, "")).filter(Boolean);
+
+  const allItems = (data.tree || [])
+    .filter((item) => item.path)
+    .map((item) => ({ path: item.path, type: item.type, size: item.size ?? null, sha: item.sha ?? null }));
+
+  const matches = allItems.filter((item) => {
     const path = String(item.path || "").toLowerCase();
-    const includeOk = include.length === 0 || include.some((term) => path.includes(term));
-    const excludeOk = !exclude.some((term) => path.includes(term));
+    const includeOk = include.length === 0 || include.some((term) => path === term || path.startsWith(`${term}/`) || path.includes(term));
+    const excludeOk = !exclude.some((term) => path === term || path.startsWith(`${term}/`) || path.includes(term));
     return includeOk && excludeOk;
   });
 
+  const requestedLimit = Math.max(1, Math.min(Number(input.limit || 200), 500));
+  const paths = matches.slice(0, requestedLimit);
+
   return {
-    repository: listed.repository,
-    ref: listed.ref,
-    total_seen: listed.count,
-    count: matches.length,
-    truncated: listed.truncated,
+    repository: fullName,
+    ref,
+    total_seen: allItems.length,
+    matched_total: matches.length,
+    count: paths.length,
+    truncated: Boolean(data.truncated) || matches.length > paths.length,
     include,
     exclude,
-    paths: matches.slice(0, Math.max(1, Math.min(Number(input.limit || 200), 500))),
+    paths,
   };
 }
 
