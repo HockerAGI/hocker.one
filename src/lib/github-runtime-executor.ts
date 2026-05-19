@@ -23,6 +23,14 @@ export type GitHubRuntimeInput = {
   include?: string[];
   exclude?: string[];
   limit?: number;
+  branch?: string;
+  base_branch?: string;
+  target_branch?: string;
+  title?: string;
+  body?: string;
+  message?: string;
+  content?: string;
+  expected_sha?: string;
 };
 
 type GitHubRepo = {
@@ -309,6 +317,160 @@ async function auditPaths(input: GitHubRuntimeInput) {
   };
 }
 
+
+type GitHubWritePlanRisk = "medium" | "high";
+
+function safeBranchName(value: unknown, fallback: string): string {
+  const raw = String(value || fallback).trim();
+
+  if (!raw) throw new Error("Falta branch.");
+  if (raw.length > 160) throw new Error("Branch demasiado largo.");
+  if (
+    raw.includes("..") ||
+    raw.startsWith("/") ||
+    raw.endsWith("/") ||
+    raw.includes(String.fromCharCode(92)) ||
+    raw.endsWith(".lock") ||
+    /[\s~^:?*[\]\u0000]/.test(raw)
+  ) {
+    throw new Error("Branch no permitido.");
+  }
+
+  return raw;
+}
+
+function safeOptionalText(value: unknown, fallback = ""): string {
+  return String(value ?? fallback).trim();
+}
+
+function contentStats(content: unknown): { present: boolean; bytes: number; lines: number } {
+  const value = typeof content === "string" ? content : "";
+  return {
+    present: value.length > 0,
+    bytes: Buffer.byteLength(value, "utf8"),
+    lines: value.length ? value.split(/\r\n|\r|\n/).length : 0,
+  };
+}
+
+function buildRollbackPlan(operation: GitHubRuntimeWriteOperation, path: string | null) {
+  if (operation === "create_branch") {
+    return {
+      strategy: "delete_branch_if_no_pr",
+      steps: [
+        "Si la rama fue creada por error y no tiene PR activo, eliminar la rama propuesta.",
+        "Si existe PR activo, cerrar PR antes de eliminar rama.",
+      ],
+    };
+  }
+
+  if (operation === "upsert_file") {
+    return {
+      strategy: "restore_previous_blob_or_revert_commit",
+      path,
+      steps: [
+        "Leer SHA previo del archivo antes de ejecutar escritura.",
+        "Si el archivo existía, restaurar contenido anterior en un commit de reversa.",
+        "Si el archivo no existía, eliminar el archivo creado en un commit de reversa.",
+      ],
+    };
+  }
+
+  return {
+    strategy: "close_pr_or_revert_branch",
+    steps: [
+      "Si el PR no debe continuar, cerrarlo sin merge.",
+      "Si ya fue mergeado, generar commit de reversa con referencia al PR original.",
+    ],
+  };
+}
+
+export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation, input: GitHubRuntimeInput) {
+  const { fullName } = parseRepository(input);
+  const base = safeRef(input.base || input.base_branch || input.ref || "main", "main");
+  const defaultBranch = `nova/${operation}-${Date.now()}`;
+  const targetBranch = safeBranchName(input.branch || input.target_branch || input.head || defaultBranch, defaultBranch);
+  const missing_fields: string[] = [];
+  const risk_level: GitHubWritePlanRisk = operation === "create_pr" ? "medium" : "high";
+  let path: string | null = null;
+  let title = safeOptionalText(input.title);
+  let message = safeOptionalText(input.message);
+  const stats = contentStats(input.content);
+
+  if (operation === "upsert_file") {
+    try {
+      path = safePath(input.path);
+    } catch {
+      missing_fields.push("path");
+    }
+
+    if (!stats.present) missing_fields.push("content");
+    if (!message) missing_fields.push("message");
+  }
+
+  if (operation === "create_pr") {
+    if (!title) missing_fields.push("title");
+    title = title || "NOVA proposed change";
+  }
+
+  if (operation === "create_branch" && !message) {
+    message = `Create ${targetBranch}`;
+  }
+
+  const steps =
+    operation === "create_branch"
+      ? [
+          "Validar repositorio y rama base.",
+          "Crear rama nueva desde base solo después de aprobación owner.",
+          "Registrar resultado en auditoría.",
+        ]
+      : operation === "upsert_file"
+        ? [
+            "Validar path seguro y tamaño de contenido.",
+            "Leer SHA previo si el archivo existe.",
+            "Aplicar cambio únicamente en rama no-main aprobada.",
+            "Registrar diff, SHA previo y SHA nuevo en auditoría.",
+          ]
+        : [
+            "Validar head/base antes de abrir PR.",
+            "Crear PR draft o listo según política owner.",
+            "Adjuntar resumen, rollback y evidencia de validación.",
+          ];
+
+  return {
+    valid: missing_fields.length === 0,
+    mode: "owner_gate",
+    operation,
+    repository: fullName,
+    base,
+    target_branch: targetBranch,
+    path,
+    title: title || null,
+    message: message || null,
+    risk_level,
+    required_fields: missing_fields,
+    dry_run: true,
+    execute_now: false,
+    owner_gate_required: true,
+    required_approval_role: "owner",
+    content_preview: {
+      present: stats.present,
+      bytes: stats.bytes,
+      lines: stats.lines,
+      content_returned: false,
+    },
+    steps,
+    rollback_plan: buildRollbackPlan(operation, path),
+    audit_chain: {
+      required: true,
+      records: ["agi_action_queue", "github_operation", "owner_decision", "execution_result"],
+    },
+    next_step: missing_fields.length
+      ? `Completar campos requeridos: ${missing_fields.join(", ")}.`
+      : "Enviar a cola segura. No ejecutar escritura hasta aprobación owner.",
+  };
+}
+
+
 export async function executeGitHubReadOperation(operation: GitHubRuntimeReadOperation, input: GitHubRuntimeInput) {
   switch (operation) {
     case "get_repo":
@@ -339,6 +501,8 @@ export function getGitHubExecutorStatus() {
       read_operations_execute_now: true,
       write_operations_execute_now: false,
       write_operations_policy: "Owner Gate + dry-run + approval queue antes de tocar GitHub.",
+      write_gate_phase: "12.7B-2",
+      write_plan_enabled: true,
     },
   };
 }
