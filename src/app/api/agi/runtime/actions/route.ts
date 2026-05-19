@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { enqueueAgiAction } from "@/lib/agi-runtime-core";
-import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
+import { listAgiActions } from "@/lib/agi-action-execution";
+import { json, parseBody, parseQuery, requireProjectRole, toApiError } from "@/app/api/_lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,12 +30,33 @@ const ActionSchema = z.object({
   requires_approval: z.boolean().default(true),
 });
 
+export async function GET(req: Request): Promise<Response> {
+  try {
+    const query = parseQuery(req);
+    const projectId = query.get("project_id") || process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
+    const status = query.get("status") || undefined;
+    const toolKey = query.get("tool_key") || undefined;
+    const limit = Number(query.get("limit") || 30);
+    const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
+    const actions = await listAgiActions({ project_id: ctx.project_id, status, tool_key: toolKey, limit });
+
+    return json({
+      ok: true,
+      project_id: ctx.project_id,
+      count: actions.length,
+      actions,
+      message: "Cola AGI Runtime leída con seguridad. Las escrituras reales requieren aprobación owner.",
+    });
+  } catch (error) {
+    const apiError = toApiError(error);
+    return json(apiError.payload, apiError.status);
+  }
+}
+
 export async function POST(req: Request): Promise<Response> {
   try {
     const body = await parseBody(req);
-
     const parsed = ActionSchema.parse(body) as RuntimeActionInput;
-
     const ctx = await requireProjectRole(parsed.project_id, ["owner", "admin", "operator"]);
 
     const item = await enqueueAgiAction({
@@ -54,9 +76,7 @@ export async function POST(req: Request): Promise<Response> {
       {
         ok: true,
         item,
-        message: item.requires_approval
-          ? "Acción AGI creada en revisión. No ejecuta nada sin aprobación."
-          : "Acción AGI creada en cola segura.",
+        message: item.requires_approval ? "Acción AGI creada en revisión. No ejecuta nada sin aprobación." : "Acción AGI creada en cola segura.",
       },
       201,
     );

@@ -11,6 +11,7 @@ import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
 import OwnerLiveHome from "@/components/owner/OwnerLiveHome";
 import HockerCommandCenter from "@/components/owner/HockerCommandCenter";
 import AgiRuntimePreview from "@/components/owner/AgiRuntimePreview";
+import OwnerApprovalCenter from "@/components/owner/OwnerApprovalCenter";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,6 +31,7 @@ export default async function OwnerPage() {
     <div className="hko-page-flow space-y-5">
       <HockerCommandCenter summary={livePulse} />
       <AgiRuntimePreview projectId={process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one"} />
+      <OwnerApprovalCenter projectId={process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one"} />
       <NovaCorePanel variant="owner" />
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="hko-mini-stat"><span>Acceso</span><strong>Protegido</strong></div>
