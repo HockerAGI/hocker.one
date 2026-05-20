@@ -13,11 +13,11 @@ export function getHockerContinuityContextPack() {
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7B-X — Hocker ONE Self-Execution Bridge",
-      status: "in_progress",
-      objective: "Trasladar el flujo que antes dependía de ChatGPT + Termux hacia Hocker ONE.",
-      previous_stable_phase: "12.7B-2 — GitHub Executor Write-Gate + agi_action_queue",
-      next_target: "Fase 13 — AGI Autonomy Layer.",
+      name: "12.7C — NOVA Chat Production Gate + Native Capability Surface",
+      status: "completed",
+      objective: "Consolidar NOVA Chat como canal nativo de operación, con Queue Lock, Production Gate, capacidades visibles y routing automático sin selector manual de modelo o AGI.",
+      previous_stable_phase: "12.7B-Y — GitHub Write Gate real + PR #7 mergeado a main",
+      next_target: "12.7D — NOVA AGI Policy Sync + Tool Router alignment. No avanzar a Fase 13 hasta cerrar executors reales adicionales y memoria operacional.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -58,6 +58,6 @@ export function getHockerContinuityContextPack() {
       real_autonomous_agis: 58,
       complete_real_hocker_ecosystem: 61,
     },
-    handoff_prompt_for_nova: "Antes de ejecutar, lee el Context Pack, revisa agi_action_queue, valida herramienta real, genera plan, solicita aprobación owner, ejecuta solo si está approved y guarda auditoría/rollback.",
+    handoff_prompt_for_nova: "Antes de responder o preparar acciones, lee el Context Pack, revisa agi_action_queue y respeta Queue Lock. NOVA debe hablar natural, elegir AGI/modelo automáticamente, no fingir integraciones y no iniciar tareas nuevas si hay cola pendiente. Toda acción sensible requiere Owner Gate, pruebas, auditoría y rollback.",
   };
 }
