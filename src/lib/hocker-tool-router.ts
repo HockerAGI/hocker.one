@@ -71,3 +71,63 @@ export function routeHockerCapabilityRequest(message: string, contract = getHock
     next_step: capability.next_step,
   };
 }
+
+
+export function buildNovaChatCapabilitiesContext(
+  message: string,
+  project_id = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one",
+) {
+  const contract = getHockerCapabilitiesContract(project_id);
+  const decision = routeHockerCapabilityRequest(message, contract);
+
+  const alwaysRelevant = new Set([
+    "nova_native_chat",
+    "automatic_model_router",
+    "automatic_agi_router",
+    "queue_lock_owner_gate",
+    "repo_code_github",
+    "chido_monitoring",
+    "chido_sensitive_ops",
+  ]);
+
+  alwaysRelevant.add(decision.capability_key);
+
+  const relevant_capabilities = contract.public_context.capabilities
+    .filter((capability) => alwaysRelevant.has(capability.key))
+    .slice(0, 10)
+    .map((capability) => ({
+      key: capability.key,
+      label: capability.label,
+      status: capability.status,
+      mode: capability.mode,
+      owner_agi: capability.owner_agi,
+      support_agis: capability.support_agis.slice(0, 4),
+      requires_owner_gate: capability.requires_owner_gate,
+      can_execute_now: capability.can_execute_now,
+      current_limit: capability.current_limit,
+      next_step: capability.next_step,
+    }));
+
+  return {
+    version: contract.public_context.version,
+    compact: true,
+    instruction:
+      "Contrato compacto para NOVA Chat. No prometas capacidades pending/blocked/partial como ejecutables. Si falta executor, dilo claro y prepara solo plan seguro.",
+    allowed_final_buttons: contract.public_context.allowed_final_buttons,
+    summary: contract.summary,
+    decision: {
+      capability_key: decision.capability_key,
+      capability_label: decision.capability_label,
+      owner_agi: decision.owner_agi,
+      support_agis: decision.support_agis.slice(0, 4),
+      status: decision.status,
+      mode: decision.mode,
+      requires_owner_gate: decision.requires_owner_gate,
+      can_execute_now: decision.can_execute_now,
+      should_show_final_buttons: decision.should_show_final_buttons,
+      reason: decision.reason,
+      next_step: decision.next_step,
+    },
+    relevant_capabilities,
+  };
+}

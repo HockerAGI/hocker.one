@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
+import { buildNovaChatCapabilitiesContext } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -110,7 +110,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const queueLock = await getAgiQueueLock(parsed.data.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
-  const capabilitiesContract = getHockerCapabilitiesContract(parsed.data.project_id).public_context;
+  const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, parsed.data.project_id);
 
   const guardedPayload = {
     ...parsed.data,
