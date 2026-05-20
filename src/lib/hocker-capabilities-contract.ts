@@ -131,7 +131,7 @@ const CAPABILITY_DEFINITIONS: HockerCapabilityDefinition[] = [
     can_generate: true,
     can_execute_now: true,
     user_visible: true,
-    current_limit: "Gemini está operativo. OpenAI/Anthropic dependen de llave/crédito.",
+    current_limit: "NOVA Railway opera con Gemini. Hocker ONE no ejecuta Gemini directo. OpenAI/Anthropic dependen de llave/crédito.",
     next_step: "Registrar salud real por proveedor sin mostrarlo como selector manual.",
   },
   {

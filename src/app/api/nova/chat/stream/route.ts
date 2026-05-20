@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
+import { buildNovaChatCapabilitiesContext } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ function getNovaKey(): string {
 }
 
 function safeContext(body: z.infer<typeof StreamChatSchema>, productionGateContext: Record<string, unknown>) {
-  const capabilitiesContract = getHockerCapabilitiesContract(body.project_id).public_context;
+  const capabilitiesContract = buildNovaChatCapabilitiesContext(String(body.message ?? ""), body.project_id);
   const tools = getRuntimeToolCatalog().map((tool) => ({
     tool_key: tool.tool_key,
     name: tool.name,
