@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { buildNovaChatCapabilitiesContext } from "@/lib/hocker-tool-router";
+import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -143,6 +143,20 @@ export async function POST(req: Request): Promise<Response> {
           realtime_requested: true,
           ...productionGateContext,
         }));
+
+        if (shouldAnswerCapabilitiesLocally(parsed.data.message)) {
+          const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, parsed.data.project_id);
+          controller.enqueue(sse("message", {
+            ok: true,
+            type: "final",
+            content: buildNovaCapabilitiesReply(capabilitiesContract),
+            actions: [],
+            meta: { ...productionGateContext, capabilities_contract: capabilitiesContract },
+            transport: "local_capabilities_contract",
+          }));
+          controller.enqueue(sse("done", { ok: true }));
+          return;
+        }
 
         const upstream = await fetch(`${baseUrl}/api/v1/chat/stream`, {
           method: "POST",

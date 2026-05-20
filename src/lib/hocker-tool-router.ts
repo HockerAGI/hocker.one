@@ -18,7 +18,7 @@ export type HockerToolRouteDecision = {
 };
 
 const ROUTES: Array<{ key: string; patterns: RegExp[]; reason: string }> = [
-  { key: "image_generation", reason: "La solicitud pide imagen/visual creativo.", patterns: [/imagen|foto|visual|diseño|diseño|logo|wallpaper|fondo/i] },
+  { key: "image_generation", reason: "La solicitud pide imagen/visual creativo.", patterns: [/im[aá]gen|im[aá]genes|foto|visual|diseño|logo|wallpaper|fondo/i] },
   { key: "video_generation", reason: "La solicitud pide video, avatar, reels o producción audiovisual.", patterns: [/video|avatar|heygen|reel|storyboard|guion audiovisual/i] },
   { key: "document_generation", reason: "La solicitud pide documento, PDF, contrato, ficha o reporte.", patterns: [/documento|pdf|docx|reporte|ficha|contrato|manual/i] },
   { key: "presentation_generation", reason: "La solicitud pide presentación o slides.", patterns: [/presentaci[oó]n|slides|pptx|deck|diapositivas/i] },
@@ -40,6 +40,19 @@ function findCapability(contract: HockerCapabilitiesContract, key: string): Hock
 
 function fallbackCapability(contract: HockerCapabilitiesContract): HockerCapability {
   return findCapability(contract, "nova_native_chat") ?? contract.capabilities[0];
+}
+
+function matchCapabilityKeys(message: string): Set<string> {
+  const clean = String(message || "").trim();
+  const keys = new Set<string>();
+
+  for (const route of ROUTES) {
+    if (route.patterns.some((pattern) => pattern.test(clean))) {
+      keys.add(route.key);
+    }
+  }
+
+  return keys;
 }
 
 export function routeHockerCapabilityRequest(message: string, contract = getHockerCapabilitiesContract()): HockerToolRouteDecision {
@@ -91,6 +104,9 @@ export function buildNovaChatCapabilitiesContext(
   ]);
 
   alwaysRelevant.add(decision.capability_key);
+  for (const key of matchCapabilityKeys(message)) {
+    alwaysRelevant.add(key);
+  }
 
   const relevant_capabilities = contract.public_context.capabilities
     .filter((capability) => alwaysRelevant.has(capability.key))
@@ -130,4 +146,78 @@ export function buildNovaChatCapabilitiesContext(
     },
     relevant_capabilities,
   };
+}
+
+
+export function shouldAnswerCapabilitiesLocally(message: string): boolean {
+  const clean = String(message || "").toLowerCase();
+
+  return (
+    /\b(qu[eé]|que)\s+(puedes|puede|pueden)\s+hacer\b/i.test(clean) ||
+    /\bcapacidades\b/i.test(clean) ||
+    /\bfunciones\b/i.test(clean) ||
+    /\bintegraciones?\b/i.test(clean) ||
+    /\bconectad[oa]s?\b/i.test(clean) ||
+    /\bsin prometer\b/i.test(clean) ||
+    /\bno inventes\b/i.test(clean) ||
+    /\bqu[eé]\s+tienes\s+(listo|conectado|activo)\b/i.test(clean)
+  );
+}
+
+function capabilityLine(capability: {
+  label: string;
+  status: string;
+  mode: string;
+  owner_agi: string;
+  can_execute_now: boolean;
+  current_limit: string;
+}): string {
+  const statusLabel: Record<string, string> = {
+    active: "activo",
+    protected: "protegido",
+    partial: "parcial",
+    pending: "pendiente",
+    blocked: "bloqueado",
+  };
+
+  const modeLabel: Record<string, string> = {
+    answer_now: "puedo responder ahora",
+    read_now: "puedo leer ahora",
+    prepare_only: "solo puedo preparar",
+    owner_gate: "requiere Owner Gate",
+    blocked: "no ejecutable",
+  };
+
+  return `- ${capability.label}: ${statusLabel[capability.status] ?? capability.status}; ${modeLabel[capability.mode] ?? capability.mode}. AGI interna: ${capability.owner_agi}. ${capability.current_limit}`;
+}
+
+export function buildNovaCapabilitiesReply(context: ReturnType<typeof buildNovaChatCapabilitiesContext>): string {
+  const priority = [
+    "image_generation",
+    "video_generation",
+    "repo_code_github",
+    "chido_monitoring",
+    "chido_sensitive_ops",
+    "nova_native_chat",
+    "automatic_model_router",
+    "automatic_agi_router",
+  ];
+
+  const byKey = new Map(context.relevant_capabilities.map((capability) => [capability.key, capability]));
+  const ordered = [
+    ...priority.map((key) => byKey.get(key)).filter(Boolean),
+    ...context.relevant_capabilities.filter((capability) => !priority.includes(capability.key)),
+  ].slice(0, 10);
+
+  return [
+    "## Capacidades reales de NOVA",
+    "",
+    "Sí puedo responder desde Hocker ONE con routing automático de modelo y AGI. No tienes que elegir modelo ni AGI manualmente.",
+    "",
+    "### Estado por área",
+    ...ordered.map((capability) => capabilityLine(capability)),
+    "",
+    "### Regla de seguridad",
+    "No voy a prometer integraciones falsas ni ejecutar acciones productivas desde nova.agi. Lo pendiente se prepara como plan seguro; lo sensible pasa por Queue Lock, Owner Gate, auditoría y rollback.",
+  ].join("\\n");
 }

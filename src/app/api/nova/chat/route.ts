@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { buildNovaChatCapabilitiesContext } from "@/lib/hocker-tool-router";
+import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -111,6 +111,34 @@ export async function POST(req: Request): Promise<Response> {
   const queueLock = await getAgiQueueLock(parsed.data.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
   const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, parsed.data.project_id);
+  const injectedMeta = { ...productionGateContext, capabilities_contract: capabilitiesContract };
+
+  if (shouldAnswerCapabilitiesLocally(parsed.data.message)) {
+    return NextResponse.json(
+      {
+        ok: true,
+        project_id: parsed.data.project_id,
+        thread_id: parsed.data.thread_id ?? null,
+        reply: buildNovaCapabilitiesReply(capabilitiesContract),
+        intent: "capabilities",
+        agi_id: "nova",
+        actions: [],
+        trace_id: null,
+        meta: {
+          reason: "Respuesta local desde capabilities_contract. No se llamó a nova.agi porque es estado real del sistema.",
+          controls: {
+            allow_write: false,
+            requested_actions: false,
+            enqueued_actions: [],
+            action_policy: "local_capabilities_contract_no_execution",
+            upstream_requested_actions: false,
+          },
+          ...injectedMeta,
+        },
+      },
+      { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
 
   const guardedPayload = {
     ...parsed.data,
@@ -144,7 +172,7 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-    const safePayload = sanitizeNovaPayload(responseJson, { ...productionGateContext, capabilities_contract: capabilitiesContract });
+    const safePayload = sanitizeNovaPayload(responseJson, injectedMeta);
 
     return NextResponse.json(safePayload, {
       status: res.status,
@@ -160,7 +188,7 @@ export async function POST(req: Request): Promise<Response> {
           : error instanceof Error
             ? error.message
             : "Fallo de conexión con NOVA.",
-        meta: { ...productionGateContext, capabilities_contract: capabilitiesContract },
+        meta: injectedMeta,
       },
       { status: 502 },
     );
