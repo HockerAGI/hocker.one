@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
+import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,7 @@ function getNovaKey(): string {
 }
 
 function safeContext(body: z.infer<typeof StreamChatSchema>, productionGateContext: Record<string, unknown>) {
+  const capabilitiesContract = getHockerCapabilitiesContract(body.project_id).public_context;
   const tools = getRuntimeToolCatalog().map((tool) => ({
     tool_key: tool.tool_key,
     name: tool.name,
@@ -64,6 +66,7 @@ function safeContext(body: z.infer<typeof StreamChatSchema>, productionGateConte
         integrations: tools,
         rule: "No iniciar tareas nuevas con cola pendiente. No ejecutar acciones sensibles sin Owner Gate, pruebas, auditoría y autorización final.",
         ...productionGateContext,
+        capabilities_contract: capabilitiesContract,
       },
     },
   };

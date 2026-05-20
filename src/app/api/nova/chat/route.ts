@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
+import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,6 +110,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const queueLock = await getAgiQueueLock(parsed.data.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
+  const capabilitiesContract = getHockerCapabilitiesContract(parsed.data.project_id).public_context;
 
   const guardedPayload = {
     ...parsed.data,
@@ -120,6 +122,7 @@ export async function POST(req: Request): Promise<Response> {
       hocker_runtime: {
         ...(typeof parsed.data.context_data?.hocker_runtime === "object" ? parsed.data.context_data.hocker_runtime : {}),
         ...productionGateContext,
+        capabilities_contract: capabilitiesContract,
       },
     },
   };
@@ -141,7 +144,7 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-    const safePayload = sanitizeNovaPayload(responseJson, productionGateContext);
+    const safePayload = sanitizeNovaPayload(responseJson, { ...productionGateContext, capabilities_contract: capabilitiesContract });
 
     return NextResponse.json(safePayload, {
       status: res.status,
@@ -157,7 +160,7 @@ export async function POST(req: Request): Promise<Response> {
           : error instanceof Error
             ? error.message
             : "Fallo de conexión con NOVA.",
-        meta: productionGateContext,
+        meta: { ...productionGateContext, capabilities_contract: capabilitiesContract },
       },
       { status: 502 },
     );
