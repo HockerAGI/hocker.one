@@ -2,6 +2,7 @@ import { AGI_REGISTRY, APP_REGISTRY } from "@/lib/hocker-dashboard";
 import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
+import { getSyntiaMemoryWriteGatePublicContext } from "@/lib/syntia-memory-write-gate";
 
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
@@ -16,11 +17,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7F — Syntia Context Memory operational",
+      name: "12.7G — Memory Write Gate + curated handoff",
       status: "in_progress",
-      objective: "Convertir la memoria de SYNTIA en una capa operacional confiable, auditable y consultable por Hocker ONE/NOVA.",
-      previous_stable_phase: "12.7E — Capabilities Contract + Tool Router real",
-      next_target: "12.7G — Memory Write Gate + curated handoff. No avanzar a Fase 13 hasta cerrar memoria operacional y executors reales adicionales.",
+      objective: "Activar Write Gate seguro para propuestas de memoria curada sin publicación directa ni ejecución productiva.",
+      previous_stable_phase: "12.7F — Syntia Context Memory operational",
+      next_target: "12.7H — Memory Review UI + publication hardening. No avanzar a Fase 13 hasta cerrar owner decision real, auditoría y rollback.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -83,6 +84,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
       id: projectId,
     },
     syntia_operational_memory: memory.public_context,
+    memory_write_gate: getSyntiaMemoryWriteGatePublicContext(),
     updated_percentages: {
       ...base.updated_percentages,
       syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,
