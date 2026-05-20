@@ -16,6 +16,7 @@ import {
   Sparkles,
   Undo2,
   XCircle,
+  Plus,
 } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 
@@ -60,6 +61,74 @@ type RuntimeSummary = {
   schema_ready?: boolean;
   message?: string;
 };
+
+type NativeCapability = {
+  key: string;
+  label: string;
+  status: "Activo" | "Protegido" | "Parcial" | "Pendiente";
+  detail: string;
+  prompt: string;
+};
+
+const NATIVE_CAPABILITIES: NativeCapability[] = [
+  {
+    key: "archivo",
+    label: "Archivo",
+    status: "Pendiente",
+    detail: "PDF, DOC, CSV o ZIP. Falta conectar carga segura real antes de analizar contenido.",
+    prompt: "NOVA, quiero importar un archivo. Primero dime qué formato necesitas y cómo lo vas a procesar sin exponer datos sensibles.",
+  },
+  {
+    key: "imagen",
+    label: "Imagen",
+    status: "Pendiente",
+    detail: "Candy Ads será responsable. Falta executor visual real en Hocker ONE.",
+    prompt: "NOVA, prepara una solicitud de imagen para Candy Ads. Usa mi branding y dime qué integración falta antes de generar.",
+  },
+  {
+    key: "video",
+    label: "Video",
+    status: "Pendiente",
+    detail: "PRO IA será responsable. HeyGen/Video todavía debe validarse como integración real.",
+    prompt: "NOVA, prepara un guion y storyboard de video para PRO IA. Si HeyGen no está conectado, dilo claro.",
+  },
+  {
+    key: "documento",
+    label: "Documento",
+    status: "Pendiente",
+    detail: "Generación exportable pendiente. Puede preparar estructura y contenido desde chat.",
+    prompt: "NOVA, prepara un documento ejecutivo y dime qué formato final conviene: PDF, DOCX o canvas interno.",
+  },
+  {
+    key: "presentacion",
+    label: "Presentación",
+    status: "Pendiente",
+    detail: "Decks/presentaciones pendientes de exportador real.",
+    prompt: "NOVA, prepara una presentación ejecutiva con estructura de slides y estilo Hocker ONE.",
+  },
+  {
+    key: "repo",
+    label: "Repo / código",
+    status: "Protegido",
+    detail: "GitHub real funciona con branch, PR, pruebas, Owner Gate y auditoría. No toca main directo.",
+    prompt: "NOVA, revisa los repos del ecosistema y prepara un plan seguro. No ejecutes nada si hay cola pendiente.",
+  },
+  {
+    key: "investigacion",
+    label: "Investigación",
+    status: "Parcial",
+    detail: "Puede preparar análisis. Deep research con citas queda separado hasta tener pipeline completo.",
+    prompt: "NOVA, investiga este tema con fuentes verificables y separa hechos, riesgos y recomendaciones.",
+  },
+  {
+    key: "datos",
+    label: "Datos / Supabase",
+    status: "Protegido",
+    detail: "Solo lectura/estado por ahora. Escritura real debe pasar por Owner Gate.",
+    prompt: "NOVA, revisa el estado de datos/Supabase y dime qué puedes leer realmente sin ejecutar cambios.",
+  },
+];
+
 type ActionListResponse = { ok?: boolean; actions?: RuntimeAction[]; error?: string };
 type MutateResponse = { ok?: boolean; message?: string; error?: string };
 
@@ -136,6 +205,7 @@ export default function NovaRealtimeChat() {
   const [actions, setActions] = useState<RuntimeAction[]>([]);
   const [queueLock, setQueueLock] = useState<QueueLock | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [showCapabilities, setShowCapabilities] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -221,7 +291,7 @@ export default function NovaRealtimeChat() {
         }),
       });
 
-      if (!res.ok || !res.body) throw new Error(`NOVA realtime HTTP ${res.status}`);
+      if (!res.ok || !res.body) throw new Error(`Hablar con NOVA HTTP ${res.status}`);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -266,7 +336,7 @@ export default function NovaRealtimeChat() {
       setMessages((prev) => prev.map((msg) => msg.id === novaId ? { ...msg, content: msg.content || (received ? msg.content : "NOVA respondió sin texto visible."), streaming: false } : msg));
       await loadRuntime();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Fallo en NOVA realtime.";
+      const msg = err instanceof Error ? err.message : "Fallo en Hablar con NOVA.";
       setError(msg);
       setMessages((prev) => prev.map((item) => item.id === novaId ? { ...item, role: "system", content: msg, streaming: false } : item));
     } finally {
@@ -346,6 +416,11 @@ export default function NovaRealtimeChat() {
     } finally {
       setBusyAction(null);
     }
+  }
+
+  function selectCapability(capability: NativeCapability) {
+    setInput(capability.prompt);
+    setShowCapabilities(false);
   }
 
   return (
@@ -449,7 +524,7 @@ export default function NovaRealtimeChat() {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe claro qué quieres que revise, prepare o explique NOVA..."
+            placeholder="Pídele a NOVA que revise, cree, investigue o prepare algo real..."
             rows={1}
             className="custom-scrollbar"
             onKeyDown={(e) => {

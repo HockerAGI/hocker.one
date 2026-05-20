@@ -122,7 +122,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const parsed = StreamChatSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return new Response(JSON.stringify({ ok: false, error: "Payload inválido para NOVA realtime.", issues: parsed.error.flatten() }), { status: 400 });
+    return new Response(JSON.stringify({ ok: false, error: "Payload inválido para Hablar con NOVA.", issues: parsed.error.flatten() }), { status: 400 });
   }
 
   const queueLock = await getAgiQueueLock(parsed.data.project_id);

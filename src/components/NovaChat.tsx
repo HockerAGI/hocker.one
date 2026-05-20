@@ -52,8 +52,8 @@ type IntentOption = {
 
 const MODES: Array<{ value: Mode; label: string; hint: string }> = [
   { value: "auto", label: "Auto", hint: "mejor ruta" },
-  { value: "fast", label: "Rápido", hint: "directo" },
-  { value: "pro", label: "Profundo", hint: "quirúrgico" },
+  { value: "fast", label: "NOVA", hint: "elige sola" },
+  { value: "pro", label: "NOVA", hint: "elige sola" },
 ];
 
 const INTENTS: IntentOption[] = [
