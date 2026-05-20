@@ -3,9 +3,8 @@ import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
 
-export function getHockerContinuityContextPack() {
+export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
-  const projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
   const capabilities = getHockerCapabilitiesContract(projectId);
 
   return {
@@ -74,7 +73,7 @@ export function getHockerContinuityContextPack() {
 }
 
 export async function getHockerContinuityContextPackWithMemory(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
-  const base = getHockerContinuityContextPack();
+  const base = getHockerContinuityContextPack(projectId);
   const memory = await getSyntiaOperationalMemorySnapshot(projectId);
 
   return {
