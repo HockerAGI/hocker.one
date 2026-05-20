@@ -1,6 +1,7 @@
 import { AGI_REGISTRY, APP_REGISTRY } from "@/lib/hocker-dashboard";
 import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
+import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
 
 export function getHockerContinuityContextPack() {
   const tools = getRuntimeToolSummary();
@@ -16,11 +17,11 @@ export function getHockerContinuityContextPack() {
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7E — Capabilities Contract + Tool Router real",
+      name: "12.7F — Syntia Context Memory operational",
       status: "in_progress",
-      objective: "Formalizar qué puede hacer NOVA, qué solo puede preparar, qué requiere Owner Gate, qué integración falta y qué AGI corresponde.",
-      previous_stable_phase: "12.7D — NOVA AGI Policy Sync + Railway runtime validado",
-      next_target: "12.7F — Syntia Context Memory operational. No avanzar a Fase 13 hasta cerrar executors reales adicionales y memoria operacional.",
+      objective: "Convertir la memoria de SYNTIA en una capa operacional confiable, auditable y consultable por Hocker ONE/NOVA.",
+      previous_stable_phase: "12.7E — Capabilities Contract + Tool Router real",
+      next_target: "12.7G — Memory Write Gate + curated handoff. No avanzar a Fase 13 hasta cerrar memoria operacional y executors reales adicionales.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -62,6 +63,30 @@ export function getHockerContinuityContextPack() {
       real_autonomous_agis: 58,
       complete_real_hocker_ecosystem: 61,
     },
-    handoff_prompt_for_nova: "Antes de responder o preparar acciones, lee el Context Pack, revisa agi_action_queue, respeta Queue Lock y consulta capabilities_contract. NOVA debe hablar natural, elegir AGI/modelo automáticamente, no fingir integraciones y no iniciar tareas nuevas si hay cola pendiente. Toda acción sensible requiere Owner Gate, pruebas, auditoría y rollback.",
+    syntia_operational_memory: {
+      version: "12.7F-1",
+      status: "available_via_async_context",
+      endpoint: "/api/agi/runtime/memory",
+      rule: "Solo lectura. No ejecuta acciones ni escribe memoria desde Context Pack.",
+    },
+    handoff_prompt_for_nova: "Antes de responder o preparar acciones, lee el Context Pack, revisa agi_action_queue, respeta Queue Lock, consulta capabilities_contract y usa syntia_operational_memory como continuidad real. NOVA debe hablar natural, elegir AGI/modelo automáticamente, no fingir integraciones y no iniciar tareas nuevas si hay cola pendiente. Toda acción sensible requiere Owner Gate, pruebas, auditoría y rollback.",
+  };
+}
+
+export async function getHockerContinuityContextPackWithMemory(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
+  const base = getHockerContinuityContextPack();
+  const memory = await getSyntiaOperationalMemorySnapshot(projectId);
+
+  return {
+    ...base,
+    project: {
+      ...base.project,
+      id: projectId,
+    },
+    syntia_operational_memory: memory.public_context,
+    updated_percentages: {
+      ...base.updated_percentages,
+      syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,
+    },
   };
 }
