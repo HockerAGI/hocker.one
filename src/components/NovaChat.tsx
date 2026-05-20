@@ -142,7 +142,7 @@ export default function NovaChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [mode, setMode] = useState<Mode>("auto");
+  const mode: Mode = "auto";
   const [intent, setIntent] = useState<IntentKey>("chat");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -494,7 +494,6 @@ export default function NovaChat() {
                   <button
                     key={item.value}
                     type="button"
-                    onClick={() => setMode(item.value)}
                     title={item.hint}
                     className={cx(
                       "rounded-full border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.18em]",
