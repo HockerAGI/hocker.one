@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
+import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +42,7 @@ function getNovaKey(): string {
 
 function safeContext(body: z.infer<typeof StreamChatSchema>, productionGateContext: Record<string, unknown>) {
   const capabilitiesContract = buildNovaChatCapabilitiesContext(String(body.message ?? ""), body.project_id);
+  const upstreamRuntimeContext = buildNovaUpstreamRuntimeContext(capabilitiesContract, productionGateContext);
   const tools = getRuntimeToolCatalog().map((tool) => ({
     tool_key: tool.tool_key,
     name: tool.name,
@@ -65,8 +66,7 @@ function safeContext(body: z.infer<typeof StreamChatSchema>, productionGateConte
         realtime_requested: true,
         integrations: tools,
         rule: "No iniciar tareas nuevas con cola pendiente. No ejecutar acciones sensibles sin Owner Gate, pruebas, auditoría y autorización final.",
-        ...productionGateContext,
-        capabilities_contract: capabilitiesContract,
+        ...upstreamRuntimeContext,
       },
     },
   };
