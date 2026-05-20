@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
+import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,6 +112,7 @@ export async function POST(req: Request): Promise<Response> {
   const productionGateContext = buildNovaProductionGateContext(queueLock);
   const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, parsed.data.project_id);
   const injectedMeta = { ...productionGateContext, capabilities_contract: capabilitiesContract };
+  const upstreamRuntimeContext = buildNovaUpstreamRuntimeContext(capabilitiesContract, productionGateContext);
 
   if (shouldAnswerCapabilitiesLocally(parsed.data.message)) {
     return NextResponse.json(
@@ -149,8 +150,7 @@ export async function POST(req: Request): Promise<Response> {
       ...(parsed.data.context_data ?? {}),
       hocker_runtime: {
         ...(typeof parsed.data.context_data?.hocker_runtime === "object" ? parsed.data.context_data.hocker_runtime : {}),
-        ...productionGateContext,
-        capabilities_contract: capabilitiesContract,
+        ...upstreamRuntimeContext,
       },
     },
   };

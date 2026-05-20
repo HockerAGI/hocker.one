@@ -221,3 +221,18 @@ export function buildNovaCapabilitiesReply(context: ReturnType<typeof buildNovaC
     "No voy a prometer integraciones falsas ni ejecutar acciones productivas desde nova.agi. Lo pendiente se prepara como plan seguro; lo sensible pasa por Queue Lock, Owner Gate, auditoría y rollback.",
   ].join("\\n");
 }
+
+
+export function buildNovaUpstreamRuntimeContext(
+  capabilitiesContext: ReturnType<typeof buildNovaChatCapabilitiesContext>,
+  productionGateContext: Record<string, unknown>,
+) {
+  return {
+    ...productionGateContext,
+    capabilities_contract_injected: false,
+    capabilities_contract_reason:
+      "Hocker ONE conserva capabilities_contract en meta y responde capacidades localmente. A nova.agi solo se envía resumen mínimo para evitar exceso de contexto.",
+    capability_summary: capabilitiesContext.summary,
+    capability_decision: capabilitiesContext.decision,
+  };
+}
