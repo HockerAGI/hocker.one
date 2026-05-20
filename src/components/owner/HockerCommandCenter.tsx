@@ -43,7 +43,7 @@ export default function HockerCommandCenter({ summary }: { summary: HockerLivePu
     { label: "Memoria", value: memory, tone: "mint" },
     { label: "AGIs", value: updates, tone: "violet" },
     { label: "Errores", value: errors, tone: "amber" },
-    { label: "Dedup", value: dedup, tone: "cyan" },
+    { label: "Limpieza", value: dedup, tone: "cyan" },
   ];
 
   return (

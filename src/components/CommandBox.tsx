@@ -55,7 +55,7 @@ export default function CommandBox() {
       <div>
         <p className="hko-kicker">Nueva tarea</p>
         <h3 className="mt-2 text-xl font-black text-white">Crear tarea</h3>
-        <p className="mt-2 text-sm text-slate-400">Escribe lo que necesitas hacer en lenguaje claro.</p>
+        <p className="mt-2 text-sm text-slate-400">Escribe lo que necesitas. NOVA lo ordena y lo manda a revisión cuando corresponda.</p>
       </div>
       <label className="block rounded-2xl border border-white/8 bg-slate-950/45 p-3">
         <span className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Título</span>

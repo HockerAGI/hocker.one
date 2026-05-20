@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function CommandsPage() {
   return (
     <div className="hko-page-flow space-y-4">
-      <HockerPageHeader eyebrow="Operación" title="Tareas" text="Crea acciones cortas, revisa avances y deja lo técnico guardado en detalles." />
+      <HockerPageHeader eyebrow="Operación" title="Tareas" text="Pide una tarea clara. NOVA la organiza y la manda a revisión cuando esté lista." />
       <section className="grid gap-4 xl:grid-cols-[0.78fr_1.22fr]">
         <CommandBox />
         <CommandsQueue />

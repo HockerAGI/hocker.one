@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,12 +41,13 @@ function getNovaKey(): string {
   return String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
 }
 
-function sanitizeNovaPayload(payload: NovaChatResponse): Record<string, unknown> {
+function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<string, unknown>): Record<string, unknown> {
   if (!payload.ok) {
     return {
       ok: false,
       error: payload.error ?? "NOVA no pudo completar la solicitud.",
       trace_id: payload.trace_id ?? null,
+      meta: injectedMeta,
     };
   }
 
@@ -64,7 +66,7 @@ function sanitizeNovaPayload(payload: NovaChatResponse): Record<string, unknown>
     reply: payload.reply ?? "",
     intent: payload.intent,
     agi_id: payload.agi_id,
-    actions: Array.isArray(payload.actions) ? payload.actions : [],
+    actions: [],
     trace_id: payload.trace_id ?? null,
     meta: {
       reason: payload.meta?.reason,
@@ -72,12 +74,14 @@ function sanitizeNovaPayload(payload: NovaChatResponse): Record<string, unknown>
       syntia_memory: payload.meta?.syntia_memory,
       syntia_memory_items: payload.meta?.syntia_memory_items,
       controls: {
-        allow_write: controls.allow_write,
-        requested_actions: controls.requested_actions,
-        enqueued_actions: controls.enqueued_actions,
-        action_policy: controls.action_policy,
+        allow_write: false,
+        requested_actions: false,
+        enqueued_actions: [],
+        action_policy: "production_gate_12_7c_1_chat_does_not_enqueue_actions",
+        upstream_requested_actions: controls.requested_actions,
       },
       context_data: payload.meta?.context_data ?? {},
+      ...injectedMeta,
     },
   };
 }
@@ -103,6 +107,23 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
+  const queueLock = await getAgiQueueLock(parsed.data.project_id);
+  const productionGateContext = buildNovaProductionGateContext(queueLock);
+
+  const guardedPayload = {
+    ...parsed.data,
+    mode: "auto",
+    prefer: "auto",
+    allow_actions: false,
+    context_data: {
+      ...(parsed.data.context_data ?? {}),
+      hocker_runtime: {
+        ...(typeof parsed.data.context_data?.hocker_runtime === "object" ? parsed.data.context_data.hocker_runtime : {}),
+        ...productionGateContext,
+      },
+    },
+  };
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 55_000);
 
@@ -112,15 +133,15 @@ export async function POST(req: Request): Promise<Response> {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
-        "X-Hocker-Source": "hocker.one",
+        "X-Hocker-Source": "hocker.one.production-gate",
       },
-      body: JSON.stringify(parsed.data),
+      body: JSON.stringify(guardedPayload),
       signal: controller.signal,
       cache: "no-store",
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-    const safePayload = sanitizeNovaPayload(responseJson);
+    const safePayload = sanitizeNovaPayload(responseJson, productionGateContext);
 
     return NextResponse.json(safePayload, {
       status: res.status,
@@ -136,6 +157,7 @@ export async function POST(req: Request): Promise<Response> {
           : error instanceof Error
             ? error.message
             : "Fallo de conexión con NOVA.",
+        meta: productionGateContext,
       },
       { status: 502 },
     );

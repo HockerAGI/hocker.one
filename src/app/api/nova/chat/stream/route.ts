@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
+import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ function getNovaKey(): string {
   return String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
 }
 
-function safeContext(body: z.infer<typeof StreamChatSchema>) {
+function safeContext(body: z.infer<typeof StreamChatSchema>, productionGateContext: Record<string, unknown>) {
   const tools = getRuntimeToolCatalog().map((tool) => ({
     tool_key: tool.tool_key,
     name: tool.name,
@@ -47,23 +48,32 @@ function safeContext(body: z.infer<typeof StreamChatSchema>) {
     supports_read: tool.supports_read,
     supports_write: tool.supports_write,
     supports_realtime: tool.supports_realtime,
+    execution_enabled: tool.execution_enabled,
   }));
 
   return {
     ...body,
+    mode: "auto",
+    allow_actions: false,
+    tools_requested: [],
     context_data: {
       ...(body.context_data ?? {}),
       hocker_runtime: {
-        mode: "agi_runtime_core_12_7a",
+        mode: "agi_runtime_core_12_7c_1",
         realtime_requested: true,
         integrations: tools,
-        rule: "No ejecutar acciones sensibles sin Owner Gate, dry-run y auditoría.",
+        rule: "No iniciar tareas nuevas con cola pendiente. No ejecutar acciones sensibles sin Owner Gate, pruebas, auditoría y autorización final.",
+        ...productionGateContext,
       },
     },
   };
 }
 
-async function emitFallbackChat(controller: ReadableStreamDefaultController<Uint8Array>, payload: z.infer<typeof StreamChatSchema>) {
+async function emitFallbackChat(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  payload: z.infer<typeof StreamChatSchema>,
+  productionGateContext: Record<string, unknown>,
+) {
   const baseUrl = getNovaBaseUrl();
   const key = getNovaKey();
   const res = await fetch(`${baseUrl}/api/v1/chat`, {
@@ -71,9 +81,9 @@ async function emitFallbackChat(controller: ReadableStreamDefaultController<Uint
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${key}`,
-      "X-Hocker-Source": "hocker.one.realtime-fallback",
+      "X-Hocker-Source": "hocker.one.realtime-production-gate-fallback",
     },
-    body: JSON.stringify(safeContext(payload)),
+    body: JSON.stringify(safeContext(payload, productionGateContext)),
     cache: "no-store",
   });
 
@@ -83,7 +93,14 @@ async function emitFallbackChat(controller: ReadableStreamDefaultController<Uint
     return;
   }
 
-  controller.enqueue(sse("message", { ok: true, type: "final", content: data.reply ?? "", actions: data.actions ?? [], meta: data.meta ?? {}, transport: "single_response" }));
+  controller.enqueue(sse("message", {
+    ok: true,
+    type: "final",
+    content: data.reply ?? "",
+    actions: [],
+    meta: { ...(data.meta ?? {}), ...productionGateContext },
+    transport: "single_response",
+  }));
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -105,8 +122,11 @@ export async function POST(req: Request): Promise<Response> {
 
   const parsed = StreamChatSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return new Response(JSON.stringify({ ok: false, error: "Payload inválido para NOVA realtime.", issues: parsed.error.flatten() }), { status: 400 });
+    return new Response(JSON.stringify({ ok: false, error: "Payload inválido para Hablar con NOVA.", issues: parsed.error.flatten() }), { status: 400 });
   }
+
+  const queueLock = await getAgiQueueLock(parsed.data.project_id);
+  const productionGateContext = buildNovaProductionGateContext(queueLock);
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -114,7 +134,12 @@ export async function POST(req: Request): Promise<Response> {
       const timeout = setTimeout(() => abort.abort(), 55_000);
 
       try {
-        controller.enqueue(sse("meta", { ok: true, transport: "hocker.one.sse", realtime_requested: true }));
+        controller.enqueue(sse("meta", {
+          ok: true,
+          transport: "hocker.one.sse.production_gate",
+          realtime_requested: true,
+          ...productionGateContext,
+        }));
 
         const upstream = await fetch(`${baseUrl}/api/v1/chat/stream`, {
           method: "POST",
@@ -122,9 +147,9 @@ export async function POST(req: Request): Promise<Response> {
             "Content-Type": "application/json",
             Accept: "text/event-stream",
             Authorization: `Bearer ${key}`,
-            "X-Hocker-Source": "hocker.one.realtime",
+            "X-Hocker-Source": "hocker.one.realtime-production-gate",
           },
-          body: JSON.stringify(safeContext(parsed.data)),
+          body: JSON.stringify(safeContext(parsed.data, productionGateContext)),
           signal: abort.signal,
           cache: "no-store",
         }).catch(() => null);
@@ -135,7 +160,7 @@ export async function POST(req: Request): Promise<Response> {
             controller.enqueue(chunk);
           }
         } else {
-          await emitFallbackChat(controller, parsed.data);
+          await emitFallbackChat(controller, parsed.data, productionGateContext);
         }
 
         controller.enqueue(sse("done", { ok: true }));

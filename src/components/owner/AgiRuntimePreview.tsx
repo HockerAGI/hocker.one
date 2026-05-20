@@ -30,7 +30,7 @@ export default async function AgiRuntimePreview({ projectId }: Props) {
     schema_ready: false,
     counts: { agents: 16, tools_configured: 0, tools_total: 0, actions: 0, runs: 0 },
     integrations: [],
-    message: error instanceof Error ? error.message : "AGI Runtime pendiente.",
+    message: error instanceof Error ? error.message : "Herramientas reales pendiente.",
   }));
 
   const integrations = Array.isArray(summary.integrations) ? (summary.integrations as IntegrationLike[]) : [];
@@ -44,12 +44,12 @@ export default async function AgiRuntimePreview({ projectId }: Props) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.10),transparent_28%),radial-gradient(circle_at_80%_30%,rgba(168,85,247,0.08),transparent_30%)]" />
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200"><Bot className="h-4 w-4" /> AGI Runtime</p>
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200"><Bot className="h-4 w-4" /> Herramientas reales</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Herramientas reales, estados honestos.</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">NOVA puede ver qué está conectado, qué está parcial y qué falta. Nada sensible se ejecuta sin aprobación owner.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Link href="/chat" className="shell-button-primary justify-center">Abrir NOVA realtime</Link>
+          <Link href="/chat" className="shell-button-primary justify-center">Abrir Hablar con NOVA</Link>
           <Link href="/owner" className="shell-button-secondary justify-center">Actualizar estado</Link>
         </div>
       </div>
@@ -66,7 +66,7 @@ export default async function AgiRuntimePreview({ projectId }: Props) {
         <span className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-sky-100"><ShieldCheck className="h-3.5 w-3.5" /> Owner Gate</span>
         <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100"><CheckCircle2 className="h-3.5 w-3.5" /> Dry-run primero</span>
         <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-amber-100"><Clock3 className="h-3.5 w-3.5" /> Parcial no ejecuta</span>
-        <span className="inline-flex items-center gap-2 rounded-full border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-rose-100"><AlertTriangle className="h-3.5 w-3.5" /> Faltan llaves</span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-rose-100"><AlertTriangle className="h-3.5 w-3.5" /> Faltan conexiones</span>
       </div>
 
       <div className="relative mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

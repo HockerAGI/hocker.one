@@ -45,7 +45,7 @@ export async function GET(req: Request): Promise<Response> {
       project_id: ctx.project_id,
       count: actions.length,
       actions,
-      message: "Cola AGI Runtime leída con seguridad. Las escrituras reales requieren aprobación owner.",
+      message: "Cola Herramientas reales leída con seguridad. Las escrituras reales requieren aprobación owner.",
     });
   } catch (error) {
     const apiError = toApiError(error);

@@ -125,7 +125,7 @@ export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePu
 
         <CoreMetric label="Memoria IA" value={activeMemory} text="aprendizajes activos" tone="mint" />
         <CoreMetric label="AGIs" value={activeUpdates} text="señales activas" tone="violet" />
-        <CoreMetric label="Dedup" value={repeatedSeen} text="sin duplicar" tone="cyan" />
+        <CoreMetric label="Limpieza" value={repeatedSeen} text="sin duplicar" tone="cyan" />
         <CoreMetric label="Errores" value={preventedErrors} text="prevenidos" tone="amber" />
       </div>
 

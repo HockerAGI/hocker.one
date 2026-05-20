@@ -189,7 +189,7 @@ export default function MemoryMirrorPanel({ summary }: { summary: HockerMemoryMi
         <MetricCard label="Memorias" value={numberLabel(summary.approved_memory_count)} detail="Conocimiento aprobado y reutilizable." tone={summary.approved_memory_count > 0 ? "active" : "pending"} />
         <MetricCard label="Feeds AGI" value={numberLabel(summary.active_feed_count)} detail="Actualizaciones entregadas por función." tone={summary.active_feed_count > 0 ? "active" : "pending"} />
         <MetricCard label="Errores" value={numberLabel(summary.prevented_error_count)} detail="Patrones registrados para no repetir fallos." tone={summary.prevented_error_count > 0 ? "protected" : "neutral"} />
-        <MetricCard label="Dedup" value={numberLabel(summary.dedup_hits)} detail="Repeticiones detectadas sin duplicar datos." tone={summary.dedup_hits > 0 ? "protected" : "neutral"} />
+        <MetricCard label="Limpieza" value={numberLabel(summary.dedup_hits)} detail="Repeticiones detectadas sin duplicar datos." tone={summary.dedup_hits > 0 ? "protected" : "neutral"} />
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">

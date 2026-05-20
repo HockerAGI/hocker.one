@@ -171,7 +171,7 @@ export function getRuntimeToolSummary() {
 function getAdminSupabase(): SupabaseClient {
   const url = envValue("SUPABASE_URL") || envValue("NEXT_PUBLIC_SUPABASE_URL");
   const key = envValue("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Supabase admin no configurado para AGI Runtime.");
+  if (!url || !key) throw new Error("Supabase admin no configurado para Herramientas reales.");
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
@@ -299,7 +299,7 @@ export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: b
 
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "No se pudo sincronizar AGI Runtime." };
+    return { ok: false, error: error instanceof Error ? error.message : "No se pudo sincronizar Herramientas reales." };
   }
 }
 
@@ -370,8 +370,8 @@ export async function getAgiRuntimeSummary(project_id: string) {
       })),
       recent_actions: recentActions ?? [],
       message: sync.ok
-        ? "AGI Runtime normalizado: estados reales, llaves detectadas y herramientas protegidas por Owner Gate."
-        : "AGI Runtime definido; falta aplicar migración o configurar Supabase admin.",
+        ? "Herramientas reales normalizado: estados reales, llaves detectadas y herramientas protegidas por Owner Gate."
+        : "Herramientas reales definido; falta aplicar migración o configurar Supabase admin.",
     };
   } catch (error) {
     return {
@@ -399,7 +399,7 @@ export async function getAgiRuntimeSummary(project_id: string) {
       },
       integrations: tools,
       recent_actions: [],
-      message: error instanceof Error ? error.message : "No se pudo leer AGI Runtime.",
+      message: error instanceof Error ? error.message : "No se pudo leer Herramientas reales.",
     };
   }
 }

@@ -14,8 +14,8 @@ export default function ChatPage() {
     <PageShell
       compact
       eyebrow="NOVA · Canal privado"
-      title="NOVA realtime"
-      description="Chat en vivo con contexto real, herramientas configuradas y acciones protegidas."
+      title="Hablar con NOVA"
+      description="Canal central para pedir, revisar y autorizar trabajo real sin elegir modelo ni AGI manualmente."
       actions={
         <>
           <Link href="/dashboard" className="shell-button-secondary">
