@@ -1,3 +1,3 @@
-# NOVA Write Gate Test
+# Prueba de escritura de NOVA
 
-Dry-run only. No escritura real directa.
+Solo para pruebas de ejecución en seco. No se realiza escritura real directa.
