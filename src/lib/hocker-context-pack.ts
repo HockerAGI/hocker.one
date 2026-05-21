@@ -20,11 +20,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7J — NOVA Chat action drafts + controlled executors",
+      name: "12.7K — NOVA Chat UX foundation",
       status: "in_progress",
-      objective: "Permitir que NOVA Chat convierta lenguaje natural en borradores seguros de acción, sin ejecución directa y con Owner Gate.",
-      previous_stable_phase: "12.7I — Memory rollback + publication audit",
-      next_target: "12.7K — GitHub action materializer + chat UX upgrade. No avanzar a Fase 13 hasta cerrar acciones controladas desde chat, UI clara y executors reales por integración.",
+      objective: "Mejorar la experiencia visual de NOVA Chat para mostrar previews, herramientas, estado operativo y acciones seguras solo cuando aplican.",
+      previous_stable_phase: "12.7J — NOVA Chat action drafts + controlled executors",
+      next_target: "12.7K-2 — GitHub action materializer. No avanzar a Fase 13 hasta cerrar materialización GitHub, UI estable y executors reales por integración.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
