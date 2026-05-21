@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
+import { requireProjectRole } from "@/app/api/_lib";
+import { buildNovaChatActionDraftPreview, enqueueNovaChatActionDraft } from "@/lib/nova-chat-action-drafts";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
@@ -42,7 +44,7 @@ function getNovaKey(): string {
   return String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
 }
 
-function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<string, unknown>): Record<string, unknown> {
+function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<string, unknown>, localActionDraft: Record<string, unknown> | null = null): Record<string, unknown> {
   if (!payload.ok) {
     return {
       ok: false,
@@ -67,7 +69,7 @@ function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<str
     reply: payload.reply ?? "",
     intent: payload.intent,
     agi_id: payload.agi_id,
-    actions: [],
+    actions: localActionDraft ? [localActionDraft] : [],
     trace_id: payload.trace_id ?? null,
     meta: {
       reason: payload.meta?.reason,
@@ -77,11 +79,12 @@ function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<str
       controls: {
         allow_write: false,
         requested_actions: false,
-        enqueued_actions: [],
-        action_policy: "production_gate_12_7c_1_chat_does_not_enqueue_actions",
+        enqueued_actions: localActionDraft ? [localActionDraft] : [],
+        action_policy: localActionDraft ? "nova_chat_action_draft_12_7j_no_execution" : "production_gate_12_7c_1_chat_does_not_enqueue_actions",
         upstream_requested_actions: controls.requested_actions,
       },
       context_data: payload.meta?.context_data ?? {},
+      chat_action_draft: localActionDraft,
       ...injectedMeta,
     },
   };
@@ -113,6 +116,25 @@ export async function POST(req: Request): Promise<Response> {
   const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, parsed.data.project_id);
   const injectedMeta = { ...productionGateContext, capabilities_contract: capabilitiesContract };
   const upstreamRuntimeContext = buildNovaUpstreamRuntimeContext(capabilitiesContract, productionGateContext);
+
+  let localActionDraft: Record<string, unknown> | null = null;
+  const draftPreview = buildNovaChatActionDraftPreview({
+    project_id: parsed.data.project_id,
+    message: parsed.data.message,
+    queue_lock: queueLock,
+  });
+
+  if (draftPreview && parsed.data.allow_actions) {
+    const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
+    localActionDraft = await enqueueNovaChatActionDraft({
+      project_id: ctx.project_id,
+      message: parsed.data.message,
+      queue_lock: queueLock,
+      created_by: ctx.user.id,
+    }) as Record<string, unknown> | null;
+  } else if (draftPreview) {
+    localActionDraft = draftPreview as Record<string, unknown>;
+  }
 
   if (shouldAnswerCapabilitiesLocally(parsed.data.message)) {
     return NextResponse.json(
@@ -172,7 +194,7 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-    const safePayload = sanitizeNovaPayload(responseJson, injectedMeta);
+    const safePayload = sanitizeNovaPayload(responseJson, injectedMeta, localActionDraft);
 
     return NextResponse.json(safePayload, {
       status: res.status,
