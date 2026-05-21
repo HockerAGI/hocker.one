@@ -189,6 +189,11 @@ function summarizeAction(action: RuntimeAction) {
   return { repo, branch, path };
 }
 
+
+function shouldAllowActionDraft(prompt: string) {
+  return /haz|hacer|crea|crear|prepara|preparar|corrige|corregir|modifica|modificar|actualiza|actualizar|implementa|implementar|ejecuta|ejecutar|revisa|revisar|conecta|conectar|despliega|desplegar|github|repo|repositorio|c[oó]digo|branch|rama|pull request|\bpr\b|commit|supabase|vercel|terminal|meta ads|campaña|anuncio/i.test(prompt);
+}
+
 function isReadyForProduction(action: RuntimeAction) {
   const payload = action.payload ?? {};
   const gate = typeof payload.production_gate === "object" && payload.production_gate !== null ? payload.production_gate as Record<string, unknown> : null;
@@ -282,7 +287,7 @@ export default function NovaRealtimeChat() {
           thread_id: threadId,
           message: prompt,
           mode: "auto",
-          allow_actions: false,
+          allow_actions: shouldAllowActionDraft(prompt),
           tools_requested: [],
           context_data: {
             source: "nova_realtime_chat_production_gate",

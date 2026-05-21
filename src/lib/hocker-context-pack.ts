@@ -5,6 +5,7 @@ import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-mem
 import { getSyntiaMemoryWriteGatePublicContext } from "@/lib/syntia-memory-write-gate";
 import { getSyntiaMemoryReviewGatePublicContext } from "@/lib/syntia-memory-review-gate";
 import { getSyntiaMemoryPublicationAuditPublicContext } from "@/lib/syntia-memory-publication-audit";
+import { getNovaChatActionDraftPublicContext } from "@/lib/nova-chat-action-drafts";
 
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
@@ -19,11 +20,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7I — Memory rollback + publication audit",
+      name: "12.7J — NOVA Chat action drafts + controlled executors",
       status: "in_progress",
-      objective: "Agregar rollback seguro de memoria publicada, diff de publicación y auditoría restaurable antes de permitir aprendizaje más autónomo.",
-      previous_stable_phase: "12.7H — Memory Review UI + publication hardening",
-      next_target: "12.7J — NOVA Chat action drafts + controlled executors. No avanzar a Fase 13 hasta cerrar rollback, diff, auditoría restaurable y acciones controladas desde chat.",
+      objective: "Permitir que NOVA Chat convierta lenguaje natural en borradores seguros de acción, sin ejecución directa y con Owner Gate.",
+      previous_stable_phase: "12.7I — Memory rollback + publication audit",
+      next_target: "12.7K — GitHub action materializer + chat UX upgrade. No avanzar a Fase 13 hasta cerrar acciones controladas desde chat, UI clara y executors reales por integración.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -89,6 +90,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     memory_write_gate: getSyntiaMemoryWriteGatePublicContext(),
     memory_review_gate: getSyntiaMemoryReviewGatePublicContext(),
     memory_publication_audit: getSyntiaMemoryPublicationAuditPublicContext(),
+    nova_chat_action_drafts: getNovaChatActionDraftPublicContext(),
     updated_percentages: {
       ...base.updated_percentages,
       syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,
