@@ -3,6 +3,7 @@ import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
 import { getSyntiaMemoryWriteGatePublicContext } from "@/lib/syntia-memory-write-gate";
+import { getSyntiaMemoryReviewGatePublicContext } from "@/lib/syntia-memory-review-gate";
 
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
@@ -17,11 +18,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7G — Memory Write Gate + curated handoff",
+      name: "12.7H — Memory Review UI + publication hardening",
       status: "in_progress",
-      objective: "Activar Write Gate seguro para propuestas de memoria curada sin publicación directa ni ejecución productiva.",
-      previous_stable_phase: "12.7F — Syntia Context Memory operational",
-      next_target: "12.7H — Memory Review UI + publication hardening. No avanzar a Fase 13 hasta cerrar owner decision real, auditoría y rollback.",
+      objective: "Activar revisión owner real, UI de propuestas y publicación endurecida hacia Memory Mirror sin confiar en reviewer_role del body.",
+      previous_stable_phase: "12.7G — Memory Write Gate + curated handoff",
+      next_target: "12.7I — Memory rollback + publication audit. No avanzar a Fase 13 hasta cerrar rollback, diff y auditoría restaurable.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -85,6 +86,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     },
     syntia_operational_memory: memory.public_context,
     memory_write_gate: getSyntiaMemoryWriteGatePublicContext(),
+    memory_review_gate: getSyntiaMemoryReviewGatePublicContext(),
     updated_percentages: {
       ...base.updated_percentages,
       syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,

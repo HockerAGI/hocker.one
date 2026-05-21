@@ -85,10 +85,13 @@ export default async function MemoryPage() {
       subtitle="Bitácora viva de SYNTIA: estado, decisiones, pendientes e interacciones del ecosistema HOCKER."
       actions={
         <div className="flex flex-wrap gap-2">
+          <Link href="/memory/review" className="hocker-button-primary">
+            Review
+          </Link>
           <Link href="/agis" className="hocker-button-secondary">
             AGIs
           </Link>
-          <Link href="/dashboard" className="hocker-button-primary">
+          <Link href="/dashboard" className="hocker-button-secondary">
             Panel
           </Link>
         </div>
