@@ -4,6 +4,7 @@ import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contrac
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
 import { getSyntiaMemoryWriteGatePublicContext } from "@/lib/syntia-memory-write-gate";
 import { getSyntiaMemoryReviewGatePublicContext } from "@/lib/syntia-memory-review-gate";
+import { getSyntiaMemoryPublicationAuditPublicContext } from "@/lib/syntia-memory-publication-audit";
 
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
@@ -18,11 +19,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7H — Memory Review UI + publication hardening",
+      name: "12.7I — Memory rollback + publication audit",
       status: "in_progress",
-      objective: "Activar revisión owner real, UI de propuestas y publicación endurecida hacia Memory Mirror sin confiar en reviewer_role del body.",
-      previous_stable_phase: "12.7G — Memory Write Gate + curated handoff",
-      next_target: "12.7I — Memory rollback + publication audit. No avanzar a Fase 13 hasta cerrar rollback, diff y auditoría restaurable.",
+      objective: "Agregar rollback seguro de memoria publicada, diff de publicación y auditoría restaurable antes de permitir aprendizaje más autónomo.",
+      previous_stable_phase: "12.7H — Memory Review UI + publication hardening",
+      next_target: "12.7J — NOVA Chat action drafts + controlled executors. No avanzar a Fase 13 hasta cerrar rollback, diff, auditoría restaurable y acciones controladas desde chat.",
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -62,7 +63,7 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       nova_as_real_operator: 62,
       syntia_context_memory: 77,
       real_autonomous_agis: 58,
-      complete_real_hocker_ecosystem: 61,
+      complete_real_hocker_ecosystem: 63,
     },
     syntia_operational_memory: {
       version: "12.7F-1",
@@ -87,6 +88,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     syntia_operational_memory: memory.public_context,
     memory_write_gate: getSyntiaMemoryWriteGatePublicContext(),
     memory_review_gate: getSyntiaMemoryReviewGatePublicContext(),
+    memory_publication_audit: getSyntiaMemoryPublicationAuditPublicContext(),
     updated_percentages: {
       ...base.updated_percentages,
       syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,
