@@ -136,6 +136,42 @@ export async function POST(req: Request): Promise<Response> {
     localActionDraft = draftPreview as Record<string, unknown>;
   }
 
+  if (localActionDraft) {
+    const draft = localActionDraft as Record<string, unknown>;
+    const enqueued = draft.enqueued === true;
+    const scope = String(draft.scope ?? "general_action");
+    const ownerAgi = String(draft.owner_agi ?? "nova");
+
+    return Response.json({
+      ok: true,
+      project_id: parsed.data.project_id,
+      thread_id: null,
+      reply: enqueued
+        ? "Preparé un borrador seguro desde NOVA Chat y lo dejé pendiente de revisión. No ejecuté nada."
+        : "Preparé un preview seguro de acción desde NOVA Chat. No encolé ni ejecuté nada.",
+      intent: "action_draft",
+      agi_id: ownerAgi,
+      actions: [localActionDraft],
+      trace_id: null,
+      meta: {
+        reason: "Respuesta local 12.7J-1A: los borradores de acción se responden desde Hocker ONE sin depender del upstream.",
+        controls: {
+          allow_write: false,
+          requested_actions: true,
+          enqueued_actions: enqueued ? [localActionDraft] : [],
+          action_policy: enqueued
+            ? "nova_chat_action_draft_enqueued_no_execution"
+            : "nova_chat_action_draft_preview_no_execution",
+          upstream_requested_actions: false,
+          upstream_called: false,
+        },
+        chat_action_draft: localActionDraft,
+        action_scope: scope,
+        ...injectedMeta,
+      },
+    });
+  }
+
   if (shouldAnswerCapabilitiesLocally(parsed.data.message)) {
     return NextResponse.json(
       {
