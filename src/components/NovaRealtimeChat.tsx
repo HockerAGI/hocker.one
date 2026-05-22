@@ -210,6 +210,72 @@ const NATIVE_CAPABILITIES: NativeCapability[] = [
   },
 ];
 
+type CapabilityGroup = {
+  key: "crear" | "trabajo" | "sistema";
+  title: string;
+  label: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  items: NativeCapability[];
+  capabilities: NativeCapability[];
+  tools: NativeCapability[];
+  keys: string[];
+};
+
+function capabilityItems(keys: string[]): NativeCapability[] {
+  const allowed = new Set(keys);
+  return NATIVE_CAPABILITIES.filter((item) => allowed.has(item.key));
+}
+
+function makeCapabilityGroup(input: {
+  key: CapabilityGroup["key"];
+  title: string;
+  subtitle: string;
+  description: string;
+  capabilityKeys: string[];
+}): CapabilityGroup {
+  const items = capabilityItems(input.capabilityKeys);
+
+  return {
+    key: input.key,
+    title: input.title,
+    label: input.title,
+    name: input.title,
+    subtitle: input.subtitle,
+    description: input.description,
+    items,
+    capabilities: items,
+    tools: items,
+    keys: input.capabilityKeys,
+  };
+}
+
+const CAPABILITY_GROUPS: CapabilityGroup[] = [
+  makeCapabilityGroup({
+    key: "crear",
+    title: "Crear",
+    subtitle: "Contenido visual y creativo",
+    description: "Imagen, video, voz, avatar y piezas creativas cuando el executor real esté conectado.",
+    capabilityKeys: ["imagen", "video", "voz", "avatar"],
+  }),
+  makeCapabilityGroup({
+    key: "trabajo",
+    title: "Trabajo",
+    subtitle: "Archivos, documentos y código",
+    description: "Documentos, presentaciones, investigación, archivos y cambios protegidos en repositorio.",
+    capabilityKeys: ["archivo", "documento", "presentacion", "investigacion", "repo"],
+  }),
+  makeCapabilityGroup({
+    key: "sistema",
+    title: "Sistema",
+    subtitle: "Conexiones y operación",
+    description: "Datos, conexiones, estado operativo y acciones protegidas bajo tu aprobación.",
+    capabilityKeys: ["datos"],
+  }),
+];
+
+
 function id() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -435,6 +501,87 @@ function formatScope(scope?: string) {
     general_action: "Acción general",
   };
   return map[String(scope ?? "")] ?? "Acción detectada";
+}
+
+function humanStatus(status?: string) {
+  const map: Record<string, string> = {
+    needs_approval: "Esperando aprobación",
+    approved: "Autorizado",
+    queued: "En espera",
+    dry_run_queued: "En revisión",
+    running: "En proceso",
+    executing: "Ejecutando",
+    executed: "Completado",
+    completed: "Completado",
+    failed: "Requiere revisión",
+    error: "Requiere revisión",
+    execution_failed: "Falló ejecución",
+    needs_fix: "Necesita ajuste",
+    review: "En revisión",
+    rejected: "Cancelado",
+    cancelled: "Cancelado",
+    canceled: "Cancelado",
+    production_ready: "Listo para producción",
+    ready_for_production: "Listo para producción",
+    pendiente: "Pendiente",
+  };
+
+  return map[String(status ?? "")] ?? compact(status || "Pendiente", 40);
+}
+
+function humanRisk(risk?: string) {
+  const map: Record<string, string> = {
+    low: "Bajo",
+    medium: "Medio",
+    high: "Alto",
+    critical: "Crítico",
+  };
+
+  return map[String(risk ?? "")] ?? compact(risk || "Medio", 24);
+}
+
+function humanTool(tool?: string | null) {
+  const map: Record<string, string> = {
+    github: "Cambios en código",
+    supabase: "Datos",
+    vercel: "Cloud",
+    trigger: "Automatización",
+    nova_orchestrator: "NOVA",
+  };
+
+  return map[String(tool ?? "")] ?? "Preparación";
+}
+
+function shortTechnicalValue(value: unknown, max = 54) {
+  return compact(String(value ?? "No definido"), max);
+}
+
+function actionEvidenceText(action: RuntimeAction) {
+  const payload = action.payload ?? {};
+  const result = action.execution_result && typeof action.execution_result === "object" ? action.execution_result : null;
+  const resultItem = result?.result && typeof result.result === "object" ? result.result as Record<string, unknown> : null;
+  const htmlUrl = typeof resultItem?.html_url === "string" ? resultItem.html_url : "";
+  const path = payloadString(payload, "path", "evidence_path");
+
+  if (htmlUrl) return "Evidencia generada y guardada en GitHub.";
+  if (path) return `Se guardará evidencia en ${shortTechnicalValue(path, 72)}.`;
+  if (action.action_type === "github.create_branch") return "La evidencia será la rama protegida creada fuera de main.";
+  if (action.action_type === "github.create_pr") return "La evidencia será un PR draft con resumen y trazabilidad.";
+  return "La evidencia se mostrará al ejecutar el paso autorizado.";
+}
+
+function actionRollbackText(action: RuntimeAction) {
+  if (action.action_type === "github.create_branch") return "Si no procede, la rama puede eliminarse o quedar cerrada sin tocar main.";
+  if (action.action_type === "github.upsert_file") return "Si hay error, se revierte el archivo desde la rama protegida.";
+  if (action.action_type === "github.create_pr") return "Si no procede, el PR se cierra sin merge; si se mergea, se revierte con commit nuevo.";
+  return "Toda ejecución debe registrar resultado, error y plan de reversa.";
+}
+
+function actionPrimaryLocation(action: RuntimeAction) {
+  const info = summarizeAction(action);
+  if (info.path !== "No aplica") return info.path;
+  if (info.branch !== "No aplica") return info.branch;
+  return info.repo;
 }
 
 export default function NovaRealtimeChat() {
@@ -739,45 +886,47 @@ export default function NovaRealtimeChat() {
     const safe = draft.executed === false && draft.enqueued === false;
 
     return (
-      <div className="mt-3 overflow-hidden rounded-2xl border border-sky-300/20 bg-sky-300/[0.055] shadow-[0_18px_60px_rgba(14,165,233,0.10)]">
+      <div className="mt-3 overflow-hidden rounded-[1.6rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_34%),rgba(255,255,255,0.045)] shadow-[0_18px_64px_rgba(14,165,233,0.10)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-2xl bg-sky-300/10 text-sky-200">
               <Wand2 className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-black text-white">Preview seguro de acción</p>
-              <p className="text-[11px] text-slate-400">{formatScope(draft.scope)} · {String(draft.owner_agi ?? "nova").toUpperCase()}</p>
+              <p className="text-sm font-black text-white">NOVA preparó una acción</p>
+              <p className="text-[11px] text-slate-400">{formatScope(draft.scope)} · requiere tu revisión</p>
             </div>
           </div>
 
           <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${safe ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200" : "border-amber-300/30 bg-amber-300/10 text-amber-100"}`}>
-            {safe ? "sin ejecución" : "revisión"}
+            {safe ? "Sin ejecutar" : "Esperando aprobación"}
           </span>
         </div>
 
         <div className="space-y-3 px-4 py-4">
-          <p className="text-sm text-slate-100">{compact(draft.draft?.title || draft.reason || "NOVA preparó un borrador seguro.")}</p>
+          <p className="text-sm leading-6 text-slate-100">{compact(draft.draft?.title || draft.reason || "NOVA preparó un borrador seguro.")}</p>
 
           <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Herramienta</p>
-              <p className="mt-1 text-sm font-bold text-white">{draft.tool_key || "Preparación"}</p>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tipo</p>
+              <p className="mt-1 text-sm font-bold text-white">{humanTool(draft.tool_key)}</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Riesgo</p>
-              <p className="mt-1 text-sm font-bold text-white">{draft.risk_level || "medium"}</p>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Cuidado</p>
+              <p className="mt-1 text-sm font-bold text-white">{humanRisk(draft.risk_level)}</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Owner Gate</p>
-              <p className="mt-1 text-sm font-bold text-white">{draft.draft?.owner_gate_required ? "Requerido" : "No definido"}</p>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tu aprobación</p>
+              <p className="mt-1 text-sm font-bold text-white">{draft.draft?.owner_gate_required ? "Requerida" : "No requerida"}</p>
             </div>
           </div>
 
           {flow.length > 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
-              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Flujo propuesto</p>
-              <div className="space-y-2">
+            <details className="group rounded-2xl border border-white/10 bg-slate-950/32 p-3">
+              <summary className="cursor-pointer list-none text-xs font-black text-sky-100 outline-none transition hover:text-white">
+                Ver detalle del plan
+              </summary>
+              <div className="mt-3 space-y-2">
                 {flow.map((item, index) => (
                   <div key={`${item}-${index}`} className="flex gap-2 text-xs text-slate-300">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/10 text-[10px] font-black text-sky-200">{index + 1}</span>
@@ -785,18 +934,18 @@ export default function NovaRealtimeChat() {
                   </div>
                 ))}
               </div>
-            </div>
+            </details>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setShowSummary(true)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
-              Ver resumen
+            <button type="button" onClick={() => setShowSummary(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+              Ver estado
             </button>
-            <button type="button" disabled className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-500">
-              Enviar a producción · requiere 12.7K-2
+            <button type="button" disabled className="min-h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-500">
+              Requiere materialización segura
             </button>
-            <button type="button" onClick={() => setMessages((prev) => prev.filter((msg) => msg.actions?.[0] !== draft))} className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15">
-              No enviar
+            <button type="button" onClick={() => setMessages((prev) => prev.filter((msg) => msg.actions?.[0] !== draft))} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15">
+              Cancelar flujo
             </button>
           </div>
         </div>
@@ -804,29 +953,34 @@ export default function NovaRealtimeChat() {
     );
   }
 
-
   function GuidedGitHubChainCard({ chain }: { chain: GuidedGitHubChain }) {
     const nextAction = chain.nextAction;
     const loading = nextAction ? busyAction === nextAction.id : false;
     const canApprove = Boolean(nextAction && ["needs_approval", "ready_for_production", "production_ready", "queued", "dry_run_queued"].includes(nextAction.status));
     const canExecute = Boolean(nextAction && nextAction.status === "approved");
     const canReject = Boolean(nextAction && BLOCKING_STATUSES.has(nextAction.status));
+    const nextLabel = nextAction ? guidedGithubStepLabel(nextAction.action_type) : "Cadena completada";
 
     return (
-      <div className="rounded-3xl border border-sky-300/20 bg-sky-300/[0.045] p-4 shadow-[0_0_38px_rgba(56,189,248,0.08)]">
+      <div className="rounded-[1.7rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_32%),rgba(255,255,255,0.045)] p-4 shadow-[0_0_38px_rgba(56,189,248,0.08)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Cadena GitHub guiada · HOSTIA</p>
-            <h3 className="mt-1 text-base font-black text-white">Aprobación y ejecución paso por paso</h3>
-            <p className="mt-1 text-xs text-slate-400">NOVA habla contigo. HOSTIA ejecuta GitHub. Owner Gate autoriza cada paso.</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Cambios en código</p>
+            <h3 className="mt-1 text-base font-black text-white">{nextAction ? `Siguiente: ${nextLabel}` : "Todo listo"}</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-400">NOVA prepara. Tú apruebas. El sistema ejecuta un paso a la vez con evidencia.</p>
           </div>
           <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
-            {chain.completed}/{chain.total} ejecutados
+            {chain.completed} de {chain.total} completados
           </span>
         </div>
 
-        <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/45 p-3 text-xs text-slate-300">
-          <b className="text-slate-100">Rama protegida:</b> {chain.targetBranch}
+        <div className="mt-3 grid gap-2 sm:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
+            <b className="text-slate-100">Rama protegida:</b> {shortTechnicalValue(chain.targetBranch, 84)}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
+            <b className="text-slate-100">Estado:</b> {nextAction ? humanStatus(nextAction.status) : "Completado"}
+          </div>
         </div>
 
         <div className="mt-3 grid gap-2 lg:grid-cols-3">
@@ -840,11 +994,21 @@ export default function NovaRealtimeChat() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-black text-sky-100">{index + 1}</span>
                   <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] ${statusTone(action?.status ?? "pendiente")}`}>
-                    {action?.status ?? "pendiente"}
+                    {humanStatus(action?.status ?? "pendiente")}
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-black text-white">{guidedGithubStepLabel(actionType)}</p>
-                <p className="mt-1 text-[11px] text-slate-400">{action?.id ?? "Acción no encontrada en cola."}</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-400">{action ? actionEvidenceText(action) : "Se activará cuando el paso anterior esté listo."}</p>
+                {action ? (
+                  <details className="mt-2 rounded-xl border border-white/10 bg-slate-950/35 p-2">
+                    <summary className="cursor-pointer list-none text-[11px] font-bold text-sky-100">Evidencia y reversa</summary>
+                    <div className="mt-2 space-y-2 text-[11px] leading-5 text-slate-400">
+                      <p><b className="text-slate-200">Dónde:</b> {shortTechnicalValue(actionPrimaryLocation(action), 88)}</p>
+                      <p><b className="text-slate-200">Reversa:</b> {actionRollbackText(action)}</p>
+                      <p className="text-slate-500">ID técnico: {action.id}</p>
+                    </div>
+                  </details>
+                ) : null}
                 {action?.execution_error ? (
                   <p className="mt-2 rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[11px] text-rose-100">{action.execution_error}</p>
                 ) : null}
@@ -854,30 +1018,30 @@ export default function NovaRealtimeChat() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setShowSummary(true)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
-            Ver resumen
+          <button type="button" onClick={() => setShowSummary(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+            Ver estado
           </button>
 
           {nextAction && canApprove ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "approve")} className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
-              {loading ? "Procesando…" : "Aprobar siguiente paso"}
+            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "approve")} className="min-h-10 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
+              {loading ? "Procesando…" : `Aprobar ${nextLabel}`}
             </button>
           ) : null}
 
           {nextAction && canExecute ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "execute")} className="rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
-              {loading ? "Ejecutando…" : "Ejecutar paso autorizado"}
+            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "execute")} className="min-h-10 rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
+              {loading ? "Ejecutando…" : `Ejecutar ${nextLabel}`}
             </button>
           ) : null}
 
           {nextAction && canReject ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "reject")} className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
-              No enviar
+            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "reject")} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
+              Cancelar flujo
             </button>
           ) : null}
 
           {!nextAction ? (
-            <span className="rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100">
+            <span className="min-h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100">
               Cadena completada
             </span>
           ) : null}
@@ -891,47 +1055,56 @@ export default function NovaRealtimeChat() {
     const loading = busyAction === action.id;
 
     return (
-      <div className="rounded-2xl border border-white/10 bg-slate-950/52 p-4">
+      <div className="rounded-2xl border border-white/10 bg-slate-950/48 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-black text-white">{action.title}</p>
-            <p className="mt-1 text-xs text-slate-400">{action.agi_id.toUpperCase()} · {action.tool_key || "sin herramienta"} · {action.action_type}</p>
+            <p className="mt-1 text-xs text-slate-400">{humanTool(action.tool_key)} · {guidedGithubStepLabel(action.action_type)}</p>
           </div>
           <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${statusTone(action.status)}`}>
-            {action.status}
+            {humanStatus(action.status)}
           </span>
         </div>
 
         <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Repo:</b> {info.repo}</div>
-          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Rama:</b> {info.branch}</div>
-          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Ruta:</b> {info.path}</div>
+          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Repositorio:</b> {info.repo}</div>
+          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Rama:</b> {shortTechnicalValue(info.branch, 54)}</div>
+          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Evidencia:</b> {shortTechnicalValue(info.path, 54)}</div>
         </div>
+
+        <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+          <summary className="cursor-pointer list-none text-xs font-black text-sky-100">Ver evidencia y reversa</summary>
+          <div className="mt-2 space-y-2 text-xs leading-5 text-slate-400">
+            <p>{actionEvidenceText(action)}</p>
+            <p><b className="text-slate-200">Reversa:</b> {actionRollbackText(action)}</p>
+            <p className="text-slate-500">ID técnico: {action.id}</p>
+          </div>
+        </details>
 
         {action.execution_error ? (
           <p className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs text-rose-100">{action.execution_error}</p>
         ) : null}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setShowSummary(true)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
-            Ver resumen
+          <button type="button" onClick={() => setShowSummary(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+            Ver estado
           </button>
 
           {(action.status === "needs_approval" || action.status === "ready_for_production" || action.status === "production_ready") ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "approve")} className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
-              {loading ? "Procesando…" : "Enviar a producción"}
+            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "approve")} className="min-h-10 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
+              {loading ? "Procesando…" : "Aprobar cambio"}
             </button>
           ) : null}
 
           {action.status === "approved" ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "execute")} className="rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
-              {loading ? "Ejecutando…" : "Ejecutar worker seguro"}
+            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "execute")} className="min-h-10 rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
+              {loading ? "Ejecutando…" : "Ejecutar paso autorizado"}
             </button>
           ) : null}
 
           {BLOCKING_STATUSES.has(action.status) ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "reject")} className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
-              No enviar
+            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "reject")} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
+              Cancelar flujo
             </button>
           ) : null}
         </div>
@@ -939,54 +1112,42 @@ export default function NovaRealtimeChat() {
     );
   }
 
+
   return (
-    <div className="flex h-full min-h-[68dvh] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/72 shadow-2xl">
-      <div className="border-b border-white/10 bg-slate-950/70 px-4 py-3 backdrop-blur-xl sm:px-5">
+    <div className="flex h-full min-h-[68dvh] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#06152D]/80 shadow-2xl">
+      <div className="border-b border-white/10 bg-[#06152D]/90 px-4 py-3 backdrop-blur-xl sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_32px_rgba(56,189,248,0.18)]">
+            <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-[1.15rem] border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_32px_rgba(30,200,255,0.18)]">
               <Sparkles className="h-5 w-5" />
               <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400" />
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-base font-black text-white">NOVA Chat</h2>
-                <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
-                  nativo
+                <h2 className="truncate text-base font-black text-white">NOVA</h2>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] ${effectiveLock.locked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-emerald-300/30 bg-emerald-300/10 text-emerald-200"}`}>
+                  {effectiveLock.locked ? "Acciones pendientes" : "Lista"}
                 </span>
               </div>
-              <p className="truncate text-xs text-slate-400">Habla natural. NOVA prepara, valida y muestra controles solo cuando aplican.</p>
+              <p className="truncate text-xs text-slate-400">Chat privado · tu aprobación activa</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] ${effectiveLock.locked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-emerald-300/30 bg-emerald-300/10 text-emerald-200"}`}>
-              {effectiveLock.locked ? "cola ocupada" : "cola limpia"}
-            </span>
-            <button type="button" onClick={() => setShowSummary((value) => !value)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-100 hover:bg-white/10">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setShowSummary((value) => !value)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-100 hover:bg-white/10">
               <PanelRight className="mr-1.5 inline h-3.5 w-3.5" />
-              Estado
+              Sistema
             </button>
-            <button type="button" onClick={() => void loadRuntime()} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-100 hover:bg-white/10">
-              <RefreshCw className="mr-1.5 inline h-3.5 w-3.5" />
-              Actualizar
+            <button type="button" onClick={() => void loadRuntime()} className="grid min-h-10 min-w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-100 hover:bg-white/10" aria-label="Actualizar estado">
+              <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500"><ShieldCheck className="h-3.5 w-3.5" /> Seguridad</p>
-            <p className="mt-1 text-sm font-bold text-white">{effectiveLock.reason || "Sistema protegido por Owner Gate."}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500"><Activity className="h-3.5 w-3.5" /> Runtime</p>
-            <p className="mt-1 text-sm font-bold text-white">{configured.length}/{integrations.length || summary?.counts?.tools_total || 0} herramientas conectadas</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500"><Brain className="h-3.5 w-3.5" /> Acciones</p>
-            <p className="mt-1 text-sm font-bold text-white">{blockingActions.length} pendientes · {actions.length} recientes</p>
-          </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-400">
+          <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5"><ShieldCheck className="mr-1 inline h-3.5 w-3.5 text-emerald-300" /> Sin ejecución oculta</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5"><Activity className="mr-1 inline h-3.5 w-3.5 text-sky-300" /> {configured.length}/{integrations.length || summary?.counts?.tools_total || 0} conexiones</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5"><Brain className="mr-1 inline h-3.5 w-3.5 text-amber-300" /> {blockingActions.length} pendientes</span>
         </div>
       </div>
 
@@ -995,26 +1156,26 @@ export default function NovaRealtimeChat() {
           <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
             <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-black text-white">Estado operativo</p>
-                <span className="text-[11px] text-slate-500">Proyecto: {projectId}</span>
+                <p className="text-sm font-black text-white">Sistema</p>
+                <span className="text-[11px] text-slate-500">Proyecto privado</span>
               </div>
               <div className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="rounded-xl bg-slate-950/45 p-3 text-slate-300">AGIs: <b className="text-white">{summary?.counts?.agents ?? "—"}</b></div>
                 <div className="rounded-xl bg-slate-950/45 p-3 text-slate-300">Runs: <b className="text-white">{summary?.counts?.runs ?? "—"}</b></div>
-                <div className="rounded-xl bg-slate-950/45 p-3 text-slate-300">Acciones: <b className="text-white">{summary?.counts?.actions ?? actions.length}</b></div>
+                <div className="rounded-xl bg-slate-950/45 p-3 text-slate-300">Pendientes: <b className="text-white">{blockingActions.length}</b></div>
                 <div className="rounded-xl bg-slate-950/45 p-3 text-slate-300">Parciales: <b className="text-white">{partial.length}</b></div>
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-              <p className="mb-3 text-sm font-black text-white">Herramientas visibles</p>
+              <p className="mb-3 text-sm font-black text-white">Conexiones</p>
               <div className="flex flex-wrap gap-2">
                 {integrations.slice(0, 10).map((item) => (
                   <span key={item.tool_key} className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] ${statusTone(item.status)}`}>
                     {item.name}
                   </span>
                 ))}
-                {integrations.length === 0 ? <span className="text-xs text-slate-500">Sin resumen cargado todavía.</span> : null}
+                {integrations.length === 0 ? <span className="text-xs text-slate-500">Cargando estado real.</span> : null}
               </div>
             </div>
           </div>
@@ -1023,30 +1184,24 @@ export default function NovaRealtimeChat() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 sm:px-5">
         {messages.length === 0 ? (
-          <div className="mx-auto flex max-w-4xl flex-col items-center justify-center py-10 text-center">
-            <div className="grid h-16 w-16 place-items-center rounded-[1.4rem] border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_50px_rgba(14,165,233,0.18)]">
+          <div className="mx-auto flex max-w-3xl flex-col items-center justify-center py-8 text-center sm:py-12">
+            <div className="grid h-16 w-16 place-items-center rounded-[1.4rem] border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_50px_rgba(30,200,255,0.18)]">
               <Bot className="h-8 w-8" />
             </div>
-            <h3 className="mt-5 text-2xl font-black text-white">¿Qué quieres que haga NOVA?</h3>
+            <h3 className="mt-5 text-2xl font-black text-white">Lista para trabajar contigo.</h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Puedes pedir estrategia, revisión, código, investigación o preparación de acciones. Si requiere ejecución real, NOVA mostrará una tarjeta segura antes de tocar cualquier integración.
+              Pídele algo a NOVA. Si requiere tocar código, datos o integraciones, primero verás un preview claro y la acción esperará tu aprobación.
             </p>
 
-            <div className="mt-6 grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {NATIVE_CAPABILITIES.slice(0, 8).map((capability) => (
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {NATIVE_CAPABILITIES.slice(0, 6).map((capability) => (
                 <button
                   key={capability.key}
                   type="button"
                   onClick={() => applyCapability(capability)}
-                  className="group rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:border-sky-300/25 hover:bg-sky-300/10"
+                  className="min-h-10 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-100 transition hover:border-sky-300/25 hover:bg-sky-300/10"
                 >
-                  <span className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-sky-200 group-hover:bg-sky-300/15">
-                    {capabilityIcon(capability.key)}
-                  </span>
-                  <span className="block text-sm font-black text-white">{capability.label}</span>
-                  <span className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] ${statusTone(capability.status.toLowerCase())}`}>
-                    {capability.status}
-                  </span>
+                  {capability.label}
                 </button>
               ))}
             </div>
@@ -1092,7 +1247,7 @@ export default function NovaRealtimeChat() {
           <div className="mx-auto max-w-5xl space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-amber-100">
               <LockKeyhole className="h-4 w-4" />
-              Hay acciones pendientes. NOVA guía el flujo por pasos y no mezcla procesos.
+              Hay tareas esperando tu aprobación. NOVA guía un paso a la vez.
             </div>
             <div className="grid gap-3">
               {guidedGitHubChain ? <GuidedGitHubChainCard chain={guidedGitHubChain} /> : null}
@@ -1107,7 +1262,7 @@ export default function NovaRealtimeChat() {
 
       {latestDraft ? (
         <div className="border-t border-white/10 bg-sky-300/[0.035] px-4 py-2 text-center text-xs text-sky-100">
-          Preview activo: {formatScope(latestDraft.scope)} · no se ejecutó nada.
+          Preview seguro: {formatScope(latestDraft.scope)} · sin ejecutar nada.
         </div>
       ) : null}
 
@@ -1118,21 +1273,38 @@ export default function NovaRealtimeChat() {
         </div>
       ) : null}
 
-      <form onSubmit={(event) => void send(event)} className="border-t border-white/10 bg-slate-950/82 p-3 backdrop-blur-xl sm:p-4">
+      <form onSubmit={(event) => void send(event)} className="border-t border-white/10 bg-[#06152D]/95 p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-xl sm:p-4">
         {showCapabilities ? (
-          <div className="mb-3 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-3 sm:grid-cols-2 lg:grid-cols-5">
-            {NATIVE_CAPABILITIES.map((capability) => (
-              <button
-                key={capability.key}
-                type="button"
-                onClick={() => applyCapability(capability)}
-                title={capability.detail}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/45 px-3 py-2 text-left text-xs font-bold text-slate-200 hover:border-sky-300/25 hover:bg-sky-300/10"
-              >
-                {capabilityIcon(capability.key)}
-                <span>{capability.label}</span>
-              </button>
-            ))}
+          <div className="mb-3 rounded-[1.35rem] border border-white/10 bg-white/[0.04] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-xs font-black text-white">Herramientas</p>
+              <span className="text-[11px] text-slate-500">Se activan cuando aplique</span>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              {CAPABILITY_GROUPS.map((group) => (
+                <div key={group.title} className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{group.title}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.keys.map((key) => {
+                      const capability = NATIVE_CAPABILITIES.find((item) => item.key === key);
+                      if (!capability) return null;
+                      return (
+                        <button
+                          key={capability.key}
+                          type="button"
+                          onClick={() => applyCapability(capability)}
+                          title={capability.detail}
+                          className="min-h-10 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-left text-xs font-bold text-slate-200 hover:border-sky-300/25 hover:bg-sky-300/10"
+                        >
+                          <span className="mr-1.5 inline-flex align-middle text-sky-200">{capabilityIcon(capability.key)}</span>
+                          {capability.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -1167,10 +1339,10 @@ export default function NovaRealtimeChat() {
         </div>
 
         <div className="mx-auto mt-2 flex max-w-5xl flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-slate-500">
-          <span>Enter envía · Shift + Enter agrega línea.</span>
+          <span>NOVA entiende lenguaje natural.</span>
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
-            Sin ejecución oculta · Owner Gate activo
+            Sin ejecución oculta · tu aprobación activa
           </span>
         </div>
       </form>
