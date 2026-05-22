@@ -6,6 +6,7 @@ import { getSyntiaMemoryWriteGatePublicContext } from "@/lib/syntia-memory-write
 import { getSyntiaMemoryReviewGatePublicContext } from "@/lib/syntia-memory-review-gate";
 import { getSyntiaMemoryPublicationAuditPublicContext } from "@/lib/syntia-memory-publication-audit";
 import { getNovaChatActionDraftPublicContext } from "@/lib/nova-chat-action-drafts";
+import { getNovaGitHubActionMaterializerPublicContext } from "@/lib/nova-github-action-materializer";
 
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
@@ -20,11 +21,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7K — NOVA Chat UX foundation",
+      name: "12.7K-2A — GitHub Action Materializer",
       status: "in_progress",
-      objective: "Mejorar la experiencia visual de NOVA Chat para mostrar previews, herramientas, estado operativo y acciones seguras solo cuando aplican.",
-      previous_stable_phase: "12.7J — NOVA Chat action drafts + controlled executors",
-      next_target: "12.7K-2 — GitHub action materializer. No avanzar a Fase 13 hasta cerrar materialización GitHub, UI estable y executors reales por integración.",
+      objective: "Convertir previews de NOVA Chat en acciones GitHub reales en cola segura, sin ejecución directa y con Owner Gate.",
+      previous_stable_phase: "12.7K — NOVA Chat UX foundation",
+      next_target: "12.7K-2B — Chat owner buttons + guided GitHub execution chain. No avanzar a Fase 13 hasta cerrar ejecución guiada, evidencia visual y rollback por acción."
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -59,11 +60,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       hocker_one_private_operational_panel: 84,
       mobile_web_ux_ui: 85,
       agi_runtime_base: 69,
-      github_real_tooling: 92,
+      github_real_tooling: 94,
       owner_gate_operational_security: 84,
-      nova_as_real_operator: 62,
+      nova_as_real_operator: 67,
       syntia_context_memory: 77,
-      real_autonomous_agis: 58,
+      real_autonomous_agis: 61,
       complete_real_hocker_ecosystem: 63,
     },
     syntia_operational_memory: {
@@ -91,6 +92,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     memory_review_gate: getSyntiaMemoryReviewGatePublicContext(),
     memory_publication_audit: getSyntiaMemoryPublicationAuditPublicContext(),
     nova_chat_action_drafts: getNovaChatActionDraftPublicContext(),
+    nova_github_action_materializer: getNovaGitHubActionMaterializerPublicContext(),
     updated_percentages: {
       ...base.updated_percentages,
       syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 import { requireProjectRole } from "@/app/api/_lib";
-import { buildNovaChatActionDraftPreview, enqueueNovaChatActionDraft } from "@/lib/nova-chat-action-drafts";
+import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
+import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
@@ -126,7 +127,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (draftPreview && parsed.data.allow_actions) {
     const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
-    localActionDraft = await enqueueNovaChatActionDraft({
+    localActionDraft = await materializeNovaGitHubActionsFromChat({
       project_id: ctx.project_id,
       message: parsed.data.message,
       queue_lock: queueLock,
@@ -139,6 +140,7 @@ export async function POST(req: Request): Promise<Response> {
   if (localActionDraft) {
     const draft = localActionDraft as Record<string, unknown>;
     const enqueued = draft.enqueued === true;
+    const materialized = draft.materialized === true;
     const scope = String(draft.scope ?? "general_action");
     const ownerAgi = String(draft.owner_agi ?? "nova");
 
@@ -146,9 +148,11 @@ export async function POST(req: Request): Promise<Response> {
       ok: true,
       project_id: parsed.data.project_id,
       thread_id: null,
-      reply: enqueued
-        ? "Preparé un borrador seguro desde NOVA Chat y lo dejé pendiente de revisión. No ejecuté nada."
-        : "Preparé un preview seguro de acción desde NOVA Chat. No encolé ni ejecuté nada.",
+      reply: materialized
+        ? "Preparé acciones GitHub reales en cola segura. No ejecuté nada: quedaron esperando autorización Owner Gate."
+        : enqueued
+          ? "Preparé un borrador seguro desde NOVA Chat y lo dejé pendiente de revisión. No ejecuté nada."
+          : "Preparé un preview seguro de acción desde NOVA Chat. No encolé ni ejecuté nada.",
       intent: "action_draft",
       agi_id: ownerAgi,
       actions: [localActionDraft],
@@ -159,9 +163,11 @@ export async function POST(req: Request): Promise<Response> {
           allow_write: false,
           requested_actions: true,
           enqueued_actions: enqueued ? [localActionDraft] : [],
-          action_policy: enqueued
-            ? "nova_chat_action_draft_enqueued_no_execution"
-            : "nova_chat_action_draft_preview_no_execution",
+          action_policy: materialized
+            ? "nova_github_materialized_actions_waiting_owner_gate"
+            : enqueued
+              ? "nova_chat_action_draft_enqueued_no_execution"
+              : "nova_chat_action_draft_preview_no_execution",
           upstream_requested_actions: false,
           upstream_called: false,
         },
