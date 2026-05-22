@@ -1,4 +1,5 @@
 import { AGI_REGISTRY, APP_REGISTRY } from "@/lib/hocker-dashboard";
+import { getHockerPublicPrivateTopologyContext } from "@/lib/hocker-public-private-topology";
 import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
@@ -21,12 +22,13 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7K-2C — UX Polish + Evidence View",
+      name: "12.7L-1 — Public/private topology + SEO/PWA foundation",
       status: "in_progress",
-      objective: "Convertir NOVA Chat en una experiencia conversacional premium: menos panel técnico, más claridad humana, evidencia visible y rollback entendible.",
-      previous_stable_phase: "12.7K-2B — Chat owner buttons + guided GitHub execution chain",
-      next_target: "12.7L — Public/private topology + SEO/PWA foundation. No avanzar a Fase 13 hasta cerrar UX móvil, evidencia visual y separación pública/privada."
+      objective: "Separar Hocker ONE en capa pública indexable, capa privada operativa y capa protegida sensible; activar SEO/PWA base sin exponer operación interna.",
+      previous_stable_phase: "12.7K-2C — UX Polish + Evidence View",
+      next_target: "12.7L-2 — App shell route aliases + structured data + Lighthouse baseline. No avanzar a Fase 13 hasta cerrar topología pública/privada, PWA installable y noindex privado.",
     },
+    public_private_topology: getHockerPublicPrivateTopologyContext(),
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
       "Nada de ejecución real sin Owner Gate.",
