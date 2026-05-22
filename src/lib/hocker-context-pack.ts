@@ -21,11 +21,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7K-2A — GitHub Action Materializer",
+      name: "12.7K-2B — Chat owner buttons + guided GitHub execution chain",
       status: "in_progress",
-      objective: "Convertir previews de NOVA Chat en acciones GitHub reales en cola segura, sin ejecución directa y con Owner Gate.",
-      previous_stable_phase: "12.7K — NOVA Chat UX foundation",
-      next_target: "12.7K-2B — Chat owner buttons + guided GitHub execution chain. No avanzar a Fase 13 hasta cerrar ejecución guiada, evidencia visual y rollback por acción."
+      objective: "Guiar desde NOVA Chat la aprobación y ejecución por pasos de acciones GitHub reales bajo Owner Gate.",
+      previous_stable_phase: "12.7K-2A — GitHub Action Materializer",
+      next_target: "12.7K-2C — Guided execution evidence + rollback visibility. No avanzar a Fase 13 hasta cerrar evidencia visual, rollback por acción y validación production-safe."
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -38,6 +38,7 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       github_read: ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"],
       github_write_gate: ["create_branch", "upsert_file", "create_pr"],
       github_approved_worker: ["create_branch", "upsert_file", "create_pr"],
+      github_guided_execution_chain: ["approve_next_step", "execute_authorized_step", "show_result_or_error"],
       queue_table: "public.agi_action_queue",
       owner_gate: true,
       audit_chain: true,
@@ -93,6 +94,20 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     memory_publication_audit: getSyntiaMemoryPublicationAuditPublicContext(),
     nova_chat_action_drafts: getNovaChatActionDraftPublicContext(),
     nova_github_action_materializer: getNovaGitHubActionMaterializerPublicContext(),
+    nova_chat_guided_execution: {
+      version: "12.7K-2B",
+      status: "active",
+      mode: "chat_owner_buttons_guided_github_chain",
+      rules: {
+        button_visibility_only_when_needed: true,
+        approve_next_step_only: true,
+        execute_authorized_step_only: true,
+        github_order_enforced: ["github.create_branch", "github.upsert_file", "github.create_pr"],
+        no_direct_execution_from_chat: true,
+        owner_gate_required: true,
+        no_main_direct_write: true,
+      },
+    },
     updated_percentages: {
       ...base.updated_percentages,
       syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,

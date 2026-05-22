@@ -180,6 +180,96 @@ export async function listAgiActions(params: { project_id: string; status?: stri
   return (data ?? []) as AgiActionQueueRow[];
 }
 
+
+const GUIDED_GITHUB_CHAIN_VERSION = "12.7K-2B";
+const GUIDED_GITHUB_MATERIALIZER_VERSION = "12.7K-2A";
+const GUIDED_GITHUB_ACTION_ORDER = ["github.create_branch", "github.upsert_file", "github.create_pr"];
+
+function guidedGithubActionIndex(actionType: string): number {
+  const index = GUIDED_GITHUB_ACTION_ORDER.indexOf(actionType);
+  return index === -1 ? 999 : index;
+}
+
+function isGuidedGithubTerminal(status: unknown): boolean {
+  return ["executed", "completed", "rejected", "cancelled", "canceled"].includes(String(status));
+}
+
+function isGuidedGithubExecuted(item: AgiActionQueueRow): boolean {
+  return ["executed", "completed"].includes(String(item.status));
+}
+
+function guidedGithubBranchKey(item: AgiActionQueueRow): string | null {
+  const payload = asRecord(item.payload);
+
+  if (item.tool_key !== "github") return null;
+  if (!GUIDED_GITHUB_ACTION_ORDER.includes(item.action_type)) return null;
+  if (payload.materializer_version !== GUIDED_GITHUB_MATERIALIZER_VERSION) return null;
+
+  const branch = stringValue(payload.target_branch ?? payload.branch ?? payload.head);
+  return branch || null;
+}
+
+async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow): Promise<{ key: string; siblings: AgiActionQueueRow[] } | null> {
+  const key = guidedGithubBranchKey(item);
+  if (!key) return null;
+
+  const db = getAdminSupabase();
+  const { data, error } = await db
+    .from("agi_action_queue")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("tool_key", "github")
+    .in("action_type", GUIDED_GITHUB_ACTION_ORDER)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const siblings = ((data ?? []) as AgiActionQueueRow[])
+    .filter((row) => guidedGithubBranchKey(row) === key)
+    .sort((a, b) => {
+      const byAction = guidedGithubActionIndex(a.action_type) - guidedGithubActionIndex(b.action_type);
+      if (byAction !== 0) return byAction;
+      return Date.parse(a.created_at || "") - Date.parse(b.created_at || "");
+    });
+
+  return { key, siblings };
+}
+
+async function assertGuidedGithubApprovalOrder(projectId: string, item: AgiActionQueueRow): Promise<void> {
+  const chain = await getGuidedGithubChain(projectId, item);
+  if (!chain) return;
+
+  const next = chain.siblings.find((row) => !isGuidedGithubTerminal(row.status));
+  if (next && next.id !== item.id) {
+    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: primero atiende ${next.action_type}. Acción actual: ${item.action_type}.`);
+  }
+
+  const currentIndex = guidedGithubActionIndex(item.action_type);
+  const previousPending = chain.siblings.find((row) => guidedGithubActionIndex(row.action_type) < currentIndex && !isGuidedGithubExecuted(row));
+
+  if (previousPending) {
+    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: antes de aprobar ${item.action_type}, debe ejecutarse ${previousPending.action_type}.`);
+  }
+}
+
+async function assertGuidedGithubExecutionOrder(projectId: string, item: AgiActionQueueRow): Promise<void> {
+  const chain = await getGuidedGithubChain(projectId, item);
+  if (!chain) return;
+
+  const next = chain.siblings.find((row) => !isGuidedGithubTerminal(row.status));
+  if (next && next.id !== item.id) {
+    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: primero atiende ${next.action_type}. Acción actual: ${item.action_type}.`);
+  }
+
+  const currentIndex = guidedGithubActionIndex(item.action_type);
+  const previousPending = chain.siblings.find((row) => guidedGithubActionIndex(row.action_type) < currentIndex && !isGuidedGithubExecuted(row));
+
+  if (previousPending) {
+    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: antes de ejecutar ${item.action_type}, debe ejecutarse ${previousPending.action_type}.`);
+  }
+}
+
+
 export async function decideAgiAction(params: { project_id: string; action_id: string; decision: "approve" | "reject"; actor_id: string; note?: string }): Promise<AgiActionQueueRow> {
   const item = await getQueueItem(params.project_id, params.action_id);
 
@@ -188,6 +278,8 @@ export async function decideAgiAction(params: { project_id: string; action_id: s
   }
 
   if (params.decision === "approve") {
+    await assertGuidedGithubApprovalOrder(params.project_id, item);
+
     return patchQueueItem(item.id, {
       status: "approved",
       approved_by: params.actor_id,
@@ -324,6 +416,8 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
   if (item.tool_key !== "github" || !item.action_type.startsWith("github.")) {
     throw new Error("Worker actual solo ejecuta acciones GitHub aprobadas.");
   }
+
+  await assertGuidedGithubExecutionOrder(params.project_id, item);
 
   await patchQueueItem(item.id, { status: "executing", executed_by: params.actor_id });
 

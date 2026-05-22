@@ -294,6 +294,117 @@ function summarizeAction(action: RuntimeAction) {
   return { repo, branch, path };
 }
 
+
+const GUIDED_GITHUB_ACTION_ORDER = ["github.create_branch", "github.upsert_file", "github.create_pr"];
+const GUIDED_GITHUB_TERMINAL_STATUSES = new Set(["executed", "completed", "rejected", "cancelled", "canceled"]);
+
+type GuidedGitHubChain = {
+  key: string;
+  targetBranch: string;
+  actions: RuntimeAction[];
+  nextAction: RuntimeAction | null;
+  completed: number;
+  total: number;
+};
+
+function payloadString(payload: Record<string, unknown> | undefined, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+
+  return "";
+}
+
+function isGuidedGithubMaterializerAction(action: RuntimeAction): boolean {
+  const payload = action.payload ?? {};
+  return (
+    action.tool_key === "github" &&
+    GUIDED_GITHUB_ACTION_ORDER.includes(action.action_type) &&
+    payload.materializer_version === "12.7K-2A"
+  );
+}
+
+function guidedGithubBranchKey(action: RuntimeAction): string | null {
+  if (!isGuidedGithubMaterializerAction(action)) return null;
+  return payloadString(action.payload, "target_branch", "branch", "head") || null;
+}
+
+function isGuidedGithubTerminal(action: RuntimeAction): boolean {
+  return GUIDED_GITHUB_TERMINAL_STATUSES.has(action.status);
+}
+
+function isGuidedGithubCompleted(action: RuntimeAction): boolean {
+  return ["executed", "completed"].includes(action.status);
+}
+
+function guidedGithubStepLabel(actionType: string): string {
+  if (actionType === "github.create_branch") return "Crear rama segura";
+  if (actionType === "github.upsert_file") return "Guardar evidencia";
+  if (actionType === "github.create_pr") return "Abrir PR draft";
+  return actionType;
+}
+
+function buildGuidedGitHubChain(items: RuntimeAction[]): GuidedGitHubChain | null {
+  const groups = new Map<string, RuntimeAction[]>();
+
+  for (const item of items) {
+    const key = guidedGithubBranchKey(item);
+    if (!key) continue;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+
+  if (groups.size === 0) return null;
+
+  const chains = Array.from(groups.entries()).map(([key, group]) => {
+    const latestByType = new Map<string, RuntimeAction>();
+
+    for (const item of group) {
+      const current = latestByType.get(item.action_type);
+      if (!current || Date.parse(item.created_at || "") > Date.parse(current.created_at || "")) {
+        latestByType.set(item.action_type, item);
+      }
+    }
+
+    const ordered = GUIDED_GITHUB_ACTION_ORDER
+      .map((actionType) => latestByType.get(actionType))
+      .filter(Boolean) as RuntimeAction[];
+
+    const nextAction = ordered.find((item) => !isGuidedGithubTerminal(item)) ?? null;
+    const completed = ordered.filter(isGuidedGithubCompleted).length;
+    const latestTime = Math.max(...ordered.map((item) => Date.parse(item.created_at || "") || 0), 0);
+
+    return {
+      key,
+      targetBranch: key,
+      actions: ordered,
+      nextAction,
+      completed,
+      total: GUIDED_GITHUB_ACTION_ORDER.length,
+      latestTime,
+      hasOpenWork: Boolean(nextAction),
+    };
+  });
+
+  chains.sort((a, b) => {
+    if (a.hasOpenWork !== b.hasOpenWork) return a.hasOpenWork ? -1 : 1;
+    return b.latestTime - a.latestTime;
+  });
+
+  const selected = chains[0];
+  if (!selected) return null;
+
+  return {
+    key: selected.key,
+    targetBranch: selected.targetBranch,
+    actions: selected.actions,
+    nextAction: selected.nextAction,
+    completed: selected.completed,
+    total: selected.total,
+  };
+}
+
+
 function statusTone(status: string) {
   if (["connected", "configured", "active", "executed", "completed", "approved"].includes(status)) return "border-emerald-400/30 bg-emerald-400/10 text-emerald-200";
   if (["partial", "needs_approval", "ready_for_production", "production_ready", "queued", "review"].includes(status)) return "border-amber-300/30 bg-amber-300/10 text-amber-100";
@@ -347,6 +458,12 @@ export default function NovaRealtimeChat() {
   const partial = integrations.filter((item) => item.status === "partial");
   const blockingActions = useMemo(() => actions.filter((item) => BLOCKING_STATUSES.has(item.status)), [actions]);
   const productionAction = useMemo(() => actions.find(isReadyForProduction) ?? null, [actions]);
+  const guidedGitHubChain = useMemo(() => buildGuidedGitHubChain(actions), [actions]);
+  const guidedGitHubActionIds = useMemo(() => new Set(guidedGitHubChain?.actions.map((item) => item.id) ?? []), [guidedGitHubChain]);
+  const standaloneBlockingActions = useMemo(
+    () => blockingActions.filter((item) => !guidedGitHubActionIds.has(item.id)),
+    [blockingActions, guidedGitHubActionIds],
+  );
   const latestDraft = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const draft = messages[i]?.actions?.[0];
@@ -687,6 +804,88 @@ export default function NovaRealtimeChat() {
     );
   }
 
+
+  function GuidedGitHubChainCard({ chain }: { chain: GuidedGitHubChain }) {
+    const nextAction = chain.nextAction;
+    const loading = nextAction ? busyAction === nextAction.id : false;
+    const canApprove = Boolean(nextAction && ["needs_approval", "ready_for_production", "production_ready", "queued", "dry_run_queued"].includes(nextAction.status));
+    const canExecute = Boolean(nextAction && nextAction.status === "approved");
+    const canReject = Boolean(nextAction && BLOCKING_STATUSES.has(nextAction.status));
+
+    return (
+      <div className="rounded-3xl border border-sky-300/20 bg-sky-300/[0.045] p-4 shadow-[0_0_38px_rgba(56,189,248,0.08)]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Cadena GitHub guiada · HOSTIA</p>
+            <h3 className="mt-1 text-base font-black text-white">Aprobación y ejecución paso por paso</h3>
+            <p className="mt-1 text-xs text-slate-400">NOVA habla contigo. HOSTIA ejecuta GitHub. Owner Gate autoriza cada paso.</p>
+          </div>
+          <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
+            {chain.completed}/{chain.total} ejecutados
+          </span>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/45 p-3 text-xs text-slate-300">
+          <b className="text-slate-100">Rama protegida:</b> {chain.targetBranch}
+        </div>
+
+        <div className="mt-3 grid gap-2 lg:grid-cols-3">
+          {GUIDED_GITHUB_ACTION_ORDER.map((actionType, index) => {
+            const action = chain.actions.find((item) => item.action_type === actionType);
+            const active = Boolean(action && nextAction?.id === action.id);
+            const done = Boolean(action && isGuidedGithubCompleted(action));
+
+            return (
+              <div key={actionType} className={`rounded-2xl border p-3 ${active ? "border-sky-300/30 bg-sky-300/10" : done ? "border-emerald-300/25 bg-emerald-300/10" : "border-white/10 bg-white/[0.035]"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-black text-sky-100">{index + 1}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] ${statusTone(action?.status ?? "pendiente")}`}>
+                    {action?.status ?? "pendiente"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-black text-white">{guidedGithubStepLabel(actionType)}</p>
+                <p className="mt-1 text-[11px] text-slate-400">{action?.id ?? "Acción no encontrada en cola."}</p>
+                {action?.execution_error ? (
+                  <p className="mt-2 rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[11px] text-rose-100">{action.execution_error}</p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setShowSummary(true)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+            Ver resumen
+          </button>
+
+          {nextAction && canApprove ? (
+            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "approve")} className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
+              {loading ? "Procesando…" : "Aprobar siguiente paso"}
+            </button>
+          ) : null}
+
+          {nextAction && canExecute ? (
+            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "execute")} className="rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
+              {loading ? "Ejecutando…" : "Ejecutar paso autorizado"}
+            </button>
+          ) : null}
+
+          {nextAction && canReject ? (
+            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "reject")} className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
+              No enviar
+            </button>
+          ) : null}
+
+          {!nextAction ? (
+            <span className="rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100">
+              Cadena completada
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   function RuntimeActionCard({ action }: { action: RuntimeAction }) {
     const info = summarizeAction(action);
     const loading = busyAction === action.id;
@@ -893,10 +1092,12 @@ export default function NovaRealtimeChat() {
           <div className="mx-auto max-w-5xl space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-amber-100">
               <LockKeyhole className="h-4 w-4" />
-              Hay acciones pendientes. NOVA puede explicar y preparar, pero no debe mezclar procesos.
+              Hay acciones pendientes. NOVA guía el flujo por pasos y no mezcla procesos.
             </div>
             <div className="grid gap-3">
-              {blockingActions.slice(0, 2).map((action) => (
+              {guidedGitHubChain ? <GuidedGitHubChainCard chain={guidedGitHubChain} /> : null}
+
+              {standaloneBlockingActions.slice(0, guidedGitHubChain ? 1 : 2).map((action) => (
                 <RuntimeActionCard key={action.id} action={action} />
               ))}
             </div>
