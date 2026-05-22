@@ -8,7 +8,19 @@ import WorkspaceBar from "@/components/WorkspaceBar";
 import HockerLiveBackground from "@/components/ui-hocker/HockerLiveBackground";
 import HockerVfxLayer from "@/components/vfx/HockerVfxLayer";
 
-const PUBLIC_ROUTES = ["/", "/empresa", "/login", "/auth/callback"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/one",
+  "/empresa",
+  "/servicios",
+  "/ecosistema",
+  "/soluciones",
+  "/casos",
+  "/seguridad",
+  "/contacto",
+  "/login",
+  "/auth/callback",
+];
 
 export default function ShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";

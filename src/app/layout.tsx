@@ -5,7 +5,10 @@ import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import ShellFrame from "@/components/ShellFrame";
 import PwaRegister from "@/components/PwaRegister";
 
+const HOCKER_PUBLIC_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(HOCKER_PUBLIC_URL),
   title: {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
