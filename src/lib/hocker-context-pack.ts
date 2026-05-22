@@ -21,11 +21,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7K-2B — Chat owner buttons + guided GitHub execution chain",
+      name: "12.7K-2C — UX Polish + Evidence View",
       status: "in_progress",
-      objective: "Guiar desde NOVA Chat la aprobación y ejecución por pasos de acciones GitHub reales bajo Owner Gate.",
-      previous_stable_phase: "12.7K-2A — GitHub Action Materializer",
-      next_target: "12.7K-2C — Guided execution evidence + rollback visibility. No avanzar a Fase 13 hasta cerrar evidencia visual, rollback por acción y validación production-safe."
+      objective: "Convertir NOVA Chat en una experiencia conversacional premium: menos panel técnico, más claridad humana, evidencia visible y rollback entendible.",
+      previous_stable_phase: "12.7K-2B — Chat owner buttons + guided GitHub execution chain",
+      next_target: "12.7L — Public/private topology + SEO/PWA foundation. No avanzar a Fase 13 hasta cerrar UX móvil, evidencia visual y separación pública/privada."
     },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
@@ -59,11 +59,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
     capabilities_contract: capabilities.public_context,
     updated_percentages: {
       hocker_one_private_operational_panel: 84,
-      mobile_web_ux_ui: 85,
+      mobile_web_ux_ui: 90,
       agi_runtime_base: 69,
       github_real_tooling: 94,
       owner_gate_operational_security: 84,
-      nova_as_real_operator: 67,
+      nova_as_real_operator: 72,
       syntia_context_memory: 77,
       real_autonomous_agis: 61,
       complete_real_hocker_ecosystem: 63,
@@ -95,9 +95,9 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     nova_chat_action_drafts: getNovaChatActionDraftPublicContext(),
     nova_github_action_materializer: getNovaGitHubActionMaterializerPublicContext(),
     nova_chat_guided_execution: {
-      version: "12.7K-2B",
+      version: "12.7K-2C",
       status: "active",
-      mode: "chat_owner_buttons_guided_github_chain",
+      mode: "chat_owner_buttons_guided_github_chain_with_clean_ux",
       rules: {
         button_visibility_only_when_needed: true,
         approve_next_step_only: true,
@@ -106,6 +106,9 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
         no_direct_execution_from_chat: true,
         owner_gate_required: true,
         no_main_direct_write: true,
+        human_labels_enabled: true,
+        technical_ids_hidden_by_default: true,
+        evidence_and_rollback_visible_on_demand: true,
       },
     },
     updated_percentages: {
