@@ -1,4 +1,9 @@
 import type { MetadataRoute } from "next";
+import {
+  HOCKER_PRIVATE_ROUTES,
+  HOCKER_PROTECTED_ROUTES,
+  HOCKER_PUBLIC_SITEMAP_ROUTES,
+} from "@/lib/hocker-public-private-topology";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app").replace(/\/$/, "");
 
@@ -7,39 +12,11 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: [
-          "/",
-          "/one",
-          "/empresa",
-          "/servicios",
-          "/ecosistema",
-          "/soluciones",
-          "/casos",
-          "/seguridad",
-          "/contacto",
-        ],
+        allow: [...HOCKER_PUBLIC_SITEMAP_ROUTES],
         disallow: [
           "/api/",
-          "/dashboard",
-          "/chat",
-          "/live",
-          "/map",
-          "/apps",
-          "/agis",
-          "/nodes",
-          "/owner",
-          "/commands",
-          "/integrations",
-          "/status",
-          "/memory",
-          "/governance",
-          "/supply",
-          "/mobile",
-          "/launch",
-          "/chido",
-          "/security",
-          "/admin",
-          "/access",
+          ...HOCKER_PRIVATE_ROUTES,
+          ...HOCKER_PROTECTED_ROUTES,
         ],
       },
     ],

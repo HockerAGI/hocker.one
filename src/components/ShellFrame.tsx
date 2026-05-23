@@ -7,24 +7,12 @@ import BottomDock from "@/components/BottomDock";
 import WorkspaceBar from "@/components/WorkspaceBar";
 import HockerLiveBackground from "@/components/ui-hocker/HockerLiveBackground";
 import HockerVfxLayer from "@/components/vfx/HockerVfxLayer";
+import { HOCKER_PUBLIC_ROUTES } from "@/lib/hocker-public-private-topology";
 
-const PUBLIC_ROUTES = [
-  "/",
-  "/one",
-  "/empresa",
-  "/servicios",
-  "/ecosistema",
-  "/soluciones",
-  "/casos",
-  "/seguridad",
-  "/contacto",
-  "/login",
-  "/auth/callback",
-];
 
 export default function ShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
-  const isPublicRoute = PUBLIC_ROUTES.some(
+  const isPublicRoute = HOCKER_PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 

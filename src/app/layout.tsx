@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import ShellFrame from "@/components/ShellFrame";
 import PwaRegister from "@/components/PwaRegister";
+import { getHockerPublicJsonLdGraph } from "@/lib/hocker-structured-data";
 
 const HOCKER_PUBLIC_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app";
 
@@ -49,6 +50,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const hockerPublicJsonLd = getHockerPublicJsonLdGraph();
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -57,6 +60,11 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className="bg-[#020617] text-slate-50 antialiased selection:bg-sky-400/30 selection:text-white">
+        <script
+          type="application/ld+json"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(hockerPublicJsonLd) }}
+        />
         <WorkspaceProvider>
           <ShellFrame>{children}</ShellFrame>
           <PwaRegister />
