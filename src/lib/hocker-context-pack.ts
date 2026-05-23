@@ -28,7 +28,16 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       previous_stable_phase: "12.7K-2C — UX Polish + Evidence View",
       next_target: "12.7L-2 — App shell route aliases + structured data + Lighthouse baseline. No avanzar a Fase 13 hasta cerrar topología pública/privada, PWA installable y noindex privado.",
     },
-    public_private_topology: getHockerPublicPrivateTopologyContext(),
+    public_private_topology: {
+      ...getHockerPublicPrivateTopologyContext(),
+      private_noindex_header_hardening: {
+        version: "12.7L-1B",
+        status: "active",
+        source: "next.config.headers",
+        headers: ["X-Robots-Tag", "X-Hocker-Topology"],
+        objective: "Forzar noindex/nofollow/noarchive en rutas privadas, protegidas y API sin depender únicamente del middleware.",
+      },
+    },
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
       "Nada de ejecución real sin Owner Gate.",

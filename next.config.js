@@ -1,5 +1,48 @@
 /** @type {import('next').NextConfig} */
+
+const hockerPrivateNoindexHeaders = [
+  {
+    key: "X-Robots-Tag",
+    value: "noindex, nofollow, noarchive",
+  },
+  {
+    key: "X-Hocker-Topology",
+    value: "12.7L-1B-private-noindex-hardening",
+  },
+];
+
+const hockerPrivateNoindexSources = [
+  "/api/:path*",
+  "/chat/:path*",
+  "/dashboard/:path*",
+  "/live/:path*",
+  "/map/:path*",
+  "/apps/:path*",
+  "/agis/:path*",
+  "/nodes/:path*",
+  "/owner/:path*",
+  "/commands/:path*",
+  "/integrations/:path*",
+  "/status/:path*",
+  "/memory/:path*",
+  "/governance/:path*",
+  "/supply/:path*",
+  "/mobile/:path*",
+  "/launch/:path*",
+  "/chido/:path*",
+  "/security/:path*",
+  "/admin/:path*",
+  "/access/:path*",
+];
+
 const nextConfig = {
+  async headers() {
+    return hockerPrivateNoindexSources.map((source) => ({
+      source,
+      headers: hockerPrivateNoindexHeaders,
+    }));
+  },
+
   reactStrictMode: true,
   webpack: (config) => {
     config.infrastructureLogging = { level: "error" };
