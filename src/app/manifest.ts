@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Hocker ONE",
     short_name: "Hocker ONE",
     description: "Sistema operativo conversacional del ecosistema HOCKER para coordinar NOVA, AGIs, acciones y evidencia.",
-    start_url: "/chat",
+    start_url: "/app/nova",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

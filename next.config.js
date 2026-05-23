@@ -7,7 +7,7 @@ const hockerPrivateNoindexHeaders = [
   },
   {
     key: "X-Hocker-Topology",
-    value: "12.7L-1B-private-noindex-hardening",
+    value: "12.7L-2B-private-noindex-pwa-baseline",
   },
 ];
 

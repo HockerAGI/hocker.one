@@ -22,14 +22,22 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7L-2A — App shell aliases + structured data baseline",
+      name: "12.7L-2B-3 — PWA polish + header trace cleanup + Lighthouse diagnostics",
       status: "in_progress",
-      objective: "Crear aliases privados /app, reducir duplicación de topología y activar structured data público sin exponer operación interna.",
-      previous_stable_phase: "12.7L-1B — Private noindex header hardening",
-      next_target: "12.7L-2B — Lighthouse baseline + PWA installability verification. No avanzar a Fase 13 hasta cerrar aliases /app, structured data, Lighthouse y PWA premium.",
+      objective: "Pulir PWA, alinear start_url con /app/nova, limpiar trazabilidad de headers y preparar diagnóstico Lighthouse real antes de Fase 13.",
+      previous_stable_phase: "12.7L-2A — App shell aliases + structured data baseline",
+      next_target: "12.7L-2B-STABLE — Lighthouse/PWA baseline final. No avanzar a Fase 13 hasta cerrar Lighthouse real o diagnóstico documentado, PWA installable, SW y headers limpios.",
     },
     public_private_topology: {
       ...getHockerPublicPrivateTopologyContext(),
+      pwa_lighthouse_diagnostics: {
+        version: "12.7L-2B-3",
+        status: "active",
+        manifest_start_url: "/app/nova",
+        header_trace: "12.7L-2B-private-noindex-pwa-baseline",
+        lighthouse_status: "diagnostics_required",
+        rule: "No avanzar a Fase 13 hasta tener Lighthouse real o error documentado con causa clara.",
+      },
       app_shell_aliases: {
         version: "12.7L-2A",
         status: "active",
