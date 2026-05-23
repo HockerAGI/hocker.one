@@ -1,4 +1,4 @@
-export const HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION = "12.7L-2A";
+export const HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION = "12.7L-2B-3";
 
 export const HOCKER_PUBLIC_ROUTES = [
   "/",
@@ -108,11 +108,14 @@ export function getHockerPublicPrivateTopologyContext() {
       api_routes_noindex: true,
       pwa_manifest_enabled: true,
       structured_data_enabled: true,
+      pwa_start_url_app_nova: true,
+      lighthouse_diagnostics_required: true,
+      header_trace_cleaned: true,
       service_worker_registered: true,
       no_private_routes_in_sitemap: true,
       nova_remains_primary_interface: true,
       owner_gate_remains_required_for_execution: true,
     },
-    next_step: "12.7L-2B debe validar Lighthouse baseline, PWA installable y limpieza fina de metadata/canonical.",
+    next_step: "12.7L-2B-STABLE debe cerrar Lighthouse real, PWA installable, service worker y trazabilidad limpia antes de Fase 13.",
   };
 }

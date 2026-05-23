@@ -59,7 +59,7 @@ export function middleware(req: NextRequest) {
     res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
 
-  res.headers.set("X-Hocker-Topology", "12.7L-2A-public-private-app-shell");
+  res.headers.set("X-Hocker-Topology", "12.7L-2B-private-noindex-pwa-baseline");
 
   return res;
 }
