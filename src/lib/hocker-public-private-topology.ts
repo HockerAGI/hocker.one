@@ -1,4 +1,4 @@
-export const HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION = "12.7L-1";
+export const HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION = "12.7L-2A";
 
 export const HOCKER_PUBLIC_ROUTES = [
   "/",
@@ -15,6 +15,12 @@ export const HOCKER_PUBLIC_ROUTES = [
 ] as const;
 
 export const HOCKER_PRIVATE_ROUTES = [
+  "/app",
+  "/app/nova",
+  "/app/actividad",
+  "/app/pendientes",
+  "/app/ecosistema",
+  "/app/ajustes",
   "/dashboard",
   "/chat",
   "/live",
@@ -31,6 +37,15 @@ export const HOCKER_PRIVATE_ROUTES = [
   "/supply",
   "/mobile",
   "/launch",
+] as const;
+
+export const HOCKER_APP_ALIAS_ROUTES = [
+  "/app",
+  "/app/nova",
+  "/app/actividad",
+  "/app/pendientes",
+  "/app/ecosistema",
+  "/app/ajustes",
 ] as const;
 
 export const HOCKER_PROTECTED_ROUTES = [
@@ -71,10 +86,11 @@ export function getHockerPublicPrivateTopologyContext() {
           robots: "/robots.txt",
           manifest: "/manifest.webmanifest",
           canonical_required: true,
-          structured_data_ready: false,
+          structured_data_ready: true,
         },
       },
       private_operational: {
+        route_aliases: HOCKER_APP_ALIAS_ROUTES,
         purpose: "Operar NOVA, AGIs, acciones, estado, memoria, integraciones y auditoría bajo sesión.",
         routes: HOCKER_PRIVATE_ROUTES,
         index_policy: "noindex_header",
@@ -91,11 +107,12 @@ export function getHockerPublicPrivateTopologyContext() {
       private_pages_noindex: true,
       api_routes_noindex: true,
       pwa_manifest_enabled: true,
+      structured_data_enabled: true,
       service_worker_registered: true,
       no_private_routes_in_sitemap: true,
       nova_remains_primary_interface: true,
       owner_gate_remains_required_for_execution: true,
     },
-    next_step: "12.7L-2 debe consolidar shell /app, navegación pública premium, structured data y noindex por metadata cuando aplique.",
+    next_step: "12.7L-2B debe validar Lighthouse baseline, PWA installable y limpieza fina de metadata/canonical.",
   };
 }

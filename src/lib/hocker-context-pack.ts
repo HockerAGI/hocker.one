@@ -22,14 +22,21 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7L-1 — Public/private topology + SEO/PWA foundation",
+      name: "12.7L-2A — App shell aliases + structured data baseline",
       status: "in_progress",
-      objective: "Separar Hocker ONE en capa pública indexable, capa privada operativa y capa protegida sensible; activar SEO/PWA base sin exponer operación interna.",
-      previous_stable_phase: "12.7K-2C — UX Polish + Evidence View",
-      next_target: "12.7L-2 — App shell route aliases + structured data + Lighthouse baseline. No avanzar a Fase 13 hasta cerrar topología pública/privada, PWA installable y noindex privado.",
+      objective: "Crear aliases privados /app, reducir duplicación de topología y activar structured data público sin exponer operación interna.",
+      previous_stable_phase: "12.7L-1B — Private noindex header hardening",
+      next_target: "12.7L-2B — Lighthouse baseline + PWA installability verification. No avanzar a Fase 13 hasta cerrar aliases /app, structured data, Lighthouse y PWA premium.",
     },
     public_private_topology: {
       ...getHockerPublicPrivateTopologyContext(),
+      app_shell_aliases: {
+        version: "12.7L-2A",
+        status: "active",
+        routes: ["/app", "/app/nova", "/app/actividad", "/app/pendientes", "/app/ecosistema", "/app/ajustes"],
+        compatibility_routes: ["/dashboard", "/chat", "/live", "/commands", "/map", "/owner", "/integrations"],
+        rule: "Aliases privados sin eliminar rutas heredadas; todos conservan noindex por header.",
+      },
       private_noindex_header_hardening: {
         version: "12.7L-1B",
         status: "active",

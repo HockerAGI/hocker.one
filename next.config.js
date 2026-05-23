@@ -12,6 +12,7 @@ const hockerPrivateNoindexHeaders = [
 ];
 
 const hockerPrivateNoindexSources = [
+  "/app/:path*",
   "/api/:path*",
   "/chat/:path*",
   "/dashboard/:path*",

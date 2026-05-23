@@ -15,6 +15,7 @@ const PUBLIC_PREFIXES = [
 ];
 
 const ALWAYS_PRIVATE_PREFIXES = [
+  "/app",
   "/api",
   "/dashboard",
   "/chat",
@@ -58,7 +59,7 @@ export function middleware(req: NextRequest) {
     res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
 
-  res.headers.set("X-Hocker-Topology", "12.7L-1-public-private-protected");
+  res.headers.set("X-Hocker-Topology", "12.7L-2A-public-private-app-shell");
 
   return res;
 }
