@@ -39,7 +39,7 @@ export function getHockerProviderOrchestratorPublicContext() {
       queue_lock_required: true,
       evidence_required: true,
     },
-    next_step: "12.7L-2C-B debe agregar router diagnóstico multi-proveedor sin tocar el router LLM nativo de NOVA.AGI.",
+    next_step: "12.7L-2C-B delega diagnóstico a hocker-diagnostics-provider-router. Siguiente: 12.7Z-1 SQL normalization + idempotent GitHub worker.",
   };
 }
 
@@ -199,7 +199,7 @@ export async function getHockerUnifiedProviderInventory(projectId = "hocker-one"
     diagnostics: {
       source: "hocker.one",
       providers: diagnosticsProviders(),
-      next_step: "Activar router diagnóstico multi-proveedor sin duplicar router LLM.",
+      next_step: "Router diagnóstico activo en 12.7L-2C-B. Siguiente: validar evidencia y pasar a 12.7Z-1.",
     },
     execution_policy: {
       nova_agi_thinks_and_routes_models: true,

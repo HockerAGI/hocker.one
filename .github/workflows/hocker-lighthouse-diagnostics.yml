@@ -1,0 +1,50 @@
+name: HOCKER Lighthouse Diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Base URL to audit"
+        required: false
+        default: "https://hockerone.vercel.app"
+      diagnostic_routes:
+        description: "Comma-separated routes"
+        required: false
+        default: "/,/one,/ecosistema,/soluciones,/seguridad"
+
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run diagnostics router
+        env:
+          PROD_BASE: ${{ inputs.base_url }}
+          DIAGNOSTIC_ROUTES: ${{ inputs.diagnostic_routes }}
+          HOCKER_DIAGNOSTICS_SKIP_GITHUB: "1"
+        run: node scripts/diagnostics/hocker-diagnostics-provider-router.mjs
+
+      - name: Upload diagnostics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hocker-lighthouse-diagnostics
+          path: |
+            HOCKER_127L2CB_DIAGNOSTICS_*
+            /tmp/HOCKER_127L2CB_DIAGNOSTICS_*
+            /sdcard/Download/HOCKER_127L2CB_DIAGNOSTICS_*
+          if-no-files-found: ignore
