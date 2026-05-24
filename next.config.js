@@ -7,11 +7,13 @@ const hockerPrivateNoindexHeaders = [
   },
   {
     key: "X-Hocker-Topology",
-    value: "12.7L-2B-private-noindex-pwa-baseline",
+    value: "12.7L-2C-private-noindex-clean",
   },
 ];
 
 const hockerPrivateNoindexSources = [
+  "/auth/callback",
+  "/auth/callback/:path*",
   "/app/:path*",
   "/api/:path*",
   "/chat/:path*",
