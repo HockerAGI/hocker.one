@@ -521,7 +521,7 @@ async function executeUpsertFile(payload: JsonRecord) {
   if (isMockedGithubBoundary()) {
     return mockedGithubResult("mocked_create_branch", payload, {
       repository: fullName,
-      base: base,
+      base: stringValue(payload.base) || stringValue(payload.base_branch) || stringValue(payload.source_branch) || stringValue(payload.from) || "main",
       target_branch: branch,
       created: true,
       ref: `refs/heads/${branch}`,
