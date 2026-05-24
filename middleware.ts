@@ -1,65 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const PUBLIC_PREFIXES = [
-  "/",
-  "/one",
-  "/empresa",
-  "/servicios",
-  "/ecosistema",
-  "/soluciones",
-  "/casos",
-  "/seguridad",
-  "/contacto",
-  "/login",
-  "/auth/callback",
-];
-
-const ALWAYS_PRIVATE_PREFIXES = [
-  "/app",
-  "/api",
-  "/dashboard",
-  "/chat",
-  "/live",
-  "/map",
-  "/apps",
-  "/agis",
-  "/nodes",
-  "/owner",
-  "/commands",
-  "/integrations",
-  "/status",
-  "/memory",
-  "/governance",
-  "/supply",
-  "/mobile",
-  "/launch",
-  "/chido",
-  "/security",
-  "/admin",
-  "/access",
-];
-
-function isExactOrChild(pathname: string, route: string) {
-  return pathname === route || pathname.startsWith(`${route}/`);
-}
-
-function isPrivatePath(pathname: string) {
-  return ALWAYS_PRIVATE_PREFIXES.some((route) => isExactOrChild(pathname, route));
-}
-
-function isPublicPath(pathname: string) {
-  return PUBLIC_PREFIXES.some((route) => isExactOrChild(pathname, route));
-}
+import {
+  HOCKER_PRIVATE_TOPOLOGY_HEADER,
+  HOCKER_PUBLIC_TOPOLOGY_HEADER,
+  isHockerNoindexRoute,
+  isHockerPublicRoute,
+} from "@/lib/hocker-public-private-topology";
 
 export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const pathname = req.nextUrl.pathname;
 
-  if (isPrivatePath(pathname) || !isPublicPath(pathname)) {
-    res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-  }
+  const mustNoindex = isHockerNoindexRoute(pathname) || !isHockerPublicRoute(pathname);
 
-  res.headers.set("X-Hocker-Topology", "12.7L-2B-private-noindex-pwa-baseline");
+  if (mustNoindex) {
+    res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    res.headers.set("X-Hocker-Topology", HOCKER_PRIVATE_TOPOLOGY_HEADER);
+  } else {
+    res.headers.set("X-Hocker-Topology", HOCKER_PUBLIC_TOPOLOGY_HEADER);
+  }
 
   return res;
 }

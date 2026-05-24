@@ -3,6 +3,7 @@ import {
   HOCKER_PRIVATE_ROUTES,
   HOCKER_PROTECTED_ROUTES,
   HOCKER_PUBLIC_SITEMAP_ROUTES,
+  HOCKER_TECHNICAL_NOINDEX_ROUTES,
 } from "@/lib/hocker-public-private-topology";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app").replace(/\/$/, "");
@@ -17,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
           "/api/",
           ...HOCKER_PRIVATE_ROUTES,
           ...HOCKER_PROTECTED_ROUTES,
+          ...HOCKER_TECHNICAL_NOINDEX_ROUTES,
         ],
       },
     ],
