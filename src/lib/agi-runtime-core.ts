@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
 
@@ -166,6 +167,42 @@ export function getRuntimeToolSummary() {
     },
     tools,
   };
+}
+
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(",")}]`;
+  }
+
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`)
+      .join(",")}}`;
+  }
+
+  return JSON.stringify(value ?? null);
+}
+
+function buildAgiActionIdempotencyKey(input: {
+  project_id: string;
+  agi_id: string;
+  tool_key?: string | null;
+  action_type: string;
+  title: string;
+  payload?: JsonObject;
+}): string {
+  const source = stableJson({
+    project_id: input.project_id,
+    agi_id: input.agi_id,
+    tool_key: input.tool_key ?? null,
+    action_type: input.action_type,
+    title: input.title,
+    payload: input.payload ?? {},
+  });
+
+  return `agi_action:${createHash("sha256").update(source).digest("hex")}`;
 }
 
 function getAdminSupabase(): SupabaseClient {
@@ -421,6 +458,18 @@ export async function enqueueAgiAction(input: {
   const requiresApproval = input.requires_approval ?? true;
   const status = requiresApproval ? "needs_approval" : dryRun ? "dry_run_queued" : "queued";
 
+  const idempotencyKey = buildAgiActionIdempotencyKey(input);
+
+  const existing = await sb
+    .from("agi_action_queue")
+    .select("*")
+    .eq("project_id", input.project_id)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (existing.error) throw new Error(existing.error.message);
+  if (existing.data) return existing.data;
+
   const row = {
     project_id: input.project_id,
     agi_id: input.agi_id,
@@ -433,9 +482,26 @@ export async function enqueueAgiAction(input: {
     requires_approval: requiresApproval,
     status,
     created_by: input.created_by ?? null,
+    idempotency_key: idempotencyKey,
+    attempt_count: 0,
+    max_attempts: 3,
   };
 
   const { data, error } = await sb.from("agi_action_queue").insert(row).select("*").single();
-  if (error || !data) throw new Error(error?.message ?? "No se pudo crear acción AGI.");
+
+  if (error) {
+    const duplicate = await sb
+      .from("agi_action_queue")
+      .select("*")
+      .eq("project_id", input.project_id)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (!duplicate.error && duplicate.data) return duplicate.data;
+
+    throw new Error(error.message);
+  }
+
+  if (!data) throw new Error("No se pudo crear acción AGI.");
   return data;
 }

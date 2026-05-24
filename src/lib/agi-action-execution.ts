@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 
@@ -27,6 +28,12 @@ export type AgiActionQueueRow = {
   approved_at?: string | null;
   rejected_at?: string | null;
   executed_at?: string | null;
+  idempotency_key?: string | null;
+  locked_at?: string | null;
+  lock_owner?: string | null;
+  attempt_count?: number | null;
+  max_attempts?: number | null;
+  last_error?: string | null;
   created_at: string;
   updated_at?: string | null;
 };
@@ -70,11 +77,32 @@ function encodeSegment(value: string): string {
   return encodeURIComponent(value).replace(/%2F/g, "/");
 }
 
+function allowedRepositories(): Set<string> {
+  const raw =
+    envValue("HOCKER_GITHUB_ALLOWED_REPOS") ||
+    envValue("GITHUB_ALLOWED_REPOS") ||
+    "HockerAGI/hocker.one,HockerAGI/nova.agi";
+
+  return new Set(raw.split(",").map((item) => item.trim()).filter(Boolean));
+}
+
 function parseRepository(payload: JsonRecord): { owner: string; repo: string; fullName: string } {
-  const raw = stringValue(payload.repository) || envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one";
+  const ownerInput = stringValue(payload.owner);
+  const repoInput = stringValue(payload.repo);
+  const raw =
+    ownerInput && repoInput
+      ? `${ownerInput}/${repoInput}`
+      : stringValue(payload.repository) || envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one";
+
   const [owner, repo] = raw.split("/").map((item) => item.trim()).filter(Boolean);
   if (!owner || !repo) throw new Error("Repositorio inválido. Usa formato owner/repo.");
-  return { owner, repo, fullName: `${owner}/${repo}` };
+
+  const fullName = `${owner}/${repo}`;
+  if (!allowedRepositories().has(fullName)) {
+    throw new Error(`Repositorio no permitido para ejecución AGI: ${fullName}`);
+  }
+
+  return { owner, repo, fullName };
 }
 
 function safeBranch(value: unknown, fallback = ""): string {
@@ -87,11 +115,123 @@ function safeBranch(value: unknown, fallback = ""): string {
   return raw;
 }
 
+function allowedPathPrefixes(): string[] {
+  return (
+    envValue("HOCKER_GITHUB_ALLOWED_PATH_PREFIXES") ||
+    "src/,app/,docs/,scripts/,supabase/migrations/,public/,package.json,next.config.js,tsconfig.json"
+  )
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function safePath(value: unknown): string {
   const raw = stringValue(value).replace(/^\/+/, "");
   if (!raw) throw new Error("Falta path.");
   if (raw.includes("..") || raw.includes(String.fromCharCode(92))) throw new Error("Path no permitido.");
+  if (raw.startsWith(".git/") || raw.includes("/.git/")) throw new Error("Path Git interno bloqueado.");
+  if (/(\.env|\.pem|\.key|\.p12|\.pfx|private-extra-headers\.json)$/i.test(raw)) {
+    throw new Error("Path sensible bloqueado.");
+  }
+
+  const allowed = allowedPathPrefixes();
+  const ok = allowed.some((prefix) => raw === prefix || raw.startsWith(prefix));
+  if (!ok) {
+    throw new Error(`Path fuera de allowlist AGI: ${raw}`);
+  }
+
   return raw;
+}
+
+
+function numberValue(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function buildLockOwner(actorId: string): string {
+  return `hocker-one:${actorId}:${randomUUID()}`;
+}
+
+function buildRollbackPlan(item: AgiActionQueueRow, result: JsonRecord): JsonRecord {
+  if (item.action_type === "github.create_branch") {
+    return {
+      type: "github.delete_branch_if_created",
+      safe: Boolean(result.created),
+      repository: result.repository ?? null,
+      branch: result.target_branch ?? null,
+      note: result.created ? "Rollback puede eliminar la rama creada si no hay PR activo." : "La rama ya existía; rollback automático no aplica.",
+    };
+  }
+
+  if (item.action_type === "github.upsert_file") {
+    return {
+      type: "github.restore_previous_file_sha",
+      safe: Boolean(result.previous_sha),
+      repository: result.repository ?? null,
+      branch: result.branch ?? null,
+      path: result.path ?? null,
+      previous_sha: result.previous_sha ?? null,
+      new_sha: result.content_sha ?? null,
+      note: result.previous_sha ? "Rollback requiere restaurar contenido previo usando previous_sha." : "Archivo nuevo; rollback requiere eliminar archivo creado.",
+    };
+  }
+
+  if (item.action_type === "github.create_pr") {
+    return {
+      type: "github.close_pr_if_created",
+      safe: Boolean(result.number),
+      repository: result.repository ?? null,
+      pr_number: result.number ?? null,
+      already_exists: result.already_exists ?? false,
+      note: result.already_exists ? "PR ya existía; rollback automático no aplica." : "Rollback puede cerrar el PR draft creado.",
+    };
+  }
+
+  return { type: "manual_review", safe: false };
+}
+
+async function claimApprovedQueueItem(params: {
+  project_id: string;
+  action_id: string;
+  actor_id: string;
+  item: AgiActionQueueRow;
+}): Promise<AgiActionQueueRow> {
+  const now = new Date().toISOString();
+  const attemptCount = numberValue(params.item.attempt_count, 0);
+  const maxAttempts = Math.max(1, numberValue(params.item.max_attempts, 3));
+
+  if (attemptCount >= maxAttempts) {
+    throw new Error(`Acción agotó intentos permitidos: ${attemptCount}/${maxAttempts}`);
+  }
+
+  const sb = getAdminSupabase();
+  const { data, error } = await sb
+    .from("agi_action_queue")
+    .update({
+      status: "executing",
+      executed_by: params.actor_id,
+      locked_at: now,
+      lock_owner: buildLockOwner(params.actor_id),
+      attempt_count: attemptCount + 1,
+      last_error: null,
+      updated_at: now,
+    })
+    .eq("project_id", params.project_id)
+    .eq("id", params.action_id)
+    .eq("status", "approved")
+    .is("locked_at", null)
+    .select("*")
+    .maybeSingle<AgiActionQueueRow>();
+
+  if (error) throw new Error(error.message);
+
+  if (!data) {
+    const latest = await getQueueItem(params.project_id, params.action_id);
+    throw new Error(`No se pudo reclamar lock de ejecución. Estado actual: ${latest.status}; locked_at=${latest.locked_at ?? "null"}`);
+  }
+
+  return data;
 }
 
 function ensureNotMainBranch(branch: string): void {
@@ -346,6 +486,7 @@ async function executeUpsertFile(payload: JsonRecord) {
   const path = safePath(payload.path);
   const content = typeof payload.content === "string" ? payload.content : "";
   const message = stringValue(payload.message, `NOVA update ${path}`);
+  const expectedSha = stringValue(payload.expected_sha);
   ensureNotMainBranch(branch);
   if (!content) throw new Error("Falta content para upsert_file.");
 
@@ -356,6 +497,18 @@ async function executeUpsertFile(payload: JsonRecord) {
   } catch (error) {
     const status = (error as Error & { status?: number }).status;
     if (status !== 404) throw error;
+  }
+
+  if (previousSha && !expectedSha) {
+    throw new Error("expected_sha obligatorio para modificar archivo existente.");
+  }
+
+  if (previousSha && expectedSha !== previousSha) {
+    throw new Error(`expected_sha no coincide para ${path}. Esperado por payload=${expectedSha}; actual=${previousSha}`);
+  }
+
+  if (!previousSha && expectedSha && !["__new__", "CREATE", "create", "new"].includes(expectedSha)) {
+    throw new Error(`expected_sha indica archivo existente pero ${path} no existe en la rama.`);
   }
 
   const result = await githubRequest<GitHubPutContentResponse>(`/repos/${owner}/${repo}/contents/${encodeSegment(path)}`, {
@@ -390,6 +543,29 @@ async function executeCreatePr(payload: JsonRecord) {
   ensureNotMainBranch(head);
   if (!title) throw new Error("Falta title para create_pr.");
 
+  const existingQuery = new URLSearchParams({ state: "open", head: `${owner}:${head}`, base });
+  const existingPrs = await githubRequest<GitHubPullResponse[]>(
+    `/repos/${owner}/${repo}/pulls?${existingQuery.toString()}`,
+    { method: "GET" },
+  );
+
+  if (existingPrs[0]) {
+    const existing = existingPrs[0];
+    return {
+      operation: "create_pr",
+      repository: fullName,
+      number: existing.number,
+      state: existing.state,
+      draft: Boolean(existing.draft),
+      html_url: existing.html_url,
+      base,
+      head,
+      head_sha: existing.head?.sha ?? null,
+      base_sha: existing.base?.sha ?? null,
+      already_exists: true,
+    };
+  }
+
   const pr = await githubRequest<GitHubPullResponse>(`/repos/${owner}/${repo}/pulls`, {
     method: "POST",
     body: JSON.stringify({ title, head, base, body, draft: true }),
@@ -406,20 +582,26 @@ async function executeCreatePr(payload: JsonRecord) {
     head,
     head_sha: pr.head?.sha ?? null,
     base_sha: pr.base?.sha ?? null,
+    already_exists: false,
   };
 }
 
 export async function executeApprovedAgiAction(params: { project_id: string; action_id: string; actor_id: string }): Promise<AgiActionQueueRow> {
-  const item = await getQueueItem(params.project_id, params.action_id);
+  const pending = await getQueueItem(params.project_id, params.action_id);
 
-  if (item.status !== "approved") throw new Error(`Acción no aprobada. Estado actual: ${item.status}`);
-  if (item.tool_key !== "github" || !item.action_type.startsWith("github.")) {
+  if (pending.status !== "approved") throw new Error(`Acción no aprobada. Estado actual: ${pending.status}`);
+  if (pending.tool_key !== "github" || !pending.action_type.startsWith("github.")) {
     throw new Error("Worker actual solo ejecuta acciones GitHub aprobadas.");
   }
 
-  await assertGuidedGithubExecutionOrder(params.project_id, item);
+  await assertGuidedGithubExecutionOrder(params.project_id, pending);
 
-  await patchQueueItem(item.id, { status: "executing", executed_by: params.actor_id });
+  const item = await claimApprovedQueueItem({
+    project_id: params.project_id,
+    action_id: params.action_id,
+    actor_id: params.actor_id,
+    item: pending,
+  });
 
   try {
     const payload = asRecord(item.payload);
@@ -433,26 +615,45 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
             ? await executeCreatePr(payload)
             : (() => { throw new Error(`Operación GitHub no soportada por worker: ${operation}`); })();
 
+    const rollbackPlan = buildRollbackPlan(item, result as JsonRecord);
+
     return patchQueueItem(item.id, {
       status: "executed",
       executed_by: params.actor_id,
       executed_at: new Date().toISOString(),
+      locked_at: null,
+      lock_owner: null,
+      last_error: null,
       execution_error: null,
+      rollback_plan: rollbackPlan,
       execution_result: {
         ok: true,
         executed_at: new Date().toISOString(),
-        worker: "github_approved_execution_worker",
+        worker: "github_approved_execution_worker_12.7Z-1A",
+        idempotency_key: item.idempotency_key ?? null,
+        attempt_count: item.attempt_count ?? null,
         result,
       },
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Falla desconocida al ejecutar acción AGI.";
+
     await patchQueueItem(item.id, {
       status: "execution_failed",
       executed_by: params.actor_id,
       executed_at: new Date().toISOString(),
-      execution_error: error instanceof Error ? error.message : "Falla desconocida al ejecutar acción AGI.",
-      execution_result: { ok: false, worker: "github_approved_execution_worker" },
+      locked_at: null,
+      lock_owner: null,
+      last_error: message,
+      execution_error: message,
+      execution_result: {
+        ok: false,
+        worker: "github_approved_execution_worker_12.7Z-1A",
+        idempotency_key: item.idempotency_key ?? null,
+        attempt_count: item.attempt_count ?? null,
+      },
     });
+
     throw error;
   }
 }
