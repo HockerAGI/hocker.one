@@ -55,7 +55,11 @@ type GitHubPullResponse = {
 
 
 function githubExecutionMode(): "real" | "mock" {
-  const raw = (envValue("HOCKER_GITHUB_EXECUTION_MODE") || envValue("GITHUB_EXECUTION_MODE") || "real")
+  const raw = String(
+    process.env.HOCKER_GITHUB_EXECUTION_MODE ||
+      process.env.GITHUB_EXECUTION_MODE ||
+      "real",
+  )
     .trim()
     .toLowerCase();
 
@@ -271,6 +275,12 @@ function ensureNotMainBranch(branch: string): void {
 }
 
 async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
+
+  const method = String(init?.method || "GET").toUpperCase();
+  if (isMockedGithubBoundary() && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    throw new Error(`Blocked real GitHub write while HOCKER_GITHUB_EXECUTION_MODE=mock: ${method}`);
+  }
+
   const token = getGitHubRuntimeToken();
   if (!token) throw new Error("GitHub no configurado: falta HOCKER_GITHUB_TOKEN, GITHUB_TOKEN o GH_TOKEN.");
 
@@ -471,6 +481,18 @@ async function executeCreateBranch(payload: JsonRecord) {
   const target = safeBranch(payload.branch ?? payload.target_branch ?? payload.head, "");
   ensureNotMainBranch(target);
 
+  if (isMockedGithubBoundary()) {
+    return mockedGithubResult("mocked_create_branch", payload, {
+      repository: fullName,
+      base,
+      target_branch: target,
+      created: true,
+      ref: `refs/heads/${target}`,
+      sha: `mock-sha-${target}`,
+    });
+  }
+
+
   const baseRef = await githubRequest<GitHubRefResponse>(`/repos/${owner}/${repo}/git/ref/heads/${encodeSegment(base)}`);
 
   try {
@@ -517,18 +539,6 @@ async function executeUpsertFile(payload: JsonRecord) {
   const message = stringValue(payload.message, `NOVA update ${path}`);
   const expectedSha = stringValue(payload.expected_sha);
   ensureNotMainBranch(branch);
-
-  if (isMockedGithubBoundary()) {
-    return mockedGithubResult("mocked_create_branch", payload, {
-      repository: fullName,
-      base: stringValue(payload.base) || stringValue(payload.base_branch) || stringValue(payload.source_branch) || stringValue(payload.from) || "main",
-      target_branch: branch,
-      created: true,
-      ref: `refs/heads/${branch}`,
-      sha: `mock-sha-${branch}`,
-    });
-  }
-
   if (!content) throw new Error("Falta content para upsert_file.");
 
   let previousSha: string | null = null;
