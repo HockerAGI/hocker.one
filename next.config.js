@@ -1,3 +1,22 @@
+const hockerPublicIndexableHeaders = [
+  {
+    key: "X-Hocker-Topology",
+    value: "12.7L-2C-public-indexable-clean",
+  },
+];
+
+const hockerPublicIndexableSources = [
+  "/",
+  "/one",
+  "/empresa",
+  "/servicios",
+  "/ecosistema",
+  "/soluciones",
+  "/casos",
+  "/seguridad",
+  "/contacto",
+];
+
 /** @type {import('next').NextConfig} */
 
 const hockerPrivateNoindexHeaders = [
@@ -40,10 +59,16 @@ const hockerPrivateNoindexSources = [
 
 const nextConfig = {
   async headers() {
-    return hockerPrivateNoindexSources.map((source) => ({
-      source,
-      headers: hockerPrivateNoindexHeaders,
-    }));
+    return [
+      ...hockerPublicIndexableSources.map((source) => ({
+        source,
+        headers: hockerPublicIndexableHeaders,
+      })),
+      ...hockerPrivateNoindexSources.map((source) => ({
+        source,
+        headers: hockerPrivateNoindexHeaders,
+      })),
+    ];
   },
 
   reactStrictMode: true,
