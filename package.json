@@ -24,7 +24,8 @@
     "ops:prod:smoke": "bash scripts/ops/hocker-production-smoke-test.sh",
     "ops:nova": "bash scripts/ops/hocker-nova-command-center.sh",
     "ops:validate": "bash scripts/ops/hocker-total-validation.sh",
-    "ops:nova:watch": "bash scripts/ops/hocker-nova-watchtower.sh"
+    "ops:nova:watch": "bash scripts/ops/hocker-nova-watchtower.sh",
+    "diagnostics:router": "node scripts/diagnostics/hocker-diagnostics-provider-router.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.3.1",

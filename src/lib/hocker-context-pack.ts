@@ -1,6 +1,7 @@
 import { AGI_REGISTRY, APP_REGISTRY } from "@/lib/hocker-dashboard";
 import { getHockerPublicPrivateTopologyContext } from "@/lib/hocker-public-private-topology";
 import { getHockerProviderOrchestratorPublicContext } from "@/lib/hocker-provider-orchestrator";
+import { getHockerDiagnosticsProviderRouterPublicContext } from "@/lib/hocker-diagnostics-provider-router";
 import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
@@ -23,21 +24,22 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7L-2C-A.1C — Context trace cleanup",
+      name: "12.7L-2C-B — Diagnostics provider router",
       status: "in_progress",
-      objective: "Eliminar trazabilidad vieja 12.7L-2B del Context Pack, conservar headers públicos/privados limpios, /auth/callback noindex y NOVA nativa sin selector de proveedor.",
-      previous_stable_phase: "12.7L-2C-A.1B — Public header config fix",
-      next_target: "12.7L-2C-B — Diagnostics provider router without duplicating NOVA.AGI LLM routing.",
+      objective: "Agregar router diagnóstico local → PageSpeed → GitHub Actions → fallback documentado sin duplicar el router LLM nativo de NOVA.AGI.",
+      previous_stable_phase: "12.7L-2C-A.1C — Context trace cleanup",
+      next_target: "12.7Z-1 — SQL normalization + idempotent GitHub worker.",
     },
     public_private_topology: {
       ...getHockerPublicPrivateTopologyContext(),
       pwa_lighthouse_diagnostics: {
-        version: "12.7L-2C-A.1C",
+        version: "12.7L-2C-B",
         status: "active",
         manifest_start_url: "/app/nova",
         header_trace: "12.7L-2C-private-noindex-clean",
-        lighthouse_status: "diagnostics_required",
-        rule: "No avanzar a Fase 13 hasta tener Lighthouse real o error documentado con causa clara.",
+        lighthouse_status: "diagnostics_router_active",
+        provider_router_version: "12.7L-2C-B",
+        rule: "No avanzar a Fase 13 hasta tener Lighthouse real o error documentado con causa clara. Fallback documentado no equivale a éxito.",
       },
       app_shell_aliases: {
         version: "12.7L-2A",
@@ -55,6 +57,7 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       },
     },
     provider_orchestrator_inventory: getHockerProviderOrchestratorPublicContext(),
+    diagnostics_provider_router: getHockerDiagnosticsProviderRouterPublicContext(),
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
       "Nada de ejecución real sin Owner Gate.",
