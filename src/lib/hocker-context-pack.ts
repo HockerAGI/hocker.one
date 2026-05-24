@@ -1,5 +1,6 @@
 import { AGI_REGISTRY, APP_REGISTRY } from "@/lib/hocker-dashboard";
 import { getHockerPublicPrivateTopologyContext } from "@/lib/hocker-public-private-topology";
+import { getHockerProviderOrchestratorPublicContext } from "@/lib/hocker-provider-orchestrator";
 import { getRuntimeToolSummary } from "@/lib/agi-runtime-core";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
@@ -22,11 +23,11 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7L-2B-3 — PWA polish + header trace cleanup + Lighthouse diagnostics",
+      name: "12.7L-2C-A — Provider Orchestrator Inventory + NOVA.AGI sync",
       status: "in_progress",
-      objective: "Pulir PWA, alinear start_url con /app/nova, limpiar trazabilidad de headers y preparar diagnóstico Lighthouse real antes de Fase 13.",
+      objective: "Sincronizar Hocker ONE con el router cognitivo real de NOVA.AGI sin duplicar lógica LLM; NOVA decide proveedor internamente y Hocker ONE conserva Owner Gate para ejecución.",
       previous_stable_phase: "12.7L-2A — App shell aliases + structured data baseline",
-      next_target: "12.7L-2B-STABLE — Lighthouse/PWA baseline final. No avanzar a Fase 13 hasta cerrar Lighthouse real o diagnóstico documentado, PWA installable, SW y headers limpios.",
+      next_target: "12.7L-2C-B — Diagnostics provider router without duplicating NOVA.AGI LLM routing.",
     },
     public_private_topology: {
       ...getHockerPublicPrivateTopologyContext(),
@@ -53,6 +54,7 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
         objective: "Forzar noindex/nofollow/noarchive en rutas privadas, protegidas y API sin depender únicamente del middleware.",
       },
     },
+    provider_orchestrator_inventory: getHockerProviderOrchestratorPublicContext(),
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
       "Nada de ejecución real sin Owner Gate.",
