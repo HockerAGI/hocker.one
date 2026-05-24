@@ -53,6 +53,35 @@ type GitHubPullResponse = {
   base?: { ref?: string; sha?: string };
 };
 
+
+function githubExecutionMode(): "real" | "mock" {
+  const raw = (envValue("HOCKER_GITHUB_EXECUTION_MODE") || envValue("GITHUB_EXECUTION_MODE") || "real")
+    .trim()
+    .toLowerCase();
+
+  return raw === "mock" ? "mock" : "real";
+}
+
+function isMockedGithubBoundary(): boolean {
+  return githubExecutionMode() === "mock";
+}
+
+function mockedGithubResult(operation: string, payload: JsonRecord, extra: JsonRecord = {}): JsonRecord {
+  return {
+    operation,
+    mocked: true,
+    github_write_executed: false,
+    worker_boundary: "mocked_github_boundary_12.7Z-1E",
+    checked_at: new Date().toISOString(),
+    repository:
+      stringValue(payload.repository) ||
+      (stringValue(payload.owner) && stringValue(payload.repo)
+        ? `${stringValue(payload.owner)}/${stringValue(payload.repo)}`
+        : envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one"),
+    ...extra,
+  };
+}
+
 function envValue(key: string): string {
   return String(process.env[key] ?? "").trim();
 }
@@ -488,6 +517,18 @@ async function executeUpsertFile(payload: JsonRecord) {
   const message = stringValue(payload.message, `NOVA update ${path}`);
   const expectedSha = stringValue(payload.expected_sha);
   ensureNotMainBranch(branch);
+
+  if (isMockedGithubBoundary()) {
+    return mockedGithubResult("mocked_create_branch", payload, {
+      repository: fullName,
+      base: stringValue(payload.base) || stringValue(payload.base_branch) || stringValue(payload.source_branch) || stringValue(payload.from) || "main",
+      target_branch: branch,
+      created: true,
+      ref: `refs/heads/${branch}`,
+      sha: `mock-sha-${branch}`,
+    });
+  }
+
   if (!content) throw new Error("Falta content para upsert_file.");
 
   let previousSha: string | null = null;
@@ -509,6 +550,19 @@ async function executeUpsertFile(payload: JsonRecord) {
 
   if (!previousSha && expectedSha && !["__new__", "CREATE", "create", "new"].includes(expectedSha)) {
     throw new Error(`expected_sha indica archivo existente pero ${path} no existe en la rama.`);
+  }
+
+  if (isMockedGithubBoundary()) {
+    return mockedGithubResult("mocked_upsert_file", payload, {
+      repository: fullName,
+      branch,
+      path,
+      previous_sha: previousSha ?? null,
+      expected_sha: expectedSha || (previousSha ? null : "__new__"),
+      content_sha: `mock-content-sha-${Date.now()}`,
+      commit_sha: `mock-commit-sha-${Date.now()}`,
+      html_url: `https://github.com/${fullName}/blob/${branch}/${path}`,
+    });
   }
 
   const result = await githubRequest<GitHubPutContentResponse>(`/repos/${owner}/${repo}/contents/${encodeSegment(path)}`, {
@@ -542,6 +596,21 @@ async function executeCreatePr(payload: JsonRecord) {
   const body = stringValue(payload.body, "Plan generado por NOVA y aprobado por owner.");
   ensureNotMainBranch(head);
   if (!title) throw new Error("Falta title para create_pr.");
+
+  if (isMockedGithubBoundary()) {
+    return mockedGithubResult("mocked_create_pr", payload, {
+      repository: fullName,
+      number: 12701,
+      state: "open",
+      draft: true,
+      html_url: `https://github.com/${fullName}/pull/12701`,
+      base,
+      head,
+      head_sha: `mock-head-sha-${head}`,
+      base_sha: `mock-base-sha-${base}`,
+      already_exists: false,
+    });
+  }
 
   const existingQuery = new URLSearchParams({ state: "open", head: `${owner}:${head}`, base });
   const existingPrs = await githubRequest<GitHubPullResponse[]>(
