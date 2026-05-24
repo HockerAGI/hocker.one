@@ -113,6 +113,16 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     if (isGitHubWriteOperation(operation)) {
+      if (operation === "upsert_file" && !parsed.expected_sha) {
+        throw new ApiError(400, {
+          error: "expected_sha obligatorio para github.upsert_file. Usa read_file/compare_refs antes de aprobar modificación.",
+          tool_key: "github",
+          operation,
+          required_field: "expected_sha",
+          safe_create_value: "__new__",
+        });
+      }
+
       const writePlan = createGitHubWriteGatePlan(operation, parsed);
 
       if (!writePlan.valid) {
