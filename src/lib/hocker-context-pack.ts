@@ -10,6 +10,7 @@ import { getSyntiaMemoryReviewGatePublicContext } from "@/lib/syntia-memory-revi
 import { getSyntiaMemoryPublicationAuditPublicContext } from "@/lib/syntia-memory-publication-audit";
 import { getNovaChatActionDraftPublicContext } from "@/lib/nova-chat-action-drafts";
 import { getNovaGitHubActionMaterializerPublicContext } from "@/lib/nova-github-action-materializer";
+import { getHockerNovaAlwaysOnAwarenessContext } from "@/lib/hocker-nova-always-on-awareness";
 
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
@@ -24,10 +25,10 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
     },
     current_phase: {
-      name: "12.7L-2C-B — Diagnostics provider router",
+      name: "12.7M-2 — Hocker ONE ↔ NOVA Always-On Awareness Sync",
       status: "in_progress",
-      objective: "Agregar router diagnóstico local → PageSpeed → GitHub Actions → fallback documentado sin duplicar el router LLM nativo de NOVA.AGI.",
-      previous_stable_phase: "12.7L-2C-A.1C — Context trace cleanup",
+      objective: "Sincronizar Hocker ONE con NOVA.AGI 12.7M-1 Always-On Cognitive Mesh sin duplicar router, sin exponer proveedor/modelo/fallback al usuario y sin tocar ejecución productiva.",
+      previous_stable_phase: "12.7M-1 — NOVA.AGI Always-On Cognitive Mesh",
       next_target: "12.7Z-1 — SQL normalization + idempotent GitHub worker.",
     },
     public_private_topology: {
@@ -58,6 +59,7 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
     },
     provider_orchestrator_inventory: getHockerProviderOrchestratorPublicContext(),
     diagnostics_provider_router: getHockerDiagnosticsProviderRouterPublicContext(),
+    nova_always_on_awareness: getHockerNovaAlwaysOnAwarenessContext(),
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
       "Nada de ejecución real sin Owner Gate.",
