@@ -19,6 +19,13 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "Inicio | Hocker ONE",
   description: "Centro privado de control del ecosistema HOCKER.",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true,
+  },
 };
 
 export default async function OwnerPage() {
