@@ -6,6 +6,7 @@ import { Loader2, Send, Sparkles } from "lucide-react";
 import { ActionPreviewCard, EvidencePanel, PageState } from "@/components/hocker-2c";
 import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import { OwnerNovaInlineApprovals } from "./OwnerNovaInlineApprovals";
+import { OwnerNovaInlineExecutions } from "./OwnerNovaInlineExecutions";
 
 type NovaOwnerMode = "normal" | "crear" | "analizar" | "ejecutar";
 
@@ -173,6 +174,7 @@ export function OwnerNovaBridge() {
             </div>
 
             <OwnerNovaInlineApprovals />
+            <OwnerNovaInlineExecutions />
 
             {lastPrompt ? (
               <p className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs leading-5 text-[var(--hocker-text-muted)]">
