@@ -7,6 +7,7 @@ export type OwnerLiveAction = {
   target: string;
   summary: string;
   createdAt: string;
+  projectId: string;
   raw: unknown;
 };
 
@@ -113,6 +114,7 @@ export function normalizeOwnerActions(payload: unknown): OwnerLiveAction[] {
         target,
         summary,
         createdAt: asString(item.created_at || item.createdAt || item.executed_at, "Sin fecha"),
+        projectId: asString(item.project_id || item.projectId, "hocker-one"),
         raw: item,
       };
     });
