@@ -2,10 +2,12 @@ import Link from "next/link";
 import { ActionPreviewCard, EvidencePanel } from "@/components/hocker-2c";
 import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import { OwnerMetricCard } from "./OwnerMetricCard";
+import { OwnerLiveSummary } from "@/components/hocker-2c/owner/live";
 
 export function OwnerCommandCenter() {
   return (
     <div className="space-y-5">
+      <OwnerLiveSummary />
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <OwnerMetricCard label="Salud" value="Activa" detail="El centro está listo para operar." tone="green" />
         <OwnerMetricCard label="Pendientes" value="Revisión" detail="Las acciones reales requieren aprobación." tone="gold" />
