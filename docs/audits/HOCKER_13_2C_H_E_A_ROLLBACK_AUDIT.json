@@ -1,0 +1,933 @@
+{
+  "phase": "13-2C-H-E-A",
+  "current_repo": {
+    "route_candidates": [
+      {
+        "file": "src/app/api/agi/runtime/memory/publication-audit/route.ts",
+        "endpoint": "/api/agi/runtime/memory/publication-audit",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "keyword_hits": [
+          "rollback"
+        ],
+        "has_owner_guard": true,
+        "owner_guard": "requireProjectRole([\"owner\"]) or owner-including role gate",
+        "has_parse_body": true,
+        "mentions_project_id": true,
+        "mentions_action_id": false,
+        "mentions_rollback_plan": false,
+        "can_mutate": true
+      }
+    ],
+    "code_reference_count": 39,
+    "code_references": [
+      {
+        "file": "src/app/api/agi/runtime/memory/publication-audit/route.ts",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/app/launch/page.tsx",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/app/security/rls/page.tsx",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/components/NovaRealtimeChat.tsx",
+        "keyword_hits": [
+          "rollback",
+          "undo"
+        ]
+      },
+      {
+        "file": "src/components/hocker-2c/owner/live/OwnerEvidenceLivePanel.tsx",
+        "keyword_hits": [
+          "rollback",
+          "rolled_back",
+          "revert"
+        ]
+      },
+      {
+        "file": "src/components/hocker-2c/owner/live/owner-live-normalizers.ts",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan",
+          "rolled_back",
+          "revert"
+        ]
+      },
+      {
+        "file": "src/components/hocker-2c/owner/nova/OwnerNovaBridge.tsx",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx",
+        "keyword_hits": [
+          "revert"
+        ]
+      },
+      {
+        "file": "src/components/hocker-2c/owner/nova/OwnerNovaInlineExecutions.tsx",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan",
+          "revert",
+          "undo"
+        ]
+      },
+      {
+        "file": "src/components/owner/OwnerApprovalCenter.tsx",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/components/vfx/HockerVfxLayer.tsx",
+        "keyword_hits": [
+          "restore"
+        ]
+      },
+      {
+        "file": "src/lib/agi-action-execution.ts",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan",
+          "rollbackPlan",
+          "restore"
+        ]
+      },
+      {
+        "file": "src/lib/github-runtime-executor.ts",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan",
+          "rollbackPlan",
+          "revert",
+          "restore"
+        ]
+      },
+      {
+        "file": "src/lib/hocker-context-pack.ts",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/lib/hocker-human-copy.ts",
+        "keyword_hits": [
+          "rolled_back",
+          "revert"
+        ]
+      },
+      {
+        "file": "src/lib/hocker-permissions.ts",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/lib/hocker-tool-router.ts",
+        "keyword_hits": [
+          "rollback",
+          "undo"
+        ]
+      },
+      {
+        "file": "src/lib/nova-chat-action-drafts.ts",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/lib/nova-github-action-materializer.ts",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "src/lib/syntia-memory-publication-audit.ts",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan",
+          "rolled_back",
+          "restore"
+        ]
+      },
+      {
+        "file": "src/lib/syntia-memory-review-gate.ts",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1A_SQL_IDEMPOTENT_GITHUB_WORKER.md",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1B_SUPABASE_SCHEMA_VERIFIED.md",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1C_WORKER_DRY_SMOKE.md",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1D_QUEUE_INTEGRATION_DRY_SMOKE.md",
+        "keyword_hits": [
+          "undo"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1EB_WORKER_MOCK_EXECUTION.md",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1F_REAL_GITHUB_WRITE_SANDBOX.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_127Z1G_REAL_WRITE_ROLLBACK_DRILL.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_13_2C_H_D_INLINE_RESULT_EVIDENCE.md",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "docs/audits/HOCKER_13_2C_H_E_A_ROLLBACK_CURRENT_REPO_SCAN.md",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan",
+          "rollbackPlan",
+          "rolled_back",
+          "revert",
+          "restore",
+          "undo"
+        ]
+      },
+      {
+        "file": "docs/audits/hocker-one-12.7l2c-provider-orchestrator-inventory.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "docs/ops/supabase-baseline-decision-record.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "docs/security/HOCKER_ONE_TENANT_RLS_POLICY.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "scripts/phase127b2/github_write_gate_notes.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "scripts/phase127bx/self_execution_bridge_notes.md",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "supabase/migrations/20260519_023616_agi_runtime_action_queue.sql",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "supabase/migrations/20260524_091700_agi_action_queue_lock_idempotency.sql",
+        "keyword_hits": [
+          "rollback",
+          "rollback_plan"
+        ]
+      },
+      {
+        "file": "supabase/remote-state/2026-04-22/auth_storage_schema.sql",
+        "keyword_hits": [
+          "rollback"
+        ]
+      },
+      {
+        "file": "supabase/remote-state/2026-04-22/schema.sql",
+        "keyword_hits": [
+          "rollback"
+        ]
+      }
+    ],
+    "migrations": [
+      "supabase/migrations/20260519_023616_agi_runtime_action_queue.sql",
+      "supabase/migrations/20260524_091700_agi_action_queue_lock_idempotency.sql",
+      "supabase/remote-state/2026-04-22/auth_storage_schema.sql",
+      "supabase/remote-state/2026-04-22/schema.sql"
+    ]
+  },
+  "historical_archives": [
+    {
+      "archive": "/sdcard/Download/HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950.tar.gz",
+      "exists": true,
+      "matches": [
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1A_SQL_IDEMPOTENT_GITHUB_WORKER.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 935
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1B_SUPABASE_SCHEMA_VERIFIED.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 1117
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1C_WORKER_DRY_SMOKE.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 888
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1D_QUEUE_INTEGRATION_DRY_SMOKE.md",
+          "keyword_hits": [
+            "undo"
+          ],
+          "size": 719
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1EB_WORKER_MOCK_EXECUTION.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 753
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1F_REAL_GITHUB_WRITE_SANDBOX.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 836
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/HOCKER_127Z1G_REAL_WRITE_ROLLBACK_DRILL.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 802
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/audits/hocker-one-12.7l2c-provider-orchestrator-inventory.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 751
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/ops/supabase-baseline-decision-record.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 2650
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/docs/security/HOCKER_ONE_TENANT_RLS_POLICY.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 1217
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/scripts/phase127b2/github_write_gate_notes.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 829
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/scripts/phase127bx/self_execution_bridge_notes.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 805
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/app/api/agi/runtime/memory/publication-audit/route.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 2422
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/app/launch/page.tsx",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 5868
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/app/security/rls/page.tsx",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 7485
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/components/NovaRealtimeChat.tsx",
+          "keyword_hits": [
+            "rollback",
+            "undo"
+          ],
+          "size": 58441
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/components/owner/OwnerApprovalCenter.tsx",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 6602
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/components/vfx/HockerVfxLayer.tsx",
+          "keyword_hits": [
+            "restore"
+          ],
+          "size": 5777
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/agi-action-execution.ts",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan",
+            "rollbackPlan",
+            "restore"
+          ],
+          "size": 25971
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/github-runtime-executor.ts",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan",
+            "rollbackPlan",
+            "revert",
+            "restore"
+          ],
+          "size": 16405
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/hocker-context-pack.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 7838
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/hocker-tool-router.ts",
+          "keyword_hits": [
+            "rollback",
+            "undo"
+          ],
+          "size": 10240
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/nova-chat-action-drafts.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 9105
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/nova-github-action-materializer.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 9186
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/syntia-memory-publication-audit.ts",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan",
+            "rolled_back",
+            "restore"
+          ],
+          "size": 13892
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/src/lib/syntia-memory-review-gate.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 14962
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/supabase/migrations/20260519_023616_agi_runtime_action_queue.sql",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 5450
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/supabase/migrations/20260524_091700_agi_action_queue_lock_idempotency.sql",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 1504
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/supabase/remote-state/2026-04-22/auth_storage_schema.sql",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 102155
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/hocker.one/supabase/remote-state/2026-04-22/schema.sql",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 270209
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/repos/nova.agi/src/lib/hocker-one-policy.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 4633
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/manifests/hocker.one_GIT_STATE.txt",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 15621
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/manifests/hocker.one_TRACKED_FILES.txt",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 17520
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/manifests/hocker.one_FILE_HASHES.txt",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 47812
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/manifests/hocker.one_STRUCTURE.txt",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 19493
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/manifests/hocker.one_SYMBOLS.txt",
+          "keyword_hits": [
+            "rollback",
+            "rollbackPlan"
+          ],
+          "size": 126677
+        },
+        {
+          "file": "HOCKER_FULL_SOURCE_CODE_AUDIT_20260524_213950/reports/FINAL_SUMMARY.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 471
+        }
+      ],
+      "error": null
+    },
+    {
+      "archive": "/sdcard/Download/HOCKER_13_ZERO_REAL_AUDIT_20260524_192900.tar.gz",
+      "exists": true,
+      "matches": [
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/hocker-one-12.7l2c-provider-orchestrator-inventory.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 751
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1A_SQL_IDEMPOTENT_GITHUB_WORKER.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 935
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1B_SUPABASE_SCHEMA_VERIFIED.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 1117
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1C_WORKER_DRY_SMOKE.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 888
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1D_QUEUE_INTEGRATION_DRY_SMOKE.md",
+          "keyword_hits": [
+            "undo"
+          ],
+          "size": 719
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1EB_WORKER_MOCK_EXECUTION.md",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 753
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1F_REAL_GITHUB_WRITE_SANDBOX.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 836
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/audits/HOCKER_127Z1G_REAL_WRITE_ROLLBACK_DRILL.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 802
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/ops/supabase-baseline-decision-record.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 2650
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/docs/security/HOCKER_ONE_TENANT_RLS_POLICY.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 1217
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/scripts/phase127b2/github_write_gate_notes.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 829
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/scripts/phase127bx/self_execution_bridge_notes.md",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 805
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/app/api/agi/runtime/memory/publication-audit/route.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 2422
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/app/launch/page.tsx",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 5868
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/app/security/rls/page.tsx",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 7485
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/components/owner/OwnerApprovalCenter.tsx",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 6602
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/components/vfx/HockerVfxLayer.tsx",
+          "keyword_hits": [
+            "restore"
+          ],
+          "size": 5777
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/components/NovaRealtimeChat.tsx",
+          "keyword_hits": [
+            "rollback",
+            "undo"
+          ],
+          "size": 58441
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/agi-action-execution.ts",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan",
+            "rollbackPlan",
+            "restore"
+          ],
+          "size": 25971
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/github-runtime-executor.ts",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan",
+            "rollbackPlan",
+            "revert",
+            "restore"
+          ],
+          "size": 16405
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/hocker-context-pack.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 7838
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/hocker-tool-router.ts",
+          "keyword_hits": [
+            "rollback",
+            "undo"
+          ],
+          "size": 10240
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/nova-github-action-materializer.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 9186
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/nova-chat-action-drafts.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 9105
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/syntia-memory-review-gate.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 14962
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/src/lib/syntia-memory-publication-audit.ts",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan",
+            "rolled_back",
+            "restore"
+          ],
+          "size": 13892
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/supabase/migrations/20260519_023616_agi_runtime_action_queue.sql",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 5450
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/supabase/migrations/20260524_091700_agi_action_queue_lock_idempotency.sql",
+          "keyword_hits": [
+            "rollback",
+            "rollback_plan"
+          ],
+          "size": 1504
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/supabase/remote-state/2026-04-22/auth_storage_schema.sql",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 102155
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one/supabase/remote-state/2026-04-22/schema.sql",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 270209
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/hocker.one_FILES.txt",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 55707
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/source/nova.agi/src/lib/hocker-one-policy.ts",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 4633
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/desktop___memory.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 25171
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/desktop___memory__review.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 14091
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/desktop___security__rls.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 15283
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/desktop___launch.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 13345
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/tablet___memory.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 24890
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/tablet___memory__review.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 13810
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/tablet___security__rls.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 15003
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/tablet___launch.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 13064
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/mobile___memory.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 24813
+        },
+        {
+          "file": "HOCKER_13_ZERO_REAL_AUDIT_20260524_192900/visual/meta/mobile___security__rls.json",
+          "keyword_hits": [
+            "rollback"
+          ],
+          "size": 14926
+        }
+      ],
+      "error": null
+    }
+  ],
+  "decision": {
+    "real_rollback_endpoint_confirmed": true,
+    "rollback_endpoint_candidates": [
+      {
+        "file": "src/app/api/agi/runtime/memory/publication-audit/route.ts",
+        "endpoint": "/api/agi/runtime/memory/publication-audit",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "keyword_hits": [
+          "rollback"
+        ],
+        "has_owner_guard": true,
+        "owner_guard": "requireProjectRole([\"owner\"]) or owner-including role gate",
+        "has_parse_body": true,
+        "mentions_project_id": true,
+        "mentions_action_id": false,
+        "mentions_rollback_plan": false,
+        "can_mutate": true
+      }
+    ],
+    "rollback_plan_only_detected": false,
+    "safe_next_step": "Implementar preview UI sólo si se confirma endpoint real de rollback."
+  }
+}
