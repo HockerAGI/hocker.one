@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { ActionPreviewCard, EvidencePanel } from "@/components/hocker-2c";
+import { EvidencePanel } from "@/components/hocker-2c";
 import { OwnerShell } from "@/components/hocker-2c/owner";
+import { OwnerActionsLivePanel } from "@/components/hocker-2c/owner/live";
 
 export const metadata: Metadata = {
   title: "Pendientes | Hocker ONE",
@@ -11,30 +12,18 @@ export default function OwnerActionsPage() {
   return (
     <OwnerShell
       title="Pendientes"
-      description="Acciones preparadas que necesitan revisión antes de ejecutarse. Nada sensible avanza sin permiso."
+      description="Acciones reales disponibles para revisión. Si no hay datos, la vista lo dirá sin inventar nada."
       rightPanel={
         <EvidencePanel
           items={[
             { label: "Nombre humano", value: "Pendientes" },
-            { label: "Nombre interno", value: "Owner Gate" },
-            { label: "Estado", value: "Seguro por defecto" },
+            { label: "Regla", value: "Nada se ejecuta sin aprobación" },
+            { label: "Modo", value: "Lectura segura" },
           ]}
         />
       }
     >
-      <ActionPreviewCard
-        title="Ejemplo de acción lista para revisión"
-        summary="Esta tarjeta muestra cómo deben verse las acciones reales: claras, con riesgo, destino y pasos."
-        risk="low"
-        target="Hocker ONE"
-        steps={[
-          "NOVA prepara el cambio.",
-          "El owner revisa el resumen.",
-          "El sistema ejecuta sólo si se aprueba.",
-          "La evidencia queda guardada.",
-        ]}
-        requiresApproval
-      />
+      <OwnerActionsLivePanel />
     </OwnerShell>
   );
 }
