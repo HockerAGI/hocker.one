@@ -4423,3 +4423,11 @@ html[data-hko-vfx="paused"] *::after {
     transition: none !important;
   }
 }
+
+
+/* hocker-bottom-dock-desktop-guard */
+@media (min-width: 768px) {
+  [data-hocker-bottom-dock] {
+    display: none !important;
+  }
+}

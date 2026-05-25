@@ -17,7 +17,7 @@ export default function BottomDock() {
 
   return (
     <div className="hko-bottom-dock-wrap">
-      <nav className="hko-bottom-dock" aria-label="Navegación principal">
+      <nav data-hocker-bottom-dock className="hko-bottom-dock" aria-label="Navegación principal">
         {ITEMS.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
