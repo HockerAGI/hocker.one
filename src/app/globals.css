@@ -4431,3 +4431,108 @@ html[data-hko-vfx="paused"] *::after {
     display: none !important;
   }
 }
+
+
+/* hocker-soft-core-os-13-2c-b */
+:root {
+  --hocker-bg: #070b16;
+  --hocker-bg-soft: #0b1224;
+  --hocker-surface: rgba(13, 25, 48, 0.72);
+  --hocker-surface-strong: rgba(16, 34, 64, 0.92);
+
+  --hocker-blue: #0366ff;
+  --hocker-cyan: #16c8ff;
+  --hocker-glow: #5fe7ff;
+  --hocker-gold: #d6a84f;
+
+  --hocker-text-main: #eef7ff;
+  --hocker-text-soft: #9fb4c9;
+  --hocker-text-muted: #6f8399;
+
+  --hocker-success: #34d399;
+  --hocker-warning: #fbbf24;
+  --hocker-danger: #ff4d6d;
+
+  --hocker-radius-sm: 12px;
+  --hocker-radius-md: 18px;
+  --hocker-radius-lg: 24px;
+  --hocker-radius-xl: 32px;
+
+  --hocker-blur-card: blur(22px);
+  --hocker-shadow-soft: 0 20px 80px rgba(0, 0, 0, 0.32);
+  --hocker-shadow-glow: 0 0 32px rgba(22, 200, 255, 0.18);
+}
+
+.hocker-soft-shell {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(22, 200, 255, 0.12), transparent 32rem),
+    radial-gradient(circle at 88% 18%, rgba(3, 102, 255, 0.16), transparent 34rem),
+    radial-gradient(circle at 35% 100%, rgba(95, 231, 255, 0.08), transparent 30rem),
+    var(--hocker-bg);
+  color: var(--hocker-text-main);
+}
+
+.hocker-card {
+  background: var(--hocker-surface);
+  border: 1px solid rgba(95, 231, 255, 0.12);
+  border-radius: var(--hocker-radius-lg);
+  backdrop-filter: var(--hocker-blur-card);
+  box-shadow: var(--hocker-shadow-soft);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.hocker-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(95, 231, 255, 0.28);
+  box-shadow: var(--hocker-shadow-soft), var(--hocker-shadow-glow);
+}
+
+.nova-pulse {
+  position: relative;
+  box-shadow:
+    0 0 24px rgba(22, 200, 255, 0.18),
+    0 0 80px rgba(3, 102, 255, 0.14);
+  animation: novaPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes novaPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+
+  50% {
+    transform: scale(1.015);
+    opacity: 1;
+  }
+}
+
+.owner-action {
+  border: 1px solid rgba(214, 168, 79, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(214, 168, 79, 0.08),
+    0 0 40px rgba(214, 168, 79, 0.12);
+}
+
+.hocker-focus-ring:focus-visible {
+  outline: 2px solid var(--hocker-cyan);
+  outline-offset: 3px;
+}
+
+.hocker-scroll-soft {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(95, 231, 255, 0.34) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-pulse,
+  .hocker-card,
+  .owner-action {
+    animation: none !important;
+    transition: none !important;
+  }
+}

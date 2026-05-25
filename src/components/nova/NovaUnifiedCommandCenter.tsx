@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import {
   HOCKER_COMMAND_CENTER_AGIS,
   HOCKER_COMMAND_CENTER_APPS,
@@ -103,7 +104,7 @@ function ModuleCard({ item }: { item: HockerCommandItem }) {
 export function NovaUnifiedCommandCenter() {
   const [activeTab, setActiveTab] = useState<TabId>("apps");
   const [message, setMessage] = useState("");
-  const [reply, setReply] = useState("NOVA está lista para ordenar el siguiente paso. Pide una revisión, una corrección o un plan de acción.");
+  const [reply, setReply] = useState(`${HOCKER_HUMAN_COPY.private_tagline} Pide una revisión, una corrección o un plan de acción.`);
   const [loading, setLoading] = useState(false);
 
   const activeItems = useMemo(() => itemsForTab(activeTab), [activeTab]);
@@ -147,7 +148,7 @@ export function NovaUnifiedCommandCenter() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#05070d] text-white">
+    <main className="hocker-soft-shell min-h-screen overflow-hidden text-white">
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute inset-0 -z-0">
           <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-400/20 blur-3xl" />
@@ -163,7 +164,7 @@ export function NovaUnifiedCommandCenter() {
                 NOVA Command Center
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white md:text-6xl">
-                Todo HOCKER en una sola consola.
+                {HOCKER_HUMAN_COPY.private_tagline}
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
                 Habla con NOVA, revisa módulos, detecta pendientes y prepara acciones sin saltar entre pantallas.
@@ -215,7 +216,7 @@ export function NovaUnifiedCommandCenter() {
                     void sendMessage();
                   }
                 }}
-                placeholder="Ejemplo: NOVA, revisa Hocker Ads y dime qué falta para dejarlo real."
+                placeholder="Dile a NOVA qué necesitas mover…"
                 className="min-h-24 flex-1 resize-none rounded-3xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none ring-cyan-300/30 placeholder:text-slate-500 focus:border-cyan-300/40 focus:ring-4"
               />
               <button
