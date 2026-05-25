@@ -16,11 +16,19 @@ type DetailItem = {
   value: string;
 };
 
+type RollbackPreview = {
+  title: string;
+  summary: string;
+  items: DetailItem[];
+  details: string;
+};
+
 type ExecutionViewState = {
   title: string;
   summary: string;
   status: "success" | "failed" | "unknown";
   rollbackAvailable: boolean;
+  rollback: RollbackPreview | null;
   items: DetailItem[];
   details: string;
   evidence: OwnerEvidenceRecord[];
@@ -42,6 +50,35 @@ function readString(value: unknown, fallback = "") {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return fallback;
+}
+
+function deepFindValue(value: unknown, wantedKeys: string[], depth = 0): unknown {
+  if (depth > 5) return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = deepFindValue(item, wantedKeys, depth + 1);
+      if (found !== null && found !== undefined) return found;
+    }
+    return null;
+  }
+
+  if (!isRecord(value)) return null;
+
+  const normalizedWanted = wantedKeys.map((key) => key.toLowerCase());
+
+  for (const [key, item] of Object.entries(value)) {
+    if (normalizedWanted.includes(key.toLowerCase())) {
+      return item;
+    }
+  }
+
+  for (const item of Object.values(value)) {
+    const found = deepFindValue(item, wantedKeys, depth + 1);
+    if (found !== null && found !== undefined) return found;
+  }
+
+  return null;
 }
 
 function deepFindString(value: unknown, wantedKeys: string[], depth = 0): string {
@@ -118,6 +155,38 @@ function compactItems(items: DetailItem[]) {
   return items.filter((item) => item.value && item.value !== "undefined" && item.value !== "null");
 }
 
+function summarizeRollbackPlan(payload: unknown): RollbackPreview | null {
+  const plan = deepFindValue(payload, ["rollback_plan", "rollbackPlan"]);
+
+  if (!plan || plan === true) return null;
+
+  const operation = deepFindString(plan, ["operation", "type", "action_type"]) || deepFindString(payload, ["operation", "type"]);
+  const repository = deepFindString(plan, ["repository", "repo", "full_name"]) || deepFindString(payload, ["repository", "repo"]);
+  const branch = deepFindString(plan, ["branch", "target_branch", "head"]) || deepFindString(payload, ["branch", "target_branch", "head"]);
+  const path = deepFindString(plan, ["path", "file_path"]) || deepFindString(payload, ["path", "file_path"]);
+  const previousSha = deepFindString(plan, ["previous_sha", "previousSha", "before_sha", "old_sha"]);
+  const targetSha = deepFindString(plan, ["target_sha", "targetSha", "sha", "commit_sha"]);
+  const reason = deepFindString(plan, ["reason", "summary", "description", "note"]);
+
+  const items = compactItems([
+    { label: "Operación a revertir", value: operation || "Cambio ejecutado" },
+    { label: "Repositorio", value: repository },
+    { label: "Rama", value: branch },
+    { label: "Archivo", value: path },
+    { label: "SHA anterior", value: previousSha },
+    { label: "SHA objetivo", value: targetSha },
+    { label: "Motivo / nota", value: reason },
+  ]);
+
+  return {
+    title: "Rollback disponible",
+    summary:
+      "NOVA encontró un plan de reversión asociado a esta ejecución. Por seguridad, aquí sólo se muestra el plan; no existe botón de revertir hasta confirmar un endpoint real de rollback de acciones.",
+    items,
+    details: safeJson(plan),
+  };
+}
+
 function summarizeExecutionPayload(payload: unknown): ExecutionViewState {
   const operation = deepFindString(payload, ["operation", "action_type", "type"]) || "acción aprobada";
   const repository = deepFindString(payload, ["repository", "full_name", "repo"]);
@@ -129,7 +198,8 @@ function summarizeExecutionPayload(payload: unknown): ExecutionViewState {
   const idempotency = deepFindString(payload, ["idempotency_key"]);
 
   const success = payloadLooksSuccessful(payload);
-  const rollbackAvailable = deepHasTruthyKey(payload, ["rollback_plan"]);
+  const rollback = summarizeRollbackPlan(payload);
+  const rollbackAvailable = Boolean(rollback) || deepHasTruthyKey(payload, ["rollback_plan"]);
 
   const items = compactItems([
     { label: "Operación", value: operation },
@@ -150,6 +220,7 @@ function summarizeExecutionPayload(payload: unknown): ExecutionViewState {
       : readError(payload),
     status: success ? "success" : "unknown",
     rollbackAvailable,
+    rollback,
     items,
     details: safeJson(payload),
     evidence: [],
@@ -231,6 +302,40 @@ function isAlreadyFinal(status: string) {
   );
 }
 
+function RollbackPreviewCard({ rollback }: { rollback: RollbackPreview }) {
+  return (
+    <section className="mt-4 rounded-[1.5rem] border border-[var(--hocker-gold)]/35 bg-[var(--hocker-gold)]/[0.08] p-4 text-amber-50">
+      <p className="text-xs uppercase tracking-[0.24em] text-[var(--hocker-gold)]">Rollback disponible</p>
+      <h4 className="mt-2 text-lg font-semibold text-white">{rollback.title}</h4>
+      <p className="mt-2 text-sm leading-6 text-amber-50/85">{rollback.summary}</p>
+
+      {rollback.items.length > 0 ? (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {rollback.items.map((item) => (
+            <div key={item.label} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-50/55">{item.label}</p>
+              <p className="mt-1 break-words text-sm text-white">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <p className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3 text-sm leading-6 text-rose-50">
+        Reversión bloqueada por seguridad: todavía no hay endpoint confirmado para ejecutar rollback de acciones.
+      </p>
+
+      <details className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3">
+        <summary className="cursor-pointer text-sm font-medium text-cyan-100">
+          Ver plan completo
+        </summary>
+        <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs leading-6 text-cyan-50">
+          {rollback.details}
+        </pre>
+      </details>
+    </section>
+  );
+}
+
 function ResultPanel({ result }: { result: ExecutionViewState }) {
   const statusClass =
     result.status === "success"
@@ -254,11 +359,7 @@ function ResultPanel({ result }: { result: ExecutionViewState }) {
         </div>
       ) : null}
 
-      {result.rollbackAvailable ? (
-        <p className="mt-4 rounded-2xl border border-[var(--hocker-gold)]/30 bg-[var(--hocker-gold)]/10 p-3 text-sm leading-6 text-amber-100">
-          Rollback disponible. Revisa la evidencia antes de revertir cualquier cambio.
-        </p>
-      ) : null}
+      {result.rollback ? <RollbackPreviewCard rollback={result.rollback} /> : null}
 
       {result.evidence.length > 0 ? (
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
@@ -339,6 +440,7 @@ function NovaInlineExecuteCard({
         summary: error instanceof Error ? error.message : "La ejecución falló sin mostrar detalle claro.",
         status: "failed",
         rollbackAvailable: false,
+        rollback: null,
         items: [
           { label: "Acción", value: action.title },
           { label: "Estado anterior", value: action.status },
