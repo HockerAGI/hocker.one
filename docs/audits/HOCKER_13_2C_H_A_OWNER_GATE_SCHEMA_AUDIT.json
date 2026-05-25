@@ -1,0 +1,53 @@
+{
+  "actions": {
+    "file": "src/app/api/agi/runtime/actions/route.ts",
+    "has_require_project_role": true,
+    "owner_required": false,
+    "admin_operator_allowed": true,
+    "has_parse_body": true,
+    "mentions_project_id": true,
+    "mentions_action_id": false,
+    "mentions_id": true,
+    "mentions_decision": false,
+    "mentions_status": true,
+    "mentions_note": false,
+    "mentions_rejection": false,
+    "mentions_approval": true,
+    "post_exists": true,
+    "get_exists": true
+  },
+  "decision": {
+    "file": "src/app/api/agi/runtime/actions/decision/route.ts",
+    "has_require_project_role": true,
+    "owner_required": true,
+    "admin_operator_allowed": false,
+    "has_parse_body": true,
+    "mentions_project_id": true,
+    "mentions_action_id": true,
+    "mentions_id": true,
+    "mentions_decision": true,
+    "mentions_status": true,
+    "mentions_note": true,
+    "mentions_rejection": false,
+    "mentions_approval": false,
+    "post_exists": true,
+    "get_exists": false
+  },
+  "execute": {
+    "file": "src/app/api/agi/runtime/actions/execute/route.ts",
+    "has_require_project_role": true,
+    "owner_required": true,
+    "admin_operator_allowed": false,
+    "has_parse_body": true,
+    "mentions_project_id": true,
+    "mentions_action_id": true,
+    "mentions_id": true,
+    "mentions_decision": false,
+    "mentions_status": true,
+    "mentions_note": false,
+    "mentions_rejection": false,
+    "mentions_approval": false,
+    "post_exists": true,
+    "get_exists": false
+  }
+}
