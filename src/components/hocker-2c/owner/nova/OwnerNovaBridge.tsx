@@ -7,6 +7,7 @@ import { ActionPreviewCard, EvidencePanel, PageState } from "@/components/hocker
 import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import { OwnerNovaInlineApprovals } from "./OwnerNovaInlineApprovals";
 import { OwnerNovaInlineExecutions } from "./OwnerNovaInlineExecutions";
+import { OwnerNovaVoiceDock } from "./OwnerNovaVoiceDock";
 
 type NovaOwnerMode = "normal" | "crear" | "analizar" | "ejecutar";
 
@@ -70,6 +71,16 @@ export function OwnerNovaBridge() {
   const [lastPrompt, setLastPrompt] = useState("");
 
   const selectedMode = useMemo(() => modes.find((item) => item.id === mode) ?? modes[0], [mode]);
+
+  function handleVoicePrompt(text: string) {
+    const clean = String(text ?? "").trim();
+    if (!clean) return;
+
+    setMessage((current) => {
+      const previous = String(current ?? "").trim();
+      return previous ? `${previous}\n${clean}` : clean;
+    });
+  }
 
   async function submit(input?: string) {
     const clean = (input ?? message).trim();
@@ -207,6 +218,12 @@ export function OwnerNovaBridge() {
             </button>
           </div>
         </div>
+
+        <OwnerNovaVoiceDock
+          onPrompt={handleVoicePrompt}
+          responseText={reply}
+          disabled={loading}
+        />
 
         <div className="hocker-card p-5">
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--hocker-cyan)]">Acciones rápidas</p>
