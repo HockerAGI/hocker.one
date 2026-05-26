@@ -42,6 +42,7 @@ function resultLabel(result: OwnerEvidenceRecord["result"]) {
 }
 
 export function OwnerEvidenceLivePanel() {
+  const evidenceExportHref = "/api/owner/evidence/export?project_id=hocker-one&status=executed&limit=50";
   const [state, setState] = useState<LoadState>("loading");
   const [records, setRecords] = useState<OwnerEvidenceRecord[]>([]);
 
@@ -85,8 +86,27 @@ export function OwnerEvidenceLivePanel() {
   }
 
   return (
-    <section className="grid gap-4 xl:grid-cols-2">
-      {visibleRecords.map((record) => (
+    <section className="space-y-4">
+      <div className="hocker-card flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--hocker-cyan)]">Export server-only</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--hocker-text-soft)]">
+            Descarga un PDF generado en API server. No se importa PDFKit en el frontend.
+          </p>
+        </div>
+
+        <a
+          href={evidenceExportHref}
+          target="_blank"
+          rel="noreferrer"
+          className="hocker-focus-ring inline-flex items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/15"
+        >
+          Exportar evidencia PDF
+        </a>
+      </div>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {visibleRecords.map((record) => (
         <EvidencePanel
           key={record.id}
           title={record.title}
@@ -98,7 +118,8 @@ export function OwnerEvidenceLivePanel() {
             { label: "Rollback", value: record.rollback },
           ]}
         />
-      ))}
+        ))}
+      </section>
     </section>
   );
 }
