@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import { HOCKER_NAV_ITEMS_2C } from "@/lib/hocker-role-navigation";
+import { HOCKER_OWNER_ROUTE_HARDENING_2C } from "@/lib/hocker-owner-routes-2c";
+import { HOCKER_PRODUCT_BLUEPRINT_2C } from "@/lib/hocker-product-blueprint-2c";
 
 type OwnerShellProps = {
   eyebrow?: string;
@@ -93,6 +95,13 @@ export function OwnerShell({
                 <p className="mt-3 text-sm leading-6 text-[var(--hocker-text-soft)]">
                   NOVA muestra sólo lo importante. Los detalles técnicos quedan bajo control owner.
                 </p>
+
+                <div className="mt-4 rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.045] p-3">
+                  <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/60">Política owner 2C</p>
+                  <p className="mt-2 text-xs leading-5 text-cyan-50">
+                    {HOCKER_PRODUCT_BLUEPRINT_2C.category} · {HOCKER_OWNER_ROUTE_HARDENING_2C.robots}
+                  </p>
+                </div>
               </div>
             )}
           </div>
