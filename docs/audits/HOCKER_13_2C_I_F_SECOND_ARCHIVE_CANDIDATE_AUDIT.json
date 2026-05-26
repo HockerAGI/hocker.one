@@ -1,0 +1,249 @@
+{
+  "phase": "13-2C-I-F",
+  "summary": {
+    "targets": 5,
+    "active_sources_scanned": 300
+  },
+  "items": [
+    {
+      "file": "src/components/NovaChat.tsx",
+      "exists": true,
+      "lines": 547,
+      "sha256": "fd27ece77867d50cfa791e14cf869972d6a77e095a66d84b356c4ee41333fcf0",
+      "imports": [
+        "import {",
+        "import {",
+        "import { useWorkspace } from \"@/components/WorkspaceContext\";"
+      ],
+      "exports": [
+        "export default function NovaChat() {"
+      ],
+      "functions": [
+        "const QUICK_STARTS =",
+        "function cx",
+        "function makeId",
+        "function fileKind"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/nova-chat-action-drafts.ts",
+        "src/lib/nova-github-action-materializer.ts"
+      ],
+      "risk_hits": {
+        "client_component": [
+          "\"use client\""
+        ],
+        "fetch": [
+          "fetch("
+        ],
+        "mutation": [
+          "POST"
+        ]
+      },
+      "recommendation": "KEEP_OR_REVIEW_REFERENCED"
+    },
+    {
+      "file": "src/components/ErrorBoundary.tsx",
+      "exists": true,
+      "lines": 111,
+      "sha256": "b2fa3a8d31e4f982ae125ee8f7dd0fe8f0328057d603f5dda8f5b0f6ae1d190e",
+      "imports": [
+        "import type { ErrorInfo, ReactNode } from \"react\";",
+        "import { Component } from \"react\";"
+      ],
+      "exports": [
+        "export default class ErrorBoundary extends Component<"
+      ],
+      "functions": [
+        "function DefaultFallback"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/hocker-2c/owner/fusion/OwnerErrorBoundary.tsx",
+        "src/components/hocker-2c/owner/index.ts"
+      ],
+      "risk_hits": {
+        "client_component": [
+          "\"use client\""
+        ]
+      },
+      "recommendation": "KEEP_OR_REVIEW_REFERENCED"
+    },
+    {
+      "file": "src/components/SystemStatus.tsx",
+      "exists": true,
+      "lines": 227,
+      "sha256": "f4aae5f1de03c877ce627ca974cc8208d9647d4f3d8ba2bda5189457f325e0e7",
+      "imports": [
+        "import { useCallback, useEffect, useMemo, useState } from \"react\";",
+        "import { CircleDot, RefreshCw, ShieldAlert, SignalHigh, Sparkles } from \"lucide-react\";",
+        "import { createBrowserSupabase } from \"@/lib/supabase-browser\";",
+        "import type { DashboardSummary } from \"@/lib/hocker-dashboard\";"
+      ],
+      "exports": [
+        "export default function SystemStatus({ summary }: Props) {"
+      ],
+      "functions": [
+        "function formatRelativeTime"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/lib/hocker-system-registry-2c.ts"
+      ],
+      "risk_hits": {
+        "client_component": [
+          "\"use client\""
+        ],
+        "supabase": [
+          "Supabase",
+          "createBrowser",
+          "supabase"
+        ]
+      },
+      "recommendation": "KEEP_OR_REVIEW_REFERENCED"
+    },
+    {
+      "file": "src/trigger/hocker-core-executor.ts",
+      "exists": true,
+      "lines": 37,
+      "sha256": "ec1addcf4495e37d049cc9adac97a2450155e89981efc57b485d74b87112400f",
+      "imports": [
+        "import { task } from \"@trigger.dev/sdk/v3\";",
+        "import { executeCommand } from \"@/server/executor/hocker-core-executor\";"
+      ],
+      "exports": [
+        "export const hockerCoreExecutor = task({"
+      ],
+      "functions": [
+        "export const hockerCoreExecutor ="
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/commands/approve/route.ts",
+        "src/app/api/commands/route.ts",
+        "src/app/api/execute/route.ts",
+        "src/app/api/orchestrator/run/route.ts"
+      ],
+      "risk_hits": {},
+      "recommendation": "KEEP_OR_REVIEW_REFERENCED"
+    },
+    {
+      "file": "src/server/executor/hocker-core-executor.ts",
+      "exists": true,
+      "lines": 39,
+      "sha256": "272bf395a70f7fd4f78230719b45bc59af31592021151d88965d333401ed50dc",
+      "imports": [
+        "import { createAdminSupabase } from \"@/lib/supabase-admin\";",
+        "import { processCloudQueue } from \"@/app/api/commands/_cloud\";"
+      ],
+      "exports": [
+        "export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {"
+      ],
+      "functions": [
+        "function isCloudNode",
+        "export async function executeCommand"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/commands/approve/route.ts",
+        "src/app/api/commands/route.ts",
+        "src/app/api/execute/route.ts",
+        "src/app/api/orchestrator/run/route.ts",
+        "src/trigger/hocker-core-executor.ts"
+      ],
+      "risk_hits": {
+        "supabase": [
+          "Supabase",
+          "supabase"
+        ]
+      },
+      "recommendation": "KEEP_OR_REVIEW_REFERENCED"
+    }
+  ],
+  "executor_compare": {
+    "both_exist": true,
+    "same_hash": false,
+    "similarity_ratio": 0.091,
+    "diff_preview": [
+      "--- src/trigger/hocker-core-executor.ts",
+      "+++ src/server/executor/hocker-core-executor.ts",
+      "@@ -1,37 +1,39 @@",
+      "-import { task } from \"@trigger.dev/sdk/v3\";",
+      "-import { executeCommand } from \"@/server/executor/hocker-core-executor\";",
+      "+import { createAdminSupabase } from \"@/lib/supabase-admin\";",
+      "+import { processCloudQueue } from \"@/app/api/commands/_cloud\";",
+      " ",
+      "-type HockerCoreExecutorPayload = {",
+      "-  commandId: string;",
+      "-  projectId?: string;",
+      "-};",
+      "+function isCloudNode(nodeId: string | null | undefined): boolean {",
+      "+  return String(nodeId ?? \"\").startsWith(\"cloud-\");",
+      "+}",
+      " ",
+      "-export const hockerCoreExecutor = task({",
+      "-  id: \"hocker-core-executor\",",
+      "-  maxDuration: 60,",
+      "-  retry: {",
+      "-    maxAttempts: 3,",
+      "-    minTimeoutInMs: 2000,",
+      "-    maxTimeoutInMs: 10000,",
+      "-    factor: 2,",
+      "-    randomize: true,",
+      "-  },",
+      "-  run: async (payload: HockerCoreExecutorPayload) => {",
+      "-    if (!payload?.commandId || !payload.commandId.trim()) {",
+      "-      throw new Error(\"commandId es obligatorio para ejecutar un nodo.\");",
+      "-    }",
+      "+export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {",
+      "+  const sb = createAdminSupabase();",
+      " ",
+      "-    const cleanCommandId = payload.commandId.trim();",
+      "-    const cleanProjectId = payload.projectId?.trim() || undefined;",
+      "+  const { data: command, error } = await sb",
+      "+    .from(\"commands\")",
+      "+    .select(\"*\")",
+      "+    .eq(\"id\", commandId)",
+      "+    .maybeSingle();",
+      " ",
+      "-    await executeCommand(cleanCommandId, cleanProjectId);",
+      "+  if (error || !command) return;",
+      " ",
+      "-    return {",
+      "-      ok: true,",
+      "-      commandId: cleanCommandId,",
+      "-      projectId: cleanProjectId ?? null,",
+      "-      executed: true,",
+      "-      timestamp: new Date().toISOString(),",
+      "-    };",
+      "-  },",
+      "-});",
+      "+  if (expectedProjectId && command.project_id !== expectedProjectId) {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  if (!isCloudNode(command.node_id)) {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  if (command.status !== \"queued\" && command.status !== \"needs_approval\") {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  if (command.needs_approval) {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  await processCloudQueue(sb, {",
+      "+    commandId,",
+      "+    nodeId: command.node_id,",
+      "+  });",
+      "+}"
+    ]
+  }
+}
