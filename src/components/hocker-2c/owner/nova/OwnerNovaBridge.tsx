@@ -8,6 +8,7 @@ import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import { OwnerNovaInlineApprovals } from "./OwnerNovaInlineApprovals";
 import { OwnerNovaInlineExecutions } from "./OwnerNovaInlineExecutions";
 import { OwnerNovaVoiceDock } from "./OwnerNovaVoiceDock";
+import { OwnerNovaToolDrawer, type OwnerNovaAttachmentMeta, type OwnerNovaIntentKey } from "./OwnerNovaToolDrawer";
 
 type NovaOwnerMode = "normal" | "crear" | "analizar" | "ejecutar";
 
@@ -66,13 +67,15 @@ function modeInstruction(mode: NovaOwnerMode) {
 export function OwnerNovaBridge() {
   const [mode, setMode] = useState<NovaOwnerMode>("normal");
   const [message, setMessage] = useState("");
+  const [intent, setIntent] = useState<OwnerNovaIntentKey>("chat");
+  const [attachments, setAttachments] = useState<OwnerNovaAttachmentMeta[]>([]);
   const [reply, setReply] = useState<string>(HOCKER_HUMAN_COPY.private_tagline);
   const [loading, setLoading] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
 
   const selectedMode = useMemo(() => modes.find((item) => item.id === mode) ?? modes[0], [mode]);
 
-  function handleVoicePrompt(text: string) {
+  function appendToComposer(text: string) {
     const clean = String(text ?? "").trim();
     if (!clean) return;
 
@@ -80,6 +83,14 @@ export function OwnerNovaBridge() {
       const previous = String(current ?? "").trim();
       return previous ? `${previous}\n${clean}` : clean;
     });
+  }
+
+  function handleVoicePrompt(text: string) {
+    appendToComposer(text);
+  }
+
+  function handleToolPrompt(text: string) {
+    appendToComposer(text);
   }
 
   async function submit(input?: string) {
@@ -91,7 +102,20 @@ export function OwnerNovaBridge() {
     setReply("NOVA está revisando la solicitud...");
 
     try {
-      const composedMessage = `${modeInstruction(mode)}\n\nSolicitud owner:\n${clean}`;
+      const attachmentSummary = attachments.length
+        ? attachments
+            .map((item, index) => `${index + 1}. ${item.kind}: ${item.name} (${item.type || "unknown"}, ${item.size} bytes)`)
+            .join("\n")
+        : "";
+
+      const composedMessage = [
+        modeInstruction(mode),
+        `Intención seleccionada: ${intent}.`,
+        attachmentSummary ? `Archivos declarados para contexto:\n${attachmentSummary}` : "",
+        `Solicitud owner:\n${clean}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
 
       const response = await fetch("/api/nova/chat", {
         method: "POST",
@@ -100,7 +124,10 @@ export function OwnerNovaBridge() {
         },
         credentials: "include",
         body: JSON.stringify({
+          project_id: "hocker-one",
           mode: "pro",
+          prefer: "auto",
+          allow_actions: mode === "ejecutar",
           message: composedMessage,
           messages: [
             {
@@ -108,7 +135,19 @@ export function OwnerNovaBridge() {
               content: composedMessage,
             },
           ],
-          source: "owner-nova-bridge-13-2c-e",
+          context_data: {
+            owner_mode: mode,
+            selected_intent: intent,
+            attachments,
+            client: "hocker.one.owner",
+            source: "owner-nova-bridge-13-2c-i-c",
+            safety: {
+              direct_execution: false,
+              owner_gate_required: true,
+              allow_actions_only_in_execute_mode: true,
+            },
+          },
+          source: "owner-nova-bridge-13-2c-i-c",
         }),
       });
 
@@ -123,6 +162,7 @@ export function OwnerNovaBridge() {
 
       setReply(String(text));
       setMessage("");
+      setAttachments([]);
     } catch {
       setReply("No pude conectar con NOVA en este entorno. La vista quedó segura y no ejecutó nada.");
     } finally {
@@ -172,6 +212,15 @@ export function OwnerNovaBridge() {
             })}
           </div>
         </div>
+
+        <OwnerNovaToolDrawer
+          intent={intent}
+          onIntentChange={setIntent}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
+          onPrompt={handleToolPrompt}
+          disabled={loading}
+        />
 
         <div className="hocker-card p-5">
           <div className="min-h-56 rounded-3xl border border-white/10 bg-black/20 p-5">
