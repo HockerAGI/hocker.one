@@ -1,0 +1,87 @@
+{
+  "phase": "13-2C-H-F-C",
+  "files": {
+    "owner_layout": "src/app/owner/layout.tsx",
+    "owner_nova_page": "src/app/owner/nova/page.tsx",
+    "require_private_session": "src/lib/require-private-session.ts",
+    "supabase_server": "src/lib/supabase-server.ts",
+    "api_lib": "src/app/api/_lib.ts",
+    "proxy": "src/proxy.ts",
+    "middleware": "middleware.ts",
+    "inline_approvals": "src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx",
+    "inline_executions": "src/components/hocker-2c/owner/nova/OwnerNovaInlineExecutions.tsx"
+  },
+  "checks": {
+    "owner_layout_requires_private_session": true,
+    "require_private_session_uses_supabase_getUser": true,
+    "api_lib_requireProjectRole_uses_getUser": true,
+    "inline_fetches_use_credentials_include": true,
+    "runtime_actions_requires_project_role": true,
+    "owner_live_summary_uses_owner_internal_gate": true,
+    "middleware_proxy_present": true
+  },
+  "routes": [
+    {
+      "file": "src/app/api/agi/runtime/actions/route.ts",
+      "exists": true,
+      "uses_requireProjectRole": true,
+      "uses_requireOwnerOrInternal": false,
+      "uses_project_id": true,
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "uses_getUser": false
+    },
+    {
+      "file": "src/app/api/agi/runtime/capabilities/route.ts",
+      "exists": true,
+      "uses_requireProjectRole": true,
+      "uses_requireOwnerOrInternal": false,
+      "uses_project_id": true,
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "uses_getUser": false
+    },
+    {
+      "file": "src/app/api/agi/runtime/tools/route.ts",
+      "exists": true,
+      "uses_requireProjectRole": true,
+      "uses_requireOwnerOrInternal": false,
+      "uses_project_id": true,
+      "methods": [
+        "GET"
+      ],
+      "uses_getUser": false
+    },
+    {
+      "file": "src/app/api/owner/live-summary/route.ts",
+      "exists": true,
+      "uses_requireProjectRole": false,
+      "uses_requireOwnerOrInternal": true,
+      "uses_project_id": false,
+      "methods": [
+        "GET"
+      ],
+      "uses_getUser": false
+    }
+  ],
+  "decision": {
+    "auth_misalignment_confirmed": true,
+    "most_likely_causes": [
+      "La página owner y las APIs usan Supabase auth, pero pueden no compartir cookies válidas en curl si el cookie file no contiene la sesión Supabase completa.",
+      "El frontend sí intenta enviar cookies con credentials: include. El 401 del smoke probablemente viene del cookie file usado por curl, no necesariamente del navegador real.",
+      "/api/owner/live-summary usa owner/internal gate, no necesariamente la misma sesión de requireProjectRole.",
+      "/api/agi/runtime/actions exige rol de proyecto; aunque haya sesión, puede devolver 401/403 si falta project_membership o project_id correcto."
+    ],
+    "safe_next_step": "Crear endpoint diagnóstico GET seguro que reporte sólo estado de sesión/rol sin secretos, o ajustar smoke para login real con /api/auth/password-login si existe credencial owner disponible.",
+    "do_not_change_yet": [
+      "No relajar requireProjectRole",
+      "No bypass owner gate",
+      "No convertir APIs privadas en públicas",
+      "No usar service role desde cliente"
+    ]
+  }
+}
