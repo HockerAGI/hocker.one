@@ -1,0 +1,431 @@
+{
+  "phase": "13-2C-I-E",
+  "summary": {
+    "total_files_repo": 568,
+    "source_files_active_no_docs": 300,
+    "archived_files_13_2c_i_d": 13,
+    "duplicate_exact_groups": 2,
+    "same_name_different_path_groups": 5,
+    "archived_active_reference_issues": 0
+  },
+  "remaining_watch_status": {
+    "src/components/NovaChat.tsx": {
+      "exists": true,
+      "refs_by_name": [],
+      "refs_by_stem": [
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/components/NovaChat.tsx",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/nova-chat-action-drafts.ts",
+        "src/lib/nova-github-action-materializer.ts"
+      ],
+      "lines": 547
+    },
+    "src/components/ErrorBoundary.tsx": {
+      "exists": true,
+      "refs_by_name": [],
+      "refs_by_stem": [
+        "src/components/ErrorBoundary.tsx",
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/hocker-2c/owner/fusion/OwnerErrorBoundary.tsx",
+        "src/components/hocker-2c/owner/index.ts"
+      ],
+      "lines": 111
+    },
+    "src/components/SystemStatus.tsx": {
+      "exists": true,
+      "refs_by_name": [],
+      "refs_by_stem": [
+        "src/components/SystemStatus.tsx",
+        "src/lib/hocker-system-registry-2c.ts"
+      ],
+      "lines": 227
+    },
+    "src/components/AuthBox.tsx": {
+      "exists": true,
+      "refs_by_name": [],
+      "refs_by_stem": [
+        "src/components/AuthBox.tsx",
+        "src/components/hocker-2c/auth/HockerOwnerLoginSurface.tsx"
+      ],
+      "lines": 177
+    },
+    "src/lib/export-audit.ts": {
+      "exists": true,
+      "refs_by_name": [],
+      "refs_by_stem": [
+        "src/app/api/owner/evidence/export/route.ts"
+      ],
+      "lines": 81
+    }
+  },
+  "sensitive_watch_status": {
+    "src/app/api/auth/password-login/route.ts": true,
+    "middleware.ts": true,
+    "src/proxy.ts": true,
+    "src/app/api/agi/runtime/actions/route.ts": true,
+    "src/app/api/agi/runtime/actions/execute/route.ts": true,
+    "src/app/api/agi/runtime/actions/decision/route.ts": true,
+    "src/lib/agi-action-execution.ts": true,
+    "src/lib/github-runtime-executor.ts": true
+  },
+  "duplicate_exact": {
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": [
+      "android/app/src/main/assets/public/cordova.js",
+      "android/app/src/main/assets/public/cordova_plugins.js"
+    ],
+    "75c43c4a2c481d9a81e25de1b6e2ab8ea89321c2b4a057f2af770fe036d08bb8": [
+      "src/app/admin/layout.tsx",
+      "src/app/agis/layout.tsx",
+      "src/app/chat/layout.tsx",
+      "src/app/commands/layout.tsx",
+      "src/app/dashboard/layout.tsx",
+      "src/app/governance/layout.tsx",
+      "src/app/nodes/layout.tsx",
+      "src/app/supply/layout.tsx",
+      "src/app/memory/layout.tsx",
+      "src/app/chido/layout.tsx",
+      "src/app/integrations/layout.tsx",
+      "src/app/status/layout.tsx",
+      "src/app/access/layout.tsx",
+      "src/app/launch/layout.tsx",
+      "src/app/mobile/layout.tsx",
+      "src/app/security/layout.tsx",
+      "src/app/apps/layout.tsx",
+      "src/app/servicios/layout.tsx"
+    ]
+  },
+  "same_name_different_paths": {
+    "layout.tsx": [
+      "src/app/layout.tsx",
+      "src/app/admin/layout.tsx",
+      "src/app/agis/layout.tsx",
+      "src/app/chat/layout.tsx",
+      "src/app/commands/layout.tsx",
+      "src/app/dashboard/layout.tsx",
+      "src/app/governance/layout.tsx",
+      "src/app/nodes/layout.tsx",
+      "src/app/supply/layout.tsx",
+      "src/app/memory/layout.tsx",
+      "src/app/chido/layout.tsx",
+      "src/app/integrations/layout.tsx",
+      "src/app/status/layout.tsx",
+      "src/app/access/layout.tsx",
+      "src/app/launch/layout.tsx",
+      "src/app/mobile/layout.tsx",
+      "src/app/security/layout.tsx",
+      "src/app/owner/layout.tsx",
+      "src/app/apps/layout.tsx",
+      "src/app/servicios/layout.tsx"
+    ],
+    "page.tsx": [
+      "src/app/page.tsx",
+      "src/app/agis/page.tsx",
+      "src/app/chat/page.tsx",
+      "src/app/commands/page.tsx",
+      "src/app/dashboard/page.tsx",
+      "src/app/governance/page.tsx",
+      "src/app/login/page.tsx",
+      "src/app/nodes/page.tsx",
+      "src/app/supply/page.tsx",
+      "src/app/memory/page.tsx",
+      "src/app/chido/page.tsx",
+      "src/app/integrations/page.tsx",
+      "src/app/status/page.tsx",
+      "src/app/access/page.tsx",
+      "src/app/launch/page.tsx",
+      "src/app/mobile/page.tsx",
+      "src/app/security/page.tsx",
+      "src/app/owner/page.tsx",
+      "src/app/apps/page.tsx",
+      "src/app/empresa/page.tsx",
+      "src/app/servicios/page.tsx",
+      "src/app/live/page.tsx",
+      "src/app/map/page.tsx",
+      "src/app/casos/page.tsx",
+      "src/app/contacto/page.tsx",
+      "src/app/ecosistema/page.tsx",
+      "src/app/one/page.tsx",
+      "src/app/seguridad/page.tsx",
+      "src/app/soluciones/page.tsx",
+      "src/app/app/page.tsx",
+      "src/app/app/actividad/page.tsx",
+      "src/app/app/ajustes/page.tsx",
+      "src/app/app/ecosistema/page.tsx",
+      "src/app/app/nova/page.tsx",
+      "src/app/app/pendientes/page.tsx",
+      "src/app/owner/actions/page.tsx",
+      "src/app/owner/agis/page.tsx",
+      "src/app/owner/apps/page.tsx",
+      "src/app/owner/command-center/page.tsx",
+      "src/app/owner/ecosystem/page.tsx",
+      "src/app/owner/evidence/page.tsx",
+      "src/app/owner/nova/page.tsx",
+      "src/app/security/grants/page.tsx",
+      "src/app/security/hardening/page.tsx",
+      "src/app/security/rls/page.tsx",
+      "src/app/chido/ops/page.tsx",
+      "src/app/chido/actions/page.tsx",
+      "src/app/chido/research-gate/page.tsx",
+      "src/app/chido/approvals/page.tsx",
+      "src/app/chido/signatures/page.tsx",
+      "src/app/chido/preflight/page.tsx",
+      "src/app/memory/review/page.tsx",
+      "src/app/admin/jurix/page.tsx",
+      "src/app/admin/jurix/export/page.tsx"
+    ],
+    "hocker-core-executor.ts": [
+      "src/trigger/hocker-core-executor.ts",
+      "src/server/executor/hocker-core-executor.ts"
+    ],
+    "index.ts": [
+      "src/components/hocker-2c/index.ts",
+      "src/components/hocker-2c/owner/index.ts",
+      "src/components/hocker-2c/owner/live/index.ts",
+      "src/components/hocker-2c/owner/nova/index.ts"
+    ],
+    "route.ts": [
+      "src/app/signout/route.ts",
+      "src/app/auth/callback/route.ts",
+      "src/app/api/commands/route.ts",
+      "src/app/api/execute/route.ts",
+      "src/app/api/health/route.ts",
+      "src/app/api/agi/memory-mirror/route.ts",
+      "src/app/api/agi/runtime/summary/route.ts",
+      "src/app/api/agi/runtime/actions/route.ts",
+      "src/app/api/agi/runtime/tools/route.ts",
+      "src/app/api/agi/runtime/github/route.ts",
+      "src/app/api/agi/runtime/context/route.ts",
+      "src/app/api/agi/runtime/capabilities/route.ts",
+      "src/app/api/agi/runtime/memory/route.ts",
+      "src/app/api/agi/runtime/memory/write-gate/route.ts",
+      "src/app/api/agi/runtime/memory/review/route.ts",
+      "src/app/api/agi/runtime/memory/publication-audit/route.ts",
+      "src/app/api/agi/runtime/actions/decision/route.ts",
+      "src/app/api/agi/runtime/actions/execute/route.ts",
+      "src/app/api/agi/updates/feed/route.ts",
+      "src/app/api/agi/learning/submit/route.ts",
+      "src/app/api/agi/learning/review/route.ts",
+      "src/app/api/owner/live-summary/route.ts",
+      "src/app/api/owner/auth-diagnostics/route.ts",
+      "src/app/api/owner/evidence/export/route.ts",
+      "src/app/api/auth/password-login/route.ts",
+      "src/app/api/access/profile/route.ts",
+      "src/app/api/access/check/route.ts",
+      "src/app/api/access/portal-grants/request/route.ts",
+      "src/app/api/access/portal-grants/decision/route.ts",
+      "src/app/api/access/portal-grants/revoke/route.ts",
+      "src/app/api/integrations/register/route.ts",
+      "src/app/api/integrations/health/route.ts",
+      "src/app/api/integrations/events/route.ts",
+      "src/app/api/chido/actions/dry-run/route.ts",
+      "src/app/api/chido/actions/execution/preflight/route.ts",
+      "src/app/api/chido/actions/signature/check/route.ts",
+      "src/app/api/chido/actions/approval/request/route.ts",
+      "src/app/api/chido/actions/approval/decision/route.ts",
+      "src/app/api/system/status/route.ts",
+      "src/app/api/system/global-health/route.ts",
+      "src/app/api/system/beta-readiness/route.ts",
+      "src/app/api/system/mobile-sanity/route.ts",
+      "src/app/api/system/security-readiness/route.ts",
+      "src/app/api/system/security-hardening/route.ts",
+      "src/app/api/system/tenant-rls/route.ts",
+      "src/app/api/system/providers/route.ts",
+      "src/app/api/system/nova/always-on/route.ts",
+      "src/app/api/system/diagnostics/providers/route.ts",
+      "src/app/api/supply/orders/route.ts",
+      "src/app/api/supply/products/route.ts",
+      "src/app/api/supply/products/[id]/route.ts",
+      "src/app/api/supply/orders/[id]/route.ts",
+      "src/app/api/orchestrator/cron/route.ts",
+      "src/app/api/orchestrator/run/route.ts",
+      "src/app/api/nova/chat/route.ts",
+      "src/app/api/nova/chat/stream/route.ts",
+      "src/app/api/governance/killswitch/route.ts",
+      "src/app/api/events/manual/route.ts",
+      "src/app/api/commands/approve/route.ts",
+      "src/app/api/commands/dispatch/route.ts",
+      "src/app/api/commands/reject/route.ts"
+    ]
+  },
+  "archived_reference_check": {},
+  "imports_selected": {
+    "src/components/AuthBox.tsx": [
+      "@/lib/errors",
+      "@/lib/supabase-browser",
+      "lucide-react",
+      "next/link",
+      "next/navigation",
+      "react",
+      "sonner"
+    ],
+    "src/components/ErrorBoundary.tsx": [
+      "react"
+    ],
+    "src/components/NovaChat.tsx": [
+      "@/components/WorkspaceContext",
+      "lucide-react",
+      "react"
+    ],
+    "src/components/SystemStatus.tsx": [
+      "@/lib/hocker-dashboard",
+      "@/lib/supabase-browser",
+      "lucide-react",
+      "react"
+    ],
+    "src/components/NovaRealtimeChat.tsx": [
+      "@/components/WorkspaceContext",
+      "lucide-react",
+      "react"
+    ],
+    "src/components/ui-hocker/NovaCorePanel.tsx": [
+      "@/components/ui-hocker/ModuleLogoFrame",
+      "@/components/ui-hocker/StatusBadge",
+      "@/lib/hocker-dashboard",
+      "next/link"
+    ],
+    "src/components/nova/NovaUnifiedCommandCenter.tsx": [
+      "@/lib/hocker-command-center-registry",
+      "@/lib/hocker-human-copy",
+      "lucide-react",
+      "react"
+    ],
+    "src/components/hocker-2c/ActionPreviewCard.tsx": [
+      "react"
+    ],
+    "src/components/hocker-2c/EvidencePanel.tsx": [],
+    "src/components/hocker-2c/PageState.tsx": [],
+    "src/components/hocker-2c/index.ts": [
+      "./ActionPreviewCard",
+      "./EvidencePanel",
+      "./PageState"
+    ],
+    "src/components/hocker-2c/owner/OwnerCommandCenter.tsx": [
+      "./Owner2CRegistryPanel",
+      "./OwnerMetricCard",
+      "./fusion/OwnerLegacyValueFusionPanel",
+      "./fusion/OwnerSystemPulsePanel",
+      "@/components/hocker-2c",
+      "@/components/hocker-2c/owner/live",
+      "@/lib/hocker-human-copy",
+      "next/link"
+    ],
+    "src/components/hocker-2c/owner/OwnerMetricCard.tsx": [],
+    "src/components/hocker-2c/owner/OwnerShell.tsx": [
+      "./fusion/OwnerErrorBoundary",
+      "@/lib/hocker-human-copy",
+      "@/lib/hocker-owner-routes-2c",
+      "@/lib/hocker-product-blueprint-2c",
+      "@/lib/hocker-role-navigation",
+      "next/link",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/OwnerSimplePage.tsx": [
+      "next/link"
+    ],
+    "src/components/hocker-2c/owner/index.ts": [
+      "./Owner2CRegistryPanel",
+      "./OwnerCommandCenter",
+      "./OwnerMetricCard",
+      "./OwnerShell",
+      "./OwnerSimplePage",
+      "./fusion/OwnerErrorBoundary",
+      "./fusion/OwnerLegacyValueFusionPanel",
+      "./fusion/OwnerSystemPulsePanel"
+    ],
+    "src/components/hocker-2c/owner/Owner2CRegistryPanel.tsx": [
+      "@/lib/hocker-agi-registry-2c",
+      "@/lib/hocker-owner-routes-2c",
+      "@/lib/hocker-permissions",
+      "@/lib/hocker-product-blueprint-2c",
+      "@/lib/hocker-service-config",
+      "@/lib/hocker-system-registry-2c",
+      "next/link"
+    ],
+    "src/components/hocker-2c/auth/HockerOwnerLoginSurface.tsx": [
+      "@/components/AuthBox",
+      "@/lib/hocker-human-copy",
+      "@/lib/hocker-product-blueprint-2c",
+      "next/link"
+    ],
+    "src/components/hocker-2c/owner/live/OwnerActionsLivePanel.tsx": [
+      "./owner-live-normalizers",
+      "@/components/hocker-2c",
+      "@/lib/hocker-human-copy",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/live/OwnerEvidenceLivePanel.tsx": [
+      "./owner-live-normalizers",
+      "@/components/hocker-2c",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/live/index.ts": [
+      "./OwnerActionsLivePanel",
+      "./OwnerEvidenceLivePanel",
+      "./OwnerLiveSummary"
+    ],
+    "src/components/hocker-2c/owner/live/owner-live-normalizers.ts": [],
+    "src/components/hocker-2c/owner/live/OwnerLiveSummary.tsx": [
+      "./owner-live-normalizers",
+      "@/lib/hocker-agi-registry-2c",
+      "@/lib/hocker-system-registry-2c",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/nova/OwnerNovaBridge.tsx": [
+      "./OwnerNovaInlineApprovals",
+      "./OwnerNovaInlineExecutions",
+      "./OwnerNovaToolDrawer",
+      "./OwnerNovaVoiceDock",
+      "@/components/hocker-2c",
+      "@/lib/hocker-human-copy",
+      "lucide-react",
+      "next/link",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/nova/index.ts": [
+      "./OwnerNovaBridge",
+      "./OwnerNovaInlineApprovals",
+      "./OwnerNovaInlineExecutions",
+      "./OwnerNovaToolDrawer",
+      "./OwnerNovaVoiceDock"
+    ],
+    "src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx": [
+      "@/components/hocker-2c/owner/live/owner-live-normalizers",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/nova/OwnerNovaInlineExecutions.tsx": [
+      "@/components/hocker-2c/owner/live/owner-live-normalizers",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/nova/OwnerNovaVoiceDock.tsx": [
+      "@/components/VoiceInput",
+      "@/lib/tts",
+      "@/lib/voiceParser",
+      "lucide-react",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/nova/OwnerNovaToolDrawer.tsx": [
+      "lucide-react",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/fusion/OwnerErrorBoundary.tsx": [
+      "lucide-react",
+      "react"
+    ],
+    "src/components/hocker-2c/owner/fusion/OwnerLegacyValueFusionPanel.tsx": [
+      "@/lib/hocker-agi-registry-2c",
+      "@/lib/hocker-human-copy",
+      "@/lib/hocker-live-operations-registry",
+      "@/lib/hocker-product-blueprint-2c",
+      "@/lib/hocker-system-registry-2c",
+      "lucide-react",
+      "next/link"
+    ],
+    "src/components/hocker-2c/owner/fusion/OwnerSystemPulsePanel.tsx": [
+      "lucide-react",
+      "react"
+    ]
+  }
+}
