@@ -1,0 +1,33 @@
+{
+  "phase": "13-2C-I-G",
+  "sources_scanned": 300,
+  "items": [
+    {
+      "file": "src/components/NovaChat.tsx",
+      "exists": true,
+      "lines": 547,
+      "sha256": "fd27ece77867d50cfa791e14cf869972d6a77e095a66d84b356c4ee41333fcf0",
+      "stem": "NovaChat",
+      "exact_hits": [],
+      "decision": "ARCHIVE_SAFE_NO_EXACT_IMPORT"
+    },
+    {
+      "file": "src/components/ErrorBoundary.tsx",
+      "exists": true,
+      "lines": 111,
+      "sha256": "b2fa3a8d31e4f982ae125ee8f7dd0fe8f0328057d603f5dda8f5b0f6ae1d190e",
+      "stem": "ErrorBoundary",
+      "exact_hits": [],
+      "decision": "ARCHIVE_SAFE_NO_EXACT_IMPORT"
+    },
+    {
+      "file": "src/components/SystemStatus.tsx",
+      "exists": true,
+      "lines": 227,
+      "sha256": "f4aae5f1de03c877ce627ca974cc8208d9647d4f3d8ba2bda5189457f325e0e7",
+      "stem": "SystemStatus",
+      "exact_hits": [],
+      "decision": "ARCHIVE_SAFE_NO_EXACT_IMPORT"
+    }
+  ]
+}
