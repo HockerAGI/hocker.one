@@ -1,0 +1,179 @@
+{
+  "phase": "13-2C-I-C3-A",
+  "files": [
+    {
+      "file": "src/components/AuthBox.tsx",
+      "exists": true,
+      "lines": 176,
+      "sha256": "804d29712f23f39edf86197752faac0bc6f9a284ddd7bc28b36c26512669bdf5",
+      "has_sensitive_terms": true,
+      "has_mutation_or_fetch": true,
+      "server_only_signals": false,
+      "imports": [
+        "import Link from \"next/link\";",
+        "import { useMemo, useState, type FormEvent } from \"react\";",
+        "import { useRouter } from \"next/navigation\";",
+        "import { Loader2, ShieldCheck, Sparkles, LockKeyhole, ArrowRight } from \"lucide-react\";",
+        "import { toast } from \"sonner\";",
+        "import { createBrowserSupabase } from \"@/lib/supabase-browser\";",
+        "import { getErrorMessage } from \"@/lib/errors\";"
+      ],
+      "exports": [
+        "export default function AuthBox({ className = \"\" }: AuthBoxProps) {"
+      ]
+    },
+    {
+      "file": "src/app/login/page.tsx",
+      "exists": true,
+      "lines": 108,
+      "sha256": "ce3feec3206bbba07650d37abd18b18c205218c98cadfcf0b5fee53d31a197c2",
+      "has_sensitive_terms": true,
+      "has_mutation_or_fetch": true,
+      "server_only_signals": false,
+      "imports": [
+        "import Image from \"next/image\";",
+        "import { useMemo, useState, type FormEvent } from \"react\";",
+        "import { useRouter } from \"next/navigation\";",
+        "import { createBrowserSupabase } from \"@/lib/supabase-browser\";",
+        "import { getErrorMessage } from \"@/lib/errors\";",
+        "import styles from \"./login.module.css\";"
+      ],
+      "exports": [
+        "export default function LoginPage() {"
+      ]
+    },
+    {
+      "file": "src/lib/export-audit.ts",
+      "exists": true,
+      "lines": 19,
+      "sha256": "8487558324bc63e9e14e2a428447cb9a589c36094e43dfd6e4bb3d0922db984f",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": false,
+      "server_only_signals": true,
+      "imports": [
+        "import PDFDocument from \"pdfkit\";"
+      ],
+      "exports": [
+        "export function generateAuditPDF(logs: any[]) {"
+      ]
+    },
+    {
+      "file": "src/app/owner/evidence/page.tsx",
+      "exists": true,
+      "lines": 29,
+      "sha256": "e60dfbfc29ab1012c217c3669708ffd56ce6b161105976554d1e32f3793d3d22",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": false,
+      "server_only_signals": false,
+      "imports": [
+        "import type { Metadata } from \"next\";",
+        "import { EvidencePanel } from \"@/components/hocker-2c\";",
+        "import { OwnerShell } from \"@/components/hocker-2c/owner\";",
+        "import { OwnerEvidenceLivePanel } from \"@/components/hocker-2c/owner/live\";"
+      ],
+      "exports": [
+        "export const metadata: Metadata = {",
+        "export default function OwnerEvidencePage() {"
+      ]
+    },
+    {
+      "file": "src/components/hocker-2c/EvidencePanel.tsx",
+      "exists": true,
+      "lines": 40,
+      "sha256": "fdc9c4c5476896feeee11454ed069ca08cc9107b15a0160848b5d13703620108",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": false,
+      "server_only_signals": false,
+      "imports": [],
+      "exports": [
+        "export type EvidencePanelItem = {",
+        "export type EvidencePanelProps = {",
+        "export function EvidencePanel({"
+      ]
+    },
+    {
+      "file": "src/components/hocker-2c/owner/live/OwnerEvidenceLivePanel.tsx",
+      "exists": true,
+      "lines": 104,
+      "sha256": "fc8ad637e9c6b960d6fe0882295db93d366d70921a69db4254bb9db27bb8b808",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": true,
+      "server_only_signals": false,
+      "imports": [
+        "import { useEffect, useMemo, useState } from \"react\";",
+        "import { EvidencePanel, PageState } from \"@/components/hocker-2c\";",
+        "import { normalizeOwnerEvidence, type OwnerEvidenceRecord } from \"./owner-live-normalizers\";"
+      ],
+      "exports": [
+        "export function OwnerEvidenceLivePanel() {"
+      ]
+    },
+    {
+      "file": "src/app/api/auth/password-login/route.ts",
+      "exists": true,
+      "lines": 57,
+      "sha256": "69f8c7a6660f99dad9b5f8da58b092c25caa356c85e16f4bdbd4a39ee8a6c3b1",
+      "has_sensitive_terms": true,
+      "has_mutation_or_fetch": true,
+      "server_only_signals": false,
+      "imports": [
+        "import { NextResponse } from \"next/server\";",
+        "import { createServerSupabase } from \"@/lib/supabase-server\";"
+      ],
+      "exports": [
+        "export const dynamic = \"force-dynamic\";",
+        "export async function POST(request: Request) {"
+      ]
+    },
+    {
+      "file": "src/lib/require-private-session.ts",
+      "exists": true,
+      "lines": 24,
+      "sha256": "b55b2a860ca9cc95050a3cf86078b9820e5299c8d1e9ae651928f4493a246f29",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": false,
+      "server_only_signals": false,
+      "imports": [
+        "import \"server-only\";",
+        "import { redirect } from \"next/navigation\";",
+        "import { createServerSupabase } from \"@/lib/supabase-server\";"
+      ],
+      "exports": [
+        "export const HOCKER_PRIVATE_SESSION_GUARD_VERSION = \"hocker-private-session-guard-v0.1.0\";",
+        "export async function requirePrivateSession() {"
+      ]
+    },
+    {
+      "file": "src/lib/supabase-server.ts",
+      "exists": true,
+      "lines": 33,
+      "sha256": "e4097f74aede922bd589b86f0239cb3e7fa59265272b6b568d64ae3f25c62efc",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": false,
+      "server_only_signals": false,
+      "imports": [
+        "import { cookies } from \"next/headers\";",
+        "import { createServerClient } from \"@supabase/ssr\";"
+      ],
+      "exports": [
+        "export async function createServerSupabase() {"
+      ]
+    },
+    {
+      "file": "package.json",
+      "exists": true,
+      "lines": 63,
+      "sha256": "de6c01945abd9320fc0b92aaca674e7d9049e0b1b585a996822aab886e27b921",
+      "has_sensitive_terms": false,
+      "has_mutation_or_fetch": false,
+      "server_only_signals": true,
+      "imports": [],
+      "exports": []
+    }
+  ],
+  "summary": {
+    "authbox_exists": true,
+    "login_page_exists": true,
+    "export_audit_exists": true
+  }
+}
