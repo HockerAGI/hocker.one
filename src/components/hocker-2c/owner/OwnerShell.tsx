@@ -4,6 +4,7 @@ import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
 import { HOCKER_NAV_ITEMS_2C } from "@/lib/hocker-role-navigation";
 import { HOCKER_OWNER_ROUTE_HARDENING_2C } from "@/lib/hocker-owner-routes-2c";
 import { HOCKER_PRODUCT_BLUEPRINT_2C } from "@/lib/hocker-product-blueprint-2c";
+import { OwnerErrorBoundary } from "./fusion/OwnerErrorBoundary";
 
 type OwnerShellProps = {
   eyebrow?: string;
@@ -84,7 +85,7 @@ export function OwnerShell({
             </p>
           </div>
 
-          {children}
+          <OwnerErrorBoundary>{children}</OwnerErrorBoundary>
         </section>
 
         <aside className="hidden lg:block">
