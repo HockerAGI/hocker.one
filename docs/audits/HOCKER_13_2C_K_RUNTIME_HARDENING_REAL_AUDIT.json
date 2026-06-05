@@ -1,0 +1,301 @@
+{
+  "phase": "13-2C-K",
+  "sources_scanned": 300,
+  "items": [
+    {
+      "file": "src/lib/agi-action-execution.ts",
+      "exists": true,
+      "lines": 738,
+      "sha256": "fb86b98362da8dd07b5e507abd382a60ce5c4bcbac98f7e93440850aac1fe1b8",
+      "counts": {
+        "queue": 51,
+        "trace": 0,
+        "idempotency": 5,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 8,
+        "signed": 0,
+        "state": 24,
+        "secrets": 3
+      },
+      "imports": [
+        "import { randomUUID } from \"node:crypto\";",
+        "import { createClient, type SupabaseClient } from \"@supabase/supabase-js\";",
+        "import { getGitHubRuntimeToken } from \"@/lib/github-runtime-executor\";"
+      ],
+      "exports": [
+        "export type AgiActionQueueRow = {",
+        "export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number }): Promise<AgiActionQueueRow[]> {",
+        "export async function decideAgiAction(params: { project_id: string; action_id: string; decision: \"approve\" | \"reject\"; actor_id: string; note?: string }): Promise<AgiActionQueueRow> {",
+        "export async function executeApprovedAgiAction(params: { project_id: string; action_id: string; actor_id: string }): Promise<AgiActionQueueRow> {"
+      ],
+      "recommendation": "IMPLEMENT_QUEUE_RETRY_IDEMPOTENCY",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/lib/agi-runtime-core.ts",
+      "exists": true,
+      "lines": 507,
+      "sha256": "23837b89093b669efbdea4cdc480167f23ab59caefea25de60c897f6b60693d0",
+      "counts": {
+        "queue": 8,
+        "trace": 0,
+        "idempotency": 13,
+        "observability": 11,
+        "isolation": 0,
+        "approval": 38,
+        "signed": 0,
+        "state": 3,
+        "secrets": 17
+      },
+      "imports": [
+        "import { createHash } from \"node:crypto\";",
+        "import { createClient, type SupabaseClient } from \"@supabase/supabase-js\";",
+        "import { AGI_REGISTRY } from \"@/lib/hocker-dashboard\";"
+      ],
+      "exports": [
+        "export type RuntimeToolStatusKind = \"configured\" | \"connected\" | \"partial\" | \"missing\" | \"blocked\" | \"missing_key\" | \"missing_code\";",
+        "export type RuntimeTool = {",
+        "export type RuntimeToolStatus = RuntimeTool & {",
+        "export function getRuntimeToolCatalog(): RuntimeToolStatus[] {",
+        "export function getRuntimeToolSummary() {",
+        "export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: boolean; error?: string }> {",
+        "export async function getAgiRuntimeSummary(project_id: string) {",
+        "export async function enqueueAgiAction(input: {"
+      ],
+      "recommendation": "IMPLEMENT_HARDENING_CONFIG_AND_LIMITS",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/lib/github-runtime-executor.ts",
+      "exists": true,
+      "lines": 508,
+      "sha256": "cfdc088d844e2ef53cd35bac6aee805c5218fd1935bbdbe8decb5a4ffaa00a99",
+      "counts": {
+        "queue": 6,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 3,
+        "signed": 0,
+        "state": 0,
+        "secrets": 6
+      },
+      "imports": [],
+      "exports": [
+        "export type GitHubRuntimeReadOperation =",
+        "export type GitHubRuntimeWriteOperation =",
+        "export type GitHubRuntimeOperation = GitHubRuntimeReadOperation | GitHubRuntimeWriteOperation;",
+        "export type GitHubRuntimeInput = {",
+        "export function getGitHubRuntimeToken(): string {",
+        "export function hasGitHubRuntimeToken(): boolean {",
+        "export function isGitHubWriteOperation(operation: string): operation is GitHubRuntimeWriteOperation {",
+        "export function isGitHubReadOperation(operation: string): operation is GitHubRuntimeReadOperation {",
+        "export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation, input: GitHubRuntimeInput) {",
+        "export async function executeGitHubReadOperation(operation: GitHubRuntimeReadOperation, input: GitHubRuntimeInput) {",
+        "export function getGitHubExecutorStatus() {"
+      ],
+      "recommendation": "HARDEN_GITHUB_ACTION_BOUNDARIES",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/app/api/agi/runtime/actions/route.ts",
+      "exists": true,
+      "lines": 87,
+      "sha256": "4f6d3103da2ac0c87ab75726843f770a02d2c4d68b2abf7b603ce549aebb27d7",
+      "counts": {
+        "queue": 2,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 12,
+        "signed": 0,
+        "state": 0,
+        "secrets": 0
+      },
+      "imports": [
+        "import { z } from \"zod\";",
+        "import { enqueueAgiAction } from \"@/lib/agi-runtime-core\";",
+        "import { listAgiActions } from \"@/lib/agi-action-execution\";",
+        "import { json, parseBody, parseQuery, requireProjectRole, toApiError } from \"@/app/api/_lib\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {",
+        "export async function POST(req: Request): Promise<Response> {"
+      ],
+      "recommendation": "ADD_TRACE_AND_STATE_GUARDS",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/app/api/agi/runtime/tools/route.ts",
+      "exists": true,
+      "lines": 38,
+      "sha256": "6e67cce2deff2de1c2727329a9326db48c60191001b94f260ab9fc1e5fb7c751",
+      "counts": {
+        "queue": 0,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 3,
+        "isolation": 0,
+        "approval": 2,
+        "signed": 0,
+        "state": 0,
+        "secrets": 1
+      },
+      "imports": [
+        "import { getRuntimeToolCatalog } from \"@/lib/agi-runtime-core\";",
+        "import { json, requireProjectRole, toApiError } from \"@/app/api/_lib\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {"
+      ],
+      "recommendation": "ADD_TRACE_AND_STATE_GUARDS",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/app/api/agi/runtime/capabilities/route.ts",
+      "exists": true,
+      "lines": 55,
+      "sha256": "40b24a670a993eff2fa5a7657eeea3db369079ef5f2f3908dbe5a0ca100c9905",
+      "counts": {
+        "queue": 0,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 3,
+        "signed": 0,
+        "state": 0,
+        "secrets": 0
+      },
+      "imports": [
+        "import { z } from \"zod\";",
+        "import { json, requireProjectRole, toApiError } from \"@/app/api/_lib\";",
+        "import { getCapabilityRegistrySnapshot, getHockerCapabilitiesContract } from \"@/lib/hocker-capabilities-contract\";",
+        "import { routeHockerCapabilityRequest } from \"@/lib/hocker-tool-router\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {",
+        "export async function POST(req: Request): Promise<Response> {"
+      ],
+      "recommendation": "ADD_TRACE_AND_STATE_GUARDS",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/app/api/agi/runtime/context/route.ts",
+      "exists": true,
+      "lines": 17,
+      "sha256": "15873b32a172d69fb7e7aca064b947189bc14a588e9d80b2a705cb83d0060169",
+      "counts": {
+        "queue": 0,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 2,
+        "signed": 0,
+        "state": 0,
+        "secrets": 0
+      },
+      "imports": [
+        "import { json, parseQuery, requireProjectRole, toApiError } from \"@/app/api/_lib\";",
+        "import { getHockerContinuityContextPackWithMemory } from \"@/lib/hocker-context-pack\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {"
+      ],
+      "recommendation": "ADD_TRACE_AND_STATE_GUARDS",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/app/api/agi/runtime/memory/route.ts",
+      "exists": true,
+      "lines": 22,
+      "sha256": "dcc5c4e0fcd0b27fe8a33ab176f5a505a7e792b755a65c4b345c5bf62ba593d3",
+      "counts": {
+        "queue": 0,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 2,
+        "signed": 0,
+        "state": 0,
+        "secrets": 0
+      },
+      "imports": [
+        "import { json, parseQuery, requireProjectRole, toApiError } from \"@/app/api/_lib\";",
+        "import { getSyntiaOperationalMemorySnapshot } from \"@/lib/syntia-operational-memory\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {"
+      ],
+      "recommendation": "ADD_TRACE_AND_STATE_GUARDS",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/trigger/hocker-core-executor.ts",
+      "exists": true,
+      "lines": 37,
+      "sha256": "ec1addcf4495e37d049cc9adac97a2450155e89981efc57b485d74b87112400f",
+      "counts": {
+        "queue": 1,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 0,
+        "signed": 0,
+        "state": 0,
+        "secrets": 0
+      },
+      "imports": [
+        "import { task } from \"@trigger.dev/sdk/v3\";",
+        "import { executeCommand } from \"@/server/executor/hocker-core-executor\";"
+      ],
+      "exports": [
+        "export const hockerCoreExecutor = task({"
+      ],
+      "recommendation": "VERIFY_EXECUTOR_BOUNDARY",
+      "refs_by_filename": []
+    },
+    {
+      "file": "src/server/executor/hocker-core-executor.ts",
+      "exists": true,
+      "lines": 39,
+      "sha256": "272bf395a70f7fd4f78230719b45bc59af31592021151d88965d333401ed50dc",
+      "counts": {
+        "queue": 3,
+        "trace": 0,
+        "idempotency": 0,
+        "observability": 0,
+        "isolation": 0,
+        "approval": 2,
+        "signed": 0,
+        "state": 3,
+        "secrets": 0
+      },
+      "imports": [
+        "import { createAdminSupabase } from \"@/lib/supabase-admin\";",
+        "import { processCloudQueue } from \"@/app/api/commands/_cloud\";"
+      ],
+      "exports": [
+        "export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {"
+      ],
+      "recommendation": "VERIFY_EXECUTOR_BOUNDARY",
+      "refs_by_filename": []
+    }
+  ]
+}
