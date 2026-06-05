@@ -1,0 +1,761 @@
+{
+  "phase": "13-2C-J",
+  "sources_scanned": 300,
+  "items": [
+    {
+      "file": "src/lib/agi-action-execution.ts",
+      "exists": true,
+      "lines": 738,
+      "sha256": "fb86b98362da8dd07b5e507abd382a60ce5c4bcbac98f7e93440850aac1fe1b8",
+      "imports": [
+        "import { randomUUID } from \"node:crypto\";",
+        "import { createClient, type SupabaseClient } from \"@supabase/supabase-js\";",
+        "import { getGitHubRuntimeToken } from \"@/lib/github-runtime-executor\";"
+      ],
+      "exports": [
+        "export type AgiActionQueueRow = {",
+        "export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number }): Promise<AgiActionQueueRow[]> {",
+        "export async function decideAgiAction(params: { project_id: string; action_id: string; decision: \"approve\" | \"reject\"; actor_id: string; note?: string }): Promise<AgiActionQueueRow> {",
+        "export async function executeApprovedAgiAction(params: { project_id: string; action_id: string; actor_id: string }): Promise<AgiActionQueueRow> {"
+      ],
+      "functions": [
+        "function githubExecutionMode",
+        "function isMockedGithubBoundary",
+        "function mockedGithubResult",
+        "function envValue",
+        "function getAdminSupabase",
+        "function asRecord",
+        "function stringValue",
+        "function encodeSegment",
+        "function allowedRepositories",
+        "function parseRepository",
+        "function safeBranch",
+        "function allowedPathPrefixes",
+        "function safePath",
+        "function numberValue",
+        "function buildLockOwner",
+        "function buildRollbackPlan",
+        "async function claimApprovedQueueItem",
+        "function ensureNotMainBranch",
+        "async function githubRequest",
+        "async function getQueueItem",
+        "async function patchQueueItem",
+        "export async function listAgiActions",
+        "const GUIDED_GITHUB_CHAIN_VERSION =",
+        "const GUIDED_GITHUB_MATERIALIZER_VERSION =",
+        "const GUIDED_GITHUB_ACTION_ORDER =",
+        "function guidedGithubActionIndex",
+        "function isGuidedGithubTerminal",
+        "function isGuidedGithubExecuted",
+        "function guidedGithubBranchKey",
+        "async function getGuidedGithubChain",
+        "async function assertGuidedGithubApprovalOrder",
+        "async function assertGuidedGithubExecutionOrder",
+        "export async function decideAgiAction",
+        "async function executeCreateBranch",
+        "async function executeUpsertFile",
+        "async function executeCreatePr",
+        "export async function executeApprovedAgiAction"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/agi/runtime/actions/decision/route.ts",
+        "src/app/api/agi/runtime/actions/execute/route.ts",
+        "src/app/api/agi/runtime/actions/route.ts",
+        "src/app/api/owner/evidence/export/route.ts"
+      ],
+      "risk_hits": {
+        "mutation": [
+          "",
+          "POST",
+          "PUT"
+        ],
+        "fetch": [
+          "fetch("
+        ],
+        "secrets": [
+          "GITHUB_TOKEN",
+          "HOCKER_GITHUB_TOKEN",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "TOKEN",
+          "Token",
+          "token"
+        ],
+        "queue": [
+          "Approval",
+          "Queue",
+          "Rollback",
+          "approval",
+          "dry_run",
+          "queue",
+          "rollback"
+        ],
+        "runtime": [
+          "Runtime",
+          "runtime"
+        ]
+      },
+      "recommendation": "KEEP_RUNTIME_CORE"
+    },
+    {
+      "file": "src/lib/agi-runtime-core.ts",
+      "exists": true,
+      "lines": 507,
+      "sha256": "23837b89093b669efbdea4cdc480167f23ab59caefea25de60c897f6b60693d0",
+      "imports": [
+        "import { createHash } from \"node:crypto\";",
+        "import { createClient, type SupabaseClient } from \"@supabase/supabase-js\";",
+        "import { AGI_REGISTRY } from \"@/lib/hocker-dashboard\";"
+      ],
+      "exports": [
+        "export type RuntimeToolStatusKind = \"configured\" | \"connected\" | \"partial\" | \"missing\" | \"blocked\" | \"missing_key\" | \"missing_code\";",
+        "export type RuntimeTool = {",
+        "export type RuntimeToolStatus = RuntimeTool & {",
+        "export function getRuntimeToolCatalog(): RuntimeToolStatus[] {",
+        "export function getRuntimeToolSummary() {",
+        "export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: boolean; error?: string }> {",
+        "export async function getAgiRuntimeSummary(project_id: string) {",
+        "export async function enqueueAgiAction(input: {"
+      ],
+      "functions": [
+        "function envValue",
+        "function hasEnv",
+        "function allEnvKeys",
+        "function buildGroups",
+        "function labelForStatus",
+        "function statusFor",
+        "export function getRuntimeToolCatalog",
+        "export function getRuntimeToolSummary",
+        "function stableJson",
+        "function buildAgiActionIdempotencyKey",
+        "function getAdminSupabase",
+        "async function safeCount",
+        "function agentDisplayName",
+        "function agentRole",
+        "function toolKeysForAgent",
+        "export async function syncAgiRuntimeCatalog",
+        "export async function getAgiRuntimeSummary",
+        "export async function enqueueAgiAction"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/agi/runtime/actions/route.ts",
+        "src/app/api/agi/runtime/github/route.ts",
+        "src/app/api/agi/runtime/summary/route.ts",
+        "src/app/api/agi/runtime/tools/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/components/owner/AgiRuntimePreview.tsx",
+        "src/lib/hocker-capabilities-contract.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/nova-chat-action-drafts.ts",
+        "src/lib/nova-github-action-materializer.ts"
+      ],
+      "risk_hits": {
+        "mutation": [
+          ""
+        ],
+        "secrets": [
+          "GITHUB_TOKEN",
+          "HOCKER_GITHUB_TOKEN",
+          "OPENAI_API_KEY",
+          "PASSWORD",
+          "SECRET",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "TOKEN",
+          "Token",
+          "secret"
+        ],
+        "queue": [
+          "Approval",
+          "approval",
+          "dry_run",
+          "enqueue",
+          "queue"
+        ],
+        "runtime": [
+          "Runtime"
+        ]
+      },
+      "recommendation": "KEEP_RUNTIME_CORE"
+    },
+    {
+      "file": "src/lib/github-runtime-executor.ts",
+      "exists": true,
+      "lines": 508,
+      "sha256": "cfdc088d844e2ef53cd35bac6aee805c5218fd1935bbdbe8decb5a4ffaa00a99",
+      "imports": [],
+      "exports": [
+        "export type GitHubRuntimeReadOperation =",
+        "export type GitHubRuntimeWriteOperation =",
+        "export type GitHubRuntimeOperation = GitHubRuntimeReadOperation | GitHubRuntimeWriteOperation;",
+        "export type GitHubRuntimeInput = {",
+        "export function getGitHubRuntimeToken(): string {",
+        "export function hasGitHubRuntimeToken(): boolean {",
+        "export function isGitHubWriteOperation(operation: string): operation is GitHubRuntimeWriteOperation {",
+        "export function isGitHubReadOperation(operation: string): operation is GitHubRuntimeReadOperation {",
+        "export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation, input: GitHubRuntimeInput) {",
+        "export async function executeGitHubReadOperation(operation: GitHubRuntimeReadOperation, input: GitHubRuntimeInput) {",
+        "export function getGitHubExecutorStatus() {"
+      ],
+      "functions": [
+        "function envValue",
+        "export function getGitHubRuntimeToken",
+        "export function hasGitHubRuntimeToken",
+        "export function isGitHubWriteOperation",
+        "export function isGitHubReadOperation",
+        "function defaultRepository",
+        "function parseRepository",
+        "function safePath",
+        "function safeRef",
+        "function encodeSegment",
+        "async function githubRequest",
+        "function trimContent",
+        "async function getRepo",
+        "async function listTree",
+        "async function readFile",
+        "async function compareRefs",
+        "async function auditPaths",
+        "function safeBranchName",
+        "function safeOptionalText",
+        "function contentStats",
+        "function buildRollbackPlan",
+        "export function createGitHubWriteGatePlan",
+        "export async function executeGitHubReadOperation",
+        "export function getGitHubExecutorStatus"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/agi/runtime/github/route.ts",
+        "src/lib/agi-action-execution.ts",
+        "src/lib/nova-github-action-materializer.ts"
+      ],
+      "risk_hits": {
+        "fetch": [
+          "fetch("
+        ],
+        "secrets": [
+          "GITHUB_TOKEN",
+          "HOCKER_GITHUB_TOKEN",
+          "TOKEN",
+          "Token",
+          "token"
+        ],
+        "queue": [
+          "Rollback",
+          "approval",
+          "dry_run",
+          "queue",
+          "rollback"
+        ],
+        "runtime": [
+          "Runtime"
+        ]
+      },
+      "recommendation": "KEEP_RUNTIME_CORE"
+    },
+    {
+      "file": "src/app/api/agi/runtime/actions/route.ts",
+      "exists": true,
+      "lines": 87,
+      "sha256": "4f6d3103da2ac0c87ab75726843f770a02d2c4d68b2abf7b603ce549aebb27d7",
+      "imports": [
+        "import { z } from \"zod\";",
+        "import { enqueueAgiAction } from \"@/lib/agi-runtime-core\";",
+        "import { listAgiActions } from \"@/lib/agi-action-execution\";",
+        "import { json, parseBody, parseQuery, requireProjectRole, toApiError } from \"@/app/api/_lib\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {",
+        "export async function POST(req: Request): Promise<Response> {"
+      ],
+      "functions": [
+        "export const runtime =",
+        "export const dynamic =",
+        "const ActionSchema =",
+        "export async function GET",
+        "export async function POST"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "next-env.d.ts",
+        "scripts/diagnostics/hocker-diagnostics-provider-router.mjs",
+        "src/app/admin/jurix/export/page.tsx",
+        "src/app/admin/jurix/page.tsx",
+        "src/app/api/agi/runtime/capabilities/route.ts",
+        "src/app/api/commands/dispatch/route.ts",
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/app/api/system/diagnostics/providers/route.ts",
+        "src/app/chido/ops/page.tsx",
+        "src/app/security/hardening/page.tsx",
+        "src/app/security/page.tsx",
+        "src/app/sitemap.ts",
+        "src/components/AuthBox.tsx",
+        "src/components/ShellFrame.tsx",
+        "src/components/hocker-2c/owner/Owner2CRegistryPanel.tsx",
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/map/EcosystemVfxNetwork.tsx",
+        "src/lib/agi-research-gate.ts",
+        "src/lib/hocker-beta-readiness.ts",
+        "src/lib/hocker-capabilities-contract.ts",
+        "src/lib/hocker-client-portals.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-diagnostics-provider-router.ts",
+        "src/lib/hocker-global-health.ts",
+        "src/lib/hocker-live-summary.ts",
+        "src/lib/hocker-mobile-sanity.ts",
+        "src/lib/hocker-nova-always-on-awareness.ts",
+        "src/lib/hocker-provider-orchestrator.ts",
+        "src/lib/hocker-public-private-topology.ts",
+        "src/lib/hocker-security-hardening.ts",
+        "src/lib/hocker-service-config.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/syntia-memory-review-gate.ts"
+      ],
+      "risk_hits": {
+        "role_gate": [
+          "requireProjectRole"
+        ],
+        "queue": [
+          "approval",
+          "dry_run",
+          "enqueue"
+        ],
+        "runtime": [
+          "Runtime",
+          "force-dynamic",
+          "nodejs",
+          "runtime"
+        ]
+      },
+      "recommendation": "KEEP_API_RUNTIME"
+    },
+    {
+      "file": "src/app/api/agi/runtime/tools/route.ts",
+      "exists": true,
+      "lines": 38,
+      "sha256": "6e67cce2deff2de1c2727329a9326db48c60191001b94f260ab9fc1e5fb7c751",
+      "imports": [
+        "import { getRuntimeToolCatalog } from \"@/lib/agi-runtime-core\";",
+        "import { json, requireProjectRole, toApiError } from \"@/app/api/_lib\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {"
+      ],
+      "functions": [
+        "export const runtime =",
+        "export const dynamic =",
+        "export async function GET"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "next-env.d.ts",
+        "scripts/diagnostics/hocker-diagnostics-provider-router.mjs",
+        "src/app/admin/jurix/export/page.tsx",
+        "src/app/admin/jurix/page.tsx",
+        "src/app/api/agi/runtime/capabilities/route.ts",
+        "src/app/api/commands/dispatch/route.ts",
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/app/api/system/diagnostics/providers/route.ts",
+        "src/app/chido/ops/page.tsx",
+        "src/app/security/hardening/page.tsx",
+        "src/app/security/page.tsx",
+        "src/app/sitemap.ts",
+        "src/components/AuthBox.tsx",
+        "src/components/ShellFrame.tsx",
+        "src/components/hocker-2c/owner/Owner2CRegistryPanel.tsx",
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/map/EcosystemVfxNetwork.tsx",
+        "src/lib/agi-research-gate.ts",
+        "src/lib/hocker-beta-readiness.ts",
+        "src/lib/hocker-capabilities-contract.ts",
+        "src/lib/hocker-client-portals.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-diagnostics-provider-router.ts",
+        "src/lib/hocker-global-health.ts",
+        "src/lib/hocker-live-summary.ts",
+        "src/lib/hocker-mobile-sanity.ts",
+        "src/lib/hocker-nova-always-on-awareness.ts",
+        "src/lib/hocker-provider-orchestrator.ts",
+        "src/lib/hocker-public-private-topology.ts",
+        "src/lib/hocker-security-hardening.ts",
+        "src/lib/hocker-service-config.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/syntia-memory-review-gate.ts"
+      ],
+      "risk_hits": {
+        "role_gate": [
+          "requireProjectRole"
+        ],
+        "secrets": [
+          "secret"
+        ],
+        "runtime": [
+          "Runtime",
+          "force-dynamic",
+          "nodejs",
+          "runtime"
+        ]
+      },
+      "recommendation": "KEEP_API_RUNTIME"
+    },
+    {
+      "file": "src/app/api/agi/runtime/capabilities/route.ts",
+      "exists": true,
+      "lines": 55,
+      "sha256": "40b24a670a993eff2fa5a7657eeea3db369079ef5f2f3908dbe5a0ca100c9905",
+      "imports": [
+        "import { z } from \"zod\";",
+        "import { json, requireProjectRole, toApiError } from \"@/app/api/_lib\";",
+        "import { getCapabilityRegistrySnapshot, getHockerCapabilitiesContract } from \"@/lib/hocker-capabilities-contract\";",
+        "import { routeHockerCapabilityRequest } from \"@/lib/hocker-tool-router\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {",
+        "export async function POST(req: Request): Promise<Response> {"
+      ],
+      "functions": [
+        "export const runtime =",
+        "export const dynamic =",
+        "const RouteSchema =",
+        "export async function GET",
+        "export async function POST"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "next-env.d.ts",
+        "scripts/diagnostics/hocker-diagnostics-provider-router.mjs",
+        "src/app/admin/jurix/export/page.tsx",
+        "src/app/admin/jurix/page.tsx",
+        "src/app/api/agi/runtime/capabilities/route.ts",
+        "src/app/api/commands/dispatch/route.ts",
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/app/api/system/diagnostics/providers/route.ts",
+        "src/app/chido/ops/page.tsx",
+        "src/app/security/hardening/page.tsx",
+        "src/app/security/page.tsx",
+        "src/app/sitemap.ts",
+        "src/components/AuthBox.tsx",
+        "src/components/ShellFrame.tsx",
+        "src/components/hocker-2c/owner/Owner2CRegistryPanel.tsx",
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/map/EcosystemVfxNetwork.tsx",
+        "src/lib/agi-research-gate.ts",
+        "src/lib/hocker-beta-readiness.ts",
+        "src/lib/hocker-capabilities-contract.ts",
+        "src/lib/hocker-client-portals.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-diagnostics-provider-router.ts",
+        "src/lib/hocker-global-health.ts",
+        "src/lib/hocker-live-summary.ts",
+        "src/lib/hocker-mobile-sanity.ts",
+        "src/lib/hocker-nova-always-on-awareness.ts",
+        "src/lib/hocker-provider-orchestrator.ts",
+        "src/lib/hocker-public-private-topology.ts",
+        "src/lib/hocker-security-hardening.ts",
+        "src/lib/hocker-service-config.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/syntia-memory-review-gate.ts"
+      ],
+      "risk_hits": {
+        "role_gate": [
+          "requireProjectRole"
+        ],
+        "runtime": [
+          "force-dynamic",
+          "nodejs",
+          "runtime"
+        ]
+      },
+      "recommendation": "KEEP_API_RUNTIME"
+    },
+    {
+      "file": "src/app/api/agi/runtime/context/route.ts",
+      "exists": true,
+      "lines": 17,
+      "sha256": "15873b32a172d69fb7e7aca064b947189bc14a588e9d80b2a705cb83d0060169",
+      "imports": [
+        "import { json, parseQuery, requireProjectRole, toApiError } from \"@/app/api/_lib\";",
+        "import { getHockerContinuityContextPackWithMemory } from \"@/lib/hocker-context-pack\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {"
+      ],
+      "functions": [
+        "export const runtime =",
+        "export const dynamic =",
+        "export async function GET"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "next-env.d.ts",
+        "scripts/diagnostics/hocker-diagnostics-provider-router.mjs",
+        "src/app/admin/jurix/export/page.tsx",
+        "src/app/admin/jurix/page.tsx",
+        "src/app/api/agi/runtime/capabilities/route.ts",
+        "src/app/api/commands/dispatch/route.ts",
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/app/api/system/diagnostics/providers/route.ts",
+        "src/app/chido/ops/page.tsx",
+        "src/app/security/hardening/page.tsx",
+        "src/app/security/page.tsx",
+        "src/app/sitemap.ts",
+        "src/components/AuthBox.tsx",
+        "src/components/ShellFrame.tsx",
+        "src/components/hocker-2c/owner/Owner2CRegistryPanel.tsx",
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/map/EcosystemVfxNetwork.tsx",
+        "src/lib/agi-research-gate.ts",
+        "src/lib/hocker-beta-readiness.ts",
+        "src/lib/hocker-capabilities-contract.ts",
+        "src/lib/hocker-client-portals.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-diagnostics-provider-router.ts",
+        "src/lib/hocker-global-health.ts",
+        "src/lib/hocker-live-summary.ts",
+        "src/lib/hocker-mobile-sanity.ts",
+        "src/lib/hocker-nova-always-on-awareness.ts",
+        "src/lib/hocker-provider-orchestrator.ts",
+        "src/lib/hocker-public-private-topology.ts",
+        "src/lib/hocker-security-hardening.ts",
+        "src/lib/hocker-service-config.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/syntia-memory-review-gate.ts"
+      ],
+      "risk_hits": {
+        "role_gate": [
+          "requireProjectRole"
+        ],
+        "runtime": [
+          "force-dynamic",
+          "nodejs",
+          "runtime"
+        ]
+      },
+      "recommendation": "KEEP_API_RUNTIME"
+    },
+    {
+      "file": "src/app/api/agi/runtime/memory/route.ts",
+      "exists": true,
+      "lines": 22,
+      "sha256": "dcc5c4e0fcd0b27fe8a33ab176f5a505a7e792b755a65c4b345c5bf62ba593d3",
+      "imports": [
+        "import { json, parseQuery, requireProjectRole, toApiError } from \"@/app/api/_lib\";",
+        "import { getSyntiaOperationalMemorySnapshot } from \"@/lib/syntia-operational-memory\";"
+      ],
+      "exports": [
+        "export const runtime = \"nodejs\";",
+        "export const dynamic = \"force-dynamic\";",
+        "export async function GET(req: Request): Promise<Response> {"
+      ],
+      "functions": [
+        "export const runtime =",
+        "export const dynamic =",
+        "export async function GET"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "next-env.d.ts",
+        "scripts/diagnostics/hocker-diagnostics-provider-router.mjs",
+        "src/app/admin/jurix/export/page.tsx",
+        "src/app/admin/jurix/page.tsx",
+        "src/app/api/agi/runtime/capabilities/route.ts",
+        "src/app/api/commands/dispatch/route.ts",
+        "src/app/api/nova/chat/route.ts",
+        "src/app/api/nova/chat/stream/route.ts",
+        "src/app/api/system/diagnostics/providers/route.ts",
+        "src/app/chido/ops/page.tsx",
+        "src/app/security/hardening/page.tsx",
+        "src/app/security/page.tsx",
+        "src/app/sitemap.ts",
+        "src/components/AuthBox.tsx",
+        "src/components/ShellFrame.tsx",
+        "src/components/hocker-2c/owner/Owner2CRegistryPanel.tsx",
+        "src/components/hocker-2c/owner/OwnerShell.tsx",
+        "src/components/map/EcosystemVfxNetwork.tsx",
+        "src/lib/agi-research-gate.ts",
+        "src/lib/hocker-beta-readiness.ts",
+        "src/lib/hocker-capabilities-contract.ts",
+        "src/lib/hocker-client-portals.ts",
+        "src/lib/hocker-context-pack.ts",
+        "src/lib/hocker-diagnostics-provider-router.ts",
+        "src/lib/hocker-global-health.ts",
+        "src/lib/hocker-live-summary.ts",
+        "src/lib/hocker-mobile-sanity.ts",
+        "src/lib/hocker-nova-always-on-awareness.ts",
+        "src/lib/hocker-provider-orchestrator.ts",
+        "src/lib/hocker-public-private-topology.ts",
+        "src/lib/hocker-security-hardening.ts",
+        "src/lib/hocker-service-config.ts",
+        "src/lib/hocker-tool-router.ts",
+        "src/lib/syntia-memory-review-gate.ts"
+      ],
+      "risk_hits": {
+        "role_gate": [
+          "requireProjectRole"
+        ],
+        "runtime": [
+          "force-dynamic",
+          "nodejs",
+          "runtime"
+        ]
+      },
+      "recommendation": "KEEP_API_RUNTIME"
+    },
+    {
+      "file": "src/trigger/hocker-core-executor.ts",
+      "exists": true,
+      "lines": 37,
+      "sha256": "ec1addcf4495e37d049cc9adac97a2450155e89981efc57b485d74b87112400f",
+      "imports": [
+        "import { task } from \"@trigger.dev/sdk/v3\";",
+        "import { executeCommand } from \"@/server/executor/hocker-core-executor\";"
+      ],
+      "exports": [
+        "export const hockerCoreExecutor = task({"
+      ],
+      "functions": [
+        "export const hockerCoreExecutor ="
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/commands/approve/route.ts",
+        "src/app/api/commands/route.ts",
+        "src/app/api/execute/route.ts",
+        "src/app/api/orchestrator/run/route.ts",
+        "src/trigger/hocker-core-executor.ts"
+      ],
+      "risk_hits": {
+        "queue": [
+          "retry"
+        ]
+      },
+      "recommendation": "KEEP_EXECUTOR_BACKEND"
+    },
+    {
+      "file": "src/server/executor/hocker-core-executor.ts",
+      "exists": true,
+      "lines": 39,
+      "sha256": "272bf395a70f7fd4f78230719b45bc59af31592021151d88965d333401ed50dc",
+      "imports": [
+        "import { createAdminSupabase } from \"@/lib/supabase-admin\";",
+        "import { processCloudQueue } from \"@/app/api/commands/_cloud\";"
+      ],
+      "exports": [
+        "export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {"
+      ],
+      "functions": [
+        "function isCloudNode",
+        "export async function executeCommand"
+      ],
+      "refs_by_filename": [],
+      "refs_by_stem": [
+        "src/app/api/commands/approve/route.ts",
+        "src/app/api/commands/route.ts",
+        "src/app/api/execute/route.ts",
+        "src/app/api/orchestrator/run/route.ts",
+        "src/trigger/hocker-core-executor.ts"
+      ],
+      "risk_hits": {
+        "queue": [
+          "Queue",
+          "approval",
+          "queue"
+        ]
+      },
+      "recommendation": "KEEP_EXECUTOR_BACKEND"
+    }
+  ],
+  "executor_compare": {
+    "both_exist": true,
+    "same_hash": false,
+    "similarity": 0.091,
+    "diff_preview": [
+      "--- /root/HOCKER_PUSH_REAL/hocker.one/src/trigger/hocker-core-executor.ts",
+      "+++ /root/HOCKER_PUSH_REAL/hocker.one/src/server/executor/hocker-core-executor.ts",
+      "@@ -1,37 +1,39 @@",
+      "-import { task } from \"@trigger.dev/sdk/v3\";",
+      "-import { executeCommand } from \"@/server/executor/hocker-core-executor\";",
+      "+import { createAdminSupabase } from \"@/lib/supabase-admin\";",
+      "+import { processCloudQueue } from \"@/app/api/commands/_cloud\";",
+      " ",
+      "-type HockerCoreExecutorPayload = {",
+      "-  commandId: string;",
+      "-  projectId?: string;",
+      "-};",
+      "+function isCloudNode(nodeId: string | null | undefined): boolean {",
+      "+  return String(nodeId ?? \"\").startsWith(\"cloud-\");",
+      "+}",
+      " ",
+      "-export const hockerCoreExecutor = task({",
+      "-  id: \"hocker-core-executor\",",
+      "-  maxDuration: 60,",
+      "-  retry: {",
+      "-    maxAttempts: 3,",
+      "-    minTimeoutInMs: 2000,",
+      "-    maxTimeoutInMs: 10000,",
+      "-    factor: 2,",
+      "-    randomize: true,",
+      "-  },",
+      "-  run: async (payload: HockerCoreExecutorPayload) => {",
+      "-    if (!payload?.commandId || !payload.commandId.trim()) {",
+      "-      throw new Error(\"commandId es obligatorio para ejecutar un nodo.\");",
+      "-    }",
+      "+export async function executeCommand(commandId: string, expectedProjectId?: string): Promise<void> {",
+      "+  const sb = createAdminSupabase();",
+      " ",
+      "-    const cleanCommandId = payload.commandId.trim();",
+      "-    const cleanProjectId = payload.projectId?.trim() || undefined;",
+      "+  const { data: command, error } = await sb",
+      "+    .from(\"commands\")",
+      "+    .select(\"*\")",
+      "+    .eq(\"id\", commandId)",
+      "+    .maybeSingle();",
+      " ",
+      "-    await executeCommand(cleanCommandId, cleanProjectId);",
+      "+  if (error || !command) return;",
+      " ",
+      "-    return {",
+      "-      ok: true,",
+      "-      commandId: cleanCommandId,",
+      "-      projectId: cleanProjectId ?? null,",
+      "-      executed: true,",
+      "-      timestamp: new Date().toISOString(),",
+      "-    };",
+      "-  },",
+      "-});",
+      "+  if (expectedProjectId && command.project_id !== expectedProjectId) {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  if (!isCloudNode(command.node_id)) {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  if (command.status !== \"queued\" && command.status !== \"needs_approval\") {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  if (command.needs_approval) {",
+      "+    return;",
+      "+  }",
+      "+",
+      "+  await processCloudQueue(sb, {",
+      "+    commandId,",
+      "+    nodeId: command.node_id,",
+      "+  });",
+      "+}"
+    ]
+  }
+}
