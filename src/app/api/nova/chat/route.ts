@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 import { requireProjectRole } from "@/app/api/_lib";
+import { getSyntiaOperationalMemorySnapshot } from "@/lib/syntia-operational-memory";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
 import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";

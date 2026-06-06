@@ -128,7 +128,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     nova_chat_action_drafts: getNovaChatActionDraftPublicContext(),
     nova_github_action_materializer: getNovaGitHubActionMaterializerPublicContext(),
     nova_chat_guided_execution: {
-      version: "12.7K-2C",
+      version: "13-2C-L",
       status: "active",
       mode: "chat_owner_buttons_guided_github_chain_with_clean_ux",
       rules: {
@@ -140,6 +140,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
         owner_gate_required: true,
         no_main_direct_write: true,
         human_labels_enabled: true,
+        persistent_memory_active: true,
         technical_ids_hidden_by_default: true,
         evidence_and_rollback_visible_on_demand: true,
       },
