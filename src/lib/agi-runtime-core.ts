@@ -81,6 +81,17 @@ const TOOL_CATALOG: RuntimeTool[] = [
   { tool_key: "email", name: "Email / Resend / SMTP", provider: "Email", category: "core", required_env: ["RESEND_API_KEY"], optional_env: ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Alertas owner y notificaciones transaccionales." },
 ];
 
+export const AGI_RUNTIME_HARDENING = {
+  strictMode: true,
+  maxAttempts: 3,
+  lockTtlMs: 5 * 60 * 1000,
+  retryBackoffMs: [5_000, 30_000, 120_000],
+  deadLetterEnabled: true,
+  traceEnabled: true,
+  idempotencyEnabled: true,
+} as const;
+
+
 function envValue(key: string): string {
   return String(process.env[key] ?? "").trim();
 }
@@ -185,7 +196,7 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
-function buildAgiActionIdempotencyKey(input: {
+export function buildAgiActionIdempotencyKey(input: {
   project_id: string;
   agi_id: string;
   tool_key?: string | null;

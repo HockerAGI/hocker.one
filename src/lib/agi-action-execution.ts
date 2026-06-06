@@ -29,6 +29,12 @@ export type AgiActionQueueRow = {
   rejected_at?: string | null;
   executed_at?: string | null;
   idempotency_key?: string | null;
+  trace_id?: string | null;
+  request_id?: string | null;
+  execution_state?: string | null;
+  dead_letter_reason?: string | null;
+  dead_letter_at?: string | null;
+  next_attempt_at?: string | null;
   locked_at?: string | null;
   lock_owner?: string | null;
   attempt_count?: number | null;
@@ -185,6 +191,17 @@ function numberValue(value: unknown, fallback = 0): number {
 function buildLockOwner(actorId: string): string {
   return `hocker-one:${actorId}:${randomUUID()}`;
 }
+function buildExecutionTrace(actionId: string, actorId: string): { trace_id: string; request_id: string } {
+  const trace_id = randomUUID();
+  const request_id = `${actionId}:${actorId}:${randomUUID()}`;
+  return { trace_id, request_id };
+}
+
+function shouldMoveToDeadLetter(attemptCount: number, maxAttempts: number, errorMessage: string): boolean {
+  if (attemptCount >= maxAttempts) return true;
+  const msg = String(errorMessage ?? "").toLowerCase();
+  return msg.includes("forbidden") || msg.includes("not permitted") || msg.includes("invalid state");
+}
 
 function buildRollbackPlan(item: AgiActionQueueRow, result: JsonRecord): JsonRecord {
   if (item.action_type === "github.create_branch") {
@@ -233,6 +250,7 @@ async function claimApprovedQueueItem(params: {
   const now = new Date().toISOString();
   const attemptCount = numberValue(params.item.attempt_count, 0);
   const maxAttempts = Math.max(1, numberValue(params.item.max_attempts, 3));
+  const trace = buildExecutionTrace(params.action_id, params.actor_id);
 
   if (attemptCount >= maxAttempts) {
     throw new Error(`Acción agotó intentos permitidos: ${attemptCount}/${maxAttempts}`);
