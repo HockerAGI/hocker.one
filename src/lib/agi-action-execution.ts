@@ -34,6 +34,11 @@ export type AgiActionQueueRow = {
   attempt_count?: number | null;
   max_attempts?: number | null;
   last_error?: string | null;
+  failure_kind?: string | null;
+  retry_after_at?: string | null;
+  dead_letter_reason?: string | null;
+  dead_letter_at?: string | null;
+  execution_state?: string | null;
   created_at: string;
   updated_at?: string | null;
 };
@@ -186,6 +191,60 @@ function buildLockOwner(actorId: string): string {
   return `hocker-one:${actorId}:${randomUUID()}`;
 }
 
+type ExecutionFailureKind =
+  | "github_unreachable"
+  | "nova_unreachable"
+  | "supabase_unreachable"
+  | "auth_gate_rejected"
+  | "lock_conflict"
+  | "retry_exhausted"
+  | "execution_failed";
+
+function classifyExecutionFailure(message: string, actionType: string): ExecutionFailureKind {
+  const text = String(message ?? "").toLowerCase();
+  const action = String(actionType ?? "").toLowerCase();
+
+  if (text.includes("unauthorized") || text.includes("owner gate") || text.includes("403") || text.includes("401")) {
+    return "auth_gate_rejected";
+  }
+
+  if (text.includes("locked_at") || text.includes("lock conflict") || text.includes("already executing") || text.includes("lock_owner")) {
+    return "lock_conflict";
+  }
+
+  if (action.startsWith("github.") && (
+    text.includes("fetch failed") ||
+    text.includes("github") ||
+    text.includes("git") ||
+    text.includes("could not resolve host") ||
+    text.includes("etimedout") ||
+    text.includes("econnreset") ||
+    text.includes("enotfound")
+  )) {
+    return "github_unreachable";
+  }
+
+  if (text.includes("supabase") || text.includes("postgres") || text.includes("database") || text.includes("sql")) {
+    return "supabase_unreachable";
+  }
+
+  if (text.includes("nova") || text.includes("orchestrator")) {
+    return "nova_unreachable";
+  }
+
+  return "execution_failed";
+}
+
+function retryDelayMs(attemptCount: number): number {
+  const base = 15_000;
+  const expo = base * Math.max(1, 2 ** Math.max(0, attemptCount - 1));
+  return Math.min(expo, 30 * 60 * 1000);
+}
+
+function nextRetryAtIso(attemptCount: number): string {
+  return new Date(Date.now() + retryDelayMs(attemptCount)).toISOString();
+}
+
 function buildRollbackPlan(item: AgiActionQueueRow, result: JsonRecord): JsonRecord {
   if (item.action_type === "github.create_branch") {
     return {
@@ -233,20 +292,50 @@ async function claimApprovedQueueItem(params: {
   const now = new Date().toISOString();
   const attemptCount = numberValue(params.item.attempt_count, 0);
   const maxAttempts = Math.max(1, numberValue(params.item.max_attempts, 3));
+  const sb = getAdminSupabase();
 
   if (attemptCount >= maxAttempts) {
+    const now = new Date().toISOString();
+    const deadLetterReason = `retry_exhausted:${attemptCount}/${maxAttempts}`;
+
+    const { data: deadLettered, error: deadLetterError } = await sb
+      .from("agi_action_queue")
+      .update({
+        status: "execution_failed",
+        execution_state: "dead_lettered",
+        failure_kind: "retry_exhausted",
+        dead_letter_reason: deadLetterReason,
+        dead_letter_at: now,
+        retry_after_at: null,
+        locked_at: null,
+        lock_owner: null,
+        last_error: deadLetterReason,
+        execution_error: deadLetterReason,
+        updated_at: now,
+      })
+      .eq("project_id", params.project_id)
+      .eq("id", params.action_id)
+      .select("*")
+      .maybeSingle<AgiActionQueueRow>();
+
+    if (deadLetterError) throw new Error(deadLetterError.message);
+    if (deadLettered) return deadLettered;
+
     throw new Error(`Acción agotó intentos permitidos: ${attemptCount}/${maxAttempts}`);
   }
-
-  const sb = getAdminSupabase();
   const { data, error } = await sb
     .from("agi_action_queue")
     .update({
       status: "executing",
+      execution_state: "executing",
       executed_by: params.actor_id,
       locked_at: now,
       lock_owner: buildLockOwner(params.actor_id),
       attempt_count: attemptCount + 1,
+      failure_kind: null,
+      retry_after_at: null,
+      dead_letter_reason: null,
+      dead_letter_at: null,
       last_error: null,
       updated_at: now,
     })
@@ -698,10 +787,15 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
 
     return patchQueueItem(item.id, {
       status: "executed",
+      execution_state: "executed",
       executed_by: params.actor_id,
       executed_at: new Date().toISOString(),
       locked_at: null,
       lock_owner: null,
+      failure_kind: null,
+      retry_after_at: null,
+      dead_letter_reason: null,
+      dead_letter_at: null,
       last_error: null,
       execution_error: null,
       rollback_plan: rollbackPlan,
@@ -716,9 +810,19 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falla desconocida al ejecutar acción AGI.";
+    const failureKind = classifyExecutionFailure(message, item.action_type);
+    const attemptCount = numberValue(item.attempt_count, 0);
+    const maxAttempts = Math.max(1, numberValue(item.max_attempts, 3));
+    const terminal = failureKind === "auth_gate_rejected" || attemptCount >= maxAttempts;
+    const retryAfterAt = terminal ? null : nextRetryAtIso(attemptCount);
 
     await patchQueueItem(item.id, {
-      status: "execution_failed",
+      status: terminal ? "execution_failed" : "approved",
+      execution_state: terminal ? "dead_lettered" : "retry_scheduled",
+      failure_kind: failureKind,
+      retry_after_at: retryAfterAt,
+      dead_letter_reason: terminal ? message : null,
+      dead_letter_at: terminal ? new Date().toISOString() : null,
       executed_by: params.actor_id,
       executed_at: new Date().toISOString(),
       locked_at: null,
@@ -730,6 +834,8 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
         worker: "github_approved_execution_worker_12.7Z-1A",
         idempotency_key: item.idempotency_key ?? null,
         attempt_count: item.attempt_count ?? null,
+        failure_kind: failureKind,
+        retry_after_at: retryAfterAt,
       },
     });
 
