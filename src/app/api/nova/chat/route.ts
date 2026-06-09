@@ -131,7 +131,7 @@ export async function POST(req: Request): Promise<Response> {
       project_id: ctx.project_id,
       message: parsed.data.message,
       queue_lock: queueLock,
-      created_by: ctx.user.id,
+      created_by: /^[0-9a-fA-F-]{36}$/.test(String(ctx.user.id ?? "")) ? ctx.user.id : null,
     }) as Record<string, unknown> | null;
   } else if (draftPreview) {
     localActionDraft = draftPreview as Record<string, unknown>;

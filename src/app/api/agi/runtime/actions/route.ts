@@ -69,7 +69,7 @@ export async function POST(req: Request): Promise<Response> {
       risk_level: parsed.risk_level,
       dry_run: parsed.dry_run,
       requires_approval: parsed.requires_approval,
-      created_by: ctx.user.id,
+      created_by: /^[0-9a-fA-F-]{36}$/.test(String(ctx.user.id ?? "")) ? ctx.user.id : null,
     });
 
     return json(
