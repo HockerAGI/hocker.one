@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { ControlRow, JsonObject, NodeRow, Role } from "@/lib/types";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -76,7 +76,7 @@ export function toApiError(e: unknown): ApiError {
 
 export async function requireProjectRole(project_id: string, allowedRoles: Role[], req?: Request) {
   const pid = normalizeProjectId(project_id);
-  const sb = await createServerSupabase();
+  const sb = createAdminSupabase();
   const authHeader = req?.headers.get("authorization") ?? "";
   const accessToken = authHeader.toLowerCase().startsWith("bearer ")
     ? authHeader.slice(7).trim()
