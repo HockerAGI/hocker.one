@@ -83,7 +83,7 @@ export async function GET(req: Request): Promise<Response> {
   try {
     const query = parseQuery(req);
     const projectId = query.get("project_id") || process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
-    const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"], req);
 
     return json({
       ok: true,
@@ -102,7 +102,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const body = await parseBody(req);
     const parsed = GitHubActionSchema.parse(body);
-    const ctx = await requireProjectRole(parsed.project_id, ["owner", "admin", "operator"]);
+    const ctx = await requireProjectRole(parsed.project_id, ["owner", "admin", "operator"], req);
     const operation = parsed.operation as GitHubRuntimeOperation;
 
     if (!hasGitHubRuntimeToken()) {

@@ -13,7 +13,7 @@ const ExecuteSchema = z.object({
 export async function POST(req: Request): Promise<Response> {
   try {
     const parsed = ExecuteSchema.parse(await parseBody(req));
-    const ctx = await requireProjectRole(parsed.project_id, ["owner"]);
+    const ctx = await requireProjectRole(parsed.project_id, ["owner"], req);
     const item = await executeApprovedAgiAction({ project_id: ctx.project_id, action_id: parsed.action_id, actor_id: ctx.user.id });
 
     return json({

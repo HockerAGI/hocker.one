@@ -37,7 +37,7 @@ export async function GET(req: Request): Promise<Response> {
     const status = query.get("status") || undefined;
     const toolKey = query.get("tool_key") || undefined;
     const limit = Number(query.get("limit") || 30);
-    const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"], req);
     const actions = await listAgiActions({ project_id: ctx.project_id, status, tool_key: toolKey, limit });
 
     return json({
@@ -57,7 +57,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const body = await parseBody(req);
     const parsed = ActionSchema.parse(body) as RuntimeActionInput;
-    const ctx = await requireProjectRole(parsed.project_id, ["owner", "admin", "operator"]);
+    const ctx = await requireProjectRole(parsed.project_id, ["owner", "admin", "operator"], req);
 
     const item = await enqueueAgiAction({
       project_id: ctx.project_id,

@@ -74,14 +74,20 @@ export function toApiError(e: unknown): ApiError {
   });
 }
 
-export async function requireProjectRole(project_id: string, allowedRoles: Role[]) {
+export async function requireProjectRole(project_id: string, allowedRoles: Role[], req?: Request) {
   const pid = normalizeProjectId(project_id);
   const sb = await createServerSupabase();
+  const authHeader = req?.headers.get("authorization") ?? "";
+  const accessToken = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
 
   const {
     data: { user },
     error: userErr,
-  } = await sb.auth.getUser();
+  } = accessToken
+    ? await sb.auth.getUser(accessToken)
+    : await sb.auth.getUser();
 
   if (userErr || !user) {
     throw new ApiError(401, { error: "Identidad no verificada. Acceso denegado." });
