@@ -15,7 +15,7 @@ const DecisionSchema = z.object({
 export async function POST(req: Request): Promise<Response> {
   try {
     const parsed = DecisionSchema.parse(await parseBody(req));
-    const ctx = await requireProjectRole(parsed.project_id, ["owner"]);
+    const ctx = await requireProjectRole(parsed.project_id, ["owner"], req);
     const item = await decideAgiAction({
       project_id: ctx.project_id,
       action_id: parsed.action_id,
