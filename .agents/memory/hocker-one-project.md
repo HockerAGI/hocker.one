@@ -19,9 +19,17 @@ description: Nature, hard constraints, and diagnostic baseline of the imported h
 - `eslint .` is misleading — it ALSO lints `.local/skills/` (Replit env templates), not just the app. Always filter to app paths (exclude `.local/` and `docs/archive/`) before counting app errors/warnings.
 - `eslint.config.mjs` deliberately sets set-state-in-effect → 'warn' and no-unused-vars → 'warn' (^_ allowed); no-explicit-any → 'error'. Do NOT force-fix the deliberate 'warn' rules.
 
-**Islands to connect (kept on purpose, owner to wire — do NOT delete):**
-- src/routes/jurix.ts + src/lib/http.ts = disconnected Fastify island (no entrypoint; `fastify` dep unused). Fastify cannot run on Vercel — needs an adapter or a port to a Next route. When connecting, add zod validation on actor_type/severity body fields (currently only cast, not runtime-validated).
-- audit-chain.ts: rows ARE signed (signAuditRow used) but verifyAuditChain validates only the VIRTUAL hash chain — it never calls verifyAuditRow, so `/verify` is NOT cryptographic-signature-verified. The unused imports crypto/canonicalJson/verifyAuditRow are intentional connect-breadcrumbs.
-- Endpoints system/security-hardening & system/tenant-rls appear caller-less though pages /security/hardening & /security/rls exist (connect-or-delete decision pending owner).
+**Audit chain — signed, append-only, REALLY verified (durable):**
+- Rows are HMAC-signed AND the chain is persisted (seq/prev_hash/row_hash/signature cols added by migration supabase/migrations/20260612_103000_audit_chain_signatures.sql). verifyAuditChain recomputes each row signature + prev_hash linkage; legacy rows (signature null) are counted, not failed. (Previously verify only recomputed a virtual chain → false security; fixed.)
+- DEPLOY ORDER (hard): apply the migration on Supabase BEFORE deploying code — new code reads/writes the new columns and errors if absent. Migration drops audit_logs FK cascades (on-delete-set-null, so deleting a project/user keeps signed rows intact) and adds triggers that BLOCK update/delete (append-only) even for the service role. Secret: HOCKER_AUDIT_SECRET (fallback SUPABASE_SERVICE_ROLE_KEY).
+- GOTCHA (cost a review cycle): when signing/hashing a row that includes a Postgres `timestamptz`, the signed `new Date().toISOString()` ("…Z", ms precision) is re-serialized by PostgREST on read as "…+00:00" with trimmed fractional zeros → recomputed hash mismatches → ALL rows read as invalid. Fix: canonicalize the timestamp via `new Date(value).toISOString()` on BOTH the sign and verify paths (canonicalTimestamp in audit-chain.ts). Applies to ANY future signed/hashed timestamp column.
+
+**Orchestrator internal auth (consistency rule + footgun):**
+- /api/orchestrator/run validates `HOCKER_ONE_INTERNAL_TOKEN ?? CRON_SECRET`. ANY internal caller that forwards to it (cron, commands, commands/approve) MUST forward that same precedence in the Bearer header, or it silently 401s when the two secrets differ. External cron entry still authenticates with CRON_SECRET. (cron route was forwarding raw CRON_SECRET → fixed.)
+- FOOTGUN: ORCHESTRATOR_BASE_URL is dual-purpose — cron uses it as the base for the app's OWN /api/orchestrator/run, but hocker-provider-orchestrator.ts uses it as the external NOVA AGI (Railway) URL fallback. Setting it to Railway breaks the cron self-forward. Leave UNSET on Vercel (origin fallback) or point it at the Vercel app itself.
+
+**Resolved this session (no longer "islands"):**
+- Jurix Fastify island ported to Next routes under src/app/api/jurix/audit/* (auth via requireOwnerOrInternal, zod on log body); dead src/routes/jurix.ts + src/lib/http.ts deleted and the unused `fastify` dep removed.
+- system/security-hardening & system/tenant-rls endpoints: KEPT per owner decision (do NOT delete); pages /security/hardening & /security/rls exist.
 
 **Cannot verify from Replit (owner's domain):** Supabase remote-vs-local migration drift (docs/ops/supabase-remote-vs-local-baseline-report.md); live needs_approval→approved→executed flow (runs on Railway/Vercel). Auth in that flow is code-consistent (requireProjectRole; owner-only on decision/execute).

@@ -1,6 +1,4 @@
-import crypto from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { canonicalJson } from "./stable-json";
 import { signAuditRow, verifyAuditRow } from "./audit-signature";
 import type { AuditActorType, AuditChainRow, AuditSeverity } from "./audit-types";
 
@@ -11,6 +9,10 @@ type AuditDbRow = {
   action: string;
   context: Record<string, unknown> | null;
   created_at: string;
+  seq: number | string | null;
+  prev_hash: string | null;
+  row_hash: string | null;
+  signature: string | null;
 };
 
 type AuditFingerprintResult = {
@@ -19,10 +21,32 @@ type AuditFingerprintResult = {
   fingerprint: string;
   valid: boolean;
   last_created_at: string | null;
+  signed_count?: number;
+  legacy_count?: number;
+  first_invalid_seq?: number | null;
 };
+
+const SELECT_COLUMNS =
+  "id, project_id, actor_user_id, action, context, created_at, seq, prev_hash, row_hash, signature";
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Canonicalizes a timestamp to the exact `Date.toISOString()` form used when
+ * signing. Postgres `timestamptz` is re-serialized by PostgREST in a different
+ * textual form on read (e.g. `+00:00` offset, trimmed fractional zeros), so the
+ * stored string must be normalized before it is re-hashed — otherwise every
+ * signed row would fail verification. The write and verify paths MUST use this
+ * same normalization to stay symmetric.
+ */
+function canonicalTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`created_at inválido para la cadena de auditoría: ${value}`);
+  }
+  return date.toISOString();
 }
 
 function auditSecret(): string {
@@ -35,69 +59,59 @@ function auditSecret(): string {
   return "hocker-audit-fallback";
 }
 
-function normalizeContext(row: AuditDbRow): Record<string, unknown> {
-  const context =
-    row.context && typeof row.context === "object" && !Array.isArray(row.context)
-      ? row.context
-      : {};
+/**
+ * Deterministically derives the signed fields from a row's stored `context`.
+ * The SAME derivation runs at write time and at verify time, so a recomputed
+ * signature only matches when the stored row is byte-for-byte intact.
+ */
+function signingFieldsFromContext(context: Record<string, unknown> | null): {
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_type: string;
+  actor_id: string | null;
+  role: string;
+  severity: string;
+  payload: Record<string, unknown>;
+} {
+  const ctx =
+    context && typeof context === "object" && !Array.isArray(context) ? context : {};
 
   return {
-    ...context,
-    action: row.action,
-    created_at: row.created_at,
-    actor_user_id: row.actor_user_id,
-    project_id: row.project_id,
+    event_type: String(ctx.event_type ?? "manual"),
+    entity_type: String(ctx.entity_type ?? "system"),
+    entity_id: (ctx.entity_id ?? null) as string | null,
+    actor_type: String(ctx.actor_type ?? "system"),
+    actor_id: (ctx.actor_id ?? null) as string | null,
+    role: String(ctx.role ?? "nova"),
+    severity: String(ctx.severity ?? "info"),
+    payload:
+      ctx.payload && typeof ctx.payload === "object" && !Array.isArray(ctx.payload)
+        ? (ctx.payload as Record<string, unknown>)
+        : {},
   };
 }
 
-function rowToVirtualChain(
-  row: AuditDbRow,
-  index: number,
-  prevHash: string,
-): AuditChainRow {
-  const context = normalizeContext(row);
-  const seq = index + 1;
-
-  const signed = signAuditRow({
-    secret: auditSecret(),
-    project_id: row.project_id ?? "",
-    seq,
-    prev_hash: prevHash,
-    event_type: String(context.event_type ?? "manual"),
-    entity_type: String(context.entity_type ?? "system"),
-    entity_id: (context.entity_id ?? null) as string | null,
-    actor_type: String(context.actor_type ?? "system"),
-    actor_id: (context.actor_id ?? null) as string | null,
-    role: String(context.role ?? "nova"),
-    action: row.action,
-    severity: String(context.severity ?? "info"),
-    payload:
-      context.payload && typeof context.payload === "object" && !Array.isArray(context.payload)
-        ? (context.payload as Record<string, unknown>)
-        : {},
-    created_at: row.created_at,
-  });
+function toChainRow(row: AuditDbRow): AuditChainRow {
+  const fields = signingFieldsFromContext(row.context);
 
   return {
     id: row.id,
     project_id: row.project_id ?? "",
-    seq,
-    prev_hash: prevHash,
-    row_hash: signed.row_hash,
-    event_type: String(context.event_type ?? "manual"),
-    entity_type: String(context.entity_type ?? "system"),
-    entity_id: (context.entity_id ?? null) as string | null,
-    actor_type: String(context.actor_type ?? "system") as AuditActorType,
-    actor_id: (context.actor_id ?? null) as string | null,
-    role: String(context.role ?? "nova"),
+    seq: Number(row.seq ?? 0),
+    prev_hash: row.prev_hash ?? "GENESIS",
+    row_hash: row.row_hash ?? "",
+    event_type: fields.event_type,
+    entity_type: fields.entity_type,
+    entity_id: fields.entity_id,
+    actor_type: fields.actor_type as AuditActorType,
+    actor_id: fields.actor_id,
+    role: fields.role,
     action: row.action,
-    severity: String(context.severity ?? "info") as AuditSeverity,
-    payload:
-      context.payload && typeof context.payload === "object" && !Array.isArray(context.payload)
-        ? (context.payload as Record<string, unknown>)
-        : {},
+    severity: fields.severity as AuditSeverity,
+    payload: fields.payload,
     created_at: row.created_at,
-    signature: signed.signature,
+    signature: row.signature ?? "",
   };
 }
 
@@ -106,7 +120,7 @@ async function loadAuditRows(project_id: string, limit = 5000): Promise<AuditDbR
 
   const { data, error } = await sb
     .from("audit_logs")
-    .select("id, project_id, actor_user_id, action, context, created_at")
+    .select(SELECT_COLUMNS)
     .eq("project_id", project_id)
     .order("created_at", { ascending: true })
     .order("id", { ascending: true })
@@ -119,6 +133,29 @@ async function loadAuditRows(project_id: string, limit = 5000): Promise<AuditDbR
   return (data ?? []) as AuditDbRow[];
 }
 
+async function loadChainHead(
+  project_id: string,
+): Promise<{ seq: number; row_hash: string } | null> {
+  const sb = createAdminSupabase();
+
+  const { data, error } = await sb
+    .from("audit_logs")
+    .select("seq, row_hash")
+    .eq("project_id", project_id)
+    .not("seq", "is", null)
+    .order("seq", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`No se pudo leer la cabeza de la cadena de auditoría: ${error.message}`);
+  }
+
+  if (!data || data.seq == null || data.row_hash == null) return null;
+
+  return { seq: Number(data.seq), row_hash: String(data.row_hash) };
+}
+
 export async function appendAuditRecord(args: {
   project_id: string;
   action: string;
@@ -127,37 +164,69 @@ export async function appendAuditRecord(args: {
 }): Promise<AuditChainRow> {
   const sb = createAdminSupabase();
   const createdAt = nowIso();
+  const context = args.context ?? {};
+  const fields = signingFieldsFromContext(context);
+  const secret = auditSecret();
 
-  const { data, error } = await sb
-    .from("audit_logs")
-    .insert({
+  const maxAttempts = 5;
+  let lastError = "unknown";
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const head = await loadChainHead(args.project_id);
+    const seq = (head?.seq ?? 0) + 1;
+    const prevHash = head?.row_hash ?? "GENESIS";
+
+    const signed = signAuditRow({
+      secret,
       project_id: args.project_id,
-      actor_user_id: args.actor_user_id ?? null,
+      seq,
+      prev_hash: prevHash,
+      event_type: fields.event_type,
+      entity_type: fields.entity_type,
+      entity_id: fields.entity_id,
+      actor_type: fields.actor_type,
+      actor_id: fields.actor_id,
+      role: fields.role,
       action: args.action,
-      context: args.context ?? {},
-      created_at: createdAt,
-    })
-    .select("id, project_id, actor_user_id, action, context, created_at")
-    .single();
+      severity: fields.severity,
+      payload: fields.payload,
+      created_at: canonicalTimestamp(createdAt),
+    });
 
-  if (error || !data) {
-    throw new Error(`No se pudo registrar el evento de auditoría: ${error?.message ?? "unknown"}`);
+    const { data, error } = await sb
+      .from("audit_logs")
+      .insert({
+        project_id: args.project_id,
+        actor_user_id: args.actor_user_id ?? null,
+        action: args.action,
+        context,
+        created_at: createdAt,
+        seq,
+        prev_hash: prevHash,
+        row_hash: signed.row_hash,
+        signature: signed.signature,
+      })
+      .select(SELECT_COLUMNS)
+      .single();
+
+    if (!error && data) {
+      return toChainRow(data as AuditDbRow);
+    }
+
+    lastError = error?.message ?? "unknown";
+
+    // 23505 = unique_violation on (project_id, seq): concurrent writer won the
+    // slot. Re-read the head and retry with the next sequence number.
+    if (error?.code === "23505") {
+      continue;
+    }
+
+    throw new Error(`No se pudo registrar el evento de auditoría: ${lastError}`);
   }
 
-  const rows = await loadAuditRows(args.project_id, 5000);
-  const currentIndex = rows.findIndex((row) => row.id === data.id);
-  const prevHash =
-    currentIndex > 0
-      ? rowToVirtualChain(
-          rows[currentIndex - 1],
-          currentIndex - 1,
-          currentIndex > 1
-            ? rowToVirtualChain(rows[currentIndex - 2], currentIndex - 2, "GENESIS").row_hash
-            : "GENESIS",
-        ).row_hash
-      : "GENESIS";
-
-  return rowToVirtualChain(data as AuditDbRow, currentIndex >= 0 ? currentIndex : rows.length, prevHash);
+  throw new Error(
+    `No se pudo registrar el evento de auditoría tras ${maxAttempts} reintentos: ${lastError}`,
+  );
 }
 
 export async function auditTrailEvent(args: {
@@ -184,56 +253,114 @@ export async function auditTrailEvent(args: {
       role: args.role,
       severity: args.severity,
       payload: args.payload,
-      created_at: nowIso(),
     },
     actor_user_id: args.actor_type === "user" ? args.actor_id : null,
   });
 }
 
-export async function createAuditFingerprint(project_id: string): Promise<AuditFingerprintResult> {
-  const rows = await loadAuditRows(project_id, 5000);
+export async function createAuditFingerprint(
+  project_id: string,
+): Promise<AuditFingerprintResult> {
+  const sb = createAdminSupabase();
 
-  let prevHash = "GENESIS";
-  let fingerprint = "GENESIS";
+  const head = await loadChainHead(project_id);
 
-  rows.forEach((row, index) => {
-    const virtual = rowToVirtualChain(row, index, prevHash);
-    fingerprint = virtual.row_hash;
-    prevHash = virtual.row_hash;
-  });
+  const { count, error: countError } = await sb
+    .from("audit_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", project_id);
+
+  if (countError) {
+    throw new Error(`No se pudo contar la auditoría: ${countError.message}`);
+  }
+
+  const { data: latest, error: latestError } = await sb
+    .from("audit_logs")
+    .select("created_at")
+    .eq("project_id", project_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestError) {
+    throw new Error(`No se pudo leer la auditoría: ${latestError.message}`);
+  }
 
   return {
     project_id,
-    count: rows.length,
-    fingerprint,
+    count: count ?? 0,
+    fingerprint: head?.row_hash ?? "GENESIS",
     valid: true,
-    last_created_at: rows.at(-1)?.created_at ?? null,
+    last_created_at: latest?.created_at ?? null,
   };
 }
 
+/**
+ * Verifies the persisted, signed audit chain for a project. Each signed row is
+ * re-hashed and its HMAC signature recomputed from the STORED data and compared
+ * to the STORED signature (tamper of any field breaks the match), and each row's
+ * prev_hash is checked against the previous signed row_hash (deletion/reorder
+ * breaks the link). Pre-migration rows without a signature are counted as
+ * "legacy" and never cause a false failure.
+ */
 export async function verifyAuditChain(
   project_id: string,
   limit = 5000,
 ): Promise<AuditFingerprintResult & { rows_checked: number }> {
   const rows = await loadAuditRows(project_id, limit);
+  const secret = auditSecret();
 
-  let prevHash = "GENESIS";
-  let fingerprint = "GENESIS";
+  const signed = rows
+    .filter(
+      (row) =>
+        row.signature != null &&
+        row.seq != null &&
+        row.row_hash != null &&
+        row.prev_hash != null,
+    )
+    .sort((a, b) => Number(a.seq) - Number(b.seq));
+
+  const legacyCount = rows.length - signed.length;
+
   let valid = true;
+  let expectedPrev = "GENESIS";
+  let fingerprint = "GENESIS";
+  let firstInvalidSeq: number | null = null;
 
-  rows.forEach((row, index) => {
-    const virtual = rowToVirtualChain(row, index, prevHash);
+  for (const row of signed) {
+    const fields = signingFieldsFromContext(row.context);
 
-    if (index === 0 || virtual.prev_hash === prevHash) {
-      fingerprint = virtual.row_hash;
-      prevHash = virtual.row_hash;
-      return;
+    const rowOk = verifyAuditRow({
+      secret,
+      row: {
+        project_id: row.project_id ?? "",
+        seq: Number(row.seq),
+        prev_hash: row.prev_hash as string,
+        row_hash: row.row_hash as string,
+        event_type: fields.event_type,
+        entity_type: fields.entity_type,
+        entity_id: fields.entity_id,
+        actor_type: fields.actor_type,
+        actor_id: fields.actor_id,
+        role: fields.role,
+        action: row.action,
+        severity: fields.severity,
+        payload: fields.payload,
+        created_at: canonicalTimestamp(row.created_at),
+        signature: row.signature as string,
+      },
+    });
+
+    const linkOk = (row.prev_hash as string) === expectedPrev;
+
+    if (!rowOk || !linkOk) {
+      valid = false;
+      if (firstInvalidSeq === null) firstInvalidSeq = Number(row.seq);
     }
 
-    valid = false;
-    fingerprint = virtual.row_hash;
-    prevHash = virtual.row_hash;
-  });
+    fingerprint = row.row_hash as string;
+    expectedPrev = row.row_hash as string;
+  }
 
   return {
     project_id,
@@ -241,7 +368,10 @@ export async function verifyAuditChain(
     fingerprint,
     valid,
     last_created_at: rows.at(-1)?.created_at ?? null,
-    rows_checked: rows.length,
+    rows_checked: signed.length,
+    signed_count: signed.length,
+    legacy_count: legacyCount,
+    first_invalid_seq: firstInvalidSeq,
   };
 }
 
