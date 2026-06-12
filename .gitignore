@@ -1,108 +1,49 @@
-# =========================
-# CORE
-# =========================
-node_modules/
-.next/
-out/
-dist/
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# =========================
-# ENV (CRÍTICO)
-# =========================
-.env
-.env.*
-!.env.example
+# compiled output
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.expo
+.expo-shared
 
-# =========================
-# VERCEL
-# =========================
-.vercel
+# dependencies
+node_modules
 
-# =========================
-# OS / SYSTEM
-# =========================
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
 .DS_Store
 Thumbs.db
 
-# =========================
-# LOGS
-# =========================
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
 
-# =========================
-# TYPESCRIPT
-# =========================
-*.tsbuildinfo
-
-# =========================
-# BACKUPS (TU CASO CRÍTICO)
-# =========================
-src_backup_*
-src_backup_final_*
-
-# =========================
-# TEMP / SCRIPTS
-# =========================
-*.sh
-*.bak
-*.tmp
-
-# =========================
-# IDE
-# =========================
-.vscode/
-.idea/
-
-# =========================
-# TEST / CACHE
-# =========================
-coverage/
+# Replit
 .cache/
-
-# =========================
-# OPTIONAL (SI USAS)
-# =========================
-*.log
-.env*.local
-_backup_*/
-_prep_backup_*/
-_ready_backup_*/
-!env.example
-android/local.properties
-HOCKER_AUDIT_TOPOLOGY_*
-hocker_topology_audit_*.zip
-
-# HOCKER local secrets
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-
-# HOCKER local secrets
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-
-# HOCKER env files
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-.env.example
-
-# HOCKER protected env files
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-.env.example
-supabase/.temp/
-runtime/ops/
+.local/

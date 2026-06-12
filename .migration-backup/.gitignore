@@ -1,0 +1,108 @@
+# =========================
+# CORE
+# =========================
+node_modules/
+.next/
+out/
+dist/
+
+# =========================
+# ENV (CRÍTICO)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# VERCEL
+# =========================
+.vercel
+
+# =========================
+# OS / SYSTEM
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# LOGS
+# =========================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# TYPESCRIPT
+# =========================
+*.tsbuildinfo
+
+# =========================
+# BACKUPS (TU CASO CRÍTICO)
+# =========================
+src_backup_*
+src_backup_final_*
+
+# =========================
+# TEMP / SCRIPTS
+# =========================
+*.sh
+*.bak
+*.tmp
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# TEST / CACHE
+# =========================
+coverage/
+.cache/
+
+# =========================
+# OPTIONAL (SI USAS)
+# =========================
+*.log
+.env*.local
+_backup_*/
+_prep_backup_*/
+_ready_backup_*/
+!env.example
+android/local.properties
+HOCKER_AUDIT_TOPOLOGY_*
+hocker_topology_audit_*.zip
+
+# HOCKER local secrets
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+
+# HOCKER local secrets
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+
+# HOCKER env files
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+.env.example
+
+# HOCKER protected env files
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+.env.example
+supabase/.temp/
+runtime/ops/
