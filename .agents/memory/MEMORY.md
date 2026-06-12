@@ -1,0 +1,2 @@
+- [HOCKER ONE project](hocker-one-project.md) — imported Next.js 16 app; Replit is EDIT-ONLY, owner deploys on Vercel; do NOT migrate, do NOT build the PDF-described ecosystem platforms.
+- [Replit protected files](replit-protected-files.md) — can't rm/edit .replit/.replitignore (env-managed); can't `rm .gitignore` (guarded as destructive git); edit .gitignore via the write tool.
