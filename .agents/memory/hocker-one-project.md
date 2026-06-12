@@ -15,10 +15,13 @@ description: Nature, hard constraints, and diagnostic baseline of the imported h
 - `HOCKER_GITHUB_EXECUTION_MODE=mock` in src/lib/agi-action-execution.ts (defaults to `real`; opt-in test boundary).
 **Why:** owner is extremely sensitive to scope creep and fake behavior; misreading these as defects breaks trust.
 
-**Diagnostic baseline (Jun 2026, before any fixes):**
-- `tsc --noEmit` = 0 errors. `next build --webpack` = success (54 pages, 59 API routes, middleware all compile).
-- `eslint src middleware.ts` = 15 errors (mostly @typescript-eslint/no-explicit-any in hocker-live-pulse-summary.ts, supabase-server.ts, jurix.ts; plus react-hooks refs/set-state-in-render in NovaRealtimeChat.tsx) + 39 warnings (~24 unused-vars, set-state-in-effect, 3 next/no-img-element). Note: `eslint .` is misleading here — it lints .local/skills (Replit env templates), not the app.
-- Confirmed dead/disconnected: src/routes/jurix.ts + src/lib/http.ts = disconnected Fastify island (no entrypoint; `fastify` dep unused). Components ErrorBoundary.tsx, NovaChat.tsx, SystemStatus.tsx = superseded/unused.
+**Lint/build notes (durable):**
+- `eslint .` is misleading — it ALSO lints `.local/skills/` (Replit env templates), not just the app. Always filter to app paths (exclude `.local/` and `docs/archive/`) before counting app errors/warnings.
+- `eslint.config.mjs` deliberately sets set-state-in-effect → 'warn' and no-unused-vars → 'warn' (^_ allowed); no-explicit-any → 'error'. Do NOT force-fix the deliberate 'warn' rules.
+
+**Islands to connect (kept on purpose, owner to wire — do NOT delete):**
+- src/routes/jurix.ts + src/lib/http.ts = disconnected Fastify island (no entrypoint; `fastify` dep unused). Fastify cannot run on Vercel — needs an adapter or a port to a Next route. When connecting, add zod validation on actor_type/severity body fields (currently only cast, not runtime-validated).
+- audit-chain.ts: rows ARE signed (signAuditRow used) but verifyAuditChain validates only the VIRTUAL hash chain — it never calls verifyAuditRow, so `/verify` is NOT cryptographic-signature-verified. The unused imports crypto/canonicalJson/verifyAuditRow are intentional connect-breadcrumbs.
 - Endpoints system/security-hardening & system/tenant-rls appear caller-less though pages /security/hardening & /security/rls exist (connect-or-delete decision pending owner).
 
 **Cannot verify from Replit (owner's domain):** Supabase remote-vs-local migration drift (docs/ops/supabase-remote-vs-local-baseline-report.md); live needs_approval→approved→executed flow (runs on Railway/Vercel). Auth in that flow is code-consistent (requireProjectRole; owner-only on decision/execute).

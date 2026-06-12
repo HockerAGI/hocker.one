@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   Sparkles,
   Store,
-  Wallet,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -232,7 +231,6 @@ function MapNode({ card, featured = false }: { card: MapCard; featured?: boolean
 
 export default async function MapPage() {
   const livePulse = await getHockerLivePulseSummary();
-  const central = cards.filter((card) => card.group === "central");
   const liveCard = cards.find((card) => card.href === "/live");
   const novaCard = cards.find((card) => card.href === "/chat");
   const memoryCard = cards.find((card) => card.href === "/memory");

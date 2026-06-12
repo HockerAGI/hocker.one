@@ -9,6 +9,6 @@ self.addEventListener("activate", (event) => {
 });
 
 // Interceptor de transmisiones (Preparado para futuras notificaciones push)
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", (_event) => {
   // El cacheo se mantiene al mínimo para garantizar datos en tiempo real
 });

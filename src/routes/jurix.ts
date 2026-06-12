@@ -7,6 +7,7 @@ import {
   createAuditFingerprint,
   verifyAuditChain,
 } from "../lib/audit-chain.js";
+import type { AuditActorType, AuditSeverity } from "../lib/audit-types.js";
 
 function asInt(value: unknown, fallback = 500): number {
   const n = Math.trunc(Number(value));
@@ -76,13 +77,13 @@ export async function jurixRoutes(app: FastifyInstance) {
       const row = await auditTrailEvent({
         project_id: String(body.project_id ?? "hocker-one").trim(),
         event_type: String(body.event_type ?? "manual").trim(),
-        entity_type: String(body.entity_type ?? "system").trim() as any,
+        entity_type: String(body.entity_type ?? "system").trim(),
         entity_id: body.entity_id == null ? null : String(body.entity_id),
-        actor_type: String(body.actor_type ?? "system").trim() as any,
+        actor_type: String(body.actor_type ?? "system").trim() as AuditActorType,
         actor_id: body.actor_id == null ? null : String(body.actor_id),
         role: String(body.role ?? "nova").trim(),
         action: String(body.action ?? "log").trim(),
-        severity: String(body.severity ?? "info").trim() as any,
+        severity: String(body.severity ?? "info").trim() as AuditSeverity,
         payload: (body.payload && typeof body.payload === "object" && !Array.isArray(body.payload))
           ? (body.payload as Record<string, unknown>)
           : {},

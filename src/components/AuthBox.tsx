@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 
-import { useMemo, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 import { Loader2, ShieldCheck, Sparkles, LockKeyhole, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 
 type AuthBoxProps = {
@@ -14,9 +12,6 @@ type AuthBoxProps = {
 };
 
 export default function AuthBox({ className = "" }: AuthBoxProps) {
-  const router = useRouter();
-  const supabase = useMemo(() => createBrowserSupabase(), []);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

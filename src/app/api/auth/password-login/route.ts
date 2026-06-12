@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         email: data.user.email,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         ok: false,

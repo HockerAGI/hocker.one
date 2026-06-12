@@ -89,30 +89,6 @@ function hasEnv(key: string): boolean {
   return envValue(key).length > 0;
 }
 
-function allEnvKeys(tool: RuntimeTool): string[] {
-  return Array.from(new Set([...(tool.required_env ?? []), ...(tool.optional_env ?? []), ...(tool.env_groups ?? []).flatMap((group) => group.any_of)]));
-}
-
-function buildGroups(tool: RuntimeTool): EnvGroup[] {
-  if (tool.env_groups?.length) return tool.env_groups;
-  return (tool.required_env ?? []).map((key) => ({ label: key, any_of: [key], required: true }));
-}
-
-function labelForStatus(status: RuntimeToolStatusKind): RuntimeToolStatus["status_label"] {
-  switch (status) {
-    case "connected":
-      return "Conectado";
-    case "partial":
-      return "Parcial";
-    case "missing_key":
-      return "Falta llave";
-    case "missing_code":
-      return "Falta código";
-    case "blocked":
-      return "Bloqueado";
-  }
-}
-
 function statusFor(tool: RuntimeTool): RuntimeToolStatus {
   const missing = tool.required_env.filter((key) => !hasEnv(key));
   const configuredRequired = tool.required_env.length - missing.length;

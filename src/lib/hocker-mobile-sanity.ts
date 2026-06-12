@@ -78,32 +78,6 @@ function overallStatus(summary: MobileSanityResult["summary"]): MobileSanityStat
   return "ready";
 }
 
-async function fetchHead(url: string): Promise<{ ok: boolean; status: number; latency_ms: number }> {
-  const started = Date.now();
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        "User-Agent": "HockerONE-MobileSanity/0.1",
-      },
-    });
-
-    return {
-      ok: res.ok,
-      status: res.status,
-      latency_ms: Date.now() - started,
-    };
-  } catch {
-    return {
-      ok: false,
-      status: 0,
-      latency_ms: Date.now() - started,
-    };
-  }
-}
-
 function publicBaseUrl(): string {
   const explicit =
     process.env.HOCKER_ONE_PUBLIC_URL ||

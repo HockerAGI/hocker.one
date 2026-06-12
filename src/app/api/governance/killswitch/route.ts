@@ -1,6 +1,5 @@
 import { getLangfuse } from "@/lib/langfuse-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getErrorMessage } from "@/lib/errors";
 import type { ControlRow, JsonObject } from "@/lib/types";
 import {
   ApiError,

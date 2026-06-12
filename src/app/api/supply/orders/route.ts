@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { getControls, requireProjectRole, ApiError, toApiError, json } from "../../_lib";
+import { getControls, requireProjectRole } from "../../_lib";
 import { getErrorMessage } from "@/lib/errors";
 
 export const runtime = "edge";
