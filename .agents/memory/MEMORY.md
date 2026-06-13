@@ -1,3 +1,4 @@
 - [HOCKER ONE project](hocker-one-project.md) — imported Next.js 16 app; Replit is EDIT-ONLY, owner deploys on Vercel; never migrate; never build the PDF ecosystem.
 - [AGI real vs vision](agi-real-vs-vision.md) — PDFs = forbidden future vision; "make AGIs real" = wire real data + legit APIs within the advisory/approval framework.
 - [Replit protected files](replit-protected-files.md) — .replit/.replitignore env-managed (no rm/edit); .gitignore guarded from rm, edit via write tool.
+- [HOCKER ONE design system](hocker-one-design-system.md) — brand font = Inter via next/font (--font-inter); mobile strips effects for no-lag (elevate via type, not blur); app icons from isotype on #000000.
