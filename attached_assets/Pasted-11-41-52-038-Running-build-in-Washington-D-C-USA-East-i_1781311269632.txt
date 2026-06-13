@@ -1,0 +1,176 @@
+11:41:52.038 Running build in Washington, D.C., USA (East) – iad1
+11:41:52.039 Build machine configuration: 2 cores, 8 GB
+11:41:52.059 Retrieving list of deployment files...
+11:41:52.063 Skipping build cache, deployment was triggered without cache.
+11:41:52.664 Downloading 543 deployment files...
+11:41:56.825 Running "vercel build"
+11:41:57.396 Installing dependencies...
+11:42:06.955 npm warn deprecated jpeg-exif@1.1.4: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+11:42:23.569 
+11:42:23.570 added 669 packages in 26s
+11:42:23.571 
+11:42:23.571 204 packages are looking for funding
+11:42:23.571   run `npm fund` for details
+11:42:23.701 Detected Next.js version: 16.2.4
+11:42:23.713 Running "npm run build"
+11:42:23.890 
+11:42:23.890 > hocker.one@1.0.2 build
+11:42:23.891 > next build --webpack
+11:42:23.891 
+11:42:24.744   Applying modifyConfig from Vercel
+11:42:24.752 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+11:42:24.752 This information is used to shape Next.js' roadmap and prioritize features.
+11:42:24.753 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+11:42:24.753 https://nextjs.org/telemetry
+11:42:24.754 
+11:42:24.804 ▲ Next.js 16.2.4 (webpack)
+11:42:24.805 
+11:42:24.927   Creating an optimized production build ...
+11:43:13.583 ✓ Compiled successfully in 48s
+11:43:13.600   Running TypeScript ...
+11:43:35.604   Finished TypeScript in 22.0s ...
+11:43:35.617   Collecting page data using 1 worker ...
+11:43:36.643 ⚠ Using edge runtime on a page currently disables static generation for that page
+11:43:42.985   Generating static pages using 1 worker (0/15) ...
+11:43:44.357   Generating static pages using 1 worker (3/15) 
+11:43:44.358   Generating static pages using 1 worker (7/15) 
+11:43:44.359   Generating static pages using 1 worker (11/15) 
+11:43:44.359 ✓ Generating static pages using 1 worker (15/15) in 1373ms
+11:43:46.636   Finalizing page optimization ...
+11:43:46.640   Collecting build traces ...
+11:44:01.133   Running onBuildComplete from Vercel
+11:44:02.075 
+11:44:02.081 Route (app)
+11:44:02.082 ┌ ○ /
+11:44:02.082 ├ ○ /_not-found
+11:44:02.082 ├ ƒ /access
+11:44:02.083 ├ ƒ /admin/jurix
+11:44:02.083 ├ ƒ /admin/jurix/export
+11:44:02.083 ├ ƒ /agis
+11:44:02.085 ├ ƒ /api/access/check
+11:44:02.086 ├ ƒ /api/access/portal-grants/decision
+11:44:02.086 ├ ƒ /api/access/portal-grants/request
+11:44:02.087 ├ ƒ /api/access/portal-grants/revoke
+11:44:02.087 ├ ƒ /api/access/profile
+11:44:02.087 ├ ƒ /api/agi/learning/review
+11:44:02.088 ├ ƒ /api/agi/learning/submit
+11:44:02.088 ├ ƒ /api/agi/memory-mirror
+11:44:02.089 ├ ƒ /api/agi/runtime/actions
+11:44:02.089 ├ ƒ /api/agi/runtime/actions/decision
+11:44:02.089 ├ ƒ /api/agi/runtime/actions/execute
+11:44:02.090 ├ ƒ /api/agi/runtime/capabilities
+11:44:02.090 ├ ƒ /api/agi/runtime/context
+11:44:02.090 ├ ƒ /api/agi/runtime/github
+11:44:02.091 ├ ƒ /api/agi/runtime/memory
+11:44:02.091 ├ ƒ /api/agi/runtime/memory/publication-audit
+11:44:02.092 ├ ƒ /api/agi/runtime/memory/review
+11:44:02.092 ├ ƒ /api/agi/runtime/memory/write-gate
+11:44:02.092 ├ ƒ /api/agi/runtime/summary
+11:44:02.093 ├ ƒ /api/agi/runtime/tools
+11:44:02.093 ├ ƒ /api/agi/updates/feed
+11:44:02.094 ├ ƒ /api/auth/password-login
+11:44:02.094 ├ ƒ /api/chido/actions/approval/decision
+11:44:02.094 ├ ƒ /api/chido/actions/approval/request
+11:44:02.095 ├ ƒ /api/chido/actions/dry-run
+11:44:02.095 ├ ƒ /api/chido/actions/execution/preflight
+11:44:02.096 ├ ƒ /api/chido/actions/signature/check
+11:44:02.096 ├ ƒ /api/commands
+11:44:02.096 ├ ƒ /api/commands/approve
+11:44:02.097 ├ ƒ /api/commands/dispatch
+11:44:02.105 ├ ƒ /api/commands/reject
+11:44:02.105 ├ ƒ /api/events/manual
+11:44:02.106 ├ ƒ /api/execute
+11:44:02.107 ├ ƒ /api/governance/killswitch
+11:44:02.107 ├ ƒ /api/health
+11:44:02.108 ├ ƒ /api/integrations/events
+11:44:02.108 ├ ƒ /api/integrations/health
+11:44:02.108 ├ ƒ /api/integrations/register
+11:44:02.109 ├ ƒ /api/nova/chat
+11:44:02.109 ├ ƒ /api/nova/chat/stream
+11:44:02.109 ├ ƒ /api/orchestrator/cron
+11:44:02.110 ├ ƒ /api/orchestrator/run
+11:44:02.110 ├ ƒ /api/owner/auth-diagnostics
+11:44:02.111 ├ ƒ /api/owner/evidence/export
+11:44:02.111 ├ ƒ /api/owner/live-summary
+11:44:02.111 ├ ƒ /api/supply/orders
+11:44:02.112 ├ ƒ /api/supply/orders/[id]
+11:44:02.113 ├ ƒ /api/supply/products
+11:44:02.113 ├ ƒ /api/supply/products/[id]
+11:44:02.114 ├ ƒ /api/system/beta-readiness
+11:44:02.114 ├ ƒ /api/system/diagnostics/providers
+11:44:02.115 ├ ƒ /api/system/global-health
+11:44:02.115 ├ ƒ /api/system/mobile-sanity
+11:44:02.115 ├ ƒ /api/system/nova/always-on
+11:44:02.116 ├ ƒ /api/system/providers
+11:44:02.116 ├ ƒ /api/system/security-hardening
+11:44:02.116 ├ ƒ /api/system/security-readiness
+11:44:02.117 ├ ƒ /api/system/status
+11:44:02.117 ├ ƒ /api/system/tenant-rls
+11:44:02.117 ├ ƒ /app
+11:44:02.118 ├ ƒ /app/actividad
+11:44:02.118 ├ ƒ /app/ajustes
+11:44:02.119 ├ ƒ /app/ecosistema
+11:44:02.119 ├ ○ /app/nova
+11:44:02.119 ├ ƒ /app/pendientes
+11:44:02.120 ├ ƒ /apps
+11:44:02.120 ├ ƒ /auth/callback
+11:44:02.120 ├ ○ /casos
+11:44:02.121 ├ ƒ /chat
+11:44:02.121 ├ ƒ /chido
+11:44:02.121 ├ ƒ /chido/actions
+11:44:02.122 ├ ƒ /chido/approvals
+11:44:02.122 ├ ƒ /chido/ops
+11:44:02.122 ├ ƒ /chido/preflight
+11:44:02.122 ├ ƒ /chido/research-gate
+11:44:02.123 ├ ƒ /chido/signatures
+11:44:02.123 ├ ƒ /commands
+11:44:02.124 ├ ○ /contacto
+11:44:02.124 ├ ƒ /dashboard
+11:44:02.125 ├ ○ /ecosistema
+11:44:02.125 ├ ○ /empresa
+11:44:02.125 ├ ƒ /governance
+11:44:02.125 ├ ƒ /integrations
+11:44:02.125 ├ ƒ /launch
+11:44:02.126 ├ ƒ /live
+11:44:02.126 ├ ○ /login
+11:44:02.126 ├ ○ /manifest.webmanifest
+11:44:02.126 ├ ƒ /map
+11:44:02.127 ├ ƒ /memory
+11:44:02.127 ├ ƒ /memory/review
+11:44:02.127 ├ ƒ /mobile
+11:44:02.128 ├ ƒ /nodes
+11:44:02.128 ├ ○ /one
+11:44:02.129 ├ ƒ /owner
+11:44:02.129 ├ ƒ /owner/actions
+11:44:02.130 ├ ƒ /owner/agis
+11:44:02.130 ├ ƒ /owner/apps
+11:44:02.130 ├ ƒ /owner/command-center
+11:44:02.131 ├ ƒ /owner/ecosystem
+11:44:02.131 ├ ƒ /owner/evidence
+11:44:02.131 ├ ƒ /owner/nova
+11:44:02.132 ├ ○ /robots.txt
+11:44:02.132 ├ ƒ /security
+11:44:02.132 ├ ƒ /security/grants
+11:44:02.133 ├ ƒ /security/hardening
+11:44:02.133 ├ ƒ /security/rls
+11:44:02.133 ├ ○ /seguridad
+11:44:02.134 ├ ƒ /servicios
+11:44:02.134 ├ ƒ /signout
+11:44:02.135 ├ ○ /sitemap.xml
+11:44:02.135 ├ ○ /soluciones
+11:44:02.135 ├ ƒ /status
+11:44:02.136 └ ƒ /supply
+11:44:02.136 
+11:44:02.136 
+11:44:02.137 ƒ Proxy (Middleware)
+11:44:02.140 
+11:44:02.140 ○  (Static)   prerendered as static content
+11:44:02.140 ƒ  (Dynamic)  server-rendered on demand
+11:44:02.141 
+11:44:03.096 Build Completed in /vercel/output [2m]
+11:44:04.785 Deploying outputs...
+11:44:17.912 Deployment completed
+11:44:18.094 Creating build cache...
+11:44:48.586 Created build cache: 30s
+11:44:48.587 Uploading build cache [229.01 MB]
+11:44:51.805 Build cache uploaded: 3.232s
