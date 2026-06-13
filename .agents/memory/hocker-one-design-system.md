@@ -11,9 +11,10 @@ description: Durable design/typography/icon decisions for the HOCKER ONE Next.js
 - **How to apply:** All `body` font-family rules and the mobile (`<=768px`) override must resolve to `var(--font-inter)`. Never reintroduce bare family names or `Arial`. `globals.css` has 3 competing `body` font rules (cascade — the last one wins); keep them all on `var(--font-inter)`.
 
 ## Mobile / APK performance (owner hard requirement)
-- `globals.css` `@media (max-width:768px)` intentionally forces `box-shadow/backdrop-filter/transform/animation/filter: none`.
-- **Why:** Owner uses the Android APK (Capacitor WebView) and requires "fast > fancy / sin lag". Heavy effects (especially `backdrop-filter` blur + animations) cause jank there.
-- **How to apply:** Do NOT re-enable heavy effects on mobile to make it "premium". Elevate the mobile/APK feel through typography, color, and rounded radii (cheap), not blur/shadow/animation.
+- On mobile (`<=768px`), reduce ONLY heavy *decorative* effects (`backdrop-filter`/`filter` blur, decorative `animation`) scoped to VFX/background + glass-panel classes (`.hko-live-*`, `.hko-final-*`, `.hocker-panel-pro`, `.hko-page-card`, `.shell-panel`). The heavy canvas VFX (`HockerVfxLayer`) does not mount at all on mobile/reduced-motion.
+- **NEVER** globally suppress `transform`/`transition`/`animation` (e.g. `body * { transform: none !important }`). Doing that breaks real component UI (menus, buttons, layout transitions) and was the actual cause of the mobile/private "diseño roto / glitch".
+- **Why:** Owner uses the Android APK (Capacitor WebView) and requires "fast > fancy / sin lag". The real lag sources are the canvas RAF loop + blur/backdrop, not box-shadows or component transforms.
+- **How to apply:** Keep box-shadows and component transforms ENABLED on mobile. If jank persists, add `box-shadow:none` scoped to high-repeat card classes only — never a global reset. Elevate the mobile feel through typography, color, and radii, not blur.
 
 ## App icons (PWA + APK)
 - Icons are generated from `public/brand/hocker-one-isotype.png` (blue squircle "h") on a pure-black `#000000` background, via `sharp`. The isotype's own bg is `#000000` (sampled).

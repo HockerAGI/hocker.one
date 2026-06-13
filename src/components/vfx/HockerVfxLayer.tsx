@@ -12,15 +12,30 @@ type Particle = {
 
 const PARTICLES = 86;
 
-function prefersReducedMotion() {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 export default function HockerVfxLayer() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const [paused, setPaused] = useState(false);
+  const [active, setActive] = useState(false);
+
+  // The heavy canvas VFX only runs on desktop with motion allowed.
+  // On mobile (<=768px) or reduced-motion it does not mount at all: this keeps
+  // mobile/APK fast and prevents the lightweight background and this canvas
+  // layer from stacking/fighting (the source of the mobile/private glitch).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mqMobile = window.matchMedia("(max-width: 768px)");
+    const mqMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setActive(!mqMobile.matches && !mqMotion.matches);
+    update();
+    mqMobile.addEventListener("change", update);
+    mqMotion.addEventListener("change", update);
+    return () => {
+      mqMobile.removeEventListener("change", update);
+      mqMotion.removeEventListener("change", update);
+    };
+  }, []);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("hko:vfx-paused");
@@ -28,13 +43,20 @@ export default function HockerVfxLayer() {
   }, []);
 
   useEffect(() => {
+    if (!active) {
+      // On mobile / reduced-motion the layer is not mounted; clear the flag so the
+      // global html[data-hko-vfx="paused"] rule can never leak a paused state here.
+      delete document.documentElement.dataset.hkoVfx;
+      return;
+    }
     document.documentElement.dataset.hkoVfx = paused ? "paused" : "live";
     window.localStorage.setItem("hko:vfx-paused", paused ? "1" : "0");
-  }, [paused]);
+  }, [paused, active]);
 
   useEffect(() => {
+    if (!active) return;
     const canvas = canvasRef.current;
-    if (!canvas || prefersReducedMotion()) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
@@ -139,17 +161,22 @@ export default function HockerVfxLayer() {
     resize();
     rafRef.current = window.requestAnimationFrame(draw);
 
-    window.addEventListener("resize", resize);
-    document.addEventListener("visibilitychange", () => {
+    const onVisibility = () => {
       last = performance.now();
-    });
+    };
+
+    window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       running = false;
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibility);
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
     };
-  }, [paused]);
+  }, [paused, active]);
+
+  if (!active) return null;
 
   return (
     <>
