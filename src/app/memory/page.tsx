@@ -44,10 +44,14 @@ function memoryClass(type: string): string {
   return "border-slate-400/20 bg-slate-500/10 text-slate-300";
 }
 
-function getAgi(data: JsonObject | null): string {
-  if (!data) return "SYNTIA";
+function getAgiOrNull(data: JsonObject | null): string | null {
+  if (!data) return null;
   const value = data.agi_id ?? data.agi ?? data.primary_agi;
-  return typeof value === "string" && value.trim() ? value : "SYNTIA";
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function getAgi(data: JsonObject | null): string {
+  return getAgiOrNull(data) ?? "SYNTIA";
 }
 
 async function loadMemory(): Promise<MemoryEvent[]> {
@@ -116,12 +120,17 @@ export default async function MemoryPage() {
 
           <div className="hocker-panel-pro p-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-amber-400">Pendientes</p>
-            <p className="mt-1 text-2xl font-black text-white">{nextCount + interactionCount}</p>
+            <p className="mt-1 text-2xl font-black text-white">{nextCount}</p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-violet-300/70">
+              {interactionCount} interacciones
+            </p>
           </div>
         </section>
 
         <Hint title="SYNTIA activa">
-          Esta memoria sale de Supabase. NOVA la usa para mantener continuidad y responder sin perder contexto.
+          Esta memoria sale de Supabase en vivo y queda disponible para NOVA vía{" "}
+          <code className="rounded bg-white/5 px-1 py-0.5 text-[11px]">/api/agi/runtime/memory</code>. El
+          consumo desde NOVA depende de la sincronización de nova.agi por el dueño.
         </Hint>
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -141,7 +150,10 @@ export default async function MemoryPage() {
               {latestNext?.message ?? "Sin pendiente registrado todavía."}
             </h2>
             <p className="mt-3 text-xs font-bold uppercase tracking-widest text-slate-500">
-              Responsable base: SYNTIA + NOVA
+              {(() => {
+                const responsible = latestNext ? getAgiOrNull(latestNext.data) : null;
+                return responsible ? `Responsable: ${responsible}` : "Sin responsable asignado";
+              })()}
             </p>
           </article>
         </section>

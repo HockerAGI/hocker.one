@@ -194,7 +194,7 @@ export function getSyntiaMemoryWriteGatePublicContext() {
       update_feed_existing: "public.agi_update_feed",
     },
     next_step:
-      "12.7G-2 debe endurecer owner decision/publication sin confiar en reviewer_role enviado por body.",
+      "12.7H ya endurece la decisión/publicación owner (actor validado en servidor; reviewer_role del body ignorado). Pendiente del dueño: aplicar la migración de índices únicos para idempotencia real de submit/review.",
   };
 }
 
@@ -358,6 +358,63 @@ export async function submitSyntiaMemoryProposal(input: MemoryGateInput, traceId
     .single();
 
   if (error) {
+    // Idempotencia real: si el índice único de propuestas vivas dispara una
+    // colisión (envío concurrente con el mismo source_hash), no es un fallo.
+    // Recuperamos la propuesta viva existente y registramos que se vio de nuevo.
+    if ((error as { code?: string }).code === "23505") {
+      const { data: existing } = await db
+        .from("agi_learning_events")
+        .select("id,status,source_hash,canonical_memory_key,times_seen")
+        .eq("project_id", draft.project_id)
+        .eq("source_hash", draft.source_hash)
+        .in("status", ["pending_review", "approved"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing?.id) {
+        await db
+          .from("agi_learning_events")
+          .update({
+            times_seen: Number(existing.times_seen || 1) + 1,
+            last_seen_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+
+        await auditEvent({
+          projectId: draft.project_id,
+          type: "memory_write_gate.proposal_deduplicated",
+          message: "Propuesta de memoria deduplicada (idempotente) por Write Gate.",
+          data: {
+            trace_id: traceId,
+            version: SYNTIA_MEMORY_WRITE_GATE_VERSION,
+            learning_event_id: existing.id,
+            source_hash: draft.source_hash,
+            canonical_memory_key: draft.canonical_memory_key,
+            deduplicated: true,
+          },
+        });
+
+        return {
+          ok: true,
+          trace_id: traceId,
+          executed: false,
+          published: false,
+          feed_created: false,
+          actions_created: false,
+          deduplicated: true,
+          learning_event_id: existing.id,
+          status: existing.status,
+          source_hash: existing.source_hash,
+          canonical_memory_key: existing.canonical_memory_key,
+          message:
+            "Ya existía una propuesta viva equivalente. Se registró la repetición sin duplicar.",
+          version: SYNTIA_MEMORY_WRITE_GATE_VERSION,
+          preflight,
+        };
+      }
+    }
+
     return {
       ok: false,
       trace_id: traceId,
