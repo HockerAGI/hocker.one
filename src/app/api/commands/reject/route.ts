@@ -65,11 +65,16 @@ export async function POST(req: Request): Promise<Response> {
       })
       .eq("project_id", ctx.project_id)
       .eq("id", id)
+      .eq("status", "needs_approval")
       .select("*")
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
       throw new ApiError(500, { error: "Falla al registrar el rechazo en la matriz de datos." });
+    }
+
+    if (!data) {
+      throw new ApiError(409, { error: "La orden ya no está pendiente de aprobación." });
     }
 
     await ctx.sb.from("events").insert({
