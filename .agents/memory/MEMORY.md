@@ -1,2 +1,3 @@
-- [HOCKER ONE project](hocker-one-project.md) — imported Next.js 16 app; Replit is EDIT-ONLY, owner deploys on Vercel; do NOT migrate, do NOT build the PDF-described ecosystem platforms.
-- [Replit protected files](replit-protected-files.md) — can't rm/edit .replit/.replitignore (env-managed); can't `rm .gitignore` (guarded as destructive git); edit .gitignore via the write tool.
+- [HOCKER ONE project](hocker-one-project.md) — imported Next.js 16 app; Replit is EDIT-ONLY, owner deploys on Vercel; never migrate; never build the PDF ecosystem.
+- [AGI real vs vision](agi-real-vs-vision.md) — PDFs = forbidden future vision; "make AGIs real" = wire real data + legit APIs within the advisory/approval framework.
+- [Replit protected files](replit-protected-files.md) — .replit/.replitignore env-managed (no rm/edit); .gitignore guarded from rm, edit via write tool.

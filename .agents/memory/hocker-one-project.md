@@ -4,7 +4,7 @@ description: Nature, hard constraints, and diagnostic baseline of the imported h
 ---
 - Repo: HockerAGI/hocker.one — real, mature Next.js 16 App Router app. npm (package-lock), engines node 22.x. Stack: Supabase (auth+RLS), GitHub action gateway for NOVA, Trigger.dev, Langfuse, Capacitor/Android, NOVA engine on Railway.
 
-**Hard constraints (from owner "Armando"):**
+**Hard constraints (from the owner / director):**
 - Replit is ONLY for editing / cleaning / fixing / connecting code. He deploys & runs on Vercel himself — never run or migrate the app in Replit.
 - Do NOT migrate to Replit's stack. Respect the existing Next.js/Vercel/Supabase/GitHub setup exactly.
 - Do NOT build the external platforms described in the PDFs (Cloud Run, Hetzner, Cloudflare, Neo4j, GPT-5, etc.) — PDFs (attached_assets/AGIs_unificadas.txt, APPS-WEBS_UNIFICADAS.txt) are vision/ecosystem only.
@@ -28,7 +28,7 @@ description: Nature, hard constraints, and diagnostic baseline of the imported h
 - /api/orchestrator/run validates `HOCKER_ONE_INTERNAL_TOKEN ?? CRON_SECRET`. ANY internal caller that forwards to it (cron, commands, commands/approve) MUST forward that same precedence in the Bearer header, or it silently 401s when the two secrets differ. External cron entry still authenticates with CRON_SECRET. (cron route was forwarding raw CRON_SECRET → fixed.)
 - FOOTGUN: ORCHESTRATOR_BASE_URL is dual-purpose — cron uses it as the base for the app's OWN /api/orchestrator/run, but hocker-provider-orchestrator.ts uses it as the external NOVA AGI (Railway) URL fallback. Setting it to Railway breaks the cron self-forward. Leave UNSET on Vercel (origin fallback) or point it at the Vercel app itself.
 
-**Resolved this session (no longer "islands"):**
+**Jurix & security endpoints (durable facts):**
 - Jurix Fastify island ported to Next routes under src/app/api/jurix/audit/* (auth via requireOwnerOrInternal, zod on log body); dead src/routes/jurix.ts + src/lib/http.ts deleted and the unused `fastify` dep removed.
 - system/security-hardening & system/tenant-rls endpoints: KEPT per owner decision (do NOT delete); pages /security/hardening & /security/rls exist.
 
@@ -39,7 +39,7 @@ description: Nature, hard constraints, and diagnostic baseline of the imported h
   - `auditCriticalAction` is now wired into nova.agi `enqueueActions` (LIVE — called from app.ts handleChat, seals "command.enqueued" only for needsApproval/write commands; reads skip it). It is also wired into `approveAction`/`rejectAction`, but THOSE two remain dormant (no call sites in nova.agi).
   - PROD CONFIG the owner must set: nova.agi Railway HOCKER_ONE_API_URL=real hocker.one URL (now guarded in prod via superRefine — boots-fail instead of per-audit-fail) + NOVA_ORCHESTRATOR_KEY; hocker.one/Vercel same NOVA_ORCHESTRATOR_KEY + HOCKER_AUDIT_SECRET (else falls back to SUPABASE_SERVICE_ROLE_KEY).
 - Command-signing canonical-JSON null edge: hocker.one `stableStringify(null)`→`"null"` vs siblings→`"{}"`. NEVER triggered (every signer defaults payload to `{}`). Do NOT "fix" hocker.one's stableStringify — it ALSO feeds audit row_hash, so changing null handling would silently change audit hashes.
-- `_external/nova.agi` & `_external/hocker-node-agent` are shallow clones WITHOUT their own `.git` (git commands there read the PARENT hocker.one repo, where `_external/` is gitignored → empty diff/status). To recover an original file, fetch GitHub raw (repos are public). Edits made here must be pushed by Armando from HIS OWN clones; they never appear in hocker.one's Git pane.
+- `_external/nova.agi` & `_external/hocker-node-agent` are shallow clones WITHOUT their own `.git` (git commands there read the PARENT hocker.one repo, where `_external/` is gitignored → empty diff/status). To recover an original file, fetch GitHub raw (repos are public). Edits made here must be pushed by the owner from their own clones; they never appear in hocker.one's Git pane.
 
 **Command approval = the REAL execution gate (seal-before-execute), durable:**
 - The production approve/reject path is hocker.one `src/app/api/commands/{approve,reject}/route.ts` — NOT nova.agi's approveAction/rejectAction (latent exports). The node-agent / `/api/orchestrator/run` executes a command purely because `commands.status='queued'`; nothing re-checks audit at execution time.
