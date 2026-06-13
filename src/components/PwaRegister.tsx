@@ -17,6 +17,7 @@ export default function PwaRegister() {
     if (!("serviceWorker" in navigator)) return;
 
     let installPrompt: BeforeInstallPromptEvent | null = null;
+    let idleId: number | undefined;
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -69,11 +70,21 @@ export default function PwaRegister() {
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt as EventListener);
     window.addEventListener("appinstalled", onAppInstalled);
 
-    void register();
+    // Defer SW registration to idle time so it never competes with first paint.
+    const startRegister = () => void register();
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(startRegister);
+    } else {
+      idleId = window.setTimeout(startRegister, 1500);
+    }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt as EventListener);
       window.removeEventListener("appinstalled", onAppInstalled);
+      if (idleId !== undefined) {
+        if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idleId);
+        else window.clearTimeout(idleId);
+      }
       installPrompt = null;
     };
   }, []);

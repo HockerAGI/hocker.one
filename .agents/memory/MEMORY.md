@@ -2,3 +2,4 @@
 - [AGI real vs vision](agi-real-vs-vision.md) — PDFs = forbidden future vision; "make AGIs real" = wire real data + legit APIs within the advisory/approval framework.
 - [Replit protected files](replit-protected-files.md) — .replit/.replitignore env-managed (no rm/edit); .gitignore guarded from rm, edit via write tool.
 - [HOCKER ONE design system](hocker-one-design-system.md) — brand font = Inter via next/font (--font-inter); mobile strips effects for no-lag (elevate via type, not blur); app icons from isotype on #000000.
+- [HOCKER ONE performance](hocker-one-performance.md) — keep root ShellFrame thin (code-split private shell); ssr:false for canvas/chat only; don't blind-split globals.css; redesign in canvas then graduate.
