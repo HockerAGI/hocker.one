@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0",
+  "repo_name": "hockerone",
+  "generated_at": "2026-06-18T03:38:39Z",
+  "source_artifacts": [
+    {
+      "name": "ReplitExport-HockerAGI.tar.gz",
+      "sha256": "a902d71532d40b80a584b6cb0d53efdcb145c979e2dbebb319a9928dbab08fc9",
+      "entries": 2022,
+      "files": 1471
+    },
+    {
+      "name": "HOCKER_EXPORT_20260616_155414.zip",
+      "sha256": "3ca73742c1ff3a7d8e3ebd3ed930493c3054affddb7ec7bfa333f982b788cf96",
+      "entries": 1367
+    },
+    {
+      "name": "HOCKER_EXPORT_EXTREME_20260616_160753.zip",
+      "sha256": "c169f831b8dfcaa537b9c6a7b1a99601f73bfd6c186b4158ff0921097abe42a8",
+      "entries": 1380
+    }
+  ],
+  "top_level_dir_counts": {
+    ".git": 769,
+    "src": 294,
+    "_external": 123,
+    "docs": 92,
+    "android": 53,
+    "public": 47,
+    "supabase": 33,
+    "scripts": 18,
+    "attached_assets": 11,
+    ".agents": 8,
+    ".github": 3,
+    ".config": 1,
+    ".gitignore": 1,
+    ".replit": 1,
+    ".replitignore": 1,
+    "AGENTS.md": 1,
+    "README.md": 1,
+    "capacitor.config.ts": 1,
+    "env.example": 1,
+    "eslint.config.mjs": 1
+  },
+  "key_dir_counts": {
+    "src": 294,
+    "docs": 92,
+    "supabase": 33,
+    "android": 53,
+    "scripts": 18,
+    "public": 47,
+    "_external": 123,
+    ".agents": 8,
+    ".github": 3,
+    ".config": 1
+  },
+  "package_json_paths": [
+    "hockerone/_external/hocker-node-agent/package.json",
+    "hockerone/_external/nova.agi/package.json",
+    "hockerone/package.json"
+  ],
+  "active_source_files": 291,
+  "environment_contract": {
+    "referenced_keys": 69,
+    "missing_from_current_env_example": [
+      "ALLOWED_ORIGINS",
+      "ALLOW_LOCAL_COMMANDS",
+      "ALLOW_WRITE_COMMANDS",
+      "BASE_URL",
+      "CHIDO_ACTION_HMAC_SECRET",
+      "CHROME_PATH",
+      "CHROMIUM_BIN",
+      "CLOUD_COMMAND_NODE_ID",
+      "COMMAND_HMAC_SECRET",
+      "CRON_SECRET",
+      "..."
+    ],
+    "note": "The repo's current env.example is intentionally minimal; this manifest expects the enhanced template in env.example.enhanced."
+  },
+  "import_scan": {
+    "checked_local_imports": 654,
+    "broken_local_imports": 3,
+    "broken_scopes": [
+      [
+        "@/lib/nova-executive-language",
+        1
+      ],
+      [
+        "./errors",
+        1
+      ],
+      [
+        "./.next/types/routes.d.ts",
+        1
+      ]
+    ],
+    "note": "All unresolved imports are in archived/generated files, not in the active runtime tree."
+  },
+  "reimport_notes": [
+    "Treat the tar.gz as the content source and the zip exports as recovery envelopes.",
+    "Do not overwrite active runtime files with archived legacy files unless references are proven dead.",
+    "Use the enhanced env template before any re-deploy."
+  ]
+}
