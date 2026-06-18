@@ -18,13 +18,11 @@ import {
   Paperclip,
   Plus,
   RefreshCw,
-  Rocket,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
   Square,
-  Undo2,
   Video,
   Wand2,
   XCircle,
@@ -584,6 +582,237 @@ function actionPrimaryLocation(action: RuntimeAction) {
   return info.repo;
 }
 
+function DraftCard({ draft, onShowSummary, onCancel }: { draft: ChatActionDraft; onShowSummary: () => void; onCancel: () => void }) {
+  const flow = Array.isArray(draft.draft?.proposed_flow) ? draft.draft?.proposed_flow ?? [] : [];
+  const safe = draft.executed === false && draft.enqueued === false;
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-[1.6rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_34%),rgba(255,255,255,0.045)] shadow-[0_18px_64px_rgba(14,165,233,0.10)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-sky-300/10 text-sky-200">
+            <Wand2 className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-sm font-black text-white">NOVA preparó una acción</p>
+            <p className="text-[11px] text-slate-400">{formatScope(draft.scope)} · requiere tu revisión</p>
+          </div>
+        </div>
+
+        <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${safe ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200" : "border-amber-300/30 bg-amber-300/10 text-amber-100"}`}>
+          {safe ? "Sin ejecutar" : "Esperando aprobación"}
+        </span>
+      </div>
+
+      <div className="space-y-3 px-4 py-4">
+        <p className="text-sm leading-6 text-slate-100">{compact(draft.draft?.title || draft.reason || "NOVA preparó un borrador seguro.")}</p>
+
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tipo</p>
+            <p className="mt-1 text-sm font-bold text-white">{humanTool(draft.tool_key)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Cuidado</p>
+            <p className="mt-1 text-sm font-bold text-white">{humanRisk(draft.risk_level)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tu aprobación</p>
+            <p className="mt-1 text-sm font-bold text-white">{draft.draft?.owner_gate_required ? "Requerida" : "No requerida"}</p>
+          </div>
+        </div>
+
+        {flow.length > 0 ? (
+          <details className="group rounded-2xl border border-white/10 bg-slate-950/32 p-3">
+            <summary className="cursor-pointer list-none text-xs font-black text-sky-100 outline-none transition hover:text-white">
+              Ver detalle del plan
+            </summary>
+            <div className="mt-3 space-y-2">
+              {flow.map((item, index) => (
+                <div key={`${item}-${index}`} className="flex gap-2 text-xs text-slate-300">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/10 text-[10px] font-black text-sky-200">{index + 1}</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={onShowSummary} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+            Ver estado
+          </button>
+          <button type="button" disabled className="min-h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-500">
+            Requiere materialización segura
+          </button>
+          <button type="button" onClick={onCancel} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15">
+            Cancelar flujo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuidedGitHubChainCard({ chain, busyAction, onShowSummary, onMutate }: { chain: GuidedGitHubChain; busyAction: string | null; onShowSummary: () => void; onMutate: (action: RuntimeAction, mode: "approve" | "reject" | "execute") => void }) {
+  const nextAction = chain.nextAction;
+  const loading = nextAction ? busyAction === nextAction.id : false;
+  const canApprove = Boolean(nextAction && ["needs_approval", "ready_for_production", "production_ready", "queued", "dry_run_queued"].includes(nextAction.status));
+  const canExecute = Boolean(nextAction && nextAction.status === "approved");
+  const canReject = Boolean(nextAction && BLOCKING_STATUSES.has(nextAction.status));
+  const nextLabel = nextAction ? guidedGithubStepLabel(nextAction.action_type) : "Cadena completada";
+
+  return (
+    <div className="rounded-[1.7rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_32%),rgba(255,255,255,0.045)] p-4 shadow-[0_0_38px_rgba(56,189,248,0.08)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Cambios en código</p>
+          <h3 className="mt-1 text-base font-black text-white">{nextAction ? `Siguiente: ${nextLabel}` : "Todo listo"}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-400">NOVA prepara. Tú apruebas. El sistema ejecuta un paso a la vez con evidencia.</p>
+        </div>
+        <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
+          {chain.completed} de {chain.total} completados
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
+          <b className="text-slate-100">Rama protegida:</b> {shortTechnicalValue(chain.targetBranch, 84)}
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
+          <b className="text-slate-100">Estado:</b> {nextAction ? humanStatus(nextAction.status) : "Completado"}
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 lg:grid-cols-3">
+        {GUIDED_GITHUB_ACTION_ORDER.map((actionType, index) => {
+          const action = chain.actions.find((item) => item.action_type === actionType);
+          const active = Boolean(action && nextAction?.id === action.id);
+          const done = Boolean(action && isGuidedGithubCompleted(action));
+
+          return (
+            <div key={actionType} className={`rounded-2xl border p-3 ${active ? "border-sky-300/30 bg-sky-300/10" : done ? "border-emerald-300/25 bg-emerald-300/10" : "border-white/10 bg-white/[0.035]"}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-black text-sky-100">{index + 1}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] ${statusTone(action?.status ?? "pendiente")}`}>
+                  {humanStatus(action?.status ?? "pendiente")}
+                </span>
+              </div>
+              <p className="mt-2 text-sm font-black text-white">{guidedGithubStepLabel(actionType)}</p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-400">{action ? actionEvidenceText(action) : "Se activará cuando el paso anterior esté listo."}</p>
+              {action ? (
+                <details className="mt-2 rounded-xl border border-white/10 bg-slate-950/35 p-2">
+                  <summary className="cursor-pointer list-none text-[11px] font-bold text-sky-100">Evidencia y reversa</summary>
+                  <div className="mt-2 space-y-2 text-[11px] leading-5 text-slate-400">
+                    <p><b className="text-slate-200">Dónde:</b> {shortTechnicalValue(actionPrimaryLocation(action), 88)}</p>
+                    <p><b className="text-slate-200">Reversa:</b> {actionRollbackText(action)}</p>
+                    <p className="text-slate-500">ID técnico: {action.id}</p>
+                  </div>
+                </details>
+              ) : null}
+              {action?.execution_error ? (
+                <p className="mt-2 rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[11px] text-rose-100">{action.execution_error}</p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" onClick={onShowSummary} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+          Ver estado
+        </button>
+
+        {nextAction && canApprove ? (
+          <button type="button" disabled={loading} onClick={() => onMutate(nextAction, "approve")} className="min-h-10 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
+            {loading ? "Procesando…" : `Aprobar ${nextLabel}`}
+          </button>
+        ) : null}
+
+        {nextAction && canExecute ? (
+          <button type="button" disabled={loading} onClick={() => onMutate(nextAction, "execute")} className="min-h-10 rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
+            {loading ? "Ejecutando…" : `Ejecutar ${nextLabel}`}
+          </button>
+        ) : null}
+
+        {nextAction && canReject ? (
+          <button type="button" disabled={loading} onClick={() => onMutate(nextAction, "reject")} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
+            Cancelar flujo
+          </button>
+        ) : null}
+
+        {!nextAction ? (
+          <span className="min-h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100">
+            Cadena completada
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function RuntimeActionCard({ action, busyAction, onShowSummary, onMutate }: { action: RuntimeAction; busyAction: string | null; onShowSummary: () => void; onMutate: (action: RuntimeAction, mode: "approve" | "reject" | "execute") => void }) {
+  const info = summarizeAction(action);
+  const loading = busyAction === action.id;
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/48 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-black text-white">{action.title}</p>
+          <p className="mt-1 text-xs text-slate-400">{humanTool(action.tool_key)} · {guidedGithubStepLabel(action.action_type)}</p>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${statusTone(action.status)}`}>
+          {humanStatus(action.status)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+        <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Repositorio:</b> {info.repo}</div>
+        <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Rama:</b> {shortTechnicalValue(info.branch, 54)}</div>
+        <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Evidencia:</b> {shortTechnicalValue(info.path, 54)}</div>
+      </div>
+
+      <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+        <summary className="cursor-pointer list-none text-xs font-black text-sky-100">Ver evidencia y reversa</summary>
+        <div className="mt-2 space-y-2 text-xs leading-5 text-slate-400">
+          <p>{actionEvidenceText(action)}</p>
+          <p><b className="text-slate-200">Reversa:</b> {actionRollbackText(action)}</p>
+          <p className="text-slate-500">ID técnico: {action.id}</p>
+        </div>
+      </details>
+
+      {action.execution_error ? (
+        <p className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs text-rose-100">{action.execution_error}</p>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" onClick={onShowSummary} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
+          Ver estado
+        </button>
+
+        {(action.status === "needs_approval" || action.status === "ready_for_production" || action.status === "production_ready") ? (
+          <button type="button" disabled={loading} onClick={() => onMutate(action, "approve")} className="min-h-10 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
+            {loading ? "Procesando…" : "Aprobar cambio"}
+          </button>
+        ) : null}
+
+        {action.status === "approved" ? (
+          <button type="button" disabled={loading} onClick={() => onMutate(action, "execute")} className="min-h-10 rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
+            {loading ? "Ejecutando…" : "Ejecutar paso autorizado"}
+          </button>
+        ) : null}
+
+        {BLOCKING_STATUSES.has(action.status) ? (
+          <button type="button" disabled={loading} onClick={() => onMutate(action, "reject")} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
+            Cancelar flujo
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function NovaRealtimeChat() {
   const { projectId } = useWorkspace();
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -663,6 +892,7 @@ export default function NovaRealtimeChat() {
     if (!prompt || isSending) return;
 
     const actionLike = shouldAllowActionDraft(prompt);
+    // eslint-disable-next-line react-hooks/purity -- id()/Date.now() run only inside the send() event handler, never during render
     const userMsg: Msg = { id: id(), role: "user", content: prompt, createdAt: Date.now() };
     const novaId = id();
 
@@ -881,237 +1111,6 @@ export default function NovaRealtimeChat() {
     }
   }
 
-  function DraftCard({ draft }: { draft: ChatActionDraft }) {
-    const flow = Array.isArray(draft.draft?.proposed_flow) ? draft.draft?.proposed_flow ?? [] : [];
-    const safe = draft.executed === false && draft.enqueued === false;
-
-    return (
-      <div className="mt-3 overflow-hidden rounded-[1.6rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_34%),rgba(255,255,255,0.045)] shadow-[0_18px_64px_rgba(14,165,233,0.10)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-sky-300/10 text-sky-200">
-              <Wand2 className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-black text-white">NOVA preparó una acción</p>
-              <p className="text-[11px] text-slate-400">{formatScope(draft.scope)} · requiere tu revisión</p>
-            </div>
-          </div>
-
-          <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${safe ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200" : "border-amber-300/30 bg-amber-300/10 text-amber-100"}`}>
-            {safe ? "Sin ejecutar" : "Esperando aprobación"}
-          </span>
-        </div>
-
-        <div className="space-y-3 px-4 py-4">
-          <p className="text-sm leading-6 text-slate-100">{compact(draft.draft?.title || draft.reason || "NOVA preparó un borrador seguro.")}</p>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tipo</p>
-              <p className="mt-1 text-sm font-bold text-white">{humanTool(draft.tool_key)}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Cuidado</p>
-              <p className="mt-1 text-sm font-bold text-white">{humanRisk(draft.risk_level)}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tu aprobación</p>
-              <p className="mt-1 text-sm font-bold text-white">{draft.draft?.owner_gate_required ? "Requerida" : "No requerida"}</p>
-            </div>
-          </div>
-
-          {flow.length > 0 ? (
-            <details className="group rounded-2xl border border-white/10 bg-slate-950/32 p-3">
-              <summary className="cursor-pointer list-none text-xs font-black text-sky-100 outline-none transition hover:text-white">
-                Ver detalle del plan
-              </summary>
-              <div className="mt-3 space-y-2">
-                {flow.map((item, index) => (
-                  <div key={`${item}-${index}`} className="flex gap-2 text-xs text-slate-300">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/10 text-[10px] font-black text-sky-200">{index + 1}</span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
-          ) : null}
-
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setShowSummary(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
-              Ver estado
-            </button>
-            <button type="button" disabled className="min-h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-500">
-              Requiere materialización segura
-            </button>
-            <button type="button" onClick={() => setMessages((prev) => prev.filter((msg) => msg.actions?.[0] !== draft))} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15">
-              Cancelar flujo
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function GuidedGitHubChainCard({ chain }: { chain: GuidedGitHubChain }) {
-    const nextAction = chain.nextAction;
-    const loading = nextAction ? busyAction === nextAction.id : false;
-    const canApprove = Boolean(nextAction && ["needs_approval", "ready_for_production", "production_ready", "queued", "dry_run_queued"].includes(nextAction.status));
-    const canExecute = Boolean(nextAction && nextAction.status === "approved");
-    const canReject = Boolean(nextAction && BLOCKING_STATUSES.has(nextAction.status));
-    const nextLabel = nextAction ? guidedGithubStepLabel(nextAction.action_type) : "Cadena completada";
-
-    return (
-      <div className="rounded-[1.7rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_32%),rgba(255,255,255,0.045)] p-4 shadow-[0_0_38px_rgba(56,189,248,0.08)]">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">Cambios en código</p>
-            <h3 className="mt-1 text-base font-black text-white">{nextAction ? `Siguiente: ${nextLabel}` : "Todo listo"}</h3>
-            <p className="mt-1 text-xs leading-5 text-slate-400">NOVA prepara. Tú apruebas. El sistema ejecuta un paso a la vez con evidencia.</p>
-          </div>
-          <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
-            {chain.completed} de {chain.total} completados
-          </span>
-        </div>
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
-            <b className="text-slate-100">Rama protegida:</b> {shortTechnicalValue(chain.targetBranch, 84)}
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
-            <b className="text-slate-100">Estado:</b> {nextAction ? humanStatus(nextAction.status) : "Completado"}
-          </div>
-        </div>
-
-        <div className="mt-3 grid gap-2 lg:grid-cols-3">
-          {GUIDED_GITHUB_ACTION_ORDER.map((actionType, index) => {
-            const action = chain.actions.find((item) => item.action_type === actionType);
-            const active = Boolean(action && nextAction?.id === action.id);
-            const done = Boolean(action && isGuidedGithubCompleted(action));
-
-            return (
-              <div key={actionType} className={`rounded-2xl border p-3 ${active ? "border-sky-300/30 bg-sky-300/10" : done ? "border-emerald-300/25 bg-emerald-300/10" : "border-white/10 bg-white/[0.035]"}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-black text-sky-100">{index + 1}</span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] ${statusTone(action?.status ?? "pendiente")}`}>
-                    {humanStatus(action?.status ?? "pendiente")}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-black text-white">{guidedGithubStepLabel(actionType)}</p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-400">{action ? actionEvidenceText(action) : "Se activará cuando el paso anterior esté listo."}</p>
-                {action ? (
-                  <details className="mt-2 rounded-xl border border-white/10 bg-slate-950/35 p-2">
-                    <summary className="cursor-pointer list-none text-[11px] font-bold text-sky-100">Evidencia y reversa</summary>
-                    <div className="mt-2 space-y-2 text-[11px] leading-5 text-slate-400">
-                      <p><b className="text-slate-200">Dónde:</b> {shortTechnicalValue(actionPrimaryLocation(action), 88)}</p>
-                      <p><b className="text-slate-200">Reversa:</b> {actionRollbackText(action)}</p>
-                      <p className="text-slate-500">ID técnico: {action.id}</p>
-                    </div>
-                  </details>
-                ) : null}
-                {action?.execution_error ? (
-                  <p className="mt-2 rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[11px] text-rose-100">{action.execution_error}</p>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setShowSummary(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
-            Ver estado
-          </button>
-
-          {nextAction && canApprove ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "approve")} className="min-h-10 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
-              {loading ? "Procesando…" : `Aprobar ${nextLabel}`}
-            </button>
-          ) : null}
-
-          {nextAction && canExecute ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "execute")} className="min-h-10 rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
-              {loading ? "Ejecutando…" : `Ejecutar ${nextLabel}`}
-            </button>
-          ) : null}
-
-          {nextAction && canReject ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(nextAction, "reject")} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
-              Cancelar flujo
-            </button>
-          ) : null}
-
-          {!nextAction ? (
-            <span className="min-h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100">
-              Cadena completada
-            </span>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  function RuntimeActionCard({ action }: { action: RuntimeAction }) {
-    const info = summarizeAction(action);
-    const loading = busyAction === action.id;
-
-    return (
-      <div className="rounded-2xl border border-white/10 bg-slate-950/48 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-black text-white">{action.title}</p>
-            <p className="mt-1 text-xs text-slate-400">{humanTool(action.tool_key)} · {guidedGithubStepLabel(action.action_type)}</p>
-          </div>
-          <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${statusTone(action.status)}`}>
-            {humanStatus(action.status)}
-          </span>
-        </div>
-
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Repositorio:</b> {info.repo}</div>
-          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Rama:</b> {shortTechnicalValue(info.branch, 54)}</div>
-          <div className="rounded-xl bg-white/[0.04] p-2 text-slate-300"><b className="text-slate-100">Evidencia:</b> {shortTechnicalValue(info.path, 54)}</div>
-        </div>
-
-        <details className="mt-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
-          <summary className="cursor-pointer list-none text-xs font-black text-sky-100">Ver evidencia y reversa</summary>
-          <div className="mt-2 space-y-2 text-xs leading-5 text-slate-400">
-            <p>{actionEvidenceText(action)}</p>
-            <p><b className="text-slate-200">Reversa:</b> {actionRollbackText(action)}</p>
-            <p className="text-slate-500">ID técnico: {action.id}</p>
-          </div>
-        </details>
-
-        {action.execution_error ? (
-          <p className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs text-rose-100">{action.execution_error}</p>
-        ) : null}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setShowSummary(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10">
-            Ver estado
-          </button>
-
-          {(action.status === "needs_approval" || action.status === "ready_for_production" || action.status === "production_ready") ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "approve")} className="min-h-10 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50">
-              {loading ? "Procesando…" : "Aprobar cambio"}
-            </button>
-          ) : null}
-
-          {action.status === "approved" ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "execute")} className="min-h-10 rounded-xl bg-sky-300 px-3 py-2 text-xs font-black text-slate-950 hover:bg-sky-200 disabled:opacity-50">
-              {loading ? "Ejecutando…" : "Ejecutar paso autorizado"}
-            </button>
-          ) : null}
-
-          {BLOCKING_STATUSES.has(action.status) ? (
-            <button type="button" disabled={loading} onClick={() => void mutateAction(action, "reject")} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:opacity-50">
-              Cancelar flujo
-            </button>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
 
   return (
     <div className="flex h-full min-h-[68dvh] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#06152D]/80 shadow-2xl">
@@ -1229,14 +1228,14 @@ export default function NovaRealtimeChat() {
                   </div>
 
                   {msg.actions?.map((draft, index) => (
-                    <DraftCard key={`${msg.id}-draft-${index}`} draft={draft} />
+                    <DraftCard key={`${msg.id}-draft-${index}`} draft={draft} onShowSummary={() => setShowSummary(true)} onCancel={() => setMessages((prev) => prev.filter((m) => m.actions?.[0] !== draft))} />
                   ))}
                 </div>
               </div>
             ))}
 
             {productionAction ? (
-              <RuntimeActionCard action={productionAction} />
+              <RuntimeActionCard action={productionAction} busyAction={busyAction} onShowSummary={() => setShowSummary(true)} onMutate={mutateAction} />
             ) : null}
           </div>
         )}
@@ -1250,10 +1249,10 @@ export default function NovaRealtimeChat() {
               Hay tareas esperando tu aprobación. NOVA guía un paso a la vez.
             </div>
             <div className="grid gap-3">
-              {guidedGitHubChain ? <GuidedGitHubChainCard chain={guidedGitHubChain} /> : null}
+              {guidedGitHubChain ? <GuidedGitHubChainCard chain={guidedGitHubChain} busyAction={busyAction} onShowSummary={() => setShowSummary(true)} onMutate={mutateAction} /> : null}
 
               {standaloneBlockingActions.slice(0, guidedGitHubChain ? 1 : 2).map((action) => (
-                <RuntimeActionCard key={action.id} action={action} />
+                <RuntimeActionCard key={action.id} action={action} busyAction={busyAction} onShowSummary={() => setShowSummary(true)} onMutate={mutateAction} />
               ))}
             </div>
           </div>

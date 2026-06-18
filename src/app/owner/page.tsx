@@ -8,7 +8,6 @@ import NovaCorePanel from "@/components/ui-hocker/NovaCorePanel";
 import StatusBadge from "@/components/ui-hocker/StatusBadge";
 
 import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
-import OwnerLiveHome from "@/components/owner/OwnerLiveHome";
 import HockerCommandCenter from "@/components/owner/HockerCommandCenter";
 import AgiRuntimePreview from "@/components/owner/AgiRuntimePreview";
 import OwnerApprovalCenter from "@/components/owner/OwnerApprovalCenter";

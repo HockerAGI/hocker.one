@@ -84,11 +84,16 @@ export async function POST(req: Request): Promise<Response> {
         })
         .eq("project_id", ctx.project_id)
         .eq("id", id)
+        .eq("status", "needs_approval")
         .select("*")
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
+      if (error) {
         throw new ApiError(500, { error: "No se pudo registrar el rechazo." });
+      }
+
+      if (!data) {
+        throw new ApiError(409, { error: "La orden ya no está pendiente de aprobación." });
       }
 
       await ctx.sb.from("events").insert({
@@ -148,6 +153,21 @@ export async function POST(req: Request): Promise<Response> {
       approvedAt,
     );
 
+    // Sella la auditoría firmada ANTES de habilitar la ejecución: si la cadena
+    // de auditoría falla, la orden NO pasa a "queued" y el agente nunca la ejecuta.
+    await auditTrailEvent({
+      project_id: ctx.project_id,
+      event_type: "command.approved",
+      entity_type: "command",
+      entity_id: id,
+      actor_type: "user",
+      actor_id: ctx.user.id,
+      role: ctx.role,
+      action: "approve_command",
+      severity: "info",
+      payload: { command_id: id, command: commandName, node_id: nodeId || null },
+    });
+
     const { data, error } = await ctx.sb
       .from("commands")
       .update({
@@ -160,11 +180,16 @@ export async function POST(req: Request): Promise<Response> {
       })
       .eq("project_id", ctx.project_id)
       .eq("id", id)
+      .eq("status", "needs_approval")
       .select("*")
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
       throw new ApiError(500, { error: "No se pudo autorizar la orden." });
+    }
+
+    if (!data) {
+      throw new ApiError(409, { error: "La orden ya no está pendiente de aprobación." });
     }
 
     await ctx.sb.from("events").insert({
@@ -174,19 +199,6 @@ export async function POST(req: Request): Promise<Response> {
       type: "command.approved",
       message: `Command ${id} aprobada`,
       data: { command_id: id },
-    });
-
-    await auditTrailEvent({
-      project_id: ctx.project_id,
-      event_type: "command.approved",
-      entity_type: "command",
-      entity_id: id,
-      actor_type: "user",
-      actor_id: ctx.user.id,
-      role: ctx.role,
-      action: "approve_command",
-      severity: "info",
-      payload: { command_id: id },
     });
 
     if (isCloudNode((data as { node_id?: string | null }).node_id ?? null)) {

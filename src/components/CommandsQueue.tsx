@@ -8,7 +8,7 @@ import { useWorkspace } from "@/components/WorkspaceContext";
 import type { CommandRow, CommandStatus } from "@/lib/types";
 import { normalizeCommandStatus } from "@/lib/types";
 import StatusBadge from "@/components/ui-hocker/StatusBadge";
-import { humanCommandLabel, humanStatusLabel } from "@/lib/hocker-human-labels";
+import { humanCommandLabel } from "@/lib/hocker-human-labels";
 
 type QueueItem = CommandRow;
 

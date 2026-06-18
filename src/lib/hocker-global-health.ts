@@ -56,7 +56,13 @@ function publicBaseUrl(): string {
 }
 
 function novaHealthUrl(): string {
-  return process.env.NOVA_AGI_HEALTH_URL || "https://novaagi-production.up.railway.app/health";
+  const explicit = (process.env.NOVA_AGI_HEALTH_URL || "").trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const base = (process.env.NOVA_AGI_URL || "").trim().replace(/\/$/, "");
+  if (base) return `${base}/health`;
+
+  return "";
 }
 
 function statusFromOk(ok: boolean): HockerHealthStatus {
@@ -411,6 +417,8 @@ export async function collectHockerGlobalHealth(args?: { emitEvent?: boolean }):
 
   const canonicalChido = CANONICAL_INTEGRATIONS.find((item) => item.module_id === "chido-casino");
 
+  const novaHealth = novaHealthUrl();
+
   const checks = await Promise.all([
     Promise.resolve({
       id: "hocker-one-api-health",
@@ -445,14 +453,26 @@ export async function collectHockerGlobalHealth(args?: { emitEvent?: boolean }):
       },
     } as HockerGlobalHealthCheck),
 
-    checkUrl({
-      id: "nova-railway",
-      label: "NOVA / Railway",
-      category: "agi",
-      url: novaHealthUrl(),
-      critical: true,
-      source: "nova.agi.health",
-    }),
+    novaHealth
+      ? checkUrl({
+          id: "nova-railway",
+          label: "NOVA / Railway",
+          category: "agi",
+          url: novaHealth,
+          critical: true,
+          source: "nova.agi.health",
+        })
+      : Promise.resolve({
+          id: "nova-railway",
+          label: "NOVA / Railway",
+          category: "agi",
+          status: "unknown",
+          ok: false,
+          critical: true,
+          detail:
+            "NOVA_AGI_URL / NOVA_AGI_HEALTH_URL no configurado — estado real no disponible (no se inventa)",
+          source: "nova.agi.health",
+        } as HockerGlobalHealthCheck),
 
     checkSupabase(),
     checkMemory(),

@@ -1,7 +1,6 @@
 import {
   HOCKER_MEMORY_MIRROR_API_VERSION,
   auditEvent,
-  intRange,
   jsonObject,
   memorySelect,
   sb,

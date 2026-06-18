@@ -22,6 +22,23 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
     );
   }
 
+  // El forward interno a /api/orchestrator/run debe usar EXACTAMENTE la misma
+  // precedencia de token que ese endpoint valida (HOCKER_ONE_INTERNAL_TOKEN, y
+  // si no existe, CRON_SECRET). Reenviar solo CRON_SECRET provoca un 401 cuando
+  // ambos secretos difieren. Mismo patrón que commands/ y commands/approve/.
+  const internalSecret = String(
+    process.env.HOCKER_ONE_INTERNAL_TOKEN ??
+      process.env.CRON_SECRET ??
+      "",
+  ).trim();
+
+  if (!internalSecret) {
+    return NextResponse.json(
+      { ok: false, error: "HOCKER_ONE_INTERNAL_TOKEN / CRON_SECRET no configurado para despachar al orquestador." },
+      { status: 500 },
+    );
+  }
+
   const baseUrl = (
     process.env.ORCHESTRATOR_BASE_URL ??
     new URL(req.url).origin
@@ -34,7 +51,7 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
     const res = await fetch(new URL("/api/orchestrator/run", baseUrl), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${cronSecret}`,
+        Authorization: `Bearer ${internalSecret}`,
         "content-type": "application/json",
       },
       cache: "no-store",

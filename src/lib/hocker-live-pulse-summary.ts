@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export type HockerLivePulseSummary = {
   ok: boolean;
@@ -47,13 +47,15 @@ function empty(source: HockerLivePulseSummary["source"], message: string): Hocke
   };
 }
 
+type CountQuery = ReturnType<ReturnType<SupabaseClient["from"]>["select"]>;
+
 async function safeCount(
-  sb: any,
+  sb: SupabaseClient,
   table: string,
-  apply?: (q: any) => any,
+  apply?: (q: CountQuery) => CountQuery,
 ) {
   try {
-    let q = sb.from(table).select("*", { count: "exact", head: true });
+    let q: CountQuery = sb.from(table).select("*", { count: "exact", head: true });
     if (apply) q = apply(q);
     const { count, error } = await q;
     if (error) return 0;
@@ -103,11 +105,17 @@ export async function getHockerLivePulseSummary(): Promise<HockerLivePulseSummar
     ]);
 
     const repeatedSeen =
-      (learningSeen.data || []).reduce((sum: number, row: any) => sum + Math.max(0, num(row.times_seen) - 1), 0) +
-      (memorySeen.data || []).reduce((sum: number, row: any) => sum + Math.max(0, num(row.times_seen) - 1), 0) +
-      (errorSeen.data || []).reduce((sum: number, row: any) => sum + Math.max(0, num(row.times_seen) - 1), 0);
+      (learningSeen.data || []).reduce((sum: number, row: { times_seen?: unknown }) => sum + Math.max(0, num(row.times_seen) - 1), 0) +
+      (memorySeen.data || []).reduce((sum: number, row: { times_seen?: unknown }) => sum + Math.max(0, num(row.times_seen) - 1), 0) +
+      (errorSeen.data || []).reduce((sum: number, row: { times_seen?: unknown }) => sum + Math.max(0, num(row.times_seen) - 1), 0);
 
-    const latest = latestMemoryRes.data as any | null;
+    const latest = latestMemoryRes.data as {
+      title?: unknown;
+      source_agi_id?: unknown;
+      target_agi_ids?: unknown;
+      times_seen?: unknown;
+      created_at?: unknown;
+    } | null;
 
     return {
       ok: true,

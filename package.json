@@ -34,7 +34,6 @@
     "@supabase/supabase-js": "^2.49.1",
     "@trigger.dev/sdk": "3.3.17",
     "clsx": "^2.1.1",
-    "fastify": "^5.0.0",
     "iconv-lite": "^0.7.2",
     "langfuse-node": "^3.38.6",
     "lucide-react": "^0.451.0",

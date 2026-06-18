@@ -20,6 +20,8 @@ function asText(value: unknown, fallback = ""): string {
 
 async function checkHealth(endpoint: string) {
   const started = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
 
   try {
     const res = await fetch(endpoint, {
@@ -27,6 +29,7 @@ async function checkHealth(endpoint: string) {
       headers: {
         "User-Agent": "HockerONE-IntegrationRegistry/0.1",
       },
+      signal: controller.signal,
     });
 
     const raw = await res.text();
@@ -50,9 +53,16 @@ async function checkHealth(endpoint: string) {
       http_status: 0,
       latency_ms: Date.now() - started,
       body: {
-        error: error instanceof Error ? error.message : "unknown_error",
+        error:
+          error instanceof Error
+            ? error.name === "AbortError"
+              ? "timeout tras 8000ms"
+              : error.message
+            : "unknown_error",
       },
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

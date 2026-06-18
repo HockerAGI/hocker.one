@@ -229,6 +229,7 @@ export async function decideSyntiaMemoryReview(
 
   let memoryMirrorId: string | null = null;
   let feedCreated = false;
+  const feedErrors: string[] = [];
 
   if (decision === "approved" && publishToMemory && isOwnerActor(actor)) {
     const targetAgiIds = agiArray(
@@ -322,19 +323,45 @@ export async function decideSyntiaMemoryReview(
         .single();
 
       if (memoryError) {
-        return {
-          ok: false,
-          http_status: 500,
-          trace_id: traceId,
-          version: SYNTIA_MEMORY_REVIEW_GATE_VERSION,
-          reason: "failed_to_publish_memory",
-          error: memoryError.message,
-          review_id: review?.id,
-          published: false,
-        };
-      }
+        // Idempotencia: si otra decisión concurrente ya publicó esta memoria
+        // (mismo canonical_memory_key), recuperamos la fila existente en vez de fallar.
+        if ((memoryError as { code?: string }).code === "23505") {
+          const { data: raced } = await db
+            .from("agi_memory_mirror")
+            .select("id,times_seen")
+            .eq("project_id", projectId)
+            .eq("canonical_memory_key", canonicalMemoryKey)
+            .maybeSingle();
 
-      memoryMirrorId = memory?.id as string;
+          if (raced?.id) {
+            await db
+              .from("agi_memory_mirror")
+              .update({
+                last_seen_at: new Date().toISOString(),
+                times_seen: Number(raced.times_seen || 0) + 1,
+                active: safetyStatus !== "blocked",
+              })
+              .eq("id", raced.id);
+
+            memoryMirrorId = raced.id as string;
+          }
+        }
+
+        if (!memoryMirrorId) {
+          return {
+            ok: false,
+            http_status: 500,
+            trace_id: traceId,
+            version: SYNTIA_MEMORY_REVIEW_GATE_VERSION,
+            reason: "failed_to_publish_memory",
+            error: memoryError.message,
+            review_id: review?.id,
+            published: false,
+          };
+        }
+      } else {
+        memoryMirrorId = memory?.id as string;
+      }
     }
 
     for (const agiId of targetAgiIds) {
@@ -347,7 +374,7 @@ export async function decideSyntiaMemoryReview(
         .maybeSingle();
 
       if (!existingFeed?.id) {
-        await db.from("agi_update_feed").insert({
+        const { error: feedError } = await db.from("agi_update_feed").insert({
           project_id: projectId,
           agi_id: agiId,
           learning_event_id: learningEventId,
@@ -376,7 +403,14 @@ export async function decideSyntiaMemoryReview(
           retention_tier: retentionTier,
         });
 
-        feedCreated = true;
+        if (!feedError) {
+          feedCreated = true;
+        } else if ((feedError as { code?: string }).code !== "23505") {
+          // 23505 = otra decisión concurrente ya creó este feed; es idempotente.
+          // Cualquier otro error (esquema/permiso/constraint) es real: se reporta
+          // de forma explícita y auditada en vez de fingir que el feed se publicó.
+          feedErrors.push(`${agiId}: ${feedError.message}`);
+        }
       }
     }
 
@@ -409,11 +443,12 @@ export async function decideSyntiaMemoryReview(
       reviewed_by: reviewerAgiId,
       reviewed_at: new Date().toISOString(),
     })
+    .eq("project_id", projectId)
     .eq("id", learningEventId);
 
   await auditEvent({
     projectId,
-    level: decision === "blocked" ? "warn" : "info",
+    level: decision === "blocked" || feedErrors.length > 0 ? "warn" : "info",
     type: "memory_review_gate.decision",
     message: `Memory Review Gate 12.7H: ${decision}`,
     data: {
@@ -428,6 +463,8 @@ export async function decideSyntiaMemoryReview(
       published: Boolean(memoryMirrorId),
       memory_mirror_id: memoryMirrorId,
       feed_created: feedCreated,
+      feed_degraded: feedErrors.length > 0,
+      feed_errors: feedErrors,
       reviewer_role_body_ignored: true,
       version: SYNTIA_MEMORY_REVIEW_GATE_VERSION,
     },
@@ -444,12 +481,16 @@ export async function decideSyntiaMemoryReview(
     status: nextStatus,
     published: Boolean(memoryMirrorId),
     feed_created: feedCreated,
+    feed_degraded: feedErrors.length > 0,
+    feed_errors: feedErrors,
     actions_created: false,
     memory_mirror_id: memoryMirrorId,
     gate_actor: actor,
     reviewer_role: reviewerRole,
     message: memoryMirrorId
-      ? "Aprendizaje aprobado por Owner Gate y publicado en Memory Mirror/feed."
+      ? feedErrors.length > 0
+        ? "Aprendizaje aprobado y publicado en Memory Mirror, pero el feed quedó parcial (ver feed_errors)."
+        : "Aprendizaje aprobado por Owner Gate y publicado en Memory Mirror/feed."
       : "Revisión registrada. No se publicó en Memory Mirror.",
   };
 }

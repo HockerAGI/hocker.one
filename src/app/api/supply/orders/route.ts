@@ -1,17 +1,34 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { getControls, requireProjectRole, ApiError, toApiError, json } from "../../_lib";
+import { getControls, requireProjectRole } from "../../_lib";
 import { getErrorMessage } from "@/lib/errors";
 
 export const runtime = "edge";
+
+const ShippingValueSchema = z.union([
+  z.string().max(500),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
+
+const ShippingDetailsSchema = z
+  .record(z.string().min(1).max(60), ShippingValueSchema)
+  .refine(
+    (obj) => {
+      const keys = Object.keys(obj);
+      return keys.length >= 1 && keys.length <= 40;
+    },
+    { message: "shipping_details inválido: debe tener entre 1 y 40 campos planos." },
+  );
 
 const OrderSchema = z.object({
   project_id: z.string().min(1),
   idempotency_key: z.string().min(10),
   product_id: z.string().uuid(),
   quantity: z.number().int().min(1).default(1),
-  shipping_details: z.record(z.string(), z.any()),
+  shipping_details: ShippingDetailsSchema,
 });
 
 export async function POST(req: Request) {

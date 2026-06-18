@@ -1,7 +1,7 @@
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeNodeId, normalizeProjectId } from "@/lib/project";
 import { createServerSupabase } from "@/lib/supabase-server";
-import type { ControlRow, JsonObject, NodeRow, Role } from "@/lib/types";
+import type { ControlRow, JsonObject, Role } from "@/lib/types";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
