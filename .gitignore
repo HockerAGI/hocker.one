@@ -106,4 +106,5 @@ hocker_topology_audit_*.zip
 .env.example
 supabase/.temp/
 runtime/ops/
-_external/
+HOCKER_REPO_CORRECTION_PACK.zip
+backups/
