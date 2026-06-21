@@ -7,23 +7,41 @@ import {
 } from "@/lib/hocker-public-private-topology";
 
 export function middleware(req: NextRequest) {
-  const res = NextResponse.next();
   const pathname = req.nextUrl.pathname;
 
-  const mustNoindex = isHockerNoindexRoute(pathname) || !isHockerPublicRoute(pathname);
-
-  if (mustNoindex) {
-    res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    res.headers.set("X-Hocker-Topology", HOCKER_PRIVATE_TOPOLOGY_HEADER);
-  } else {
-    res.headers.set("X-Hocker-Topology", HOCKER_PUBLIC_TOPOLOGY_HEADER);
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.includes(".") ||
+    pathname === "/favicon.ico"
+  ) {
+    return NextResponse.next();
   }
+
+  const res = NextResponse.next();
+  const isPublic = isHockerPublicRoute(pathname);
+
+  if (isPublic) {
+    res.headers.set(HOCKER_PUBLIC_TOPOLOGY_HEADER, "true");
+  } else {
+    res.headers.set(HOCKER_PRIVATE_TOPOLOGY_HEADER, "true");
+  }
+
+  if (isHockerNoindexRoute(pathname) || !isPublic) {
+    res.headers.set("X-Robots-Tag", "noindex, nofollow, nosnippet");
+  }
+
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("X-Frame-Options", "DENY");
+  res.headers.set(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains; preload",
+  );
 
   return res;
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|brand/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|map|txt|xml|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
