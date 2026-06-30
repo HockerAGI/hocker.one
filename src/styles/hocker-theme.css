@@ -1,0 +1,207 @@
+/* 
+  Hocker ONE Theme System
+  CSS custom properties mapped to Tailwind config
+  Authority: Mission Control Cinematic Minimal + Geist Design System
+*/
+
+:root {
+  /* Night Core - Background Hierarchy */
+  --hocker-bg: #020617;           /* Primary background - deepest night */
+  --hocker-surface: #0f172a;      /* Secondary surface - slightly lighter */
+  --hocker-panel: #1a2847;        /* Panel/card background - accessible contrast */
+  
+  /* Accent Colors */
+  --hocker-cyan: #0ea5e9;         /* Primary action - cyan/sky */
+  --hocker-blue: #3b82f6;         /* Secondary action - blue */
+  --hocker-white: #ffffff;        /* Text primary - white */
+  --hocker-muted: #94a3b8;        /* Text secondary - slate */
+  --hocker-line: #334155;         /* Borders - slate darker */
+  
+  /* Status Colors */
+  --hocker-alert: #ef4444;        /* Error/critical - red */
+  --hocker-success: #10b981;      /* Success/approved - green */
+  --hocker-warning: #f59e0b;      /* Warning/pending - amber */
+  
+  /* Typography */
+  --font-dm-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-orbitron: 'Orbitron', monospace;
+  --font-jetbrains-mono: 'JetBrains Mono', monospace;
+}
+
+/* Dark mode forced for Hocker */
+[data-hocker-theme="dark"],
+html[data-theme="dark"],
+html {
+  color-scheme: dark;
+}
+
+/* Prevent light mode */
+@media (prefers-color-scheme: light) {
+  html {
+    color-scheme: dark;
+    background: var(--hocker-bg);
+    color: var(--hocker-white);
+  }
+}
+
+/* Base typography */
+body {
+  background-color: var(--hocker-bg);
+  color: var(--hocker-white);
+  font-family: var(--font-dm-sans);
+}
+
+/* Monospace for code/data */
+code,
+pre,
+.mono {
+  font-family: var(--font-jetbrains-mono);
+}
+
+/* Display headlines */
+h1, h2, h3, .display {
+  font-family: var(--font-dm-sans);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* Links - cyan by default */
+a {
+  color: var(--hocker-cyan);
+  text-decoration: none;
+  transition: opacity 200ms ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* Buttons - semantic colors */
+button[data-hocker-variant="danger"] {
+  background-color: var(--hocker-alert);
+  color: white;
+}
+
+button[data-hocker-variant="success"] {
+  background-color: var(--hocker-success);
+  color: var(--hocker-bg);
+  font-weight: 700;
+}
+
+button[data-hocker-variant="default"] {
+  background-color: var(--hocker-cyan);
+  color: var(--hocker-bg);
+  font-weight: 700;
+}
+
+/* Focus visible - required for accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--hocker-cyan);
+  outline-offset: 2px;
+}
+
+/* Inputs */
+input,
+textarea,
+select {
+  background-color: var(--hocker-surface);
+  border: 1px solid var(--hocker-line);
+  color: var(--hocker-white);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  font-family: inherit;
+}
+
+input::placeholder {
+  color: var(--hocker-muted);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  background-color: var(--hocker-panel);
+  border-color: var(--hocker-cyan);
+}
+
+/* Status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.badge[data-status="success"] {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--hocker-success);
+  border: 1px solid var(--hocker-success);
+}
+
+.badge[data-status="error"] {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--hocker-alert);
+  border: 1px solid var(--hocker-alert);
+}
+
+.badge[data-status="warning"] {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--hocker-warning);
+  border: 1px solid var(--hocker-warning);
+}
+
+.badge[data-status="info"] {
+  background-color: rgba(14, 165, 233, 0.1);
+  color: var(--hocker-cyan);
+  border: 1px solid var(--hocker-cyan);
+}
+
+/* Containers */
+.card {
+  background-color: var(--hocker-surface);
+  border: 1px solid var(--hocker-line);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.card:focus-within {
+  border-color: var(--hocker-cyan);
+  box-shadow: 0 0 0 1px var(--hocker-cyan);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--hocker-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hocker-line);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--hocker-muted);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--hocker-cyan);
+  color: var(--hocker-bg);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
