@@ -515,11 +515,25 @@ function buildCapability(definition: HockerCapabilityDefinition, toolsByKey: Map
   };
 }
 
-function countByStatus(capabilities: HockerCapability[]) {
-  return capabilities.reduce(
+type CapabilitySummary = {
+  total: number;
+  active: number;
+  protected: number;
+  partial: number;
+  pending: number;
+  blocked: number;
+};
+
+function countByStatus(capabilities: HockerCapability[]): CapabilitySummary {
+  return capabilities.reduce<CapabilitySummary>(
     (acc, item) => {
       acc.total += 1;
-      acc[item.status] += 1;
+      // ensure the status key exists on the accumulator and increment safely
+      if (item.status === "active") acc.active += 1;
+      else if (item.status === "protected") acc.protected += 1;
+      else if (item.status === "partial") acc.partial += 1;
+      else if (item.status === "pending") acc.pending += 1;
+      else if (item.status === "blocked") acc.blocked += 1;
       return acc;
     },
     { total: 0, active: 0, protected: 0, partial: 0, pending: 0, blocked: 0 },
