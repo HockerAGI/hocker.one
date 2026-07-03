@@ -25,6 +25,8 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "types": [
       "node",
       "react",
@@ -36,7 +38,6 @@
         "./src/*"
       ]
     },
-    "esModuleInterop": true,
     "plugins": [
       {
         "name": "next"
