@@ -7,11 +7,15 @@ out/
 dist/
 
 # =========================
-# ENV (CRÍTICO)
+# ENV (CRÍTICO - CONSOLIDADO)
 # =========================
 .env
 .env.*
+.env.local
+.env.development
+.env.production
 !.env.example
+!env.example
 
 # =========================
 # VERCEL
@@ -31,6 +35,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
 # =========================
 # TYPESCRIPT
@@ -38,15 +43,19 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 # =========================
-# BACKUPS (TU CASO CRÍTICO)
+# BACKUPS (OBSOLETOS - LIMPIAR)
 # =========================
 src_backup_*
 src_backup_final_*
+_backup_*/
+_prep_backup_*/
+_ready_backup_*/
+HOCKER_REPO_CORRECTION_PACK.zip
+backups/
 
 # =========================
 # TEMP / SCRIPTS
 # =========================
-*.sh
 *.bak
 *.tmp
 
@@ -55,6 +64,10 @@ src_backup_final_*
 # =========================
 .vscode/
 .idea/
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
 
 # =========================
 # TEST / CACHE
@@ -63,48 +76,25 @@ coverage/
 .cache/
 
 # =========================
-# OPTIONAL (SI USAS)
+# ANDROID BUILD ARTIFACTS
 # =========================
-*.log
-.env*.local
-_backup_*/
-_prep_backup_*/
-_ready_backup_*/
-!env.example
 android/local.properties
+android/.gradle/
+android/build/
+app/build/
+
+# =========================
+# HOCKER AUDIT FILES
+# =========================
 HOCKER_AUDIT_TOPOLOGY_*
 hocker_topology_audit_*.zip
 
-# HOCKER local secrets
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-
-# HOCKER local secrets
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-
-# HOCKER env files
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-.env.example
-
-# HOCKER protected env files
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-.env.example
+# =========================
+# SUPABASE
+# =========================
 supabase/.temp/
+
+# =========================
+# OPS RUNTIME
+# =========================
 runtime/ops/
-HOCKER_REPO_CORRECTION_PACK.zip
-backups/
