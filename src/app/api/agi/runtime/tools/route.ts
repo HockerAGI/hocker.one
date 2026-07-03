@@ -14,13 +14,13 @@ export async function GET(req: Request): Promise<Response> {
     await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
 
     const tools = getRuntimeToolCatalog();
-    const counts = tools.reduce(
+    const counts = tools.reduce<Record<string, number> & { total: number }>(
       (acc, tool) => {
         acc.total += 1;
         acc[tool.status] = (acc[tool.status] || 0) + 1;
         return acc;
       },
-      { total: 0 } as Record<string, number>,
+      { total: 0 },
     );
 
     return json({
