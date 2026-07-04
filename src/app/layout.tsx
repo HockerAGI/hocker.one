@@ -5,6 +5,7 @@ import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import ShellFrame from "@/components/ShellFrame";
 import PwaRegister from "@/components/PwaRegister";
 import { getHockerPublicJsonLdGraph } from "@/lib/hocker-structured-data";
+import { Analytics } from "@vercel/analytics/next";
 
 const HOCKER_PUBLIC_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app";
@@ -75,6 +76,7 @@ export default function RootLayout({
           <PwaRegister />
         </WorkspaceProvider>
         <Toaster richColors position="top-right" />
+        <Analytics />
       </body>
     </html>
   );
