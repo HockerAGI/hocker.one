@@ -33,6 +33,7 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "@trigger.dev/sdk": "3.3.17",
+    "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "iconv-lite": "^0.7.2",
     "langfuse-node": "^3.38.6",
