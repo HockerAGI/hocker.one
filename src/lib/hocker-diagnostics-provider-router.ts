@@ -73,7 +73,20 @@ export function getHockerDiagnosticsProviderRouterPublicContext() {
   };
 }
 
-export function getHockerDiagnosticsProviderInventory() {
+type DiagnosticsProviderSelection = {
+  provider_key: HockerDiagnosticsProviderKey | "documented_fallback";
+  status: "selected" | "fallback" | "none_available";
+  reason: string;
+};
+
+export function getHockerDiagnosticsProviderInventory(): {
+  ok: boolean;
+  version: string;
+  generated_at: string;
+  source: string;
+  providers: DiagnosticsProvider[];
+  selected: DiagnosticsProviderSelection;
+} {
   const providers: DiagnosticsProvider[] = [
     {
       key: "local_lighthouse",
@@ -143,7 +156,7 @@ export function getHockerDiagnosticsProviderInventory() {
   };
 }
 
-export function selectHockerDiagnosticsProvider(providers = getHockerDiagnosticsProviderInventory().providers) {
+export function selectHockerDiagnosticsProvider(providers = getHockerDiagnosticsProviderInventory().providers): DiagnosticsProviderSelection {
   const local = providers.find((provider) => provider.key === "local_lighthouse" && provider.configured);
   if (local) {
     return {

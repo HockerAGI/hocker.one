@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 
 type JsonRecord = Record<string, unknown>;
@@ -88,13 +88,6 @@ function mockedGithubResult(operation: string, payload: JsonRecord, extra: JsonR
 
 function envValue(key: string): string {
   return String(process.env[key] ?? "").trim();
-}
-
-function getAdminSupabase(): SupabaseClient {
-  const url = envValue("SUPABASE_URL") || envValue("NEXT_PUBLIC_SUPABASE_URL");
-  const key = envValue("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Supabase admin no configurado para AGI Action Execution.");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 function asRecord(value: unknown): JsonRecord {
@@ -238,7 +231,7 @@ async function claimApprovedQueueItem(params: {
     throw new Error(`Acción agotó intentos permitidos: ${attemptCount}/${maxAttempts}`);
   }
 
-  const sb = getAdminSupabase();
+  const sb = createAdminSupabase();
   const { data, error } = await sb
     .from("agi_action_queue")
     .update({
@@ -314,7 +307,7 @@ async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promi
 }
 
 async function getQueueItem(projectId: string, actionId: string): Promise<AgiActionQueueRow> {
-  const sb = getAdminSupabase();
+  const sb = createAdminSupabase();
   const { data, error } = await sb
     .from("agi_action_queue")
     .select("*")
@@ -328,7 +321,7 @@ async function getQueueItem(projectId: string, actionId: string): Promise<AgiAct
 }
 
 async function patchQueueItem(actionId: string, patch: Partial<AgiActionQueueRow>): Promise<AgiActionQueueRow> {
-  const sb = getAdminSupabase();
+  const sb = createAdminSupabase();
   const { data, error } = await sb
     .from("agi_action_queue")
     .update({ ...patch, updated_at: new Date().toISOString() })
@@ -341,7 +334,7 @@ async function patchQueueItem(actionId: string, patch: Partial<AgiActionQueueRow
 }
 
 export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number }): Promise<AgiActionQueueRow[]> {
-  const sb = getAdminSupabase();
+  const sb = createAdminSupabase();
   const limit = Math.max(1, Math.min(Number(params.limit || 30), 100));
 
   let query = sb
@@ -392,7 +385,7 @@ async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow):
   const key = guidedGithubBranchKey(item);
   if (!key) return null;
 
-  const db = getAdminSupabase();
+  const db = createAdminSupabase();
   const { data, error } = await db
     .from("agi_action_queue")
     .select("*")

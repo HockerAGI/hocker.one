@@ -10,6 +10,9 @@ import type { JsonObject } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const ownerGateResponse = requireOwnerOrInternal(req);
+  if (ownerGateResponse) return ownerGateResponse;
+
   const url = new URL(req.url);
   const emitEvent = url.searchParams.get("emit_event") === "1";
 
@@ -17,9 +20,6 @@ export async function GET(req: NextRequest) {
   let eventId: string | undefined;
 
   if (emitEvent) {
-    const ownerGateResponse = requireOwnerOrInternal(req);
-    if (ownerGateResponse) return ownerGateResponse;
-
     try {
       const sb = createAdminSupabase();
 

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
 
 export type RuntimeToolStatusKind = "configured" | "connected" | "partial" | "missing" | "blocked" | "missing_key" | "missing_code";
@@ -181,14 +181,11 @@ function buildAgiActionIdempotencyKey(input: {
   return `agi_action:${createHash("sha256").update(source).digest("hex")}`;
 }
 
-function getAdminSupabase(): SupabaseClient {
-  const url = envValue("SUPABASE_URL") || envValue("NEXT_PUBLIC_SUPABASE_URL");
-  const key = envValue("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Supabase admin no configurado para Herramientas reales.");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+function getAdminSupabase() {
+  return createAdminSupabase();
 }
 
-async function safeCount(sb: SupabaseClient, table: string, project_id: string): Promise<{ count: number; ok: boolean; error?: string }> {
+async function safeCount(sb: ReturnType<typeof createAdminSupabase>, table: string, project_id: string): Promise<{ count: number; ok: boolean; error?: string }> {
   const { count, error } = await sb.from(table).select("*", { count: "exact", head: true }).eq("project_id", project_id);
   if (error) return { count: 0, ok: false, error: error.message };
   return { count: count ?? 0, ok: true };

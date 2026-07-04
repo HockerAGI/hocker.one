@@ -1,8 +1,18 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+/** Timing-safe string comparison to prevent side-channel attacks. */
+function safeTokenEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
 
 async function runOrchestrator(req: Request): Promise<NextResponse> {
   const cronSecret = String(process.env.CRON_SECRET ?? "").trim();
@@ -14,8 +24,8 @@ async function runOrchestrator(req: Request): Promise<NextResponse> {
     );
   }
 
-  const auth = req.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${cronSecret}`) {
+  const auth = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!safeTokenEqual(auth, cronSecret)) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
       { status: 401 },

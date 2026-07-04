@@ -7,12 +7,14 @@ export const metadata: Metadata = {
 };
 
 export default function OwnerCommandCenterPage() {
+  const internalToken = process.env.HOCKER_ONE_INTERNAL_TOKEN ?? "";
+
   return (
     <OwnerShell
       title="Centro de mando"
       description="Una vista limpia para saber qué pasa, qué requiere aprobación y cuál es la siguiente acción importante."
     >
-      <OwnerCommandCenter />
+      <OwnerCommandCenter internalToken={internalToken} />
     </OwnerShell>
   );
 }

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { executeCommand } from "@/server/executor/hocker-core-executor";
@@ -5,6 +6,15 @@ import { executeCommand } from "@/server/executor/hocker-core-executor";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+/** Timing-safe string comparison to prevent side-channel attacks. */
+function safeTokenEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
 
 function getInternalSecret(): string {
   return String(
@@ -16,9 +26,9 @@ function getInternalSecret(): string {
 
 export async function POST(req: Request) {
   const internalSecret = getInternalSecret();
-  const authHeader = req.headers.get("authorization") ?? "";
+  const authHeader = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
 
-  if (!internalSecret || authHeader !== `Bearer ${internalSecret}`) {
+  if (!internalSecret || !safeTokenEqual(authHeader, internalSecret)) {
     return NextResponse.json(
       { ok: false, error: "Acceso denegado al núcleo del orquestador." },
       { status: 401 },

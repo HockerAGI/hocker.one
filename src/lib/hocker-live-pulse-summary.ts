@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 
 export type HockerLivePulseSummary = {
   ok: boolean;
@@ -47,10 +47,11 @@ function empty(source: HockerLivePulseSummary["source"], message: string): Hocke
   };
 }
 
-type CountQuery = ReturnType<ReturnType<SupabaseClient["from"]>["select"]>;
+type AdminClient = ReturnType<typeof createAdminSupabase>;
+type CountQuery = ReturnType<ReturnType<AdminClient["from"]>["select"]>;
 
 async function safeCount(
-  sb: SupabaseClient,
+  sb: AdminClient,
   table: string,
   apply?: (q: CountQuery) => CountQuery,
 ) {
@@ -66,17 +67,14 @@ async function safeCount(
 }
 
 export async function getHockerLivePulseSummary(): Promise<HockerLivePulseSummary> {
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !key) {
+  let sb: AdminClient;
+  try {
+    sb = createAdminSupabase();
+  } catch {
     return empty("no_config", "Sin conexión privada a Supabase.");
   }
 
   try {
-    const sb = createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
 
     const [
       approvedLearning,

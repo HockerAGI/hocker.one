@@ -9,6 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default function StatusPage() {
+  const internalToken = process.env.HOCKER_ONE_INTERNAL_TOKEN ?? "";
+
   return (
     <div className="space-y-6">
       <HockerPageHeader
@@ -16,7 +18,7 @@ export default function StatusPage() {
         title="Estado general"
         text="Estado real verificado en vivo: lo que responde, lo que está protegido y lo que sigue en integración."
       />
-      <SystemStatusLive />
+      <SystemStatusLive internalToken={internalToken} />
       <HockerSection
         title="Detalles técnicos"
         text="Configuración fija del sistema. Información interna para auditoría; no es necesaria para operar el panel."

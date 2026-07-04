@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { executeCommand } from "@/server/executor/hocker-core-executor";
 import { getInternalApiSecret } from "@/lib/security";
@@ -29,12 +30,21 @@ function readInternalToken(req: Request): string {
   return auth.replace(/^Bearer\s+/i, "").trim();
 }
 
+/** Timing-safe string comparison to prevent side-channel attacks. */
+function safeTokenEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
 export async function POST(req: Request): Promise<NextResponse> {
   try {
     const expected = getInternalApiSecret();
     const token = readInternalToken(req);
 
-    if (!expected || token !== expected) {
+    if (!expected || !safeTokenEqual(token, expected)) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 

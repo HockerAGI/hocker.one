@@ -4,8 +4,8 @@ import ModuleLogoFrame from "@/components/ui-hocker/ModuleLogoFrame";
 import StatusBadge from "@/components/ui-hocker/StatusBadge";
 
 export default function NovaCorePanel({ variant = "owner" }: { variant?: "owner" | "nova" }) {
-  const hockerOne = APP_REGISTRY.find((app) => app.key === "hocker-one") ?? APP_REGISTRY[0];
-  const nova = AGI_REGISTRY.find((agi) => agi.key === "nova") ?? AGI_REGISTRY[0];
+  const hockerOne = APP_REGISTRY.find((app) => app.key === "hocker-one") ?? APP_REGISTRY[0]!;
+  const nova = AGI_REGISTRY.find((agi) => agi.key === "nova") ?? AGI_REGISTRY[0]!;
   const isNova = variant === "nova";
   const protectedItems = [...APP_REGISTRY, ...AGI_REGISTRY].filter((item) => item.status === "protected").length;
   const workInProgress = [...APP_REGISTRY, ...AGI_REGISTRY].filter((item) => item.status === "integration" || item.status === "development" || item.status === "pending").length;

@@ -24,7 +24,7 @@ function readHumanStatus(payload: SystemPayload | null, status: PulseStatus): st
   return "Disponible";
 }
 
-export function OwnerSystemPulsePanel() {
+export function OwnerSystemPulsePanel({ internalToken }: { internalToken?: string }) {
   const [status, setStatus] = useState<PulseStatus>("loading");
   const [payload, setPayload] = useState<SystemPayload | null>(null);
 
@@ -33,10 +33,15 @@ export function OwnerSystemPulsePanel() {
 
     async function load() {
       try {
+        const headers: Record<string, string> = {};
+        if (internalToken) {
+          headers["x-hocker-internal-key"] = internalToken;
+        }
         const response = await fetch("/api/system/status", {
           method: "GET",
           credentials: "include",
           cache: "no-store",
+          headers,
         });
 
         const data = (await response.json().catch(() => ({}))) as SystemPayload;

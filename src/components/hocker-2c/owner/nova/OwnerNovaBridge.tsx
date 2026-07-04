@@ -75,6 +75,7 @@ export function OwnerNovaBridge() {
 
   const selectedMode = useMemo(() => modes.find((item) => item.id === mode) ?? modes[0], [mode]);
 
+
   function appendToComposer(text: string) {
     const clean = String(text ?? "").trim();
     if (!clean) return;
@@ -226,7 +227,7 @@ export function OwnerNovaBridge() {
           <div className="min-h-56 rounded-3xl border border-white/10 bg-black/20 p-5">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">
               <Sparkles className="h-4 w-4" />
-              Respuesta NOVA · {selectedMode.label}
+              Respuesta NOVA · {selectedMode?.label ?? "Normal"}
             </div>
 
             <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--hocker-text-main)]">

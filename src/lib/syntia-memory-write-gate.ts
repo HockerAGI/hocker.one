@@ -299,11 +299,11 @@ export async function submitSyntiaMemoryProposal(input: MemoryGateInput, traceId
     });
 
     return {
+      ...preflight,
       ok: false,
       trace_id: traceId,
       executed: false,
       reason: "memory_proposal_not_safe_to_submit",
-      ...preflight,
     };
   }
 

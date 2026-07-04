@@ -1,6 +1,7 @@
 import { getErrorMessage } from "@/lib/errors";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,7 +73,10 @@ function buildPayload(
   };
 }
 
-export async function GET(): Promise<NextResponse<HealthPayload>> {
+export async function GET(req: NextRequest) {
+  const authGate = requireOwnerOrInternal(req);
+  if (authGate) return authGate;
+
   const envChecks = buildEnvChecks();
 
   try {

@@ -39,7 +39,7 @@ function findCapability(contract: HockerCapabilitiesContract, key: string): Hock
 }
 
 function fallbackCapability(contract: HockerCapabilitiesContract): HockerCapability {
-  return findCapability(contract, "nova_native_chat") ?? contract.capabilities[0];
+  return findCapability(contract, "nova_native_chat") ?? contract.capabilities[0]!;
 }
 
 function matchCapabilityKeys(message: string): Set<string> {
@@ -205,7 +205,7 @@ export function buildNovaCapabilitiesReply(context: ReturnType<typeof buildNovaC
 
   const byKey = new Map(context.relevant_capabilities.map((capability) => [capability.key, capability]));
   const ordered = [
-    ...priority.map((key) => byKey.get(key)).filter(Boolean),
+    ...priority.map((key) => byKey.get(key)).filter((c): c is HockerCapability => !!c),
     ...context.relevant_capabilities.filter((capability) => !priority.includes(capability.key)),
   ].slice(0, 10);
 

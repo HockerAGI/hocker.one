@@ -78,6 +78,7 @@ export default function HockerVfxLayer() {
     }
 
     function resize() {
+      if (!canvas || !ctx) return;
       dpr = Math.min(window.devicePixelRatio || 1, 1.6);
       width = window.innerWidth;
       height = window.innerHeight;
@@ -90,7 +91,7 @@ export default function HockerVfxLayer() {
     }
 
     function draw(now: number) {
-      if (!running) return;
+      if (!running || !ctx) return;
 
       const delta = Math.min(48, now - last);
       last = now;
@@ -133,8 +134,8 @@ export default function HockerVfxLayer() {
         }
 
         for (let i = 0; i < particlesRef.current.length; i += 9) {
-          const a = particlesRef.current[i];
-          const b = particlesRef.current[(i + 17) % particlesRef.current.length];
+          const a = particlesRef.current[i]!;
+          const b = particlesRef.current[(i + 17) % particlesRef.current.length]!;
           const ax = a.x * width;
           const ay = a.y * height;
           const bx = b.x * width;

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -244,7 +245,10 @@ function fileExists(...parts: string[]): boolean {
   return existsSync(join(process.cwd(), ...parts));
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authGate = requireOwnerOrInternal(request);
+  if (authGate) return authGate;
+
   const vercelActive = Boolean(env("VERCEL", "VERCEL_ENV", "VERCEL_URL"));
 
   const androidShellReady =

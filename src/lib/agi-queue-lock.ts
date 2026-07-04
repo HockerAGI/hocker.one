@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createAdminSupabase } from "@/lib/supabase-admin";
 
 type QueueRow = {
   id: string;
@@ -53,23 +53,6 @@ export const AGI_QUEUE_CLEAR_STATUSES = [
   "canceled",
 ] as const;
 
-function envValue(key: string): string {
-  return String(process.env[key] ?? "").trim();
-}
-
-function getAdminSupabase(): SupabaseClient {
-  const url = envValue("SUPABASE_URL") || envValue("NEXT_PUBLIC_SUPABASE_URL");
-  const key = envValue("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!url || !key) {
-    throw new Error("Supabase admin no configurado para leer la cola AGI.");
-  }
-
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
 function countStatuses(rows: QueueRow[]): Record<string, number> {
   return rows.reduce<Record<string, number>>((acc, item) => {
     const status = String(item.status || "unknown");
@@ -83,7 +66,7 @@ export async function getAgiQueueLock(project_id: string, limit = 80): Promise<A
   const safeProjectId = String(project_id || process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one").trim();
 
   try {
-    const sb = getAdminSupabase();
+    const sb = createAdminSupabase();
     const { data, error } = await sb
       .from("agi_action_queue")
       .select("id,project_id,agi_id,tool_key,action_type,title,status,risk_level,created_at,updated_at,executed_at,execution_error")

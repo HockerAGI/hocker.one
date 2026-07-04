@@ -7,12 +7,12 @@ import { Owner2CRegistryPanel } from "./Owner2CRegistryPanel";
 import { OwnerSystemPulsePanel } from "./fusion/OwnerSystemPulsePanel";
 import { OwnerLegacyValueFusionPanel } from "./fusion/OwnerLegacyValueFusionPanel";
 
-export function OwnerCommandCenter() {
+export function OwnerCommandCenter({ internalToken }: { internalToken?: string }) {
   return (
     <div className="space-y-5">
       <OwnerLiveSummary />
       <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-        <OwnerSystemPulsePanel />
+        <OwnerSystemPulsePanel internalToken={internalToken} />
         <OwnerLegacyValueFusionPanel />
       </section>
       <Owner2CRegistryPanel />
@@ -51,12 +51,12 @@ export function OwnerCommandCenter() {
       <section className="hocker-card p-5">
         <p className="text-xs uppercase tracking-[0.24em] text-[var(--hocker-cyan)]">Accesos rápidos</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
+          {([
             ["Hablar con NOVA", "/owner/nova"],
             ["Revisar pendientes", "/owner/actions"],
             ["Ver evidencia", "/owner/evidence"],
             ["Mapa del ecosistema", "/owner/ecosystem"],
-          ].map(([label, href]) => (
+          ] as [string, string][]).map(([label, href]) => (
             <Link
               key={href}
               href={href}

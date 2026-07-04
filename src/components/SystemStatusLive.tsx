@@ -13,7 +13,7 @@ type StatusPayload = {
 
 const CHECK_ORDER = ["web", "api", "supabase", "nova", "agent", "vercel", "pwa", "android"];
 
-export default function SystemStatusLive() {
+export default function SystemStatusLive({ internalToken }: { internalToken?: string }) {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [data, setData] = useState<StatusPayload | null>(null);
 
@@ -22,9 +22,14 @@ export default function SystemStatusLive() {
 
     async function load() {
       try {
+        const headers: Record<string, string> = {};
+        if (internalToken) {
+          headers["x-hocker-internal-key"] = internalToken;
+        }
         const res = await fetch("/api/system/status", {
           method: "GET",
           cache: "no-store",
+          headers,
         });
         const json = (await res.json().catch(() => ({}))) as StatusPayload;
         if (!active) return;
@@ -72,6 +77,7 @@ export default function SystemStatusLive() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {keys.map((key) => {
           const check = checks[key];
+          if (!check) return null;
 
           return (
             <article key={key} className="hko-module-card">

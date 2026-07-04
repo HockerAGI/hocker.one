@@ -53,12 +53,9 @@ function auditSecret(): string {
   const configured = String(process.env.HOCKER_AUDIT_SECRET ?? "").trim();
   if (configured) return configured;
 
-  const fallback = String(process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
-  if (fallback) return fallback;
-
   throw new Error(
-    "Falta el secreto de auditoría: define HOCKER_AUDIT_SECRET (o, como respaldo, SUPABASE_SERVICE_ROLE_KEY). " +
-      "La cadena de auditoría NO firma con un secreto por defecto inseguro; corrige la configuración antes de operar.",
+    "HOCKER_AUDIT_SECRET no está configurado. " +
+      "La cadena de auditoría NO firma con un secreto por defecto inseguro; define HOCKER_AUDIT_SECRET antes de operar.",
   );
 }
 
