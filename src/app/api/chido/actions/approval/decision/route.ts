@@ -7,17 +7,10 @@ import {
   CHIDO_APPROVAL_EVENTS,
   CHIDO_APPROVAL_LAYER_VERSION,
 } from "@/lib/chido-approvals";
+import { ChidoApprovalDecisionSchema } from "@/lib/chido-schemas";
 import type { JsonObject } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type DecisionInput = {
-  approval_request_id?: string;
-  decision?: "approved" | "rejected";
-  guardian_agi?: string;
-  reason?: string;
-  decided_by?: string;
-};
 
 function asText(value: unknown, fallback = ""): string {
   if (value === null || value === undefined) return fallback;
@@ -29,51 +22,30 @@ function asRecord(value: unknown): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : {};
 }
 
-async function readInput(req: NextRequest): Promise<DecisionInput> {
-  return (await req.json().catch(() => ({}))) as DecisionInput;
-}
-
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
   const ownerGateResponse = requireOwnerOrInternal(req, traceId);
   if (ownerGateResponse) return ownerGateResponse;
-  const input = await readInput(req);
 
-  const approvalRequestId = asText(input.approval_request_id);
-  const decision = asText(input.decision) as "approved" | "rejected";
-  const guardianAgi = asText(input.guardian_agi).toLowerCase();
-  const reason = asText(input.reason);
-  const decidedBy = asText(input.decided_by, "hocker-one");
-
-  if (!approvalRequestId) {
+  const raw = await req.json().catch(() => ({}));
+  const parsed = ChidoApprovalDecisionSchema.safeParse(raw);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
     return NextResponse.json({
       ok: false,
       dry_run: true,
       executed: false,
       trace_id: traceId,
-      error: "Falta approval_request_id.",
+      error: firstError?.message ?? "Body inválido.",
     }, { status: 400 });
   }
+  const input = parsed.data;
 
-  if (!["approved", "rejected"].includes(decision)) {
-    return NextResponse.json({
-      ok: false,
-      dry_run: true,
-      executed: false,
-      trace_id: traceId,
-      error: "decision debe ser approved o rejected.",
-    }, { status: 400 });
-  }
-
-  if (!guardianAgi) {
-    return NextResponse.json({
-      ok: false,
-      dry_run: true,
-      executed: false,
-      trace_id: traceId,
-      error: "Falta guardian_agi.",
-    }, { status: 400 });
-  }
+  const approvalRequestId = input.approval_request_id;
+  const decision = input.decision;
+  const guardianAgi = input.guardian_agi.toLowerCase();
+  const reason = input.reason;
+  const decidedBy = input.decided_by;
 
   const sb = createAdminSupabase();
 

@@ -1,31 +1,22 @@
 import { getErrorMessage } from "@/lib/errors";
 import { ApiError, json, parseBody, parseQuery, requireProjectRole, toApiError, getControls } from "../../_lib";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function asInt(value: unknown, fallback = 0): number {
-  const n = Math.trunc(Number(value));
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function toBool(value: unknown, fallback = true): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const s = value.trim().toLowerCase();
-    if (["1", "true", "yes", "on"].includes(s)) return true;
-    if (["0", "false", "no", "off"].includes(s)) return false;
-  }
-  return fallback;
-}
-
-function asJsonObject(value: unknown): Record<string, unknown> {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return {};
-}
+const CreateProductSchema = z.object({
+  project_id: z.string().min(1),
+  name: z.string().min(1).max(200),
+  sku: z.string().max(60).nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  price_cents: z.number().int().nonnegative().max(100000000).default(0),
+  cost_cents: z.number().int().nonnegative().max(100000000).default(0),
+  currency: z.string().max(3).default("MXN"),
+  stock: z.number().int().nonnegative().max(10000000).default(0),
+  active: z.boolean().default(true),
+  meta: z.record(z.unknown()).optional(),
+});
 
 export async function GET(req: Request): Promise<Response> {
   try {
@@ -57,12 +48,15 @@ export async function GET(req: Request): Promise<Response> {
 
 export async function POST(req: Request): Promise<Response> {
   try {
-    const body = await parseBody(req);
-    const project_id = String(body.project_id ?? "").trim();
+    const rawBody = await parseBody(req);
+    const parsed = CreateProductSchema.safeParse(rawBody);
 
-    if (!project_id) {
-      throw new ApiError(400, { error: "project_id es obligatorio." });
+    if (!parsed.success) {
+      throw new ApiError(400, { error: "Estructura del producto rechazada.", issues: parsed.error.flatten() });
     }
+
+    const body = parsed.data;
+    const project_id = body.project_id;
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
     const controls = await getControls(ctx.sb, ctx.project_id);
@@ -75,19 +69,15 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(403, { error: "Modo solo lectura activo." });
     }
 
-    const name = String(body.name ?? "").trim();
-    if (!name) {
-      throw new ApiError(400, { error: "El nombre del producto es obligatorio." });
-    }
-
-    const sku = typeof body.sku === "string" ? body.sku.trim() || null : null;
-    const description = typeof body.description === "string" ? body.description.trim() || null : null;
-    const price_cents = Math.max(0, asInt(body.price_cents, 0));
-    const cost_cents = Math.max(0, asInt(body.cost_cents, 0));
-    const currency = String(body.currency ?? "MXN").trim().toUpperCase() || "MXN";
-    const stock = Math.max(0, asInt(body.stock, 0));
-    const active = toBool(body.active, true);
-    const meta = asJsonObject(body.meta);
+    const name = body.name;
+    const sku = body.sku ?? null;
+    const description = body.description ?? null;
+    const price_cents = body.price_cents;
+    const cost_cents = body.cost_cents;
+    const currency = body.currency.toUpperCase();
+    const stock = body.stock;
+    const active = body.active;
+    const meta = body.meta ?? {};
 
     const { data, error } = await ctx.sb
       .from("supply_products")

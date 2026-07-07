@@ -5,6 +5,8 @@ import { requireProjectRole } from "@/app/api/_lib";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
 import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
+import { log } from "@/lib/logger";
+import { sanitizePublicError } from "@/lib/sanitize-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -244,14 +246,13 @@ export async function POST(req: Request): Promise<Response> {
     });
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
+    log.error("NOVA chat upstream failure", { route: "/api/nova/chat", timeout: isTimeout });
     return NextResponse.json(
       {
         ok: false,
         error: isTimeout
           ? "Timeout: NOVA excedió la ventana de respuesta de 55s."
-          : error instanceof Error
-            ? error.message
-            : "Fallo de conexión con NOVA.",
+          : sanitizePublicError(error),
         meta: injectedMeta,
       },
       { status: 502 },

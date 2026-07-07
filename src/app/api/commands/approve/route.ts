@@ -1,4 +1,5 @@
 import { tasks } from "@trigger.dev/sdk/v3";
+import { z } from "zod";
 import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
 import { getCommandHmacSecret, signCommand } from "@/lib/security";
@@ -6,7 +7,6 @@ import {
   ApiError,
   getControls,
   json,
-  parseBody,
   requireProjectRole,
   toApiError,
 } from "../../_lib";
@@ -16,16 +16,22 @@ export const dynamic = "force-dynamic";
 
 const langfuse = getLangfuse();
 
-function asBool(value: unknown, fallback = true): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const s = value.trim().toLowerCase();
-    if (["1", "true", "yes", "on"].includes(s)) return true;
-    if (["0", "false", "no", "off"].includes(s)) return false;
-  }
-  return fallback;
-}
+const ApproveCommandSchema = z.object({
+  id: z.string().min(1, "Falta el ID del comando."),
+  project_id: z.string().min(1, "project_id es obligatorio."),
+  projectId: z.string().optional(),
+  approved: z
+    .union([z.boolean(), z.string(), z.number()])
+    .default(true)
+    .transform((v) => {
+      if (typeof v === "boolean") return v;
+      if (typeof v === "number") return v !== 0;
+      const s = String(v).trim().toLowerCase();
+      if (["1", "true", "yes", "on"].includes(s)) return true;
+      if (["0", "false", "no", "off"].includes(s)) return false;
+      return true;
+    }),
+});
 
 function isCloudNode(nodeId: string | null | undefined): boolean {
   return String(nodeId ?? "").startsWith("cloud-");
@@ -38,18 +44,13 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   try {
-    const body = await parseBody(req);
-    const id = String(body.id ?? "").trim();
-    const project_id = String(body.project_id ?? body.projectId ?? "").trim();
-    const approved = asBool(body.approved, true);
-
-    if (!project_id) {
-      throw new ApiError(400, { error: "project_id es obligatorio." });
+    const raw = await req.json().catch(() => ({}));
+    const parsed = ApproveCommandSchema.safeParse(raw);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0];
+      throw new ApiError(400, { error: firstError?.message ?? "Body inválido." });
     }
-
-    if (!id) {
-      throw new ApiError(400, { error: "Falta el ID del comando." });
-    }
+    const { id, project_id, approved } = parsed.data;
 
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     const controls = await getControls(ctx.sb, ctx.project_id);

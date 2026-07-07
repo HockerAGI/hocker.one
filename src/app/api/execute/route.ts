@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { executeCommand } from "@/server/executor/hocker-core-executor";
 import { getInternalApiSecret } from "@/lib/security";
+import { log } from "@/lib/logger";
+import { sanitizePublicError } from "@/lib/sanitize-error";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -45,6 +47,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     const token = readInternalToken(req);
 
     if (!expected || !safeTokenEqual(token, expected)) {
+      log.warn("Execute route: unauthorized attempt", { route: "/api/execute" });
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
@@ -68,8 +71,9 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     return NextResponse.json({ ok: true, commandId, projectId });
   } catch (err: unknown) {
+    log.error("Execute route failure", { route: "/api/execute", detail: sanitizePublicError(err) });
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "Execution error" },
+      { ok: false, error: sanitizePublicError(err) },
       { status: 500 },
     );
   }

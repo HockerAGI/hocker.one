@@ -1,6 +1,8 @@
 import { getErrorMessage } from "@/lib/errors";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
+import { log } from "@/lib/logger";
+import { sanitizePublicError } from "@/lib/sanitize-error";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -78,17 +80,19 @@ export async function GET(req: NextRequest) {
   if (authGate) return authGate;
 
   const envChecks = buildEnvChecks();
+  log.info("Health check initiated", { route: "/api/health" });
 
   try {
     const sb = createAdminSupabase();
     const { error } = await sb.from("nodes").select("id").limit(1);
 
     if (error) {
+      log.warn("Health check: database unreachable", { route: "/api/health", detail: getErrorMessage(error) });
       const payload = buildPayload(
         { ...envChecks, db: false },
         undefined,
         "Pérdida de sincronía con el núcleo de datos.",
-        getErrorMessage(error),
+        sanitizePublicError(error),
       );
       return NextResponse.json(payload, { status: 503 });
     }
@@ -100,11 +104,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(payload, { status: 200 });
   } catch (err: unknown) {
+    log.error("Health check critical failure", { route: "/api/health", detail: sanitizePublicError(err) });
     const payload = buildPayload(
       { ...envChecks, db: false },
       undefined,
       "Fallo crítico en el monitoreo.",
-      getErrorMessage(err),
+      sanitizePublicError(err),
     );
     return NextResponse.json(payload, { status: 503 });
   }

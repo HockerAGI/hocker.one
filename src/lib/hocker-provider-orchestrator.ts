@@ -109,8 +109,8 @@ function operationalProviders() {
     {
       key: "supabase",
       category: "data",
-      configured: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
-      health: hasEnv("SUPABASE_SERVICE_ROLE_KEY") ? "configured" : "not_configured",
+      configured: hasEnv("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"),
+      health: hasEnv("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY") ? "configured" : "not_configured",
       owner_gate_required: true,
       role: "Datos, memoria, cola, auditoría y estado.",
     },
@@ -200,6 +200,24 @@ export async function getHockerUnifiedProviderInventory(projectId = "hocker-one"
       source: "hocker.one",
       providers: diagnosticsProviders(),
       next_step: "Router diagnóstico activo en 12.7L-2C-B. Siguiente: 12.7Z-1 SQL normalization + idempotent GitHub worker.",
+    },
+    // ARCH-03: Provider fallback chain
+    fallback_chain: {
+      cognitive: [
+        { provider: "nova_agi", condition: "NOVA_AGI_URL + NOVA_ORCHESTRATOR_KEY configured" },
+        { provider: "local_capabilities_contract", condition: "NOVA unreachable — answer from local state" },
+        { provider: "degraded_mode", condition: "No upstream available — survival mode" },
+      ],
+      data: [
+        { provider: "supabase_admin", condition: "SUPABASE_SERVICE_ROLE_KEY / SUPABASE_SECRET_KEY configured" },
+        { provider: "supabase_server", condition: "@supabase/server with JWKS configured" },
+      ],
+      code: [
+        { provider: "github_runtime", condition: "HOCKER_GITHUB_TOKEN / GITHUB_TOKEN / GH_TOKEN configured" },
+      ],
+      cloud: [
+        { provider: "vercel", condition: "VERCEL_TOKEN configured" },
+      ],
     },
     execution_policy: {
       nova_agi_thinks_and_routes_models: true,

@@ -131,10 +131,19 @@ export async function POST(req: Request): Promise<Response> {
   const queueLock = await getAgiQueueLock(parsed.data.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
 
+  // API-03: Use the request's AbortSignal to detect client disconnect
+  const clientSignal = req.signal;
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const abort = new AbortController();
       const timeout = setTimeout(() => abort.abort(), 55_000);
+
+      // Listen for client disconnect to abort upstream fetch
+      const onClientDisconnect = () => {
+        abort.abort();
+      };
+      clientSignal.addEventListener("abort", onClientDisconnect, { once: true });
 
       try {
         controller.enqueue(sse("meta", {
@@ -174,6 +183,8 @@ export async function POST(req: Request): Promise<Response> {
         const upstreamType = upstream?.headers.get("content-type") || "";
         if (upstream?.ok && upstream.body && upstreamType.includes("text/event-stream")) {
           for await (const chunk of upstream.body as unknown as AsyncIterable<Uint8Array>) {
+            // Check if client disconnected mid-stream
+            if (clientSignal.aborted) break;
             controller.enqueue(chunk);
           }
         } else {
@@ -183,11 +194,17 @@ export async function POST(req: Request): Promise<Response> {
         controller.enqueue(sse("done", { ok: true }));
       } catch (error) {
         const isTimeout = error instanceof Error && error.name === "AbortError";
+        const isClientDisconnect = clientSignal.aborted;
+        if (isClientDisconnect) {
+          // Client left, no need to send error events
+          return;
+        }
         controller.enqueue(sse("error", { ok: false, error: isTimeout ? "Timeout: NOVA excedió 55s." : error instanceof Error ? error.message : "Fallo realtime con NOVA." }));
         controller.enqueue(sse("done", { ok: false }));
       } finally {
         clearTimeout(timeout);
-        controller.close();
+        clientSignal.removeEventListener("abort", onClientDisconnect);
+        try { controller.close(); } catch { /* already closed */ }
       }
     },
   });

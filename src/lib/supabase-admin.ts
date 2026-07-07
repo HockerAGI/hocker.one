@@ -25,14 +25,18 @@ export function createAdminSupabase(): SupabaseClient {
     ""
   ).trim();
 
-  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+  const serviceRoleKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SECRET_KEY ??
+    ""
+  ).trim();
 
   if (!url) {
     throw new Error("SUPABASE_URL no está configurado.");
   }
 
   if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY no está configurado.");
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY o SUPABASE_SECRET_KEY no está configurado.");
   }
 
   holder.client = createClient(url, serviceRoleKey, {

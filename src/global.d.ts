@@ -11,6 +11,7 @@ declare namespace NodeJS {
     SUPABASE_SERVICE_ROLE_KEY?: string;
     SUPABASE_PUBLISHABLE_KEY?: string;
     SUPABASE_SECRET_KEY?: string;
+    SUPABASE_JWKS_URL?: string;
 
     /* NOVA / Orchestration */
     NOVA_AGI_URL?: string;
@@ -38,6 +39,28 @@ declare namespace NodeJS {
     VERCEL_TOKEN?: string;
     VERCEL_PROJECT_ID?: string;
     VERCEL_TEAM_ID?: string;
+    VERCEL_MCP_URL?: string;
+
+    /* GitHub */
+    GITHUB_TOKEN?: string;
+    GITHUB_OWNER?: string;
+    GITHUB_REPO?: string;
+    GITHUB_MCP_URL?: string;
+
+    /* OpenAI */
+    OPENAI_API_KEY?: string;
+    OPENAI_ORG_ID?: string;
+    OPENAI_MCP_URL?: string;
+    OPENAI_DEFAULT_MODEL?: string;
+
+    /* Supabase MCP */
+    SUPABASE_PROJECT_REF?: string;
+    SUPABASE_MCP_URL?: string;
+
+    /* Logging & Rate Limiting */
+    LOG_LEVEL?: string;
+    LOG_FORMAT?: string;
+    ALLOWED_ORIGINS?: string;
 
     /* Langfuse */
     LANGFUSE_PUBLIC_KEY?: string;

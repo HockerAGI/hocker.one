@@ -1,3 +1,19 @@
+/**
+ * Hocker ONE — Master Stylesheet
+ *
+ * For maintainability, this file is also available as 7 split modules in src/styles/:
+ *   1. globals-base.css        — :root variables, html/body reset (lines 1-67)
+ *   2. globals-components.css  — @layer components (home, shell, status, access, dock) (lines 68-744)
+ *   3. globals-ux-polish.css   — Hocker UX v2/v3 backdrop, isotype, mobile cleanup (lines 745-1342)
+ *   4. globals-vfx.css         — VFX aurora, grid, scan, line, particles, network (lines 1343-1857)
+ *   5. globals-motion.css      — Cinematic motion system 12.6I-D + 12.6I-E (lines 1858-3671)
+ *   6. globals-nova-chat.css   — NOVA chat production gate, capabilities, self-exec bridge (lines 3672-4180)
+ *   7. globals-soft-shell.css  — Soft shell, bottom dock, hocker cards, focus rings (lines 4181-4456)
+ *
+ * Note: CSS @import with Tailwind @layer requires all @layer references
+ * to be in the same file as the @tailwind directive. The split files
+ * are kept for code review and development reference only.
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

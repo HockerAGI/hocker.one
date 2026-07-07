@@ -32,6 +32,36 @@ const WRITE_COMMANDS = new Set([
   "github.create_pr",
 ]);
 
+/** ARCH-05: Dangerous shell patterns that must never execute. */
+const SHELL_DANGEROUS_PATTERNS = [
+  /rm\s+-rf\s+\//i,
+  /:\(\)\{\s*:\|\:&\s*\}/i,
+  />\s*\/dev\/(sda|hda|nvme)/i,
+  /mkfs\b/i,
+  /dd\s+if=/i,
+  /chmod\s+777/i,
+  /wget\s+.*\|\s*(bash|sh)/i,
+  /curl\s+.*\|\s*(bash|sh)/i,
+  /\beval\b/i,
+  /\/etc\/(passwd|shadow)/i,
+  /nc\s+-/i,
+  /ncat\s+-/i,
+];
+
+/** ENV keys stripped from child process environment. */
+const SENSITIVE_ENV_KEYS = new Set([
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "SUPABASE_SECRET_KEY",
+  "HOCKER_OWNER_ACTION_KEY",
+  "HOCKER_ONE_INTERNAL_TOKEN",
+  "HOCKER_COMMAND_HMAC_SECRET",
+  "COMMAND_HMAC_SECRET",
+  "NOVA_ORCHESTRATOR_KEY",
+  "NOVA_API_KEY",
+  "LANGFUSE_SECRET_KEY",
+  "HOCKER_AUDIT_SECRET",
+]);
+
 export type CloudQueueOptions = {
   commandId?: string;
   nodeId?: string;
@@ -217,8 +247,21 @@ async function executeLocalCloud(
       throw new Error("shell.exec requiere payload.script");
     }
 
+    // ARCH-05: Block dangerous shell patterns
+    for (const pattern of SHELL_DANGEROUS_PATTERNS) {
+      if (pattern.test(script)) {
+        throw new Error(`shell.exec: patrón peligroso detectado. Ejecución denegada por política de seguridad.`);
+      }
+    }
+
     const cwd = getWorkspaceRoot();
     const timeout = Math.max(1000, Math.min(120000, asInt(p.timeout, 30000)));
+
+    // ARCH-05: Strip sensitive env vars from child process
+    const safeEnv = { ...process.env };
+    for (const key of SENSITIVE_ENV_KEYS) {
+      delete safeEnv[key];
+    }
 
     const { stdout, stderr } = await exec(script, {
       cwd,
@@ -226,7 +269,7 @@ async function executeLocalCloud(
       timeout,
       maxBuffer: 10 * 1024 * 1024,
       env: {
-        ...process.env,
+        ...safeEnv,
         HOME: cwd,
         TMPDIR: path.join(cwd, ".tmp"),
       } as NodeJS.ProcessEnv,

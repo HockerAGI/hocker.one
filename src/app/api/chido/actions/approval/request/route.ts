@@ -13,16 +13,10 @@ import {
   CHIDO_APPROVAL_LAYER_VERSION,
   chidoApprovalExpiresAt,
 } from "@/lib/chido-approvals";
+import { ChidoApprovalRequestSchema } from "@/lib/chido-schemas";
 import type { JsonObject } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type ApprovalRequestInput = {
-  action?: string;
-  target_id?: string;
-  reason?: string;
-  requested_by?: string;
-};
 
 function asText(value: unknown, fallback = ""): string {
   if (value === null || value === undefined) return fallback;
@@ -42,30 +36,29 @@ function hashValue(value: unknown): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-async function readInput(req: NextRequest): Promise<ApprovalRequestInput> {
-  return (await req.json().catch(() => ({}))) as ApprovalRequestInput;
-}
-
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
   const ownerGateResponse = requireOwnerOrInternal(req, traceId);
   if (ownerGateResponse) return ownerGateResponse;
-  const input = await readInput(req);
 
-  const actionId = asText(input.action);
-  const targetId = asText(input.target_id);
-  const reason = asText(input.reason);
-  const requestedBy = asText(input.requested_by, "hocker-one");
-
-  if (!actionId) {
+  const raw = await req.json().catch(() => ({}));
+  const parsed = ChidoApprovalRequestSchema.safeParse(raw);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
     return NextResponse.json({
       ok: false,
       dry_run: true,
       executed: false,
       trace_id: traceId,
-      error: "Falta action.",
+      error: firstError?.message ?? "Body inválido.",
     }, { status: 400 });
   }
+  const input = parsed.data;
+
+  const actionId = input.action;
+  const targetId = input.target_id;
+  const reason = input.reason;
+  const requestedBy = input.requested_by;
 
   if (isChidoBlockedAction(actionId)) {
     const blocked = getChidoBlockedAction(actionId);

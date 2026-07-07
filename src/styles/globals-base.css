@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #030711;
+  --foreground: #f8fafc;
+  --hocker-bg: #030711;
+  --hocker-panel: #07101f;
+  --hocker-card: #0b1526;
+  --hocker-line: rgba(255, 255, 255, 0.10);
+  --hocker-cyan: #55dcff;
+  --hocker-green: #22c55e;
+  --hocker-red: #ef4444;
+  --hocker-muted: #94a3b8;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+  background: var(--hocker-bg);
+}
+
+html,
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  background: #030711;
+  color: var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(85, 220, 255, 0.9);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+

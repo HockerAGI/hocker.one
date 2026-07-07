@@ -90,6 +90,43 @@ export function isHockerNoindexRoute(pathname: string): boolean {
   return HOCKER_NOINDEX_ROUTES.some((route) => isExactOrChild(pathname, route));
 }
 
+/**
+ * Generate Next.js headers() config entries from topology routes.
+ * Public routes get the X-Hocker-Topology header.
+ * Noindex routes get X-Robots-Tag + X-Hocker-Topology headers.
+ * Noindex routes also get /:path* suffix for sub-path matching,
+ * plus /auth/callback/:path* for the auth callback wildcard.
+ */
+export function getHockerNextHeadersConfig(): Array<{
+  source: string;
+  headers: Array<{ key: string; value: string }>;
+}> {
+  const publicHeaders = [
+    { key: "X-Hocker-Topology", value: HOCKER_PUBLIC_TOPOLOGY_HEADER },
+  ];
+
+  const noindexHeaders = [
+    { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+    { key: "X-Hocker-Topology", value: HOCKER_PRIVATE_TOPOLOGY_HEADER },
+  ];
+
+  const publicEntries = HOCKER_PUBLIC_INDEXABLE_ROUTES.map((route) => ({
+    source: route,
+    headers: publicHeaders,
+  }));
+
+  const noindexSources = HOCKER_NOINDEX_ROUTES.map((route) =>
+    `${route}/:path*`
+  );
+
+  const noindexEntries = noindexSources.map((source) => ({
+    source,
+    headers: noindexHeaders,
+  }));
+
+  return [...publicEntries, ...noindexEntries];
+}
+
 export function getHockerPublicPrivateTopologyContext() {
   return {
     version: HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION,

@@ -11,17 +11,10 @@ import {
   verifyChidoSignature,
   type ChidoSignaturePayload,
 } from "@/lib/chido-signatures";
+import { ChidoSignatureCheckSchema } from "@/lib/chido-schemas";
 import type { JsonObject } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type Input = {
-  approval_request_id?: string;
-  timestamp?: string;
-  nonce?: string;
-  signature?: string;
-  requested_by?: string;
-};
 
 function asText(value: unknown, fallback = ""): string {
   if (value === null || value === undefined) return fallback;
@@ -35,10 +28,6 @@ function asRecord(value: unknown): JsonObject {
 
 function hashText(value: string): string {
   return createHash("sha256").update(value).digest("hex");
-}
-
-async function readInput(req: NextRequest): Promise<Input> {
-  return (await req.json().catch(() => ({}))) as Input;
 }
 
 async function auditSignatureCheck(data: JsonObject, ok: boolean) {
@@ -67,13 +56,26 @@ export async function POST(req: NextRequest) {
   const traceId = randomUUID();
   const ownerGateResponse = requireOwnerOrInternal(req, traceId);
   if (ownerGateResponse) return ownerGateResponse;
-  const input = await readInput(req);
 
-  const approvalRequestId = asText(input.approval_request_id);
-  const timestamp = asText(input.timestamp);
-  const nonce = asText(input.nonce);
-  const signature = asText(input.signature).toLowerCase();
-  const requestedBy = asText(input.requested_by, "hocker-one");
+  const raw = await req.json().catch(() => ({}));
+  const parsed = ChidoSignatureCheckSchema.safeParse(raw);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
+    return NextResponse.json({
+      ok: false,
+      signature_verified: false,
+      executed: false,
+      trace_id: traceId,
+      error: firstError?.message ?? "Body inválido.",
+    }, { status: 400 });
+  }
+  const input = parsed.data;
+
+  const approvalRequestId = input.approval_request_id;
+  const timestamp = input.timestamp;
+  const nonce = input.nonce;
+  const signature = input.signature.toLowerCase();
+  const requestedBy = input.requested_by;
 
   if (!getChidoHmacSecret()) {
     return NextResponse.json({
@@ -83,35 +85,6 @@ export async function POST(req: NextRequest) {
       trace_id: traceId,
       error: "CHIDO_ACTION_HMAC_SECRET no está configurado.",
     }, { status: 503 });
-  }
-
-  if (!approvalRequestId || !timestamp || !nonce || !signature) {
-    const eventId = await auditSignatureCheck({
-      trace_id: traceId,
-      approval_request_id: approvalRequestId,
-      signature_verified: false,
-      dry_run: true,
-      executed: false,
-      real_execution_enabled: false,
-      error: "Faltan campos requeridos.",
-      provided: {
-        approval_request_id: Boolean(approvalRequestId),
-        timestamp: Boolean(timestamp),
-        nonce: Boolean(nonce),
-        signature: Boolean(signature),
-      },
-      requested_by: requestedBy,
-      signature_layer_version: CHIDO_SIGNATURE_LAYER_VERSION,
-    } as JsonObject, false).catch(() => undefined);
-
-    return NextResponse.json({
-      ok: false,
-      signature_verified: false,
-      executed: false,
-      trace_id: traceId,
-      event_id: eventId,
-      error: "Faltan approval_request_id, timestamp, nonce o signature.",
-    }, { status: 400 });
   }
 
   const sb = createAdminSupabase();

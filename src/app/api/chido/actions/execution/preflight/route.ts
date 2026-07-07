@@ -9,14 +9,10 @@ import {
   CHIDO_EXECUTION_PREFLIGHT_VERSION,
 } from "@/lib/chido-execution-preflight";
 import { CHIDO_SIGNATURE_LAYER_VERSION } from "@/lib/chido-signatures";
+import { ChidoExecutionPreflightSchema } from "@/lib/chido-schemas";
 import type { JsonObject } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type Input = {
-  approval_request_id?: string;
-  requested_by?: string;
-};
 
 type EventRow = {
   id: string;
@@ -37,10 +33,6 @@ function asRecord(value: unknown): JsonObject {
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
-}
-
-async function readInput(req: NextRequest): Promise<Input> {
-  return (await req.json().catch(() => ({}))) as Input;
 }
 
 async function auditPreflight(data: JsonObject) {
@@ -68,12 +60,11 @@ export async function POST(req: NextRequest) {
   const traceId = randomUUID();
   const ownerGateResponse = requireOwnerOrInternal(req, traceId);
   if (ownerGateResponse) return ownerGateResponse;
-  const input = await readInput(req);
 
-  const approvalRequestId = asText(input.approval_request_id);
-  const requestedBy = asText(input.requested_by, "hocker-one");
-
-  if (!approvalRequestId) {
+  const raw = await req.json().catch(() => ({}));
+  const parsed = ChidoExecutionPreflightSchema.safeParse(raw);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
     return NextResponse.json({
       ok: false,
       preflight_passed: false,
@@ -82,9 +73,13 @@ export async function POST(req: NextRequest) {
       real_execution_enabled: false,
       execution_lock: true,
       trace_id: traceId,
-      error: "Falta approval_request_id.",
+      error: firstError?.message ?? "Body inválido.",
     }, { status: 400 });
   }
+  const input = parsed.data;
+
+  const approvalRequestId = input.approval_request_id;
+  const requestedBy = input.requested_by;
 
   const sb = createAdminSupabase();
 

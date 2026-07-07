@@ -8,17 +8,10 @@ import {
   getChidoBlockedAction,
   isChidoBlockedAction,
 } from "@/lib/chido-actions";
+import { ChidoDryRunSchema } from "@/lib/chido-schemas";
 import type { JsonObject } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-type DryRunInput = {
-  action?: string;
-  target_id?: string;
-  reason?: string;
-  requested_by?: string;
-  payload?: unknown;
-};
 
 function asText(value: unknown, fallback = ""): string {
   if (value === null || value === undefined) return fallback;
@@ -41,24 +34,6 @@ function hashValue(value: unknown): string {
 function payloadKeys(value: unknown): string[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   return Object.keys(value as Record<string, unknown>).sort();
-}
-
-async function readInput(req: NextRequest): Promise<DryRunInput> {
-  const contentType = req.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    return (await req.json().catch(() => ({}))) as DryRunInput;
-  }
-
-  const form = await req.formData().catch(() => null);
-  if (!form) return {};
-
-  return {
-    action: asText(form.get("action")),
-    target_id: asText(form.get("target_id")),
-    reason: asText(form.get("reason")),
-    requested_by: asText(form.get("requested_by")),
-  };
 }
 
 async function auditDryRun(data: JsonObject) {
@@ -87,24 +62,27 @@ export async function POST(req: NextRequest) {
   const traceId = randomUUID();
   const ownerGateResponse = requireOwnerOrInternal(req, traceId);
   if (ownerGateResponse) return ownerGateResponse;
-  const input = await readInput(req);
-  const actionId = asText(input.action);
-  const targetId = asText(input.target_id);
-  const reason = asText(input.reason);
-  const requestedBy = asText(input.requested_by, "hocker-one");
 
-  if (!actionId) {
+  const raw = await req.json().catch(() => ({}));
+  const parsed = ChidoDryRunSchema.safeParse(raw);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
     return NextResponse.json(
       {
         ok: false,
         dry_run: true,
         executed: false,
         trace_id: traceId,
-        error: "Falta action.",
+        error: firstError?.message ?? "Body inválido.",
       },
       { status: 400 },
     );
   }
+  const input = parsed.data;
+  const actionId = input.action;
+  const targetId = input.target_id;
+  const reason = input.reason;
+  const requestedBy = input.requested_by;
 
   if (isChidoBlockedAction(actionId)) {
     const blocked = getChidoBlockedAction(actionId);
