@@ -149,7 +149,7 @@ export default function NovaRealtimeChat() {
   }, [messages, isSending]);
 
   useEffect(() => {
-    void loadRuntime();
+    queueMicrotask(() => { void loadRuntime(); });
     return () => { abortRef.current?.abort(); };
   }, [loadRuntime]);
 

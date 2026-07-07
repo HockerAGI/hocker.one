@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 const nav = [
   { href: "/owner", label: "Inicio", icon: Home },
@@ -43,11 +44,11 @@ export default function Sidebar() {
         className="flex h-[74px] items-center justify-center rounded-[26px] border border-white/10 bg-white/[0.035]"
         aria-label="Inicio privado"
       >
-        <img
+        <Image
           src="/brand/hocker-one-logo.png"
           alt="Hocker ONE"
           className="max-h-12 w-[170px] object-contain drop-shadow-[0_0_18px_rgba(85,220,255,0.18)]"
-        />
+         />
       </Link>
 
       <nav className="mt-5 grid gap-2">

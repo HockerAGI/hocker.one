@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Activity, Bot, Map } from "lucide-react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 const titles: Record<string, string> = {
   "/": "Sitio público",
@@ -47,11 +48,11 @@ export default function Topbar() {
           className="flex h-12 w-[142px] items-center justify-center rounded-2xl border border-white/10 bg-[#07101f]"
           aria-label="Ir al inicio"
         >
-          <img
+          <Image
             src="/brand/hocker-one-logo.png"
             alt="Hocker ONE"
             className="max-h-8 w-[112px] object-contain"
-          />
+           />
         </Link>
 
         <div className="min-w-0 flex-1 items-center gap-3 lg:flex">

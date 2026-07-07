@@ -4,7 +4,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import type { NodeRow, JsonObject } from "@/lib/types";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 function pill(status: NodeRow["status"]): string {
@@ -37,7 +37,7 @@ export default function NodesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function load(): Promise<void> {
+  const load = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
 
@@ -58,10 +58,10 @@ export default function NodesPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [projectId, sb]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => { void load(); });
 
     const channel: RealtimeChannel = sb
       .channel(`nodes:${projectId}`)
@@ -82,7 +82,7 @@ export default function NodesPanel() {
     return () => {
       void sb.removeChannel(channel);
     };
-  }, [projectId, sb]);
+  }, [load, projectId, sb]);
 
   if (loading && items.length === 0) {
     return (

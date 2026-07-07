@@ -533,7 +533,7 @@ export function OwnerNovaInlineExecutions() {
   useEffect(() => {
     let alive = true;
 
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
 
     loadActions()
       .then((items) => {

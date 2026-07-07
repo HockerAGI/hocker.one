@@ -62,7 +62,7 @@ export default function CommandsQueue() {
   }, [projectId, sb]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => { void load(); });
     const channel: RealtimeChannel = sb.channel(`commands:${projectId}`).on("postgres_changes", { event: "*", schema: "public", table: "commands", filter: `project_id=eq.${projectId}` }, () => void load()).subscribe();
     return () => { void sb.removeChannel(channel); };
   }, [load, projectId, sb]);
