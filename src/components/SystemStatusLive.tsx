@@ -49,7 +49,7 @@ export default function SystemStatusLive({ internalToken }: { internalToken?: st
       active = false;
       clearInterval(id);
     };
-  }, []);
+  }, [internalToken]);
 
   if (state === "loading") {
     return (

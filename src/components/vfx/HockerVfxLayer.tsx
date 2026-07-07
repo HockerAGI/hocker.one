@@ -39,7 +39,7 @@ export default function HockerVfxLayer() {
 
   useEffect(() => {
     const saved = window.localStorage.getItem("hko:vfx-paused");
-    if (saved === "1") setPaused(true);
+    if (saved === "1") queueMicrotask(() => setPaused(true));
   }, []);
 
   useEffect(() => {

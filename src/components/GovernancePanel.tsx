@@ -47,7 +47,7 @@ export default function GovernancePanel() {
   }, [projectId]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => { void load(); });
   }, [load]);
 
   async function toggle(field: "kill_switch" | "allow_write"): Promise<void> {

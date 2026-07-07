@@ -225,7 +225,7 @@ export function OwnerNovaInlineApprovals() {
   useEffect(() => {
     let alive = true;
 
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
 
     loadPendingActions()
       .then((items) => {

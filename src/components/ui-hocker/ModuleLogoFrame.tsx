@@ -1,4 +1,5 @@
 import type { ModuleKind } from "@/lib/hocker-dashboard";
+import Image from "next/image";
 
 function initials(title: string): string {
   return title
@@ -55,12 +56,12 @@ export default function ModuleLogoFrame({
       ].join(" ")}
       >
         {src ? (
-          <img
+          <Image
             src={src}
             alt={`${title} isotipo`}
             className={["hko-logo-img object-contain", img].join(" ")}
             loading="lazy"
-          />
+           />
         ) : (
           <span className="relative text-base font-black tracking-[0.08em] sm:text-lg">{initials(title)}</span>
         )}

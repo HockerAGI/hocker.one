@@ -86,11 +86,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [tutorial, setTutorialState] = useState(true);
 
   useEffect(() => {
-    const stored = readStoredState();
-    setProjectIdState(normalizeProjectId(stored.projectId ?? DEFAULT_PROJECT_ID));
-    setNodeIdState(normalizeNodeId(stored.nodeId ?? DEFAULT_NODE_ID));
-    setTutorialState(typeof stored.tutorial === "boolean" ? stored.tutorial : true);
-    setReady(true);
+    queueMicrotask(() => {
+      const stored = readStoredState();
+      setProjectIdState(normalizeProjectId(stored.projectId ?? DEFAULT_PROJECT_ID));
+      setNodeIdState(normalizeNodeId(stored.nodeId ?? DEFAULT_NODE_ID));
+      setTutorialState(typeof stored.tutorial === "boolean" ? stored.tutorial : true);
+      setReady(true);
+    });
   }, []);
 
   useEffect(() => {

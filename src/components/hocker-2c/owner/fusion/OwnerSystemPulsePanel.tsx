@@ -62,7 +62,7 @@ export function OwnerSystemPulsePanel({ internalToken }: { internalToken?: strin
     return () => {
       active = false;
     };
-  }, []);
+  }, [internalToken]);
 
   const humanStatus = useMemo(() => readHumanStatus(payload, status), [payload, status]);
 

@@ -56,7 +56,7 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
   const pendingCount = useMemo(() => actions.filter((item) => item.status === "needs_approval").length, [actions]);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     setMessage("");
     try {
       const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&limit=20`, { cache: "no-store" });
@@ -70,7 +70,10 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
     }
   }, [projectId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = setTimeout(() => { void load(); }, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   async function mutate(path: string, payload: Record<string, unknown>) {
     setBusyId(String(payload.action_id ?? ""));
