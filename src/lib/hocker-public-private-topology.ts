@@ -17,6 +17,7 @@ export const HOCKER_PUBLIC_INDEXABLE_ROUTES = [
 
 export const HOCKER_PUBLIC_ACCESS_ROUTES = [
   "/login",
+  "/api/health/ping",
 ] as const;
 
 export const HOCKER_PUBLIC_ROUTES = [
