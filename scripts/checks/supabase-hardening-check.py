@@ -4,14 +4,26 @@ import urllib.parse
 import urllib.request
 import urllib.error
 
-ENV_FILE = ".env.vercel.production"
+# Load env from .env.local (or fall back to system env vars)
+import pathlib
 
-for raw in open(ENV_FILE, "r", encoding="utf-8"):
-    line = raw.strip()
-    if not line or line.startswith("#") or "=" not in line:
-        continue
-    k, v = line.split("=", 1)
-    os.environ[k.strip()] = v.strip().strip('"').strip("'")
+_env_files = [".env.local", ".env.vercel.production", ".env"]
+_env_loaded = False
+
+for _ef in _env_files:
+    _ep = pathlib.Path(_ef)
+    if _ep.exists():
+        for raw in open(_ep, "r", encoding="utf-8"):
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip()
+            v = v.strip().strip('"').strip("'")
+            if k and k not in os.environ:
+                os.environ[k] = v
+        _env_loaded = True
+        break
 
 supabase_url = (os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "").rstrip("/")
 service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""

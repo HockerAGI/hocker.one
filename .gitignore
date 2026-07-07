@@ -3,8 +3,12 @@
 # =========================
 node_modules/
 .next/
-out/
 dist/
+
+# Next.js static export (Capacitor webDir)
+# We keep out/index.html as a Capacitor sync fallback
+out/*
+!out/index.html
 
 # =========================
 # ENV (CRÍTICO - CONSOLIDADO)

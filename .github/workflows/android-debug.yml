@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - "android/**"
-      - "mobile-shell/**"
+      - "out/**"
       - "capacitor.config.ts"
       - "package.json"
       - "package-lock.json"
@@ -41,6 +41,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build Next.js static export for Capacitor
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Ensure Android assets directory exists
+        run: mkdir -p android/app/src/main/assets/public
+
       - name: Sync Capacitor Android shell
         run: npm run android:sync
 
@@ -58,4 +67,3 @@ jobs:
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
-
