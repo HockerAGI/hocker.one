@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Activity, Bot, Map } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import HealthIndicator from "@/components/HealthIndicator";
 
 const titles: Record<string, string> = {
   "/": "Sitio público",
@@ -21,8 +22,11 @@ const titles: Record<string, string> = {
   "/servicios": "Servicios",
   "/security": "Seguridad",
   "/chido": "Chido Casino",
-  "/empresa": "Empresa",
+  "/integrations": "Integraciones",
   "/memory": "Memoria IA",
+  "/empresa": "Empresa",
+  "/launch": "Lanzamiento",
+  "/mobile": "Móvil",
 };
 
 function getTitle(pathname: string) {
@@ -56,10 +60,16 @@ export default function Topbar() {
         </Link>
 
         <div className="min-w-0 flex-1 items-center gap-3 lg:flex">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          <HealthIndicator />
           <strong className="truncate text-sm font-black uppercase tracking-[0.18em] text-slate-100">
             {title}
           </strong>
+          <span className="ml-auto hidden items-center gap-1.5 text-[10px] font-bold text-slate-600 xl:flex">
+            <kbd className="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-black text-slate-400">
+              ⌘K
+            </kbd>
+            <span>Buscar</span>
+          </span>
         </div>
 
         <nav className="flex items-center gap-2" aria-label="Accesos rápidos">

@@ -665,6 +665,33 @@ svg {
   text-transform: uppercase;
 }
 
+.hko-bottom-dock-search-btn {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 18px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.08);
+  padding: 11px 6px;
+  color: #67e8f9;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hko-bottom-dock-search-btn:hover,
+.hko-bottom-dock-search-btn:focus-visible {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.4);
+  outline: none;
+}
+
 @media (max-width: 980px) {
   .hko-hero {
     grid-template-columns: 1fr;
@@ -4460,6 +4487,28 @@ html[data-hko-vfx="paused"] *::after {
 .hocker-scroll-soft {
   scrollbar-width: thin;
   scrollbar-color: rgba(95, 231, 255, 0.34) transparent;
+}
+
+.hko-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(95, 231, 255, 0.28) transparent;
+}
+
+.hko-sidebar-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.hko-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hko-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(95, 231, 255, 0.28);
+  border-radius: 9999px;
+}
+
+.hko-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(95, 231, 255, 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {

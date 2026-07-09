@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import BottomDock from "@/components/BottomDock";
 import WorkspaceBar from "@/components/WorkspaceBar";
+import CommandPalette from "@/components/CommandPalette";
 import HockerLiveBackground from "@/components/ui-hocker/HockerLiveBackground";
 
 // Decorative canvas: deferred so private content paints first (it never runs on
@@ -35,6 +36,7 @@ export default function PrivateShell({ children }: { children: React.ReactNode }
       </div>
 
       <BottomDock />
+      <CommandPalette />
     </div>
   );
 }

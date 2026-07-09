@@ -11,20 +11,56 @@ import {
   Map,
   ShieldCheck,
   Sparkles,
+  Network,
+  Database,
+  Plug,
+  Brain,
+  Package,
+  Dices,
+  Landmark,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
-const nav = [
-  { href: "/owner", label: "Inicio", icon: Home },
-  { href: "/map", label: "Mapa", icon: Map },
-  { href: "/live", label: "Sistema en vivo", icon: Activity },
-  { href: "/apps", label: "Apps", icon: Grid2X2 },
-  { href: "/agis", label: "AGIs", icon: Sparkles },
-  { href: "/chat", label: "NOVA", icon: Bot },
-  { href: "/commands", label: "Tareas", icon: CheckSquare },
-  { href: "/security", label: "Seguridad", icon: ShieldCheck },
-  { href: "/status", label: "Estado", icon: CircleDot },
+type NavItem = { href: string; label: string; icon: typeof Home };
+type NavGroup = { title: string; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  {
+    title: "Núcleo",
+    items: [
+      { href: "/owner", label: "Inicio", icon: Home },
+      { href: "/map", label: "Mapa", icon: Map },
+      { href: "/live", label: "Sistema en vivo", icon: Activity },
+      { href: "/chat", label: "NOVA", icon: Bot },
+    ],
+  },
+  {
+    title: "Operación",
+    items: [
+      { href: "/commands", label: "Tareas", icon: CheckSquare },
+      { href: "/nodes", label: "Nodos", icon: Network },
+      { href: "/status", label: "Estado", icon: CircleDot },
+    ],
+  },
+  {
+    title: "Ecosistema",
+    items: [
+      { href: "/apps", label: "Apps", icon: Grid2X2 },
+      { href: "/agis", label: "AGIs", icon: Sparkles },
+      { href: "/integrations", label: "Integraciones", icon: Plug },
+      { href: "/memory", label: "Memoria IA", icon: Brain },
+      { href: "/supply", label: "Supply", icon: Package },
+      { href: "/chido", label: "Chido Casino", icon: Dices },
+    ],
+  },
+  {
+    title: "Gobernanza",
+    items: [
+      { href: "/security", label: "Seguridad", icon: ShieldCheck },
+      { href: "/governance", label: "Gobierno", icon: Landmark },
+    ],
+  },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -41,7 +77,7 @@ export default function Sidebar() {
     >
       <Link
         href="/owner"
-        className="flex h-[74px] items-center justify-center rounded-[26px] border border-white/10 bg-white/[0.035]"
+        className="flex h-[74px] shrink-0 items-center justify-center rounded-[26px] border border-white/10 bg-white/[0.035]"
         aria-label="Inicio privado"
       >
         <Image
@@ -51,31 +87,40 @@ export default function Sidebar() {
          />
       </Link>
 
-      <nav className="mt-5 grid gap-2">
-        {nav.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(pathname, item.href);
+      <nav className="mt-4 flex-1 overflow-y-auto pr-1 hko-sidebar-scroll" aria-label="Navegación principal">
+        {navGroups.map((group) => (
+          <div key={group.title} className="mb-4">
+            <p className="mb-2 px-2 text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">
+              {group.title}
+            </p>
+            <div className="grid gap-1.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(pathname, item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={[
-                "flex min-h-[48px] items-center gap-3 rounded-2xl border px-4 text-sm font-black tracking-[0.06em] transition",
-                active
-                  ? "border-sky-300/20 bg-sky-400/12 text-sky-100"
-                  : "border-white/5 bg-white/[0.025] text-slate-400 hover:border-sky-300/20 hover:bg-white/[0.045] hover:text-white",
-              ].join(" ")}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={[
+                      "flex min-h-[44px] items-center gap-3 rounded-2xl border px-3.5 text-[13px] font-bold tracking-[0.04em] transition",
+                      active
+                        ? "border-sky-300/20 bg-sky-400/12 text-sky-100"
+                        : "border-white/5 bg-white/[0.025] text-slate-400 hover:border-sky-300/20 hover:bg-white/[0.045] hover:text-white",
+                    ].join(" ")}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <Icon size={17} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      <div className="mt-auto rounded-[26px] border border-sky-400/15 bg-sky-400/8 p-4">
+      <div className="mt-auto shrink-0 rounded-[26px] border border-sky-400/15 bg-sky-400/8 p-4">
         <p className="text-[10px] font-black uppercase tracking-[0.30em] text-sky-200">Ordenado</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           Todo vive en Mapa. Sistema en vivo ya no está escondido.

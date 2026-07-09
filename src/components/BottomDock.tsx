@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Brain, CheckSquare, Home, Map } from "lucide-react";
+import { Activity, Brain, CheckSquare, Home, Map, Search } from "lucide-react";
 
 const ITEMS = [
   { href: "/owner", label: "Inicio", icon: Home },
@@ -14,6 +14,18 @@ const ITEMS = [
 
 export default function BottomDock() {
   const pathname = usePathname() || "/";
+
+  function triggerPalette() {
+    // Simulate Cmd+K to open the CommandPalette
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        metaKey: true,
+        ctrlKey: navigator.platform.includes("Mac") ? false : true,
+        bubbles: true,
+      })
+    );
+  }
 
   return (
     <div className="hko-bottom-dock-wrap">
@@ -34,6 +46,15 @@ export default function BottomDock() {
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={triggerPalette}
+          aria-label="Buscar (⌘K)"
+          className="hko-bottom-dock-search-btn"
+        >
+          <Search className="h-5 w-5" />
+          <span>Buscar</span>
+        </button>
       </nav>
     </div>
   );
