@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
@@ -6,6 +7,13 @@ import ShellFrame from "@/components/ShellFrame";
 import PwaRegister from "@/components/PwaRegister";
 import { getHockerPublicJsonLdGraph } from "@/lib/hocker-structured-data";
 import { Analytics } from "@vercel/analytics/next";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800", "900"],
+});
 
 const HOCKER_PUBLIC_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app";
@@ -64,8 +72,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className="bg-[#020617] text-slate-50 antialiased selection:bg-sky-400/30 selection:text-white">
+    <html lang="es" suppressHydrationWarning className={inter.variable}>
+      <body className="bg-[#020617] font-sans text-slate-50 antialiased selection:bg-sky-400/30 selection:text-white">
         <script
           type="application/ld+json"
           suppressHydrationWarning
@@ -75,7 +83,19 @@ export default function RootLayout({
           <ShellFrame>{children}</ShellFrame>
           <PwaRegister />
         </WorkspaceProvider>
-        <Toaster richColors position="top-right" />
+        <Toaster
+          richColors
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: "#07101f",
+              border: "1px solid rgba(255,255,255,0.07)",
+              color: "#f1f5f9",
+              fontFamily: "var(--font-inter), sans-serif",
+              fontSize: "13px",
+            },
+          }}
+        />
         <Analytics />
       </body>
     </html>
