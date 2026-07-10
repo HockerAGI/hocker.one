@@ -673,3 +673,75 @@ main {
   display: none;
 }
 }
+/* ─── Chido Casino sub-nav ───────────────────────────────────── */
+.chido-nav-link[data-exact="true"][aria-current="page"],
+.chido-nav-link:not([data-exact])[aria-current="page"] {
+  background: rgba(56, 189, 248, 0.10);
+  color: #bae6fd;
+  border: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+/* ─── Card mejorado — hover lift ─────────────────────────────── */
+.hko-card-hover {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.hko-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* ─── Stat tile ───────────────────────────────────────────────── */
+.hko-stat-tile {
+  border: 1px solid var(--hocker-line);
+  background: var(--hocker-panel);
+  border-radius: 18px;
+  padding: 1.25rem;
+}
+
+/* ─── Badge / pill ────────────────────────────────────────────── */
+.hko-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.hko-badge-success { border: 1px solid rgba(34,197,94,0.22); background: rgba(34,197,94,0.10); color: #86efac; }
+.hko-badge-warn    { border: 1px solid rgba(245,158,11,0.22); background: rgba(245,158,11,0.10); color: #fcd34d; }
+.hko-badge-danger  { border: 1px solid rgba(239,68,68,0.22);  background: rgba(239,68,68,0.08);  color: #fca5a5; }
+.hko-badge-sky     { border: 1px solid rgba(56,189,248,0.22); background: rgba(56,189,248,0.10); color: #bae6fd; }
+.hko-badge-muted   { border: 1px solid var(--hocker-line);    background: var(--hocker-card);    color: #64748b; }
+
+/* ─── Section heading ─────────────────────────────────────────── */
+.hko-section-label {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #475569;
+  margin-bottom: 0.75rem;
+}
+
+/* ─── Improved form inputs ────────────────────────────────────── */
+.hko-input {
+  min-height: 44px;
+  border: 1px solid var(--hocker-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--hocker-card);
+  padding: 0.5rem 1rem;
+  color: var(--foreground);
+  font-size: 13px;
+  font-family: var(--font-inter);
+  outline: none;
+  transition: border-color 150ms ease;
+  width: 100%;
+}
+.hko-input:focus {
+  border-color: rgba(85, 220, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(85, 220, 255, 0.08);
+}
