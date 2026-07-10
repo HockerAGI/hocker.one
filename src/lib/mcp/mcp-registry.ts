@@ -2,7 +2,7 @@
  * Hocker ONE — MCP Provider Registry
  *
  * Central registry that manages all MCP connections for NOVA and AGIs.
- * Provides unified access to Supabase, Vercel, GitHub, and OpenAI
+ * Provides unified access to Supabase, Vercel, GitHub, OpenAI, and Base44
  * through a single interface. AGIs query the registry to discover
  * available tools and execute operations across providers.
  */
@@ -30,6 +30,92 @@ import {
 } from "./mcp-openai";
 import { log } from "@/lib/logger";
 import { alertMcpProviderDown } from "@/lib/hocker-alerts";
+
+// ── Base44 MCP Connector ─────────────────────────────────────
+// Base44 is a Superagent platform. Unlike other connectors that use
+// McpClient, Base44 exposes a simple HTTP API. This lightweight
+// connector provides tool definitions and status detection.
+
+function isBase44McpConfigured(): boolean {
+  return Boolean(process.env.BASE44_API_KEY?.trim());
+}
+
+const BASE44_MCP_TOOLS: McpTool[] = [
+  {
+    name: "chat",
+    description: "Send a message to a Base44 Superagent and receive a reply",
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "The message to send to the agent" },
+        session_id: { type: "string", description: "Optional session ID for conversation continuity" },
+      },
+      required: ["message"],
+    },
+  },
+  {
+    name: "list_apps",
+    description: "List all Base44 apps available to the authenticated user",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "get_app_status",
+    description: "Check the status of a specific Base44 app (ready, processing, or errored)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        app_id: { type: "string", description: "The Base44 app ID to check" },
+      },
+      required: ["app_id"],
+    },
+  },
+];
+
+class McpBase44Connector {
+  state: McpProviderState = {
+    id: "base44",
+    status: "disconnected",
+    lastPingAt: null,
+    lastError: null,
+    capabilities: ["chat", "list_apps", "get_app_status"],
+    version: "base44-mcp-v1.0.0",
+  };
+
+  async initialize(): Promise<{ capabilities: string[]; version: string; tools: McpTool[] }> {
+    if (!isBase44McpConfigured()) {
+      this.state.status = "disconnected";
+      this.state.lastError = "BASE44_API_KEY not configured";
+      throw new Error("BASE44_API_KEY not configured");
+    }
+    this.state.status = "connected";
+    this.state.lastError = null;
+    this.state.lastPingAt = new Date().toISOString();
+    return {
+      capabilities: this.state.capabilities,
+      version: this.state.version,
+      tools: BASE44_MCP_TOOLS,
+    };
+  }
+
+  getClient(): McpClient | null {
+    return null;
+  }
+
+  async ping(): Promise<boolean> {
+    return isBase44McpConfigured();
+  }
+
+  disconnect(): void {
+    this.state.status = "disconnected";
+  }
+}
+
+function createBase44McpConnector(): McpBase44Connector {
+  return new McpBase44Connector();
+}
 
 export type McpRegistryProvider = {
   id: string;
@@ -62,6 +148,7 @@ type ProviderEntry = {
     | McpVercelConnector
     | McpGitHubConnector
     | McpOpenAIConnector
+    | McpBase44Connector
     | null;
   configured: boolean;
   client: McpClient | null;
@@ -151,6 +238,16 @@ class McpRegistrySingleton {
       configured: openaiConfigured,
       client: null,
     });
+
+    // Base44
+    const base44Configured = isBase44McpConfigured();
+    this.providers.set("base44", {
+      id: "base44",
+      type: "base44",
+      connector: base44Configured ? createBase44McpConnector() : null,
+      configured: base44Configured,
+      client: null,
+    });
   }
 
   /**
@@ -214,6 +311,7 @@ class McpRegistrySingleton {
       vercel: "Vercel MCP",
       github: "GitHub MCP",
       openai: "OpenAI MCP",
+      base44: "Base44 MCP",
     };
     return names[id] ?? id;
   }
@@ -253,6 +351,13 @@ class McpRegistrySingleton {
    */
   get openai(): McpOpenAIConnector | null {
     return this.getProvider<McpOpenAIConnector>("openai");
+  }
+
+  /**
+   * Get the Base44 connector.
+   */
+  get base44(): McpBase44Connector | null {
+    return this.getProvider<McpBase44Connector>("base44");
   }
 
   /**
@@ -386,7 +491,8 @@ export function isAnyMcpConfigured(): boolean {
     isSupabaseMcpConfigured() ||
     isVercelMcpConfigured() ||
     isGitHubMcpConfigured() ||
-    isOpenAIMcpConfigured()
+    isOpenAIMcpConfigured() ||
+    isBase44McpConfigured()
   );
 }
 
@@ -410,6 +516,10 @@ export function getMcpConfigurationSummary(): Record<string, { configured: boole
     openai: {
       configured: isOpenAIMcpConfigured(),
       required: ["OPENAI_API_KEY"],
+    },
+    base44: {
+      configured: isBase44McpConfigured(),
+      required: ["BASE44_API_KEY"],
     },
   };
 }
