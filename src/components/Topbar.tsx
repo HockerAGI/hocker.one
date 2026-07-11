@@ -41,8 +41,10 @@ function getTitle(pathname: string) {
 
 type PendingAction = {
   id: string;
-  command: string;
-  description?: string;
+  title?: string;
+  action_type?: string;
+  tool_key?: string | null;
+  risk_level?: string;
   created_at: string;
   payload?: Record<string, unknown>;
 };
@@ -57,7 +59,7 @@ export default function Topbar() {
 
   const fetchPending = useCallback(async () => {
     try {
-      const res = await fetch("/api/agi/runtime/actions?status=pending", { cache: "no-store" });
+      const res = await fetch("/api/agi/runtime/actions?status=needs_approval", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { actions?: PendingAction[] };
         setPendingActions(Array.isArray(data.actions) ? data.actions : []);
@@ -200,9 +202,11 @@ export default function Topbar() {
                 {pendingActions.map((action) => (
                   <div key={action.id} className="px-5 py-4">
                     <div className="mb-3">
-                      <p className="text-[11px] font-bold text-slate-200">{action.command}</p>
-                      {action.description && (
-                        <p className="mt-0.5 text-[10px] text-slate-500">{action.description}</p>
+                      <p className="text-[11px] font-bold text-slate-200">{action.title || action.action_type || "Acción AGI"}</p>
+                      {action.action_type && (
+                        <p className="mt-0.5 text-[10px] text-slate-500">
+                          {action.action_type}{action.tool_key ? ` · ${action.tool_key}` : ""}{action.risk_level ? ` · ${action.risk_level}` : ""}
+                        </p>
                       )}
                       <p className="mt-1 text-[9px] text-slate-700">
                         {new Date(action.created_at).toLocaleString("es-MX")}
