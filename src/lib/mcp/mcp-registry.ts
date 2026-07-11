@@ -95,7 +95,7 @@ class McpBase44Connector {
     this.state.lastPingAt = new Date().toISOString();
     return {
       capabilities: this.state.capabilities,
-      version: this.state.version,
+      version: this.state.version ?? "base44-mcp-v1.0.0",
       tools: BASE44_MCP_TOOLS,
     };
   }
