@@ -15,7 +15,7 @@ import { sanitizePublicError } from "@/lib/sanitize-error";
 export const dynamic = "force-dynamic";
 
 const ExecuteSchema = z.object({
-  provider: z.enum(["supabase", "vercel", "github", "openai"]),
+  provider: z.enum(["supabase", "vercel", "github", "openai", "base44"]),
   tool: z.string().min(1),
   args: z.record(z.unknown()).optional(),
 });

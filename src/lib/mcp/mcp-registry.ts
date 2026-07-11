@@ -84,6 +84,9 @@ class McpBase44Connector {
     version: "base44-mcp-v1.0.0",
   };
 
+  private readonly baseUrl = "https://api.base44.com";
+  private readonly apiKey = String(process.env.BASE44_API_KEY ?? "").trim();
+
   async initialize(): Promise<{ capabilities: string[]; version: string; tools: McpTool[] }> {
     if (!isBase44McpConfigured()) {
       this.state.status = "disconnected";
@@ -110,6 +113,65 @@ class McpBase44Connector {
 
   disconnect(): void {
     this.state.status = "disconnected";
+  }
+
+  /**
+   * Execute a Base44 tool via the Base44 REST API.
+   * Unlike McpClient-based connectors, Base44 uses direct HTTP calls.
+   */
+  async callTool(toolName: string, args?: Record<string, unknown>): Promise<unknown> {
+    if (!isBase44McpConfigured()) {
+      throw new Error("BASE44_API_KEY not configured");
+    }
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${this.apiKey}`,
+    };
+
+    switch (toolName) {
+      case "chat": {
+        const message = String(args?.message ?? "").trim();
+        if (!message) throw new Error("message is required for base44.chat");
+        const body: Record<string, unknown> = { message };
+        if (args?.session_id) body.session_id = String(args.session_id);
+
+        const res = await fetch(`${this.baseUrl}/v1/chat`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(`Base44 chat failed: ${res.status} ${data?.error ?? res.statusText}`);
+        }
+        return data;
+      }
+
+      case "list_apps": {
+        const res = await fetch(`${this.baseUrl}/v1/apps`, { headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(`Base44 list_apps failed: ${res.status} ${data?.error ?? res.statusText}`);
+        }
+        return data;
+      }
+
+      case "get_app_status": {
+        const appId = String(args?.app_id ?? "").trim();
+        if (!appId) throw new Error("app_id is required for base44.get_app_status");
+
+        const res = await fetch(`${this.baseUrl}/v1/apps/${encodeURIComponent(appId)}/status`, { headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(`Base44 get_app_status failed: ${res.status} ${data?.error ?? res.statusText}`);
+        }
+        return data;
+      }
+
+      default:
+        throw new Error(`Unknown Base44 tool: ${toolName}`);
+    }
   }
 }
 
@@ -369,14 +431,22 @@ class McpRegistrySingleton {
       throw new Error(`MCP provider ${providerId} not found or not configured.`);
     }
 
-    const connector = entry.connector as { getClient: () => McpClient };
-    const client = connector.getClient();
-    if (!client) {
-      throw new Error(`MCP provider ${providerId} client not available.`);
-    }
-
     try {
-      const result = await client.callTool(toolName, args);
+      let result: unknown;
+
+      // Base44 uses direct HTTP calls (no McpClient), so call its callTool directly
+      if (providerId === "base44") {
+        const base44Connector = entry.connector as { callTool: (name: string, a?: Record<string, unknown>) => Promise<unknown> };
+        result = await base44Connector.callTool(toolName, args);
+      } else {
+        const connector = entry.connector as { getClient: () => McpClient };
+        const client = connector.getClient();
+        if (!client) {
+          throw new Error(`MCP provider ${providerId} client not available.`);
+        }
+        result = await client.callTool(toolName, args);
+      }
+
       log.info("MCP tool executed", {
         route: "mcp-registry",
         provider: providerId,
