@@ -19,7 +19,7 @@ export default function BottomDock() {
   useEffect(() => {
     const fetchPending = async () => {
       try {
-        const res = await fetch("/api/agi/runtime/actions?status=pending", { cache: "no-store" });
+        const res = await fetch("/api/agi/runtime/actions?status=needs_approval", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json() as { actions?: unknown[] };
           setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
