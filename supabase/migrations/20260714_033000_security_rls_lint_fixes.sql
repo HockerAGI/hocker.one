@@ -245,6 +245,13 @@ AS $function$
 $function$;
 
 -- is_project_member — SQL STABLE helper (was NOT security definer)
+-- NOTE: The original core.sql migration created this function with the
+-- parameter name `pid`. PostgreSQL forbids renaming an input parameter
+-- via CREATE OR REPLACE (SQLSTATE 42P13), so we DROP first and recreate
+-- with the canonical `p_project_id` name used everywhere else. Policies
+-- that call is_project_member(project_id) use positional args, so the
+-- rename is safe and does not break any policy references.
+DROP FUNCTION IF EXISTS public.is_project_member(text) CASCADE;
 CREATE OR REPLACE FUNCTION public.is_project_member(p_project_id text)
 RETURNS boolean
 LANGUAGE sql

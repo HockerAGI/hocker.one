@@ -46,7 +46,7 @@ export default function HealthIndicator() {
     async function fetchHealth() {
       try {
         const ownerKey = typeof window !== "undefined"
-          ? String((window as any).__HOCKER_OWNER_KEY ?? "")
+          ? String((window as unknown as Record<string, string>).__HOCKER_OWNER_KEY ?? "")
           : "";
         const headers: HeadersInit = {};
         if (ownerKey) headers["x-hocker-owner-key"] = ownerKey;
