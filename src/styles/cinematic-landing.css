@@ -1,0 +1,656 @@
+/**
+ * Hocker ONE — Cinematic Landing Styles
+ * Modern, cinematic public landing experience
+ * Scope: public route "/" only (no impact on private panel)
+ */
+
+/* ── Animated gradient mesh background ────────────────────────── */
+@keyframes hko-hero-mesh-shift {
+  0%, 100% { transform: translate(0%, 0%) scale(1); opacity: 0.7; }
+  33% { transform: translate(3%, -2%) scale(1.05); opacity: 0.85; }
+  66% { transform: translate(-2%, 3%) scale(0.98); opacity: 0.75; }
+}
+
+@keyframes hko-hero-orbit {
+  0% { transform: rotate(0deg) translateX(0) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(0) rotate(-360deg); }
+}
+
+@keyframes hko-pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 0.3; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes hko-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes hko-float-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hko-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hko-scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* ── Hero container ───────────────────────────────────────────── */
+.hko-hero-cinematic {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 20% 0%, #0a1838 0%, #050d1a 40%, #020610 100%);
+}
+
+.hko-hero-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hko-hero-mesh::before,
+.hko-hero-mesh::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: hko-hero-mesh-shift 18s ease-in-out infinite;
+}
+
+.hko-hero-mesh::before {
+  width: 600px;
+  height: 600px;
+  left: -10%;
+  top: -15%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.22), transparent 70%);
+}
+
+.hko-hero-mesh::after {
+  width: 700px;
+  height: 700px;
+  right: -15%;
+  bottom: -20%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.18), transparent 70%);
+  animation-delay: -6s;
+}
+
+.hko-hero-grid-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* ── Hero nav ─────────────────────────────────────────────────── */
+.hko-hero-nav {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.hko-hero-nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.hko-hero-nav-logo:hover {
+  opacity: 0.85;
+}
+
+.hko-hero-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hko-hero-nav-link {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(203, 213, 225, 0.8);
+  text-decoration: none;
+  border-radius: 9999px;
+  transition: all 0.2s;
+}
+
+.hko-hero-nav-link:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.hko-hero-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #020610;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.25s;
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+}
+
+.hko-hero-nav-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 40px rgba(56, 189, 248, 0.45);
+}
+
+@media (max-width: 768px) {
+  .hko-hero-nav-links {
+    display: none;
+  }
+}
+
+/* ── Hero content ─────────────────────────────────────────────── */
+.hko-hero-content {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 2rem 6rem;
+}
+
+.hko-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 9999px;
+  animation: hko-fade-in 0.8s ease-out;
+}
+
+.hko-hero-title {
+  margin-top: 1.5rem;
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  font-weight: 900;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  color: white;
+  animation: hko-float-up 0.8s ease-out 0.1s both;
+}
+
+.hko-hero-title-gradient {
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 40%, #c084fc 70%, #f0abfc 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hko-shimmer 6s linear infinite;
+}
+
+.hko-hero-subtitle {
+  margin-top: 1.75rem;
+  max-width: 640px;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.6;
+  color: rgba(203, 213, 225, 0.85);
+  animation: hko-float-up 0.8s ease-out 0.2s both;
+}
+
+.hko-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  animation: hko-float-up 0.8s ease-out 0.3s both;
+}
+
+.hko-hero-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1rem 2rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #020610;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.25s;
+  box-shadow: 0 0 40px rgba(56, 189, 248, 0.25);
+}
+
+.hko-hero-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 50px rgba(56, 189, 248, 0.4);
+}
+
+.hko-hero-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1rem 2rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: white;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.25s;
+  backdrop-filter: blur(12px);
+}
+
+.hko-hero-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ── Hero stats bar ───────────────────────────────────────────── */
+.hko-hero-stats {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 2rem 3rem;
+  animation: hko-float-up 1s ease-out 0.4s both;
+}
+
+.hko-hero-stat {
+  flex: 1;
+  min-width: 180px;
+  padding: 1.25rem 1.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hko-hero-stat:first-child {
+  border-left: none;
+}
+
+.hko-hero-stat-value {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #38bdf8;
+  letter-spacing: -0.02em;
+}
+
+.hko-hero-stat-label {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+/* ── Capabilities section ─────────────────────────────────────── */
+.hko-caps-section {
+  position: relative;
+  padding: 6rem 2rem;
+  background: #020610;
+}
+
+.hko-caps-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.hko-section-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: #38bdf8;
+}
+
+.hko-section-title {
+  margin-top: 0.75rem;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: white;
+}
+
+.hko-section-desc {
+  margin-top: 1.25rem;
+  max-width: 600px;
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: rgba(203, 213, 225, 0.75);
+}
+
+.hko-caps-grid {
+  margin-top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.hko-cap-card {
+  position: relative;
+  padding: 2rem 1.75rem;
+  background: linear-gradient(180deg, rgba(11, 21, 38, 0.6) 0%, rgba(5, 13, 26, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hko-cap-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(56, 189, 248, 0.08), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.hko-cap-card:hover {
+  border-color: rgba(56, 189, 248, 0.25);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.hko-cap-card:hover::before {
+  opacity: 1;
+}
+
+.hko-cap-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.hko-cap-title {
+  margin-top: 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: white;
+}
+
+.hko-cap-text {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+/* ── Ecosystem section ────────────────────────────────────────── */
+.hko-eco-section {
+  position: relative;
+  padding: 6rem 2rem;
+  background: linear-gradient(180deg, #020610 0%, #050d1a 50%, #020610 100%);
+  overflow: hidden;
+}
+
+.hko-eco-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.hko-eco-grid {
+  margin-top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.hko-agi-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.75rem 1rem;
+  background: rgba(11, 21, 38, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  transition: all 0.3s;
+  cursor: default;
+}
+
+.hko-agi-chip:hover {
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(11, 21, 38, 0.8);
+  transform: translateY(-3px);
+}
+
+.hko-agi-chip-glyph {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: white;
+}
+
+.hko-agi-chip-name {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: white;
+}
+
+.hko-agi-chip-role {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.hko-agi-chip-dot {
+  margin-top: 0.625rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+/* ── CTA section ──────────────────────────────────────────────── */
+.hko-cta-section {
+  position: relative;
+  padding: 7rem 2rem;
+  background: #020610;
+  overflow: hidden;
+}
+
+.hko-cta-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hko-cta-card {
+  position: relative;
+  padding: 4rem 3rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.06) 0%, rgba(168, 85, 247, 0.06) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: 32px;
+  overflow: hidden;
+}
+
+.hko-cta-card::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(56, 189, 248, 0.08) 60deg, transparent 120deg);
+  animation: hko-hero-orbit 20s linear infinite;
+  pointer-events: none;
+}
+
+.hko-cta-title {
+  position: relative;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: white;
+}
+
+.hko-cta-text {
+  position: relative;
+  margin-top: 1.25rem;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: rgba(203, 213, 225, 0.8);
+}
+
+.hko-cta-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.hko-landing-footer {
+  position: relative;
+  padding: 3rem 2rem 2rem;
+  background: #020610;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hko-landing-footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.hko-landing-footer-text {
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.6);
+}
+
+.hko-landing-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.hko-landing-footer-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.7);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.hko-landing-footer-link:hover {
+  color: #38bdf8;
+}
+
+/* ── Scroll indicator ─────────────────────────────────────────── */
+.hko-scroll-indicator {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.5;
+  animation: hko-fade-in 1.5s ease-out 1s both;
+}
+
+.hko-scroll-indicator-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.6), transparent);
+  animation: hko-scan-line 2.5s ease-in-out infinite;
+}
+
+.hko-scroll-indicator-text {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(148, 163, 184, 0.5);
+}
+
+@media (max-width: 640px) {
+  .hko-hero-stats {
+    flex-direction: column;
+  }
+  .hko-hero-stat {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .hko-hero-stat:first-child {
+    border-top: none;
+  }
+  .hko-scroll-indicator {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hko-hero-mesh::before,
+  .hko-hero-mesh::after,
+  .hko-hero-title-gradient,
+  .hko-cta-card::before,
+  .hko-scroll-indicator-line {
+    animation: none !important;
+  }
+}
