@@ -22,9 +22,7 @@ type MetricRow = {
   error?: string;
 };
 
-function asRecord(value: unknown): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : {};
-}
+
 
 function asText(value: unknown, fallback = "—"): string {
   if (value === null || value === undefined) return fallback;

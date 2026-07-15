@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
-  Workflow,
 } from "lucide-react";
 
 export const metadata: Metadata = {

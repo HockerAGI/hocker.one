@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, Bell, Bot, ChevronDown, Map, X, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Activity, Bell, Bot, Map, X, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import HealthIndicator from "@/components/HealthIndicator";

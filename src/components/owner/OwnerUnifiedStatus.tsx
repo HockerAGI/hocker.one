@@ -1,4 +1,4 @@
-import { Activity, Bot, Database, ShieldCheck, Cpu, Zap } from "lucide-react";
+import { Bot, ShieldCheck, Cpu, Zap } from "lucide-react";
 import type { HockerLiveSummary } from "@/lib/hocker-live-summary";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
 
