@@ -43,6 +43,32 @@ function isCloudNode(nodeId: string): boolean {
   return nodeId.startsWith("cloud-");
 }
 
+function getTrustedBaseUrl(): string {
+  const raw =
+    process.env.HOCKER_ONE_BASE_URL ??
+    process.env.APP_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "";
+
+  const value = raw.trim();
+  if (!value) {
+    throw new ApiError(500, {
+      error: "HOCKER_ONE_BASE_URL/APP_URL/NEXT_PUBLIC_APP_URL no configurado para despachar cloud.",
+    });
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new ApiError(500, {
+      error: "Base URL inválida para despachar cloud.",
+    });
+  }
+
+  return parsed.origin.replace(/\/+$/, "");
+}
+
 type CommandInsert = Pick<
   CommandRow,
   | "id"
@@ -227,7 +253,7 @@ export async function POST(req: Request): Promise<Response> {
 
     if (!needsApproval) {
       if (isCloudNode(node_id)) {
-        const baseUrl = new URL(req.url).origin.replace(/\/+$/, "");
+        const baseUrl = getTrustedBaseUrl();
         const internalSecret = String(
           process.env.HOCKER_ONE_INTERNAL_TOKEN ??
           process.env.CRON_SECRET ??
