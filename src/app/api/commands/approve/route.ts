@@ -203,7 +203,31 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     if (isCloudNode((data as { node_id?: string | null }).node_id ?? null)) {
-      const baseUrl = new URL(req.url).origin.replace(/\/+$/, "");
+      const configuredBaseUrl = String(
+        process.env.HOCKER_ONE_BASE_URL ??
+        process.env.APP_BASE_URL ??
+        "",
+      ).trim();
+
+      if (!configuredBaseUrl) {
+        throw new ApiError(500, {
+          error: "HOCKER_ONE_BASE_URL / APP_BASE_URL no configurado para despachar cloud.",
+        });
+      }
+
+      let baseUrl: string;
+      try {
+        const parsed = new URL(configuredBaseUrl);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+          throw new Error("Invalid protocol");
+        }
+        baseUrl = parsed.origin.replace(/\/+$/, "");
+      } catch {
+        throw new ApiError(500, {
+          error: "HOCKER_ONE_BASE_URL / APP_BASE_URL inválido.",
+        });
+      }
+
       const internalSecret = String(
         process.env.HOCKER_ONE_INTERNAL_TOKEN ??
         process.env.CRON_SECRET ??
