@@ -4519,3 +4519,130 @@ html[data-hko-vfx="paused"] *::after {
     transition: none !important;
   }
 }
+
+
+/* === HOCKER UI ALIGNMENT V4 === */
+.hko-page-shell {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(96, 165, 250, 0.10), transparent 30%),
+    radial-gradient(circle at 80% 16%, rgba(168, 85, 247, 0.08), transparent 28%);
+}
+
+.hko-page-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 34%);
+  opacity: 0.72;
+  mix-blend-mode: screen;
+}
+
+.hko-page-card,
+.hocker-card {
+  background:
+    linear-gradient(180deg, rgba(9, 14, 26, 0.92) 0%, rgba(6, 10, 18, 0.78) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 24px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(24px) saturate(1.15);
+}
+
+.hko-page-head {
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.hko-page-title-block h1 {
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.hko-page-title-block > p {
+  max-width: 72ch;
+  line-height: 1.65;
+}
+
+.hko-page-actions {
+  align-items: flex-start;
+}
+
+.hko-page-actions .button,
+.hko-page-actions a,
+.hko-page-actions button,
+.hko-page-actions input,
+.hko-page-actions textarea {
+  min-height: 48px;
+  border-radius: 999px;
+}
+
+.hko-owner-page {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(96, 165, 250, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 14%, rgba(168, 85, 247, 0.12), transparent 26%),
+    linear-gradient(180deg, #03060d 0%, #050816 44%, #03050b 100%);
+}
+
+.hko-owner-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 34%);
+  opacity: 0.85;
+  mix-blend-mode: screen;
+}
+
+.hko-owner-page .hocker-card {
+  background:
+    linear-gradient(180deg, rgba(8, 13, 24, 0.88) 0%, rgba(5, 8, 16, 0.76) 100%);
+}
+
+.hko-owner-page .hocker-focus-ring:focus-visible,
+.hko-page-actions .button:focus-visible,
+.hko-page-actions a:focus-visible,
+.hko-page-actions button:focus-visible,
+.hko-page-actions input:focus-visible,
+.hko-page-actions textarea:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.85);
+  outline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .hko-page-shell {
+    padding: 0.85rem;
+  }
+
+  .hko-page-card,
+  .hocker-card {
+    border-radius: 22px;
+  }
+
+  .hko-page-actions .button,
+  .hko-page-actions a,
+  .hko-page-actions button,
+  .hko-page-actions input,
+  .hko-page-actions textarea {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hko-page-head {
+    flex-direction: column;
+  }
+
+  .hko-page-title-block h1 {
+    font-size: clamp(1.8rem, 9vw, 2.8rem);
+  }
+}

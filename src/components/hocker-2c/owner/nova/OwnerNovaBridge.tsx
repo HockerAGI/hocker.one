@@ -40,28 +40,28 @@ const modes: Array<{
 ];
 
 const quickActions = [
-  "Revisa el estado del sistema y dime la siguiente acción importante.",
+  "Revisa mi estado actual y dime qué conviene hacer primero.",
   "Prepara una mejora para Hocker ONE sin ejecutar nada todavía.",
-  "Revisa pendientes y ordénalos por prioridad.",
-  "Dime qué módulos están listos, parciales o protegidos.",
-  "Prepara una acción segura para mejorar NOVA Chat.",
+  "Resume pendientes por prioridad y urgencia.",
+  "Dime qué módulos están listos y cuáles siguen protegidos.",
+  "Prepara una propuesta segura para mejorar NOVA Chat.",
   "Resume la evidencia reciente en lenguaje simple.",
 ];
 
 function modeInstruction(mode: NovaOwnerMode) {
   if (mode === "crear") {
-    return "Modo Crear: responde con piezas claras, listas para revisar, sin ejecutar cambios reales.";
+    return "Modo Crear: responde con piezas listas para revisar. No ejecutes cambios reales.";
   }
 
   if (mode === "analizar") {
-    return "Modo Analizar: revisa estado, riesgos, evidencia y próximos pasos con lenguaje simple.";
+    return "Modo Analizar: revisa estado, riesgos, evidencia y próximos pasos con lenguaje simple y directo.";
   }
 
   if (mode === "ejecutar") {
-    return "Modo Ejecutar: sólo prepara una vista previa de acción. No ejecutes nada sin aprobación owner.";
+    return "Modo Ejecutar: prepara la acción con contexto claro. La ejecución real sólo ocurre con aprobación owner.";
   }
 
-  return "Modo Normal: responde claro, breve y accionable.";
+  return "Modo Normal: responde natural, breve y útil. Si falta contexto, pide sólo lo mínimo.";
 }
 
 export function OwnerNovaBridge() {
@@ -253,7 +253,7 @@ export function OwnerNovaBridge() {
                   void submit();
                 }
               }}
-              placeholder="Dile a NOVA qué necesitas mover…"
+              placeholder="Escribe aquí lo que necesitas que haga NOVA…"
               className="hocker-focus-ring min-h-28 flex-1 resize-none rounded-3xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-[var(--hocker-text-muted)]"
             />
 
@@ -264,7 +264,7 @@ export function OwnerNovaBridge() {
               className="hocker-focus-ring flex min-h-16 items-center justify-center gap-2 rounded-3xl bg-[var(--hocker-blue)] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_28px_rgba(3,102,255,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 md:w-40"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              Enviar
+              Pedir a NOVA
             </button>
           </div>
         </div>
