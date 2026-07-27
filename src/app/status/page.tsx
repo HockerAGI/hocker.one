@@ -1,36 +1,45 @@
 import type { Metadata } from "next";
-import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
-import HockerSection from "@/components/ui-hocker/HockerSection";
-import SystemStatusLive from "@/components/SystemStatusLive";
+import Link from "next/link";
+import PageShell from "@/components/PageShell";
+import { GlassCard } from "@/components/system";
 
 export const metadata: Metadata = {
-  title: "Estado | Hocker ONE",
-  description: "Estado general del ecosistema HOCKER.",
+  title: "Status | Hocker AGI Technologies",
+  description:
+    "Estado general del ecosistema HOCKER con espacio para salud, despliegues y telemetría.",
 };
 
-export default function StatusPage() {
-  const internalToken = process.env.HOCKER_ONE_INTERNAL_TOKEN ?? "";
+const statusItems = [
+  { label: "NOVA", value: "Workspace operativo", note: "Preparado para chat, approvals y acciones protegidas." },
+  { label: "Supabase", value: "Integración lista", note: "Base para datos, seguridad y control de acceso." },
+  { label: "MCP", value: "Capa en expansión", note: "Conectores para herramientas y servicios externos." },
+  { label: "Deploy", value: "Listo para conectar", note: "Espacio para salud y publicación." },
+  { label: "Owner", value: "Panel privado", note: "Control, aprobación y evidencia." },
+  { label: "Apps", value: "Catálogo unificado", note: "Todo el ecosistema habla el mismo idioma visual." },
+];
 
+export default function StatusPage() {
   return (
-    <div className="space-y-6">
-      <HockerPageHeader
-        eyebrow="Salud del sistema"
-        title="Estado general"
-        text="Estado real verificado en vivo: lo que responde, lo que está protegido y lo que sigue en integración."
-      />
-      <SystemStatusLive internalToken={internalToken} />
-      <HockerSection
-        title="Detalles técnicos"
-        text="Configuración fija del sistema. Información interna para auditoría; no es necesaria para operar el panel."
-        defaultOpen={false}
-      >
-        <div className="rounded-[28px] border border-white/8 bg-slate-950/60 p-5 text-sm leading-relaxed text-slate-300">
-          <p><strong className="text-white">Owner Gate:</strong> protegido.</p>
-          <p className="mt-2"><strong className="text-white">Private Routes:</strong> cerradas por sesión.</p>
-          <p className="mt-2"><strong className="text-white">Execution Lock:</strong> activo para acciones sensibles.</p>
-          <p className="mt-2"><strong className="text-white">Real Execution:</strong> desactivada en módulos de riesgo.</p>
-        </div>
-      </HockerSection>
-    </div>
+    <PageShell
+      eyebrow="Status"
+      title="Estado del ecosistema"
+      description="Una vista clara para entender qué está activo y qué está listo para escalar."
+      actions={
+        <>
+          <Link href="/owner/command-center" className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300">
+            Ver command center
+          </Link>
+          <Link href="/security" className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-200 hover:border-cyan-400/40 hover:text-cyan-300">
+            Seguridad
+          </Link>
+        </>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {statusItems.map((item) => (
+          <GlassCard key={item.label} eyebrow={item.label} title={item.value} description={item.note} interactive />
+        ))}
+      </div>
+    </PageShell>
   );
 }

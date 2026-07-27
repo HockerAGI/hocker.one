@@ -1,42 +1,39 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import PageShell from "@/components/PageShell";
-import { Bot, Brush, FileText, Film, Globe2, Megaphone, Receipt, ShoppingBag, Workflow } from "lucide-react";
+import { GlassCard } from "@/components/system";
 
 export const metadata: Metadata = {
-  title: "Servicios · Hocker ONE",
-  description: "Servicios comerciales del ecosistema Hocker.",
+  title: "Servicios | Hocker AGI Technologies",
+  description:
+    "Servicios de HOCKER AGI Technologies: marketing, automatización, desarrollo, IA y operación.",
 };
 
 const services = [
-  { title: "Publicidad IA", text: "Campañas y anuncios medibles.", icon: Megaphone },
-  { title: "Branding", text: "Marca, identidad y piezas visuales.", icon: Brush },
-  { title: "Landing pages", text: "Páginas claras para captar clientes.", icon: Globe2 },
-  { title: "Automatización", text: "Flujos, respuestas y tareas repetitivas.", icon: Workflow },
-  { title: "Video y reels", text: "Contenido corto para redes.", icon: Film },
-  { title: "CRM", text: "Clientes, ventas y seguimiento.", icon: Bot },
-  { title: "Tienda online", text: "Productos, pedidos y pagos.", icon: ShoppingBag },
-  { title: "Facturación", text: "Control, reportes y orden fiscal.", icon: Receipt },
-  { title: "Documentos", text: "Contratos, propuestas y reportes.", icon: FileText },
+  { title: "Marketing IA", text: "Estrategia, anuncios, contenido y optimización comercial." },
+  { title: "Automatización", text: "Procesos, flujos, CRM, approvals y seguimiento." },
+  { title: "Software", text: "Interfaces, paneles, apps y experiencias de producto." },
+  { title: "AGI", text: "Diseño de inteligencias especializadas y orquestación central." },
+  { title: "Infraestructura", text: "Deploy, seguridad, dominios, cloud y operación técnica." },
+  { title: "Consultoría", text: "Diagnóstico, roadmap y priorización de ejecución." },
 ];
 
 export default function ServiciosPage() {
   return (
     <PageShell
-      eyebrow="Oferta"
-      title="Servicios"
-      subtitle="Catálogo simple para Hocker Ads, clientes y portales derivados. Cada servicio puede convertirse después en página propia."
+      eyebrow="Servicios"
+      title="Qué hacemos"
+      description="Servicios diseñados para convertir contexto en ejecución: más claridad, más velocidad y más control."
+      actions={
+        <Link href="/contacto" className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300">
+          Solicitar propuesta
+        </Link>
+      }
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {services.map((service) => {
-          const Icon = service.icon;
-          return (
-            <article key={service.title} className="hocker-panel-pro p-5">
-              <Icon className="h-7 w-7 text-cyan-300" />
-              <h2 className="mt-5 text-xl font-black text-white">{service.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{service.text}</p>
-            </article>
-          );
-        })}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {services.map((service) => (
+          <GlassCard key={service.title} title={service.title} description={service.text} interactive />
+        ))}
       </div>
     </PageShell>
   );
