@@ -1,25 +1,20 @@
-import type { Metadata } from "next";
-import { HOCKER_AGI_REGISTRY_2C } from "@/lib/hocker-agi-registry-2c";
-import { OwnerShell, OwnerSimplePage } from "@/components/hocker-2c/owner";
-
-export const metadata: Metadata = {
-  title: "AGIs | Hocker ONE",
-  robots: { index: false, follow: false },
-};
+import { OwnerShell } from "@/components/hocker-2c/owner";
 
 export default function OwnerAgisPage() {
   return (
     <OwnerShell
+      eyebrow="Owner AGIs"
       title="AGIs"
-      description="Catálogo oficial owner de las 16 AGIs. El cliente no ve estos nombres internos: ve funciones humanas."
+      description="Revisión de capacidades, roles y estado operativo de cada AGI del ecosistema."
     >
-      <OwnerSimplePage
-        items={HOCKER_AGI_REGISTRY_2C.map((agi) => ({
-          title: agi.name,
-          description: `${agi.role} ${agi.humanPurpose}`,
-          status: agi.status,
-        }))}
-      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          Aquí se mostrará el catálogo de AGIs con su rol, herramientas y dependencias.
+        </div>
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          La siguiente etapa conecta esta vista con estado en vivo y acciones owner.
+        </div>
+      </div>
     </OwnerShell>
   );
 }
