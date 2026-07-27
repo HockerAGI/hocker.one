@@ -1,25 +1,20 @@
-import type { Metadata } from "next";
-import { HOCKER_SYSTEM_REGISTRY_2C } from "@/lib/hocker-system-registry-2c";
-import { OwnerShell, OwnerSimplePage } from "@/components/hocker-2c/owner";
-
-export const metadata: Metadata = {
-  title: "Apps | Hocker ONE",
-  robots: { index: false, follow: false },
-};
+import { OwnerShell } from "@/components/hocker-2c/owner";
 
 export default function OwnerAppsPage() {
   return (
     <OwnerShell
-      title="Apps y sistemas"
-      description="Aplicaciones, módulos protegidos, repos e integraciones separados de las AGIs para mantener el sistema limpio."
+      eyebrow="Owner Apps"
+      title="Apps"
+      description="Gestión de las aplicaciones del ecosistema con foco en estado, navegación y evolución."
     >
-      <OwnerSimplePage
-        items={HOCKER_SYSTEM_REGISTRY_2C.map((system) => ({
-          title: system.name,
-          description: `${system.visibleName}. ${system.purpose}`,
-          status: system.status,
-        }))}
-      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          Aquí irá el inventario de apps, su estado y sus accesos.
+        </div>
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          La siguiente etapa conecta estas apps con el nuevo sistema visual.
+        </div>
+      </div>
     </OwnerShell>
   );
 }
