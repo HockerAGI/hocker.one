@@ -1,29 +1,20 @@
-import type { Metadata } from "next";
-import { EvidencePanel } from "@/components/hocker-2c";
 import { OwnerShell } from "@/components/hocker-2c/owner";
-import { OwnerActionsLivePanel } from "@/components/hocker-2c/owner/live";
-
-export const metadata: Metadata = {
-  title: "Pendientes | Hocker ONE",
-  robots: { index: false, follow: false },
-};
 
 export default function OwnerActionsPage() {
   return (
     <OwnerShell
-      title="Pendientes"
-      description="Acciones reales disponibles para revisión. Si no hay datos, la vista lo dirá sin inventar nada."
-      rightPanel={
-        <EvidencePanel
-          items={[
-            { label: "Nombre humano", value: "Pendientes" },
-            { label: "Regla", value: "Nada se ejecuta sin aprobación" },
-            { label: "Modo", value: "Lectura segura" },
-          ]}
-        />
-      }
+      eyebrow="Owner Actions"
+      title="Acciones"
+      description="Revisa solicitudes, aprueba cambios y controla ejecuciones sensibles desde un solo espacio."
     >
-      <OwnerActionsLivePanel />
+      <div className="space-y-4">
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          Aquí irá el listado de acciones, estados, aprobaciones y ejecuciones.
+        </div>
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          La siguiente fase conecta este panel con el flujo inline de NOVA.
+        </div>
+      </div>
     </OwnerShell>
   );
 }
