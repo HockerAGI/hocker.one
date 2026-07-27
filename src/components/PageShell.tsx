@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import WorkspaceBar from "@/components/WorkspaceBar";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { cn } from "@/lib/cn";
+import { PageLayout } from "@/components/system";
 
 type PageShellProps = {
   eyebrow?: string;
@@ -32,31 +33,29 @@ export default function PageShell({
   const body = description ?? subtitle;
 
   return (
-    <section className={cn("hko-page-shell", className)}>
-      <div className="hko-page-card">
-        <header className={compact ? "hko-page-head is-compact" : "hko-page-head"}>
-          <div className="hko-page-title-block">
-            {eyebrow ? <p className="hko-page-eyebrow">{eyebrow}</p> : null}
-
-            <h1>{title}</h1>
-
-            {body ? <p>{body}</p> : null}
-
-            {showWorkspaceBar && ready ? (
-              <div className="hko-page-chips">
-                <span>{projectId}</span>
-                <span>{nodeId}</span>
-              </div>
-            ) : null}
+    <PageLayout
+      eyebrow={eyebrow}
+      title={title}
+      description={body}
+      actions={actions}
+      compact={compact}
+      className={cn("hko-page-shell", className)}
+      bodyClassName="space-y-4"
+      footer={
+        showWorkspaceBar && ready ? (
+          <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              {projectId}
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              {nodeId}
+            </span>
           </div>
-
-          {actions ? <div className="hko-page-actions">{actions}</div> : null}
-        </header>
-
-        {showWorkspaceBar ? <WorkspaceBar /> : null}
-
-        <div className="hko-page-body">{children}</div>
-      </div>
-    </section>
+        ) : null
+      }
+    >
+      {showWorkspaceBar ? <WorkspaceBar /> : null}
+      <div className="hko-page-body">{children}</div>
+    </PageLayout>
   );
 }
