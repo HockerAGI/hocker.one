@@ -1,14 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Loader2, Send, Sparkles } from "lucide-react";
-import { ActionPreviewCard, EvidencePanel, PageState } from "@/components/hocker-2c";
+import { Loader2, Sparkles } from "lucide-react";
+import { ActionPreviewCard, EvidencePanel } from "@/components/hocker-2c";
 import { HOCKER_HUMAN_COPY } from "@/lib/hocker-human-copy";
+import { GlassCard, Composer } from "@/components/system";
 import { OwnerNovaInlineApprovals } from "./OwnerNovaInlineApprovals";
 import { OwnerNovaInlineExecutions } from "./OwnerNovaInlineExecutions";
 import { OwnerNovaVoiceDock } from "./OwnerNovaVoiceDock";
-import { OwnerNovaToolDrawer, type OwnerNovaAttachmentMeta, type OwnerNovaIntentKey } from "./OwnerNovaToolDrawer";
+import {
+  OwnerNovaToolDrawer,
+  type OwnerNovaAttachmentMeta,
+  type OwnerNovaIntentKey,
+} from "./OwnerNovaToolDrawer";
 
 type NovaOwnerMode = "normal" | "crear" | "analizar" | "ejecutar";
 
@@ -54,7 +58,7 @@ function modeInstruction(mode: NovaOwnerMode) {
   }
 
   if (mode === "analizar") {
-    return "Modo Analizar: revisa estado, riesgos, evidencia y próximos pasos con lenguaje simple y directo.";
+    return "Modo Analizar: revisa estado, riesgos, evidencia y próximos pasos con lenguaje claro y directo.";
   }
 
   if (mode === "ejecutar") {
@@ -73,8 +77,10 @@ export function OwnerNovaBridge() {
   const [loading, setLoading] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
 
-  const selectedMode = useMemo(() => modes.find((item) => item.id === mode) ?? modes[0], [mode]);
-
+  const selectedMode = useMemo(
+    () => modes.find((item) => item.id === mode) ?? modes[0],
+    [mode],
+  );
 
   function appendToComposer(text: string) {
     const clean = String(text ?? "").trim();
@@ -86,26 +92,21 @@ export function OwnerNovaBridge() {
     });
   }
 
-  function handleVoicePrompt(text: string) {
-    appendToComposer(text);
-  }
-
-  function handleToolPrompt(text: string) {
-    appendToComposer(text);
-  }
-
   async function submit(input?: string) {
     const clean = (input ?? message).trim();
     if (!clean || loading) return;
 
     setLoading(true);
     setLastPrompt(clean);
-    setReply("NOVA está revisando la solicitud...");
+    setReply("NOVA está preparando una respuesta clara...");
 
     try {
       const attachmentSummary = attachments.length
         ? attachments
-            .map((item, index) => `${index + 1}. ${item.kind}: ${item.name} (${item.type || "unknown"}, ${item.size} bytes)`)
+            .map(
+              (item, index) =>
+                `${index + 1}. ${item.kind}: ${item.name} (${item.type || "unknown"}, ${item.size} bytes)`,
+            )
             .join("\n")
         : "";
 
@@ -174,24 +175,18 @@ export function OwnerNovaBridge() {
   return (
     <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
       <div className="space-y-5">
-        <div className="hocker-card p-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-[var(--hocker-cyan)]">
-                NOVA Owner Bridge
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-white">Habla. Ordena. Prepara.</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--hocker-text-soft)]">
-                Esta entrada está pensada para operar sin saltar de módulo. NOVA puede preparar acciones, pero no ejecuta nada sensible sin aprobación.
-              </p>
-            </div>
-
+        <GlassCard
+          eyebrow="NOVA Owner Bridge"
+          title="Habla. Ordena. Prepara."
+          description="Esta entrada está pensada para operar sin saltar de módulo. NOVA puede preparar acciones, pero no ejecuta nada sensible sin aprobación."
+          actions={
             <div className="rounded-2xl border border-[var(--hocker-gold)]/30 bg-[var(--hocker-gold)]/10 px-4 py-3 text-sm text-amber-100">
               Owner Gate activo
             </div>
-          </div>
-
-          <div className="mt-5 grid gap-2 sm:grid-cols-4">
+          }
+          contentClassName="space-y-5"
+        >
+          <div className="grid gap-2 sm:grid-cols-4">
             {modes.map((item) => {
               const active = item.id === mode;
 
@@ -200,7 +195,7 @@ export function OwnerNovaBridge() {
                   key={item.id}
                   type="button"
                   onClick={() => setMode(item.id)}
-                  className={`hocker-focus-ring rounded-2xl border px-3 py-3 text-left transition ${
+                  className={`rounded-2xl border px-3 py-3 text-left transition ${
                     active
                       ? "border-cyan-300/40 bg-cyan-300/15 text-white shadow-[0_0_28px_rgba(22,200,255,0.12)]"
                       : "border-white/10 bg-white/[0.045] text-[var(--hocker-text-soft)] hover:bg-white/[0.075]"
@@ -212,84 +207,76 @@ export function OwnerNovaBridge() {
               );
             })}
           </div>
-        </div>
 
-        <OwnerNovaToolDrawer
-          intent={intent}
-          onIntentChange={setIntent}
-          attachments={attachments}
-          onAttachmentsChange={setAttachments}
-          onPrompt={handleToolPrompt}
-          disabled={loading}
-        />
+          <OwnerNovaToolDrawer
+            intent={intent}
+            onIntentChange={setIntent}
+            attachments={attachments}
+            onAttachmentsChange={setAttachments}
+            onPrompt={(text) => appendToComposer(text)}
+            disabled={loading}
+          />
+        </GlassCard>
 
-        <div className="hocker-card p-5">
-          <div className="min-h-56 rounded-3xl border border-white/10 bg-black/20 p-5">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">
-              <Sparkles className="h-4 w-4" />
-              Respuesta NOVA · {selectedMode?.label ?? "Normal"}
+        <GlassCard
+          eyebrow="Chat"
+          title="Conversación con NOVA"
+          description="La experiencia debe sentirse más como un workspace conversacional que como un formulario."
+          interactive
+        >
+          <div className="space-y-4">
+            <div className="min-h-56 rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-cyan-100/70">
+                <Sparkles className="h-4 w-4" />
+                Respuesta NOVA · {selectedMode?.label ?? "Normal"}
+              </div>
+
+              <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--hocker-text-main)]">
+                {reply}
+              </div>
+
+              <OwnerNovaInlineApprovals />
+              <OwnerNovaInlineExecutions />
+
+              {lastPrompt ? (
+                <p className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs leading-5 text-[var(--hocker-text-muted)]">
+                  Última solicitud: {lastPrompt}
+                </p>
+              ) : null}
             </div>
 
-            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--hocker-text-main)]">
-              {reply}
-            </div>
-
-            <OwnerNovaInlineApprovals />
-            <OwnerNovaInlineExecutions />
-
-            {lastPrompt ? (
-              <p className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs leading-5 text-[var(--hocker-text-muted)]">
-                Última solicitud: {lastPrompt}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3 md:flex-row">
-            <textarea
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                  void submit();
-                }
-              }}
+            <Composer
               placeholder="Escribe aquí lo que necesitas que haga NOVA…"
-              className="hocker-focus-ring min-h-28 flex-1 resize-none rounded-3xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-[var(--hocker-text-muted)]"
+              onSend={(text) => void submit(text)}
+              className="border border-white/10 bg-white/[0.06]"
             />
-
-            <button
-              type="button"
-              onClick={() => void submit()}
-              disabled={loading || !message.trim()}
-              className="hocker-focus-ring flex min-h-16 items-center justify-center gap-2 rounded-3xl bg-[var(--hocker-blue)] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_28px_rgba(3,102,255,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 md:w-40"
-            >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              Pedir a NOVA
-            </button>
           </div>
-        </div>
+        </GlassCard>
 
         <OwnerNovaVoiceDock
-          onPrompt={handleVoicePrompt}
+          onPrompt={(text) => appendToComposer(text)}
           responseText={reply}
           disabled={loading}
         />
 
-        <div className="hocker-card p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--hocker-cyan)]">Acciones rápidas</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <GlassCard
+          eyebrow="Acciones rápidas"
+          title="Sugerencias"
+          description="Úsalas para acelerar análisis, creación o preparación de acciones."
+        >
+          <div className="grid gap-3 md:grid-cols-2">
             {quickActions.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => void submit(item)}
-                className="hocker-focus-ring rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-left text-sm leading-6 text-white transition hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-white/[0.075]"
+                className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-left text-sm leading-6 text-white transition hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-white/[0.075]"
               >
                 {item}
               </button>
             ))}
           </div>
-        </div>
+        </GlassCard>
       </div>
 
       <div className="space-y-5">
@@ -319,26 +306,18 @@ export function OwnerNovaBridge() {
           footer="NOVA prepara. Tú decides. El sistema registra."
         />
 
-        <div className="hocker-card p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--hocker-cyan)]">Accesos owner</p>
-          <div className="mt-4 grid gap-3">
-            <Link href="/owner/actions" className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white transition hover:bg-white/[0.075]">
-              Revisar pendientes
-            </Link>
-            <Link href="/owner/evidence" className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white transition hover:bg-white/[0.075]">
-              Ver evidencia
-            </Link>
-            <Link href="/owner/ecosystem" className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white transition hover:bg-white/[0.075]">
-              Ver ecosistema
-            </Link>
+        <GlassCard
+          eyebrow="Estado"
+          title="Flujo conversacional"
+          description="La próxima etapa será que approvals y ejecuciones vivan todavía más dentro del hilo."
+        >
+          <div className="space-y-2 text-sm leading-7 text-slate-300">
+            <p>• Chat natural</p>
+            <p>• Herramientas visibles</p>
+            <p>• Aprobación inline</p>
+            <p>• Ejecución protegida</p>
           </div>
-        </div>
-
-        <PageState
-          status="partial"
-          title="Herramientas avanzadas en preparación"
-          description="Archivo, imagen, video, voz, documentos y research se integrarán como herramientas reales por fases."
-        />
+        </GlassCard>
       </div>
     </section>
   );
