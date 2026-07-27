@@ -1,29 +1,20 @@
-import type { Metadata } from "next";
-import { EvidencePanel } from "@/components/hocker-2c";
 import { OwnerShell } from "@/components/hocker-2c/owner";
-import { OwnerEvidenceLivePanel } from "@/components/hocker-2c/owner/live";
-
-export const metadata: Metadata = {
-  title: "Evidencia | Hocker ONE",
-  robots: { index: false, follow: false },
-};
 
 export default function OwnerEvidencePage() {
   return (
     <OwnerShell
+      eyebrow="Owner Evidence"
       title="Evidencia"
-      description="Pruebas, cambios y resultados explicados en humano. Esta vista sólo lee información disponible."
-      rightPanel={
-        <EvidencePanel
-          items={[
-            { label: "Regla", value: "Toda ejecución real debe generar evidencia" },
-            { label: "Acción", value: "Sólo lectura" },
-            { label: "Visibilidad", value: "Owner primero" },
-          ]}
-        />
-      }
+      description="Registro de acciones, decisiones y rastros operativos para revisión owner."
     >
-      <OwnerEvidenceLivePanel />
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          Aquí se mostrará el historial de evidencia y exportaciones.
+        </div>
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
+          La siguiente etapa conecta este panel con el sistema de auditoría y trazabilidad.
+        </div>
+      </div>
     </OwnerShell>
   );
 }
