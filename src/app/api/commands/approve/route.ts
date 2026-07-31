@@ -1,4 +1,3 @@
-import { tasks } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
 import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
@@ -253,14 +252,7 @@ export async function POST(req: Request): Promise<Response> {
         throw new ApiError(500, { error: `No se pudo disparar el orquestador cloud: HTTP ${runRes.status}` });
       }
     } else {
-      try {
-        await tasks.trigger("hocker-core-executor", {
-          commandId: id,
-          projectId: ctx.project_id,
-        });
-      } catch {
-        // fallback al polling del agente físico
-      }
+      // El agente físico consume la cola firmada desde Supabase mediante polling.
     }
 
     trace.event({ name: "ORDEN_AUTORIZADA", input: { commandId: id } });

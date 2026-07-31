@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { tasks } from "@trigger.dev/sdk/v3";
 import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
 import { defaultNodeId, normalizeNodeId } from "@/lib/project";
@@ -268,14 +267,7 @@ export async function POST(req: Request): Promise<Response> {
 
         await triggerCloudExecutor(baseUrl, internalSecret);
       } else {
-        try {
-          await tasks.trigger("hocker-core-executor", {
-            commandId: id,
-            projectId: ctx.project_id,
-          });
-        } catch {
-          // el agente físico seguirá haciendo polling
-        }
+        // El agente físico consume la cola firmada desde Supabase mediante polling.
       }
     }
 
