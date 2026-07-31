@@ -22,3 +22,11 @@ test("Android production shell disables backup and cleartext traffic", async () 
   assert.match(manifest, /android:usesCleartextTraffic="false"/);
   assert.doesNotMatch(manifest, /android:allowBackup="true"/);
 });
+
+test("Android minSdk supports Capacitor service worker APIs", async () => {
+  const variables = await read("android/variables.gradle");
+  const match = variables.match(/minSdkVersion\s*=\s*(\d+)/);
+
+  assert.ok(match, "minSdkVersion must remain explicit");
+  assert.ok(Number(match[1]) >= 24, "Capacitor service worker support requires API 24+");
+});
