@@ -53,4 +53,10 @@ jobs:
           HOCKER_OWNER_API_KEY: dummy-owner-key
 
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        shell: bash
+        run: |
+          audit_dir="$(mktemp -d)"
+          cp package.json "$audit_dir/package.json"
+          cd "$audit_dir"
+          npm install --package-lock-only --omit=dev --ignore-scripts --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
