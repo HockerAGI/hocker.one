@@ -72,12 +72,15 @@ function riskClass(risk: OwnerLiveAction["risk"]) {
   return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
 }
 
-function isExecutableGithubAction(action: OwnerLiveAction): boolean {
+function isExecutableApprovedAction(action: OwnerLiveAction): boolean {
   if (!action.raw || typeof action.raw !== "object" || Array.isArray(action.raw)) return false;
   const raw = action.raw as Record<string, unknown>;
   const toolKey = String(raw.tool_key ?? "").toLowerCase();
   const actionType = String(raw.action_type ?? "").toLowerCase();
-  return toolKey === "github" && actionType.startsWith("github.");
+  return (
+    (toolKey === "github" && actionType.startsWith("github.")) ||
+    (toolKey === "mcp" && actionType === "mcp.execute")
+  );
 }
 
 function NovaInlineApprovalCard({
@@ -90,7 +93,7 @@ function NovaInlineApprovalCard({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<Decision | "adjust" | null>(null);
   const [message, setMessage] = useState("");
-  const canExecute = isExecutableGithubAction(action);
+  const canExecute = isExecutableApprovedAction(action);
 
   async function sendDecision(
     decision: Decision,
