@@ -7,21 +7,6 @@ import type { JsonObject } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/**
- * Chido Casino Admin Controls API
- *
- * Provides real admin operations from Hocker ONE:
- *   - KYC: approve / reject
- *   - Manual deposits: confirm / reject
- *   - Withdrawals: approve / reject
- *   - Game kill-switch: pause / resume
- *   - Casino settings: update cashback caps, wager multipliers
- *
- * All mutations are protected by the Hocker owner/internal API gate
- * and use the Supabase service role key. Every action is logged to
- * the events table with a full audit trail.
- */
-
 type AdminAction =
   | "kyc_approve"
   | "kyc_reject"
@@ -33,7 +18,7 @@ type AdminAction =
   | "games_resume"
   | "settings_update";
 
-const VALID_ACTIONS: AdminAction[] = [
+const VALID_ACTIONS = new Set<AdminAction>([
   "kyc_approve",
   "kyc_reject",
   "deposit_confirm",
@@ -43,12 +28,11 @@ const VALID_ACTIONS: AdminAction[] = [
   "games_pause",
   "games_resume",
   "settings_update",
-];
+]);
 
-function asText(value: unknown, fallback = ""): string {
-  if (value === null || value === undefined) return fallback;
-  const text = String(value).trim();
-  return text ? text : fallback;
+function asText(value: unknown, fallback = "") {
+  const text = value === null || value === undefined ? "" : String(value).trim();
+  return text || fallback;
 }
 
 function asRecord(value: unknown): JsonObject {
@@ -67,8 +51,9 @@ async function logAudit(
     actor: string;
     result: "success" | "error";
     error?: string;
-  },
-): Promise<void> {
+    details?: JsonObject;
+  }
+) {
   try {
     await sb.from("events").insert({
       project_id: "chido-casino",
@@ -83,248 +68,140 @@ async function logAudit(
         actor: params.actor,
         result: params.result,
         error: params.error ?? null,
+        details: params.details ?? {},
         source: "hocker.one",
         route: "/api/chido/admin",
         timestamp: new Date().toISOString(),
       } as JsonObject,
     });
-  } catch {
-    // Audit logging is best-effort — don't fail the operation if logging fails
+  } catch (error) {
+    console.warn("Chido admin audit write failed", error);
   }
+}
+
+function rpcFailure(error: string, traceId: string, status = 500) {
+  return NextResponse.json({ ok: false, trace_id: traceId, error }, { status });
 }
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
+  const gate = requireOwnerOrInternal(req, traceId);
+  if (gate) return gate;
 
-  // 1) Owner/Internal API gate
-  const ownerGateResponse = requireOwnerOrInternal(req, traceId);
-  if (ownerGateResponse) return ownerGateResponse;
-
-  // 2) Parse and validate body
   const raw = await req.json().catch(() => ({}));
   const action = asText(raw?.action) as AdminAction;
   const targetId = asText(raw?.target_id);
   const reason = asText(raw?.reason);
   const settings = asRecord(raw?.settings);
 
-  if (!VALID_ACTIONS.includes(action)) {
-    return NextResponse.json(
-      {
-        ok: false,
-        trace_id: traceId,
-        error: `Acción inválida. Acciones válidas: ${VALID_ACTIONS.join(", ")}`,
-      },
-      { status: 400 },
-    );
+  if (!VALID_ACTIONS.has(action)) {
+    return NextResponse.json({ ok: false, trace_id: traceId, error: "INVALID_ACTION" }, { status: 400 });
   }
 
   const sb = createAdminSupabase();
   const actor = "hocker-owner";
 
   try {
-    // ---- KYC MANAGEMENT ----
     if (action === "kyc_approve" || action === "kyc_reject") {
-      if (!targetId) {
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: "target_id (KYC request ID) requerido." },
-          { status: 400 },
-        );
-      }
+      if (!targetId) return rpcFailure("TARGET_ID_REQUIRED", traceId, 400);
+      const status = action === "kyc_approve" ? "approved" : "rejected";
+      const profileStatus = action === "kyc_approve" ? "verified" : "rejected";
 
-      const newStatus = action === "kyc_approve" ? "approved" : "rejected";
-      const profileKycStatus = action === "kyc_approve" ? "verified" : "rejected";
-
-      // Update KYC request
-      const { data: kycUpdate, error: kycError } = await sb
+      const { data: request, error } = await sb
         .from("kyc_requests")
         .update({
-          status: newStatus,
+          status,
           reviewed_at: new Date().toISOString(),
-          review_note: reason || `Reviewed by Hocker ONE admin (${action})`,
+          review_note: reason || `Reviewed by Hocker ONE (${action})`,
           updated_at: new Date().toISOString(),
         })
         .eq("id", targetId)
-        .select("id, user_id, status")
+        .select("id,user_id,status")
         .single();
 
-      if (kycError) {
-        await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: kycError.message });
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: kycError.message },
-          { status: 500 },
-        );
+      if (error) {
+        await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: error.message });
+        return rpcFailure("KYC_UPDATE_FAILED", traceId);
       }
 
-      // Update profile kyc_status
-      const userId = asText(kycUpdate?.user_id);
-      if (userId) {
-        await sb
+      if (request?.user_id) {
+        const { error: profileError } = await sb
           .from("profiles")
-          .update({ kyc_status: profileKycStatus })
-          .eq("user_id", userId);
+          .update({ kyc_status: profileStatus, updated_at: new Date().toISOString() })
+          .eq("user_id", request.user_id);
+        if (profileError) throw new Error("KYC_PROFILE_UPDATE_FAILED");
       }
 
       await logAudit(sb, { action, traceId, targetId, reason, actor, result: "success" });
-      return NextResponse.json({
-        ok: true,
-        trace_id: traceId,
-        action,
-        kyc_request_id: targetId,
-        new_status: newStatus,
-        user_id: userId,
-        message: `KYC ${newStatus} successfully.`,
-      });
+      return NextResponse.json({ ok: true, trace_id: traceId, action, kyc_request_id: targetId, status, user_id: request?.user_id });
     }
 
-    // ---- MANUAL DEPOSIT MANAGEMENT ----
     if (action === "deposit_confirm" || action === "deposit_reject") {
-      if (!targetId) {
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: "target_id (deposit request ID) requerido." },
-          { status: 400 },
-        );
-      }
-
-      const newStatus = action === "deposit_confirm" ? "confirmed" : "rejected";
-
-      const { data: depUpdate, error: depError } = await sb
+      if (!targetId) return rpcFailure("TARGET_ID_REQUIRED", traceId, 400);
+      const { data: request, error: lookupError } = await sb
         .from("manual_deposit_requests")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .select("id,folio,amount,user_id,status")
         .eq("id", targetId)
-        .select("id, user_id, status, amount")
-        .single();
+        .maybeSingle();
+      if (lookupError || !request?.folio) return rpcFailure("DEPOSIT_REQUEST_NOT_FOUND", traceId, 404);
 
-      if (depError) {
-        await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: depError.message });
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: depError.message },
-          { status: 500 },
-        );
-      }
-
-      // If confirming, credit the user's balance
-      if (action === "deposit_confirm" && depUpdate) {
-        const userId = asText(depUpdate.user_id);
-        const amount = Number(depUpdate.amount ?? 0);
-
-        if (userId && amount > 0) {
-          // Credit balance
-          const { data: balanceRow } = await sb
-            .from("balances")
-            .select("balance, bonus_balance")
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          const currentBalance = Number(balanceRow?.balance ?? 0);
-          await sb
-            .from("balances")
-            .upsert({
-              user_id: userId,
-              balance: currentBalance + amount,
-              updated_at: new Date().toISOString(),
-            });
-
-          // Record transaction
-          await sb.from("transactions").insert({
-            user_id: userId,
-            amount: amount,
-            type: "deposit",
-            status: "confirmed",
-            method: "manual",
-            reason: `Manual deposit confirmed by Hocker ONE admin`,
-            ref_id: targetId,
-            metadata: { admin_action: action, trace_id: traceId, source: "hocker.one" } as JsonObject,
-          });
-        }
-      }
-
-      await logAudit(sb, { action, traceId, targetId, reason, actor, result: "success" });
-      return NextResponse.json({
-        ok: true,
-        trace_id: traceId,
-        action,
-        deposit_request_id: targetId,
-        new_status: newStatus,
-        message: `Depósito ${newStatus} successfully.`,
+      const { data, error } = await sb.rpc("admin_confirm_manual_deposit", {
+        p_folio: request.folio,
+        p_amount: null,
+        p_ref_id: `manual_deposit:${request.folio}`,
+        p_status: action === "deposit_confirm" ? "approved" : "rejected",
+        p_reason: reason || null,
+        p_meta: {
+          reviewed_by: actor,
+          trace_id: traceId,
+          source: "hocker.one",
+          target_id: targetId,
+        },
       });
+
+      if (error || !(data as any)?.ok) {
+        const code = error?.message || String((data as any)?.error || "DEPOSIT_SETTLEMENT_FAILED");
+        await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: code });
+        return rpcFailure("DEPOSIT_SETTLEMENT_FAILED", traceId, 409);
+      }
+
+      await logAudit(sb, { action, traceId, targetId, reason, actor, result: "success", details: data as JsonObject });
+      return NextResponse.json({ ...(data as object), trace_id: traceId, action });
     }
 
-    // ---- WITHDRAWAL MANAGEMENT ----
     if (action === "withdraw_approve" || action === "withdraw_reject") {
-      if (!targetId) {
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: "target_id (withdrawal request ID) requerido." },
-          { status: 400 },
-        );
-      }
-
-      const newStatus = action === "withdraw_approve" ? "approved" : "rejected";
-
-      const { data: wdUpdate, error: wdError } = await sb
+      if (!targetId) return rpcFailure("TARGET_ID_REQUIRED", traceId, 400);
+      const { data: request, error: lookupError } = await sb
         .from("withdraw_requests")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .select("id,external_id,status")
         .eq("id", targetId)
-        .select("id, user_id, status, amount")
-        .single();
+        .maybeSingle();
+      if (lookupError || !request) return rpcFailure("WITHDRAW_REQUEST_NOT_FOUND", traceId, 404);
 
-      if (wdError) {
-        await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: wdError.message });
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: wdError.message },
-          { status: 500 },
-        );
-      }
-
-      // If rejecting a withdrawal, return the locked balance to the user
-      if (action === "withdraw_reject" && wdUpdate) {
-        const userId = asText(wdUpdate.user_id);
-        const amount = Number(wdUpdate.amount ?? 0);
-
-        if (userId && amount > 0) {
-          const { data: balanceRow } = await sb
-            .from("balances")
-            .select("balance, locked_balance")
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          const currentBalance = Number(balanceRow?.balance ?? 0);
-          const currentLocked = Number(balanceRow?.locked_balance ?? 0);
-
-          await sb
-            .from("balances")
-            .upsert({
-              user_id: userId,
-              balance: currentBalance + amount,
-              locked_balance: Math.max(0, currentLocked - amount),
-              updated_at: new Date().toISOString(),
-            });
-        }
-      }
-
-      await logAudit(sb, { action, traceId, targetId, reason, actor, result: "success" });
-      return NextResponse.json({
-        ok: true,
-        trace_id: traceId,
-        action,
-        withdrawal_request_id: targetId,
-        new_status: newStatus,
-        message: `Retiro ${newStatus} successfully.`,
+      const externalId = asText(request.external_id, request.id);
+      const finalAction = action === "withdraw_approve" ? "paid" : "reject";
+      const { data, error } = await sb.rpc("admin_settle_withdrawal", {
+        p_external_id: externalId,
+        p_final_action: finalAction,
+        p_provider_payload: { source: "hocker.one", trace_id: traceId },
+        p_note: reason || null,
+        p_idempotency_key: `withdraw_settle:${externalId}:${finalAction}`,
       });
+
+      if (error || !(data as any)?.ok) {
+        const code = error?.message || String((data as any)?.error || "WITHDRAW_SETTLEMENT_FAILED");
+        await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: code });
+        return rpcFailure("WITHDRAW_SETTLEMENT_FAILED", traceId, 409);
+      }
+
+      await logAudit(sb, { action, traceId, targetId, reason, actor, result: "success", details: data as JsonObject });
+      return NextResponse.json({ ...(data as object), trace_id: traceId, action });
     }
 
-    // ---- GAME KILL-SWITCH (PAUSE / RESUME) ----
     if (action === "games_pause" || action === "games_resume") {
       const killSwitch = action === "games_pause";
-
-      const { error: ctrlError } = await sb
-        .from("system_controls")
-        .upsert({
+      const { error } = await sb.from("system_controls").upsert(
+        {
           id: "chido-casino-games",
           project_id: "chido-casino",
           kill_switch: killSwitch,
@@ -332,92 +209,55 @@ export async function POST(req: NextRequest) {
           meta: {
             last_updated_by: actor,
             last_updated_at: new Date().toISOString(),
-            reason: reason || (killSwitch ? "Games paused by Hocker ONE admin" : "Games resumed by Hocker ONE admin"),
+            reason: reason || (killSwitch ? "Games paused by Hocker ONE" : "Games resumed by Hocker ONE"),
             source: "hocker.one",
             trace_id: traceId,
+            fail_closed: true,
           } as JsonObject,
           updated_at: new Date().toISOString(),
-        });
+        },
+        { onConflict: "project_id,id" }
+      );
 
-      if (ctrlError) {
-        await logAudit(sb, { action, traceId, reason, actor, result: "error", error: ctrlError.message });
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: ctrlError.message },
-          { status: 500 },
-        );
+      if (error) {
+        await logAudit(sb, { action, traceId, reason, actor, result: "error", error: error.message });
+        return rpcFailure("CONTROL_UPDATE_FAILED", traceId);
       }
 
       await logAudit(sb, { action, traceId, reason, actor, result: "success" });
-      return NextResponse.json({
-        ok: true,
-        trace_id: traceId,
-        action,
-        kill_switch: killSwitch,
-        message: killSwitch
-          ? "Juegos pausados. El kill-switch está activo."
-          : "Juegos reanudados. El kill-switch está desactivado.",
-      });
+      return NextResponse.json({ ok: true, trace_id: traceId, action, kill_switch: killSwitch });
     }
 
-    // ---- CASINO SETTINGS UPDATE ----
-    if (action === "settings_update") {
-      const allowedFields = [
-        "cashback_daily_cap",
-        "cashback_weekly_cap",
-        "cashback_lookback_days",
-        "cashback_wager_multiplier",
-        "free_rounds_wager_multiplier",
-        "promo_bonus_wager_multiplier",
-      ];
+    const allowedFields = new Set([
+      "cashback_daily_cap",
+      "cashback_weekly_cap",
+      "cashback_lookback_days",
+      "cashback_wager_multiplier",
+      "free_rounds_wager_multiplier",
+      "promo_bonus_wager_multiplier",
+    ]);
+    const safeSettings = Object.fromEntries(
+      Object.entries(settings).filter(([key, value]) => allowedFields.has(key) && Number.isFinite(Number(value)))
+    );
+    if (Object.keys(safeSettings).length === 0) return rpcFailure("NO_VALID_SETTINGS", traceId, 400);
 
-      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
-      for (const field of allowedFields) {
-        if (settings[field] !== undefined) {
-          updateData[field] = settings[field];
-        }
-      }
-
-      if (Object.keys(updateData).length <= 1) {
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: "No se proporcionaron campos válidos para actualizar." },
-          { status: 400 },
-        );
-      }
-
-      const { error: settingsError } = await sb
-        .from("casino_settings")
-        .update(updateData)
-        .eq("id", 1);
-
-      if (settingsError) {
-        await logAudit(sb, { action, traceId, reason, actor, result: "error", error: settingsError.message });
-        return NextResponse.json(
-          { ok: false, trace_id: traceId, error: settingsError.message },
-          { status: 500 },
-        );
-      }
-
-      await logAudit(sb, { action, traceId, reason, actor, result: "success" });
-      return NextResponse.json({
-        ok: true,
-        trace_id: traceId,
-        action,
-        updated_fields: Object.keys(updateData).filter((k) => k !== "updated_at"),
-        message: "Configuración del casino actualizada.",
-      });
+    const { data, error } = await sb
+      .from("casino_settings")
+      .update({ ...safeSettings, updated_at: new Date().toISOString() })
+      .eq("id", 1)
+      .select("*")
+      .single();
+    if (error) {
+      await logAudit(sb, { action, traceId, actor, result: "error", error: error.message });
+      return rpcFailure("SETTINGS_UPDATE_FAILED", traceId);
     }
 
-    // Should not reach here
-    return NextResponse.json(
-      { ok: false, trace_id: traceId, error: "Acción no manejada." },
-      { status: 400 },
-    );
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-    await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: errorMsg });
-    return NextResponse.json(
-      { ok: false, trace_id: traceId, error: errorMsg },
-      { status: 500 },
-    );
+    await logAudit(sb, { action, traceId, actor, result: "success", details: safeSettings as JsonObject });
+    return NextResponse.json({ ok: true, trace_id: traceId, action, settings: data });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "INTERNAL_ERROR";
+    console.error("Hocker ONE Chido admin error", { traceId, action, message });
+    await logAudit(sb, { action, traceId, targetId, reason, actor, result: "error", error: message });
+    return rpcFailure("INTERNAL_ERROR", traceId);
   }
 }
