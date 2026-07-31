@@ -1,16 +1,16 @@
 name: Repair Hocker MCP Owner Gate bridge
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - feature/mcp-owner-gate-bridge-20260731
 
 permissions:
   contents: write
 
 jobs:
   repair:
-    if: github.head_ref == 'feature/mcp-owner-gate-bridge-20260731' && github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -86,6 +86,8 @@ jobs:
           import_anchor = 'import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";'
           import_line = 'import { executeValidatedMcpDraft, validateDeferredMcpDraft } from "@/lib/mcp/mcp-policy";'
           if import_line not in worker:
+            if import_anchor not in worker:
+              raise SystemExit('worker import anchor missing')
             worker = worker.replace(import_anchor, import_anchor + '\n' + import_line, 1)
 
           new_tail = r'''async function executeApprovedMcpQueuePayload(payload: JsonRecord): Promise<JsonRecord> {
