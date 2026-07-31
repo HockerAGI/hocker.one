@@ -15,20 +15,26 @@ test("NOVA MCP drafts are validated and materialized into Owner Gate", async () 
   assert.match(materializer, /enqueueAgiAction/);
   assert.match(materializer, /requires_approval: true/);
   assert.match(chat, /materializeNovaMcpActionsFromUpstream/);
+  assert.match(chat, /requireProjectRole\(parsed\.data\.project_id, \["owner", "admin", "operator"\]\)/);
+  assert.match(chat, /allow_actions: Boolean\(upstreamActionActorId\)/);
   assert.match(chat, /mcp_owner_gate/);
   assert.match(chat, /nova_mcp_actions_waiting_owner_gate/);
 });
 
 test("mutating MCP requests require queue, approval, lock and evidence", async () => {
-  const route = await read("src/app/api/mcp/execute/route.ts");
-  const worker = await read("src/lib/agi-action-execution.ts");
+  const directRoute = await read("src/app/api/mcp/execute/route.ts");
+  const executeRoute = await read("src/app/api/agi/runtime/actions/execute/route.ts");
+  const router = await read("src/lib/agi-action-execution-router.ts");
   const approvals = await read("src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx");
 
-  assert.match(route, /MCP_MUTATION_REQUIRES_OWNER_GATE_QUEUE/);
-  assert.match(worker, /claimApprovedQueueItem/);
-  assert.match(worker, /executeValidatedMcpDraft/);
-  assert.match(worker, /mcp_approved_execution_worker_1\.0/);
-  assert.match(worker, /execution_result/);
+  assert.match(directRoute, /MCP_MUTATION_REQUIRES_OWNER_GATE_QUEUE/);
+  assert.match(executeRoute, /executeApprovedAgiActionUniversal/);
+  assert.match(router, /\.eq\("status", "approved"\)/);
+  assert.match(router, /\.is\("locked_at", null\)/);
+  assert.match(router, /executeValidatedMcpDraft/);
+  assert.match(router, /mcp_approved_execution_worker_1\.0/);
+  assert.match(router, /execution_result/);
+  assert.match(router, /return executeApprovedAgiAction\(params\)/);
   assert.match(approvals, /toolKey === "mcp" && actionType === "mcp\.execute"/);
   assert.match(approvals, /Aprobar y ejecutar/);
 });
