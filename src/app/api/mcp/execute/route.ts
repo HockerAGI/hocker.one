@@ -1,22 +1,29 @@
 /**
- * Hocker ONE — MCP Execute API Endpoint
+ * Hocker ONE — MCP direct read endpoint.
  *
- * Allows NOVA and AGIs to execute tools on MCP providers.
- * Owner/internal gate required. Rate-limited for safety.
+ * Only proven read-only tools may execute here. Every mutation must first be
+ * materialized in agi_action_queue, approved by the Owner and executed by the
+ * locked worker.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import {
+  assertMcpToolAvailable,
+  isReadOnlyMcpTool,
+  MCP_PROVIDER_IDS,
+  type McpProviderId,
+} from "@/lib/mcp/mcp-policy";
 import { log } from "@/lib/logger";
 import { sanitizePublicError } from "@/lib/sanitize-error";
 
 export const dynamic = "force-dynamic";
 
 const ExecuteSchema = z.object({
-  provider: z.enum(["supabase", "vercel", "github", "openai", "base44"]),
-  tool: z.string().min(1),
+  provider: z.enum(MCP_PROVIDER_IDS),
+  tool: z.string().min(1).max(160),
   args: z.record(z.unknown()).optional(),
 });
 
@@ -34,16 +41,33 @@ export async function POST(req: NextRequest) {
         {
           ok: false,
           trace_id: traceId,
-          error: "Invalid MCP execute payload.",
+          error: "Solicitud MCP inválida.",
           issues: parsed.error.flatten(),
         },
         { status: 400 },
       );
     }
 
-    const { provider, tool, args } = parsed.data;
+    const provider = parsed.data.provider as McpProviderId;
+    const { tool, args } = parsed.data;
 
-    log.info("MCP execute request", {
+    if (!isReadOnlyMcpTool(provider, tool)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          trace_id: traceId,
+          code: "MCP_MUTATION_REQUIRES_OWNER_GATE_QUEUE",
+          error: "Esta herramienta modifica o puede modificar datos. Debe prepararse en NOVA Chat, aprobarse y ejecutarse desde la cola segura.",
+          provider,
+          tool,
+        },
+        { status: 409 },
+      );
+    }
+
+    await assertMcpToolAvailable(provider, tool);
+
+    log.info("MCP read request", {
       route: "/api/mcp/execute",
       trace_id: traceId,
       provider,
@@ -51,11 +75,6 @@ export async function POST(req: NextRequest) {
     });
 
     const registry = getMcpRegistry();
-
-    if (!registry.isInitialized) {
-      await registry.initializeAll();
-    }
-
     const result = await registry.executeTool(provider, tool, args);
 
     return NextResponse.json({
@@ -63,10 +82,11 @@ export async function POST(req: NextRequest) {
       trace_id: traceId,
       provider,
       tool,
+      read_only: true,
       result,
     });
   } catch (err: unknown) {
-    log.error("MCP execute failure", {
+    log.error("MCP read failure", {
       route: "/api/mcp/execute",
       trace_id: traceId,
       detail: sanitizePublicError(err),
