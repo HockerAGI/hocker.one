@@ -11,15 +11,21 @@ on:
       - "capacitor.config.ts"
       - "package.json"
       - "package-lock.json"
+      - "tests/android-bootstrap-security.test.mjs"
       - ".github/workflows/android-debug.yml"
 
 permissions:
   contents: read
 
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-debug-apk:
-    name: Build Hocker ONE debug APK
+    name: Build and verify Hocker ONE debug APK
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -41,20 +47,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Next.js static export for Capacitor
-        run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      - name: Validate secure Capacitor bootstrap
+        shell: bash
+        run: |
+          test -s out/index.html
+          ! grep -Eqi '<script[^>]+src=' out/index.html
+          ! grep -Eqi 'http://|myninja\.ai' out/index.html
+          grep -Fq 'Content-Security-Policy' out/index.html
+          grep -Fq 'https://hockerone.vercel.app' out/index.html
 
-      - name: Ensure Android assets directory exists
-        run: mkdir -p android/app/src/main/assets/public
+      - name: Run Android bootstrap regression test
+        run: node --test tests/android-bootstrap-security.test.mjs
 
       - name: Sync Capacitor Android shell
         run: npm run android:sync
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew
+
+      - name: Run Android unit tests and lint
+        working-directory: android
+        run: ./gradlew testDebugUnitTest lintDebug --stacktrace
 
       - name: Build debug APK
         working-directory: android
