@@ -25,7 +25,6 @@ jobs:
           from pathlib import Path
           import re
 
-          # ── NOVA chat route: validate and materialize upstream drafts ──
           chat_path = Path('src/app/api/nova/chat/route.ts')
           chat = chat_path.read_text()
           import_anchor = 'import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";'
@@ -35,206 +34,186 @@ jobs:
               raise SystemExit('chat import anchor missing')
             chat = chat.replace(import_anchor, import_anchor + '\n' + import_line, 1)
 
-          old_response = '''    const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-              const safePayload = sanitizeNovaPayload(responseJson, injectedMeta, localActionDraft);
-
-              return NextResponse.json(safePayload, {'''
-          new_response = '''    const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-              let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
-                actions: [],
-                rejected: [],
-              };
-
-              const upstreamMcp =
-                responseJson.meta &&
-                typeof responseJson.meta.mcp === "object" &&
-                responseJson.meta.mcp !== null &&
-                !Array.isArray(responseJson.meta.mcp)
-                  ? (responseJson.meta.mcp as Record<string, unknown>)
-                  : {};
-              const hasDeferredMcpActions = Array.isArray(upstreamMcp.deferred_actions) && upstreamMcp.deferred_actions.length > 0;
-
-              if (parsed.data.allow_actions && responseJson.ok && hasDeferredMcpActions) {
-                try {
-                  const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
-                  mcpBridge = await materializeNovaMcpActionsFromUpstream({
-                    project_id: ctx.project_id,
-                    created_by: ctx.user.id,
-                    original_message: parsed.data.message,
-                    trace_id: responseJson.trace_id ?? null,
-                    upstream_meta: responseJson.meta,
-                  });
-                } catch (error) {
-                  mcpBridge = {
-                    actions: [],
-                    rejected: [{ reason: sanitizePublicError(error) }],
-                  };
-                }
-              }
-
-              const safePayload = sanitizeNovaPayload(responseJson, injectedMeta, localActionDraft);
-              const currentActions = Array.isArray(safePayload.actions) ? safePayload.actions : [];
-              safePayload.actions = [...currentActions, ...mcpBridge.actions];
-
-              const safeMeta =
-                safePayload.meta &&
-                typeof safePayload.meta === "object" &&
-                !Array.isArray(safePayload.meta)
-                  ? (safePayload.meta as Record<string, unknown>)
-                  : {};
-              const safeControls =
-                safeMeta.controls &&
-                typeof safeMeta.controls === "object" &&
-                !Array.isArray(safeMeta.controls)
-                  ? (safeMeta.controls as Record<string, unknown>)
-                  : {};
-              safeControls.enqueued_actions = safePayload.actions;
-              if (mcpBridge.actions.length > 0) {
-                safeControls.action_policy = "nova_mcp_actions_waiting_owner_gate";
-              }
-              safeMeta.controls = safeControls;
-              safeMeta.mcp_owner_gate = {
-                requested: parsed.data.allow_actions,
-                drafts_received: hasDeferredMcpActions,
-                materialized: mcpBridge.actions.length,
-                rejected: mcpBridge.rejected,
-              };
-              safePayload.meta = safeMeta;
-
-              return NextResponse.json(safePayload, {'''
           if 'materializeNovaMcpActionsFromUpstream({' not in chat:
-            if old_response not in chat:
+            pattern = re.compile(
+              r'(\s*const responseJson = \(await res\.json\(\)\.catch\(\(\) => \(\{\}\)\)\) as NovaChatResponse;)\s*\n\s*const safePayload = sanitizeNovaPayload\(responseJson, injectedMeta, localActionDraft\);',
+            )
+            replacement = r'''\1
+    let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
+      actions: [],
+      rejected: [],
+    };
+    const upstreamMcp =
+      responseJson.meta && typeof responseJson.meta.mcp === "object" && responseJson.meta.mcp !== null && !Array.isArray(responseJson.meta.mcp)
+        ? (responseJson.meta.mcp as Record<string, unknown>)
+        : {};
+    const hasDeferredMcpActions = Array.isArray(upstreamMcp.deferred_actions) && upstreamMcp.deferred_actions.length > 0;
+
+    if (parsed.data.allow_actions && responseJson.ok && hasDeferredMcpActions) {
+      try {
+        const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
+        mcpBridge = await materializeNovaMcpActionsFromUpstream({
+          project_id: ctx.project_id,
+          created_by: ctx.user.id,
+          original_message: parsed.data.message,
+          trace_id: responseJson.trace_id ?? null,
+          upstream_meta: responseJson.meta,
+        });
+      } catch (error) {
+        mcpBridge = { actions: [], rejected: [{ reason: sanitizePublicError(error) }] };
+      }
+    }
+
+    const safePayload = sanitizeNovaPayload(responseJson, injectedMeta, localActionDraft);
+    const currentActions = Array.isArray(safePayload.actions) ? safePayload.actions : [];
+    safePayload.actions = [...currentActions, ...mcpBridge.actions];
+    const safeMeta = safePayload.meta && typeof safePayload.meta === "object" && !Array.isArray(safePayload.meta)
+      ? (safePayload.meta as Record<string, unknown>)
+      : {};
+    const safeControls = safeMeta.controls && typeof safeMeta.controls === "object" && !Array.isArray(safeMeta.controls)
+      ? (safeMeta.controls as Record<string, unknown>)
+      : {};
+    safeControls.enqueued_actions = safePayload.actions;
+    if (mcpBridge.actions.length > 0) safeControls.action_policy = "nova_mcp_actions_waiting_owner_gate";
+    safeMeta.controls = safeControls;
+    safeMeta.mcp_owner_gate = {
+      requested: parsed.data.allow_actions,
+      drafts_received: hasDeferredMcpActions,
+      materialized: mcpBridge.actions.length,
+      rejected: mcpBridge.rejected,
+    };
+    safePayload.meta = safeMeta;'''
+            chat, count = pattern.subn(replacement, chat, count=1)
+            if count != 1:
               raise SystemExit('chat response anchor missing')
-            chat = chat.replace(old_response, new_response, 1)
           chat_path.write_text(chat)
 
-          # ── Approved action worker: add generic MCP execution ──
           worker_path = Path('src/lib/agi-action-execution.ts')
           worker = worker_path.read_text()
-          worker_import_anchor = 'import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";'
-          worker_import = 'import { executeValidatedMcpDraft, validateDeferredMcpDraft } from "@/lib/mcp/mcp-policy";'
-          if worker_import not in worker:
-            if worker_import_anchor not in worker:
-              raise SystemExit('worker import anchor missing')
-            worker = worker.replace(worker_import_anchor, worker_import_anchor + '\n' + worker_import, 1)
+          import_anchor = 'import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";'
+          import_line = 'import { executeValidatedMcpDraft, validateDeferredMcpDraft } from "@/lib/mcp/mcp-policy";'
+          if import_line not in worker:
+            worker = worker.replace(import_anchor, import_anchor + '\n' + import_line, 1)
 
-          helper_anchor = 'export async function executeApprovedAgiAction('
-          helper = '''async function executeApprovedMcpQueuePayload(payload: JsonRecord): Promise<JsonRecord> {
-            const provider = stringValue(payload.provider).toLowerCase();
-            const tool = stringValue(payload.tool);
-            const draft = validateDeferredMcpDraft({
-              draft_id: payload.draft_id ?? randomUUID(),
-              action_type: "mcp.execute",
-              tool_key: "mcp",
-              provider,
-              tool,
-              args: asRecord(payload.args),
-              requires_approval: true,
-              execution_target: "hocker.one.owner-gate",
-            });
-            const data = await executeValidatedMcpDraft(draft);
-            return {
-              operation: "mcp.execute",
-              provider: draft.provider,
-              tool: draft.tool,
-              qualified_name: draft.qualified_name,
-              data,
-            };
-          }
+          new_tail = r'''async function executeApprovedMcpQueuePayload(payload: JsonRecord): Promise<JsonRecord> {
+  const draft = validateDeferredMcpDraft({
+    draft_id: payload.draft_id ?? randomUUID(),
+    action_type: "mcp.execute",
+    tool_key: "mcp",
+    provider: stringValue(payload.provider).toLowerCase(),
+    tool: stringValue(payload.tool),
+    args: asRecord(payload.args),
+    requires_approval: true,
+    execution_target: "hocker.one.owner-gate",
+  });
+  const data = await executeValidatedMcpDraft(draft);
+  return {
+    operation: "mcp.execute",
+    provider: draft.provider,
+    tool: draft.tool,
+    qualified_name: draft.qualified_name,
+    data,
+  };
+}
 
-          '''
-          if 'async function executeApprovedMcpQueuePayload' not in worker:
-            if helper_anchor not in worker:
-              raise SystemExit('worker helper anchor missing')
-            worker = worker.replace(helper_anchor, helper + helper_anchor, 1)
+export async function executeApprovedAgiAction(params: { project_id: string; action_id: string; actor_id: string }): Promise<AgiActionQueueRow> {
+  const pending = await getQueueItem(params.project_id, params.action_id);
 
-          old_gate = '''  if (pending.status !== "approved") throw new Error(`Acción no aprobada. Estado actual: ${pending.status}`);
-            if (pending.tool_key !== "github" || !pending.action_type.startsWith("github.")) {
-              throw new Error("Worker actual solo ejecuta acciones GitHub aprobadas.");
-            }
+  if (pending.status !== "approved") throw new Error(`Acción no aprobada. Estado actual: ${pending.status}`);
+  const githubAction = pending.tool_key === "github" && pending.action_type.startsWith("github.");
+  const mcpAction = pending.tool_key === "mcp" && pending.action_type === "mcp.execute";
+  if (!githubAction && !mcpAction) throw new Error("No existe un worker aprobado para esta acción.");
+  if (githubAction) await assertGuidedGithubExecutionOrder(params.project_id, pending);
 
-            await assertGuidedGithubExecutionOrder(params.project_id, pending);'''
-          new_gate = '''  if (pending.status !== "approved") throw new Error(`Acción no aprobada. Estado actual: ${pending.status}`);
-            const githubAction = pending.tool_key === "github" && pending.action_type.startsWith("github.");
-            const mcpAction = pending.tool_key === "mcp" && pending.action_type === "mcp.execute";
-            if (!githubAction && !mcpAction) {
-              throw new Error("No existe un worker aprobado para esta acción.");
-            }
+  const item = await claimApprovedQueueItem({
+    project_id: params.project_id,
+    action_id: params.action_id,
+    actor_id: params.actor_id,
+    item: pending,
+  });
+  const workerName = githubAction
+    ? "github_approved_execution_worker_12.7Z-1A"
+    : "mcp_approved_execution_worker_1.0";
 
-            if (githubAction) await assertGuidedGithubExecutionOrder(params.project_id, pending);'''
-          if 'const mcpAction = pending.tool_key === "mcp"' not in worker:
-            if old_gate not in worker:
-              raise SystemExit('worker gate anchor missing')
-            worker = worker.replace(old_gate, new_gate, 1)
+  try {
+    const payload = asRecord(item.payload);
+    let result: JsonRecord;
 
-          claim_anchor = '''  const item = await claimApprovedQueueItem({
-            project_id: params.project_id,
-            action_id: params.action_id,
-            actor_id: params.actor_id,
-            item: pending,
-          });
+    if (githubAction) {
+      const operation = item.action_type.replace(/^github\./, "");
+      result =
+        operation === "create_branch"
+          ? await executeCreateBranch(payload)
+          : operation === "upsert_file"
+            ? await executeUpsertFile(payload)
+            : operation === "create_pr"
+              ? await executeCreatePr(payload)
+              : (() => { throw new Error(`Operación GitHub no soportada por worker: ${operation}`); })();
+    } else {
+      result = await executeApprovedMcpQueuePayload(payload);
+    }
 
-            try {'''
-          claim_replacement = '''  const item = await claimApprovedQueueItem({
-            project_id: params.project_id,
-            action_id: params.action_id,
-            actor_id: params.actor_id,
-            item: pending,
-          });
-          const workerName = githubAction
-            ? "github_approved_execution_worker_12.7Z-1A"
-            : "mcp_approved_execution_worker_1.0";
+    const rollbackPlan: JsonRecord = githubAction
+      ? buildRollbackPlan(item, result)
+      : {
+          type: "mcp.provider_specific_manual_review",
+          safe: false,
+          provider: payload.provider ?? null,
+          tool: payload.tool ?? null,
+          note: "El rollback depende de la herramienta y requiere revisar la evidencia guardada.",
+        };
 
-            try {'''
-          if 'const workerName = githubAction' not in worker:
-            if claim_anchor not in worker:
-              raise SystemExit('worker claim anchor missing')
-            worker = worker.replace(claim_anchor, claim_replacement, 1)
+    return patchQueueItem(item.id, {
+      status: "executed",
+      executed_by: params.actor_id,
+      executed_at: new Date().toISOString(),
+      locked_at: null,
+      lock_owner: null,
+      last_error: null,
+      execution_error: null,
+      rollback_plan: rollbackPlan,
+      execution_result: {
+        ok: true,
+        executed_at: new Date().toISOString(),
+        worker: workerName,
+        idempotency_key: item.idempotency_key ?? null,
+        attempt_count: item.attempt_count ?? null,
+        result,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falla desconocida al ejecutar acción AGI.";
 
-          old_result = '''    const payload = asRecord(item.payload);
-              const operation = item.action_type.replace(/^github\./, "");
-              const result =
-                operation === "create_branch"
-                  ? await executeCreateBranch(payload)
-                  : operation === "upsert_file"
-                    ? await executeUpsertFile(payload)
-                    : operation === "create_pr"
-                      ? await executeCreatePr(payload)
-                      : (() => { throw new Error(`Operación GitHub no soportada por worker: ${operation}`); })();
+    await patchQueueItem(item.id, {
+      status: "execution_failed",
+      executed_by: params.actor_id,
+      executed_at: new Date().toISOString(),
+      locked_at: null,
+      lock_owner: null,
+      last_error: message,
+      execution_error: message,
+      execution_result: {
+        ok: false,
+        worker: workerName,
+        idempotency_key: item.idempotency_key ?? null,
+        attempt_count: item.attempt_count ?? null,
+      },
+    });
 
-              const rollbackPlan = buildRollbackPlan(item, result as JsonRecord);'''
-          new_result = '''    const payload = asRecord(item.payload);
-              const operation = githubAction ? item.action_type.replace(/^github\./, "") : "mcp.execute";
-              const result = githubAction
-                ? operation === "create_branch"
-                  ? await executeCreateBranch(payload)
-                  : operation === "upsert_file"
-                    ? await executeUpsertFile(payload)
-                    : operation === "create_pr"
-                      ? await executeCreatePr(payload)
-                      : (() => { throw new Error(`Operación GitHub no soportada por worker: ${operation}`); })()
-                : await executeApprovedMcpQueuePayload(payload);
-
-              const rollbackPlan = githubAction
-                ? buildRollbackPlan(item, result as JsonRecord)
-                : {
-                    type: "mcp.provider_specific_manual_review",
-                    safe: false,
-                    provider: payload.provider ?? null,
-                    tool: payload.tool ?? null,
-                    note: "El rollback depende de la herramienta y requiere revisión del resultado guardado.",
-                  };'''
-          if 'await executeApprovedMcpQueuePayload(payload)' not in worker:
-            if old_result not in worker:
-              raise SystemExit('worker result anchor missing')
-            worker = worker.replace(old_result, new_result, 1)
-
-          worker = worker.replace('worker: "github_approved_execution_worker_12.7Z-1A",', 'worker: workerName,')
-          if worker.count('worker: workerName,') < 2:
-            raise SystemExit('worker evidence markers incomplete')
+    throw error;
+  }
+}
+'''
+          worker, count = re.subn(
+            r'export async function executeApprovedAgiAction\([\s\S]*\Z',
+            new_tail,
+            worker,
+            count=1,
+          )
+          if count != 1:
+            raise SystemExit('worker tail replacement failed')
           worker_path.write_text(worker)
 
-          # ── Chat approval UI: MCP actions are now executable too ──
           ui_path = Path('src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx')
           ui = ui_path.read_text()
           ui = ui.replace('function isExecutableGithubAction(action: OwnerLiveAction): boolean {', 'function isExecutableApprovedAction(action: OwnerLiveAction): boolean {', 1)
