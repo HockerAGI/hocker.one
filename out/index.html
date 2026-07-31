@@ -3,16 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; navigate-to https://hockerone.vercel.app"
+  />
+  <meta http-equiv="refresh" content="0;url=https://hockerone.vercel.app" />
+  <meta name="referrer" content="no-referrer" />
   <title>Hocker ONE</title>
-  <script>
-    // Capacitor shell: when running as standalone APK with server.url,
-    // this page is never shown. It exists only so `cap sync` has a webDir.
-    // The actual content is loaded from the remote server.url defined in capacitor.config.ts.
-    window.location.href = "https://hockerone.vercel.app";
-  </script>
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
-<body style="background:#020617;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui,sans-serif">
-  <p>Cargando Hocker ONE…</p>
+<body style="background:#020617;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:system-ui,sans-serif">
+  <p>
+    Cargando Hocker ONE…
+    <a href="https://hockerone.vercel.app" rel="noreferrer" style="color:#fff">Abrir aplicación</a>
+  </p>
 </body>
 </html>
