@@ -4,13 +4,18 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("workers console is discoverable from operations navigation", async () => {
+test("workers console is discoverable from navigation and global catalog", async () => {
   const sidebar = await read("src/components/Sidebar.tsx");
   const page = await read("src/app/workers/page.tsx");
+  const catalog = await read("src/lib/operations-catalog.ts");
 
   assert.match(sidebar, /href: "\/workers"/);
   assert.match(sidebar, /Trabajadores AGI/);
+  assert.match(sidebar, /Workflow/);
   assert.match(page, /VerifiableWorkersConsole/);
+  assert.match(catalog, /id: "verifiable-agi-workers"/);
+  assert.match(catalog, /href: "\/workers"/);
+  assert.match(catalog, /la ejecución depende de migración aplicada, despliegue activo/);
 });
 
 test("workers API keeps reads private and writes role-gated", async () => {
