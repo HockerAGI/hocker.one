@@ -20,6 +20,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Workflow,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -49,6 +50,7 @@ const navGroups: NavGroup[] = [
     title: "Operación",
     items: [
       { href: "/commands", label: "Tareas y aprobaciones", icon: CheckSquare },
+      { href: "/workers", label: "Trabajadores AGI", icon: Workflow },
       { href: "/nodes", label: "Nodos y agentes", icon: Network },
       { href: "/status", label: "Salud del sistema", icon: CircleDot },
     ],
