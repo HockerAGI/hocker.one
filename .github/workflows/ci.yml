@@ -29,68 +29,56 @@ jobs:
           ref: audit/chat-approval-ux-20260730
           fetch-depth: 0
 
-      - name: Apply focused approval patch
+      - name: Apply flexible approval patch
         if: github.actor != 'github-actions[bot]'
         shell: bash
         run: |
           python <<'PY'
           from pathlib import Path
+          import re
 
           component_path = Path('src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx')
           text = component_path.read_text()
 
-          text = text.replace(
-            '''  const urls = [
-            "/api/agi/runtime/actions?project_id=hocker-one&limit=30",
-            "/api/agi/runtime/actions?limit=30",
-            "/api/commands",
-          ];''',
-            '''  const urls = [
-            "/api/agi/runtime/actions?project_id=hocker-one&limit=30",
-            "/api/agi/runtime/actions?limit=30",
-          ];''',
-            1,
+          text, removed_commands = re.subn(
+            r'\n\s*"/api/commands",',
+            '',
+            text,
+            count=1,
           )
-          text = text.replace(
-            '    clean.includes("needs") ||\n    clean.includes("queued")',
-            '    clean.includes("needs")',
-            1,
+          text, removed_queued = re.subn(
+            r'\s*\|\|\s*\n\s*clean\.includes\("queued"\)',
+            '',
+            text,
+            count=1,
           )
 
-          risk_anchor = '''function riskClass(risk: OwnerLiveAction["risk"]) {
-            if (risk === "high") return "border-rose-300/30 bg-rose-300/10 text-rose-100";
-            if (risk === "medium") return "border-amber-300/30 bg-amber-300/10 text-amber-100";
-            return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
-          }
-          '''
-          helper = '''
+          if 'function isExecutableGithubAction' not in text:
+            anchor = re.search(r'function riskClass\([\s\S]*?\n\}', text)
+            if not anchor:
+              raise SystemExit('risk helper anchor not found')
+            helper = '''
+
           function isExecutableGithubAction(action: OwnerLiveAction): boolean {
             if (!action.raw || typeof action.raw !== "object" || Array.isArray(action.raw)) return false;
             const raw = action.raw as Record<string, unknown>;
             const toolKey = String(raw.tool_key ?? "").toLowerCase();
             const actionType = String(raw.action_type ?? "").toLowerCase();
             return toolKey === "github" && actionType.startsWith("github.");
-          }
-          '''
-          if 'function isExecutableGithubAction' not in text:
-            if risk_anchor not in text:
-              raise SystemExit('risk helper anchor not found')
-            text = text.replace(risk_anchor, risk_anchor + helper, 1)
+          }'''
+            text = text[:anchor.end()] + helper + text[anchor.end():]
 
-          text = text.replace(
-            '''  const [message, setMessage] = useState("");
-
-            async function sendDecision(decision: Decision, fallbackNote: string, busyState: Decision | "adjust") {''',
-            '''  const [message, setMessage] = useState("");
-            const canExecute = isExecutableGithubAction(action);
-
-            async function sendDecision(
-              decision: Decision,
-              fallbackNote: string,
-              busyState: Decision | "adjust",
-              executeAfterApproval = false,
-            ) {''',
-            1,
+          text = re.sub(
+            r'(const \[message, setMessage\] = useState\(""\);)',
+            r'\1\n  const canExecute = isExecutableGithubAction(action);',
+            text,
+            count=1,
+          )
+          text = re.sub(
+            r'async function sendDecision\(decision: Decision, fallbackNote: string, busyState: Decision \| "adjust"\)',
+            'async function sendDecision(decision: Decision, fallbackNote: string, busyState: Decision | "adjust", executeAfterApproval = false)',
+            text,
+            count=1,
           )
 
           old_result = '''      setMessage(
@@ -137,33 +125,26 @@ jobs:
 
           text = text.replace(
             'onClick={() => void sendDecision("approve", "Aprobado desde el chat de NOVA.", "approve")}',
-            '''onClick={() => void sendDecision(
-                    "approve",
-                    "Aprobado desde el chat de NOVA.",
-                    "approve",
-                    canExecute,
-                  )}''',
+            'onClick={() => void sendDecision("approve", "Aprobado desde el chat de NOVA.", "approve", canExecute)}',
             1,
           )
           text = text.replace(
             '{busy === "approve" ? "Aprobando..." : "Aprobar"}',
-            '''{busy === "approve"
-                    ? canExecute ? "Aprobando y ejecutando..." : "Aprobando..."
-                    : canExecute ? "Aprobar y ejecutar" : "Aprobar"}''',
+            '{busy === "approve" ? (canExecute ? "Aprobando y ejecutando..." : "Aprobando...") : (canExecute ? "Aprobar y ejecutar" : "Aprobar")}',
             1,
           )
 
           if '/api/commands' in text or 'clean.includes("queued")' in text:
-            raise SystemExit('approval state patch incomplete')
-          if 'Aprobar y ejecutar' not in text:
+            raise SystemExit(f'approval state patch incomplete: commands={removed_commands}, queued={removed_queued}')
+          if 'Aprobar y ejecutar' not in text or 'executeAfterApproval' not in text:
             raise SystemExit('execution UX patch incomplete')
           component_path.write_text(text)
 
           normalizer_path = Path('src/components/hocker-2c/owner/live/owner-live-normalizers.ts')
           normalizer = normalizer_path.read_text()
           normalizer = normalizer.replace(
-            '  if (["pending", "needs_approval", "queued"].includes(clean)) return "Necesita aprobación";\n  if (["approved"].includes(clean)) return "Aprobada";',
-            '  if (["pending", "needs_approval"].includes(clean)) return "Necesita aprobación";\n  if (["queued"].includes(clean)) return "En cola";\n  if (["approved"].includes(clean)) return "Aprobada";',
+            '  if (["pending", "needs_approval", "queued"].includes(clean)) return "Necesita aprobación";',
+            '  if (["pending", "needs_approval"].includes(clean)) return "Necesita aprobación";\n  if (["queued"].includes(clean)) return "En cola";',
             1,
           )
           normalizer = normalizer.replace('["failed", "error"]', '["failed", "error", "execution_failed"]', 1)
@@ -178,10 +159,8 @@ jobs:
           git config user.name "hocker-audit-bot"
           git config user.email "actions@users.noreply.github.com"
           git add src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx src/components/hocker-2c/owner/live/owner-live-normalizers.ts .github/workflows/ci.yml .github/workflows/apply-chat-approval-ux-patch.yml
-          if ! git diff --cached --quiet; then
-            git commit -m "fix(chat): make approval states and execution explicit"
-            git push origin HEAD:audit/chat-approval-ux-20260730
-          fi
+          git commit -m "fix(chat): make approval states and execution explicit"
+          git push origin HEAD:audit/chat-approval-ux-20260730
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
