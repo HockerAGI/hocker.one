@@ -194,8 +194,14 @@ export async function executeApprovedAgiActionUniversal(
   params: ExecuteParams,
 ): Promise<AgiActionQueueRow> {
   const pending = await getQueueItem(params.project_id, params.action_id);
+  const hasMcpTool = pending.tool_key === "mcp";
+  const hasMcpAction = pending.action_type === "mcp.execute";
 
-  if (pending.tool_key === "mcp" || pending.action_type === "mcp.execute") {
+  if (hasMcpTool !== hasMcpAction) {
+    throw new Error("Contrato de trabajador inconsistente: tool_key y action_type no coinciden.");
+  }
+
+  if (hasMcpTool && hasMcpAction) {
     return executeApprovedMcpAction(params, pending);
   }
 
