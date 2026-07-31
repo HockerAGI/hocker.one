@@ -1,0 +1,153 @@
+name: Apply chat approval UX patch
+
+on:
+  push:
+    branches:
+      - audit/chat-approval-ux-20260730
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/chat-approval-ux-20260730
+          fetch-depth: 0
+
+      - name: Apply focused approval changes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          component_path = Path('src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx')
+          text = component_path.read_text()
+
+          old_urls = '''  const urls = [
+            "/api/agi/runtime/actions?project_id=hocker-one&limit=30",
+            "/api/agi/runtime/actions?limit=30",
+            "/api/commands",
+          ];'''
+          new_urls = '''  const urls = [
+            "/api/agi/runtime/actions?project_id=hocker-one&limit=30",
+            "/api/agi/runtime/actions?limit=30",
+          ];'''
+          if old_urls not in text:
+              raise SystemExit('approval URL block not found')
+          text = text.replace(old_urls, new_urls, 1)
+
+          text = text.replace('    clean.includes("needs") ||\n    clean.includes("queued")', '    clean.includes("needs")', 1)
+
+          risk_anchor = '''function riskClass(risk: OwnerLiveAction["risk"]) {
+            if (risk === "high") return "border-rose-300/30 bg-rose-300/10 text-rose-100";
+            if (risk === "medium") return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+            return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+          }
+          '''
+          risk_replacement = risk_anchor + '''
+          function isExecutableGithubAction(action: OwnerLiveAction): boolean {
+            if (!action.raw || typeof action.raw !== "object" || Array.isArray(action.raw)) return false;
+            const raw = action.raw as Record<string, unknown>;
+            const toolKey = String(raw.tool_key ?? "").toLowerCase();
+            const actionType = String(raw.action_type ?? "").toLowerCase();
+            return toolKey === "github" && actionType.startsWith("github.");
+          }
+          '''
+          if risk_anchor not in text:
+              raise SystemExit('risk helper anchor not found')
+          text = text.replace(risk_anchor, risk_replacement, 1)
+
+          text = text.replace('''  const [message, setMessage] = useState("");
+
+            async function sendDecision(decision: Decision, fallbackNote: string, busyState: Decision | "adjust") {''', '''  const [message, setMessage] = useState("");
+            const canExecute = isExecutableGithubAction(action);
+
+            async function sendDecision(
+              decision: Decision,
+              fallbackNote: string,
+              busyState: Decision | "adjust",
+              executeAfterApproval = false,
+            ) {''', 1)
+
+          old_message = '''      setMessage(
+                decision === "approve"
+                  ? "Aprobado. La acción quedó autorizada, pero no se ejecutó desde este botón."
+                  : "Listo. La acción fue rechazada o enviada a ajuste."
+              );
+
+              setNote("");
+              onDone();'''
+          new_message = '''      if (decision === "approve" && executeAfterApproval) {
+                const executionResponse = await fetch("/api/agi/runtime/actions/execute", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    project_id: action.projectId || DEFAULT_PROJECT_ID,
+                    action_id: action.id,
+                  }),
+                });
+                const executionPayload = await executionResponse.json().catch(() => ({}));
+
+                if (!executionResponse.ok) {
+                  const executionError = executionPayload?.error || executionPayload?.message || "La ejecución no pudo completarse.";
+                  setMessage(`La acción quedó aprobada, pero no se ejecutó: ${String(executionError)}`);
+                  setNote("");
+                  onDone();
+                  return;
+                }
+
+                setMessage("Aprobada y ejecutada. El resultado quedó guardado en la evidencia.");
+              } else {
+                setMessage(
+                  decision === "approve"
+                    ? "Aprobada. Quedó lista para que el ejecutor correspondiente la procese."
+                    : "Listo. La acción fue rechazada o enviada a ajuste."
+                );
+              }
+
+              setNote("");
+              onDone();'''
+          if old_message not in text:
+              raise SystemExit('approval result block not found')
+          text = text.replace(old_message, new_message, 1)
+
+          text = text.replace('''          onClick={() => void sendDecision("approve", "Aprobado desde el chat de NOVA.", "approve")}''', '''          onClick={() => void sendDecision(
+                    "approve",
+                    "Aprobado desde el chat de NOVA.",
+                    "approve",
+                    canExecute,
+                  )}''', 1)
+          text = text.replace('''          {busy === "approve" ? "Aprobando..." : "Aprobar"}''', '''          {busy === "approve"
+                    ? canExecute ? "Aprobando y ejecutando..." : "Aprobando..."
+                    : canExecute ? "Aprobar y ejecutar" : "Aprobar"}''', 1)
+
+          component_path.write_text(text)
+
+          normalizer_path = Path('src/components/hocker-2c/owner/live/owner-live-normalizers.ts')
+          normalizer = normalizer_path.read_text()
+          old_status = '''  if (["pending", "needs_approval", "queued"].includes(clean)) return "Necesita aprobación";
+            if (["approved"].includes(clean)) return "Aprobada";'''
+          new_status = '''  if (["pending", "needs_approval"].includes(clean)) return "Necesita aprobación";
+            if (["queued"].includes(clean)) return "En cola";
+            if (["approved"].includes(clean)) return "Aprobada";'''
+          if old_status not in normalizer:
+              raise SystemExit('status mapping block not found')
+          normalizer = normalizer.replace(old_status, new_status, 1)
+          normalizer = normalizer.replace('["failed", "error"]', '["failed", "error", "execution_failed"]', 1)
+          normalizer_path.write_text(normalizer)
+          PY
+
+      - name: Remove temporary workflow and commit
+        shell: bash
+        run: |
+          rm .github/workflows/apply-chat-approval-ux-patch.yml
+          git config user.name "hocker-audit-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/hocker-2c/owner/nova/OwnerNovaInlineApprovals.tsx src/components/hocker-2c/owner/live/owner-live-normalizers.ts .github/workflows/apply-chat-approval-ux-patch.yml
+          git commit -m "fix(chat): make approval states and execution explicit"
+          git push origin HEAD:audit/chat-approval-ux-20260730
