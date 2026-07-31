@@ -3,26 +3,27 @@
 import Link from "next/link";
 import {
   Activity,
+  Bell,
   Bot,
+  Brain,
   CheckSquare,
+  ChevronRight,
   CircleDot,
+  Dices,
   Grid2X2,
   Home,
+  Landmark,
   Map,
+  Network,
+  Package,
+  Plug,
+  Search,
   ShieldCheck,
   Sparkles,
-  Network,
-  Plug,
-  Brain,
-  Package,
-  Dices,
-  Landmark,
-  ChevronRight,
-  Bell,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 type NavItem = {
   href: string;
@@ -38,6 +39,7 @@ const navGroups: NavGroup[] = [
     title: "Núcleo",
     items: [
       { href: "/owner", label: "Inicio", icon: Home },
+      { href: "/catalog", label: "Buscar en el ecosistema", icon: Search },
       { href: "/map", label: "Mapa del ecosistema", icon: Map },
       { href: "/live", label: "Operación en vivo", icon: Activity, dot: "green" },
       { href: "/chat", label: "NOVA Chat", icon: Bot, dot: "green" },
