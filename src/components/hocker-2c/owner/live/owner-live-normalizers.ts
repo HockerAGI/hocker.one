@@ -69,11 +69,12 @@ function humanStatus(status: string): string {
   const clean = status.toLowerCase();
 
   if (["draft", "prepared"].includes(clean)) return "Preparada";
-  if (["pending", "needs_approval", "queued"].includes(clean)) return "Necesita aprobación";
+  if (["pending", "needs_approval"].includes(clean)) return "Necesita aprobación";
+  if (["queued"].includes(clean)) return "En cola";
   if (["approved"].includes(clean)) return "Aprobada";
   if (["executing", "running"].includes(clean)) return "Ejecutándose";
   if (["executed", "completed", "success"].includes(clean)) return "Completada";
-  if (["failed", "error"].includes(clean)) return "Falló sin afectar el sistema";
+  if (["failed", "error", "execution_failed"].includes(clean)) return "Falló sin afectar el sistema";
   if (["rolled_back", "rollback"].includes(clean)) return "Revertida";
 
   return status || "En revisión";

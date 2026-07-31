@@ -12,7 +12,6 @@ async function loadPendingActions(): Promise<OwnerLiveAction[]> {
   const urls = [
     "/api/agi/runtime/actions?project_id=hocker-one&limit=30",
     "/api/agi/runtime/actions?limit=30",
-    "/api/commands",
   ];
 
   for (const url of urls) {
@@ -57,8 +56,7 @@ function needsOwnerApproval(status: string) {
     clean.includes("aprobacion") ||
     clean.includes("preparada") ||
     clean.includes("pending") ||
-    clean.includes("needs") ||
-    clean.includes("queued")
+    clean.includes("needs")
   );
 }
 
@@ -74,6 +72,14 @@ function riskClass(risk: OwnerLiveAction["risk"]) {
   return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
 }
 
+function isExecutableGithubAction(action: OwnerLiveAction): boolean {
+  if (!action.raw || typeof action.raw !== "object" || Array.isArray(action.raw)) return false;
+  const raw = action.raw as Record<string, unknown>;
+  const toolKey = String(raw.tool_key ?? "").toLowerCase();
+  const actionType = String(raw.action_type ?? "").toLowerCase();
+  return toolKey === "github" && actionType.startsWith("github.");
+}
+
 function NovaInlineApprovalCard({
   action,
   onDone,
@@ -84,8 +90,9 @@ function NovaInlineApprovalCard({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<Decision | "adjust" | null>(null);
   const [message, setMessage] = useState("");
+  const canExecute = isExecutableGithubAction(action);
 
-  async function sendDecision(decision: Decision, fallbackNote: string, busyState: Decision | "adjust") {
+  async function sendDecision(decision: Decision, fallbackNote: string, busyState: Decision | "adjust", executeAfterApproval = false) {
     setBusy(busyState);
     setMessage("");
 
@@ -179,10 +186,10 @@ function NovaInlineApprovalCard({
         <button
           type="button"
           disabled={Boolean(busy)}
-          onClick={() => void sendDecision("approve", "Aprobado desde el chat de NOVA.", "approve")}
+          onClick={() => void sendDecision("approve", "Aprobado desde el chat de NOVA.", "approve", canExecute)}
           className="hocker-focus-ring rounded-2xl border border-[var(--hocker-gold)]/60 bg-[var(--hocker-blue)] px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {busy === "approve" ? "Aprobando..." : "Aprobar"}
+          {busy === "approve" ? (canExecute ? "Aprobando y ejecutando..." : "Aprobando...") : (canExecute ? "Aprobar y ejecutar" : "Aprobar")}
         </button>
 
         <button
