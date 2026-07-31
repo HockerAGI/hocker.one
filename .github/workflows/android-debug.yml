@@ -2,6 +2,15 @@ name: Android Debug APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "android/**"
+      - "out/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "tests/android-bootstrap-security.test.mjs"
+      - ".github/workflows/android-debug.yml"
   push:
     branches:
       - main
