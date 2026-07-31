@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Activity, Brain, DatabaseZap, Network, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, Brain, DatabaseZap, Network, Search, ShieldCheck, Sparkles } from "lucide-react";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
 import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
+import { operationsCatalogCounts } from "@/lib/operations-catalog";
 
 function n(value: unknown) {
   const number = Number(value ?? 0);
@@ -26,7 +27,6 @@ function sourceName(value: unknown) {
     .join(" ");
 }
 
-
 function agiDisplayName(agi: (typeof AGI_REGISTRY)[number]) {
   const item = agi as unknown as {
     name?: string;
@@ -36,7 +36,6 @@ function agiDisplayName(agi: (typeof AGI_REGISTRY)[number]) {
     id?: string;
     slug?: string;
   };
-
   const raw = item.name || item.title || item.label || item.key || item.id || item.slug || "AGI";
 
   return String(raw)
@@ -71,13 +70,13 @@ function CoreMetric({ label, value, text, tone }: { label: string; value: number
 
 export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePulseSummary }) {
   const counts = summary.counts;
+  const catalog = operationsCatalogCounts();
   const activeMemory = n(counts.active_memory);
   const activeUpdates = n(counts.active_agi_updates);
   const preventedErrors = n(counts.prevented_errors);
   const repeatedSeen = n(counts.repeated_seen);
   const approved = n(counts.approved_learning);
   const latest = summary.latest_memory;
-
   const topAgis = AGI_REGISTRY.slice(0, 16);
 
   return (
@@ -89,10 +88,17 @@ export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePu
           <Network className="h-4 w-4" />
           Mapa vivo
         </span>
-        <h2 id="final-map-title">NOVA controla el ecosistema.</h2>
+        <h2 id="final-map-title">NOVA coordina el ecosistema.</h2>
         <p>
-          Una vista clara para entender qué está activo, qué aprende y qué protege el sistema. Datos reales, sin valores falsos.
+          Una vista para entender qué está operativo, qué tiene límites, qué sigue en desarrollo y qué solamente pertenece al roadmap.
         </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link href="/catalog" className="hko-final-button inline-flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Buscar y ver estados
+          </Link>
+          <Link href="/integrations" className="hko-final-button">Herramientas y APIs</Link>
+        </div>
       </header>
 
       <div className="hko-final-stage">
@@ -119,24 +125,24 @@ export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePu
           <span className="hko-final-core-halo halo-c" />
           <Brain className="hko-final-core-icon" />
           <strong>NOVA</strong>
-          <small>Núcleo central</small>
-          <em>decide · conecta · protege</em>
+          <small>Orquestador central</small>
+          <em>analiza · coordina · propone</em>
         </div>
 
-        <CoreMetric label="Memoria IA" value={activeMemory} text="aprendizajes activos" tone="mint" />
-        <CoreMetric label="AGIs" value={activeUpdates} text="señales activas" tone="violet" />
-        <CoreMetric label="Limpieza" value={repeatedSeen} text="sin duplicar" tone="cyan" />
+        <CoreMetric label="Memoria IA" value={activeMemory} text="registros activos" tone="mint" />
+        <CoreMetric label="Señales AGI" value={activeUpdates} text="actualizaciones observadas" tone="violet" />
+        <CoreMetric label="Duplicados" value={repeatedSeen} text="detectados" tone="cyan" />
         <CoreMetric label="Errores" value={preventedErrors} text="prevenidos" tone="amber" />
       </div>
 
-      <div className="hko-final-route" aria-label="Ruta del aprendizaje">
-        <span>Candy Ads</span>
+      <div className="hko-final-route" aria-label="Flujo de aprendizaje revisado">
+        <span>Dato</span>
         <i />
         <span>Syntia</span>
         <i />
         <span>NOVA</span>
         <i />
-        <span>Memoria IA</span>
+        <span>Memoria aprobada</span>
       </div>
 
       <div className="hko-final-map-dashboard">
@@ -155,34 +161,35 @@ export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePu
           <div className="hko-final-panel-title">
             <Activity className="h-5 w-5" />
             <div>
-              <span>Lectura rápida</span>
-              <strong>{approved} aprendizajes aprobados</strong>
+              <span>Catálogo operativo</span>
+              <strong>{catalog.operational} operativos · {catalog.limited} limitados</strong>
             </div>
           </div>
-          <p>La pantalla muestra el estado real guardado en el sistema. Si no hay datos, marca cero.</p>
+          <p>{catalog.development} en desarrollo y {catalog.planned} planificados. Los estados no se presentan como equivalentes.</p>
         </article>
 
         <article className="hko-final-panel">
           <div className="hko-final-panel-title">
             <ShieldCheck className="h-5 w-5" />
             <div>
-              <span>Seguridad</span>
-              <strong>Rutas privadas</strong>
+              <span>Aprendizaje y control</span>
+              <strong>{approved} aprendizajes aprobados</strong>
             </div>
           </div>
-          <p>El mapa vive dentro del acceso owner. Sin sesión, redirige al login.</p>
+          <p>Las acciones de escritura compatibles pasan por Owner Gate y guardan evidencia de ejecución.</p>
         </article>
       </div>
 
       <div className="hko-final-agi-board">
         <div className="hko-final-board-head">
           <div>
-            <span>16 AGIs</span>
-            <strong>Jerarquía visible</strong>
+            <span>{topAgis.length} perfiles especializados</span>
+            <strong>Funciones y responsables visibles</strong>
           </div>
-          <Link href="/agis" className="hko-final-button">
-            Ver AGIs
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/agis" className="hko-final-button">Ver perfiles</Link>
+            <Link href="/catalog" className="hko-final-button">Ver madurez</Link>
+          </div>
         </div>
 
         <div className="hko-final-agi-grid">
