@@ -32,3 +32,13 @@ test("mutating MCP requests require queue, approval, lock and evidence", async (
   assert.match(approvals, /toolKey === "mcp" && actionType === "mcp\.execute"/);
   assert.match(approvals, /Aprobar y ejecutar/);
 });
+
+test("CI remains read-only and cannot patch its own source", async () => {
+  const ci = await read(".github/workflows/ci.yml");
+
+  assert.match(ci, /permissions:\s*\n\s*contents: read/);
+  assert.doesNotMatch(ci, /contents: write/);
+  assert.doesNotMatch(ci, /Apply complete MCP Owner Gate bridge/);
+  await assert.rejects(read(".github/workflows/apply-hocker-mcp-owner-gate-bridge.yml"));
+  await assert.rejects(read(".github/workflows/repair-hocker-mcp-owner-gate-bridge.yml"));
+});
