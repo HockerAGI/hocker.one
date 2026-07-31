@@ -35,3 +35,14 @@ test("tools page shows live MCP providers and preserves Owner Gate", async () =>
   assert.match(integrations, /Pedir acción a NOVA/);
   assert.match(integrations, /\/commands/);
 });
+
+test("ecosystem map uses coordination and maturity language", async () => {
+  const map = await read("src/components/map/EcosystemVfxNetwork.tsx");
+
+  assert.match(map, /NOVA coordina el ecosistema/);
+  assert.match(map, /perfiles especializados/);
+  assert.match(map, /operationsCatalogCounts/);
+  assert.match(map, /Memoria aprobada/);
+  assert.doesNotMatch(map, /NOVA controla el ecosistema/);
+  assert.doesNotMatch(map, />16 AGIs</);
+});
