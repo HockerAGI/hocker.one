@@ -4,6 +4,7 @@ import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue
 import { requireProjectRole } from "@/app/api/_lib";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
 import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
+import { materializeNovaMcpActionsFromUpstream } from "@/lib/nova-mcp-action-materializer";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 import { log } from "@/lib/logger";
 import { sanitizePublicError } from "@/lib/sanitize-error";
@@ -207,11 +208,17 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
+  let upstreamActionActorId: string | null = null;
+  if (parsed.data.allow_actions) {
+    const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
+    upstreamActionActorId = ctx.user.id;
+  }
+
   const guardedPayload = {
     ...parsed.data,
     mode: "auto",
     prefer: "auto",
-    allow_actions: false,
+    allow_actions: Boolean(upstreamActionActorId),
     context_data: {
       ...(parsed.data.context_data ?? {}),
       hocker_runtime: {
@@ -238,7 +245,70 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
+    let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
+      actions: [],
+      rejected: [],
+    };
+
+    const upstreamMcp =
+      responseJson.meta &&
+      typeof responseJson.meta.mcp === "object" &&
+      responseJson.meta.mcp !== null &&
+      !Array.isArray(responseJson.meta.mcp)
+        ? (responseJson.meta.mcp as Record<string, unknown>)
+        : {};
+    const hasDeferredMcpActions =
+      Array.isArray(upstreamMcp.deferred_actions) && upstreamMcp.deferred_actions.length > 0;
+
+    if (upstreamActionActorId && responseJson.ok && hasDeferredMcpActions) {
+      try {
+        mcpBridge = await materializeNovaMcpActionsFromUpstream({
+          project_id: parsed.data.project_id,
+          created_by: upstreamActionActorId,
+          original_message: parsed.data.message,
+          trace_id: responseJson.trace_id ?? null,
+          upstream_meta: responseJson.meta,
+        });
+      } catch (error) {
+        mcpBridge = {
+          actions: [],
+          rejected: [{ reason: sanitizePublicError(error) }],
+        };
+      }
+    }
+
     const safePayload = sanitizeNovaPayload(responseJson, injectedMeta, localActionDraft);
+    const currentActions = Array.isArray(safePayload.actions) ? safePayload.actions : [];
+    safePayload.actions = [...currentActions, ...mcpBridge.actions];
+
+    const safeMeta =
+      safePayload.meta &&
+      typeof safePayload.meta === "object" &&
+      !Array.isArray(safePayload.meta)
+        ? (safePayload.meta as Record<string, unknown>)
+        : {};
+    const safeControls =
+      safeMeta.controls &&
+      typeof safeMeta.controls === "object" &&
+      !Array.isArray(safeMeta.controls)
+        ? (safeMeta.controls as Record<string, unknown>)
+        : {};
+
+    safeControls.requested_actions = parsed.data.allow_actions;
+    safeControls.enqueued_actions = safePayload.actions;
+    safeControls.upstream_requested_actions = Boolean(upstreamActionActorId);
+    if (mcpBridge.actions.length > 0) {
+      safeControls.action_policy = "nova_mcp_actions_waiting_owner_gate";
+    }
+
+    safeMeta.controls = safeControls;
+    safeMeta.mcp_owner_gate = {
+      requested: parsed.data.allow_actions,
+      drafts_received: hasDeferredMcpActions,
+      materialized: mcpBridge.actions.length,
+      rejected: mcpBridge.rejected,
+    };
+    safePayload.meta = safeMeta;
 
     return NextResponse.json(safePayload, {
       status: res.status,
