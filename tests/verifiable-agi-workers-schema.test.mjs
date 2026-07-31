@@ -51,6 +51,20 @@ test("only the locking worker can complete or fail a task", async () => {
   assert.match(sql, /when task\.attempt_count < task\.max_attempts then 'queued'/);
 });
 
+test("PL/pgSQL bodies use valid dollar-quote openings", async () => {
+  const sql = await read(migrationPath);
+
+  assert.doesNotMatch(sql, /as \$\$;/i);
+  assert.match(
+    sql,
+    /create or replace function public\.fail_agi_task[\s\S]*?set search_path = public\s+as \$\$\s+begin/i,
+  );
+  assert.match(
+    sql,
+    /create or replace function public\.recover_stale_agi_tasks[\s\S]*?set search_path = public\s+as \$\$\s+declare/i,
+  );
+});
+
 test("worker RPCs are server-only and use a fixed search path", async () => {
   const sql = await read(migrationPath);
 

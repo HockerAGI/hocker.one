@@ -189,7 +189,7 @@ returns setof public.agi_tasks
 language plpgsql
 security definer
 set search_path = public
-as $$;
+as $$
 begin
   return query
   update public.agi_tasks task
