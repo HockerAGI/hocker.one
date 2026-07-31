@@ -38,26 +38,26 @@ const navGroups: NavGroup[] = [
     title: "Núcleo",
     items: [
       { href: "/owner", label: "Inicio", icon: Home },
-      { href: "/map", label: "Mapa ecosistema", icon: Map },
-      { href: "/live", label: "Sistema en vivo", icon: Activity, dot: "green" },
-      { href: "/chat", label: "NOVA", icon: Bot, dot: "green" },
+      { href: "/map", label: "Mapa del ecosistema", icon: Map },
+      { href: "/live", label: "Operación en vivo", icon: Activity, dot: "green" },
+      { href: "/chat", label: "NOVA Chat", icon: Bot, dot: "green" },
     ],
   },
   {
     title: "Operación",
     items: [
-      { href: "/commands", label: "Tareas", icon: CheckSquare },
-      { href: "/nodes", label: "Nodos", icon: Network },
-      { href: "/status", label: "Estado", icon: CircleDot },
+      { href: "/commands", label: "Tareas y aprobaciones", icon: CheckSquare },
+      { href: "/nodes", label: "Nodos y agentes", icon: Network },
+      { href: "/status", label: "Salud del sistema", icon: CircleDot },
     ],
   },
   {
     title: "Ecosistema",
     items: [
       { href: "/apps", label: "Apps", icon: Grid2X2 },
-      { href: "/agis", label: "AGIs", icon: Sparkles },
-      { href: "/integrations", label: "Integraciones", icon: Plug },
-      { href: "/memory", label: "Memoria IA", icon: Brain },
+      { href: "/agis", label: "AGIs y funciones", icon: Sparkles },
+      { href: "/integrations", label: "Herramientas y APIs", icon: Plug },
+      { href: "/memory", label: "Memoria y aprendizaje", icon: Brain },
       { href: "/supply", label: "Supply", icon: Package },
       { href: "/chido", label: "Chido Casino", icon: Dices, dot: "amber" },
     ],
@@ -66,7 +66,7 @@ const navGroups: NavGroup[] = [
     title: "Gobernanza",
     items: [
       { href: "/security", label: "Seguridad", icon: ShieldCheck },
-      { href: "/governance", label: "Gobierno", icon: Landmark },
+      { href: "/governance", label: "Reglas y gobierno", icon: Landmark },
     ],
   },
 ];
@@ -80,7 +80,6 @@ export default function Sidebar() {
   const pathname = usePathname() || "/";
   const [pendingCount, setPendingCount] = useState(0);
 
-  // Poll pending approvals count
   useEffect(() => {
     const fetchPending = async () => {
       try {
@@ -89,7 +88,9 @@ export default function Sidebar() {
           const data = await res.json() as { actions?: unknown[] };
           setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
         }
-      } catch { /* silencioso */ }
+      } catch {
+        // El menú no debe bloquear la navegación si el contador no responde.
+      }
     };
     void fetchPending();
     const id = setInterval(() => { void fetchPending(); }, 30_000);
@@ -101,7 +102,6 @@ export default function Sidebar() {
       className="hko-sidebar fixed left-3 top-3 z-[95] hidden h-[calc(100dvh-1.5rem)] w-[264px] flex-col overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#050d1a]/90 text-white shadow-[0_32px_80px_rgba(0,0,0,0.5)] backdrop-blur-3xl lg:flex"
       aria-label="Menú lateral"
     >
-      {/* Logo */}
       <Link
         href="/owner"
         className="mx-3 mt-3 flex h-[64px] shrink-0 items-center justify-center rounded-[20px] border border-white/[0.07] bg-white/[0.03] transition-colors hover:bg-white/[0.05]"
@@ -116,7 +116,6 @@ export default function Sidebar() {
         />
       </Link>
 
-      {/* Pending approvals banner */}
       {pendingCount > 0 && (
         <Link
           href="/chat"
@@ -130,7 +129,6 @@ export default function Sidebar() {
         </Link>
       )}
 
-      {/* Nav */}
       <nav
         className="mt-3 flex-1 overflow-y-auto px-3 pb-2 hko-sidebar-scroll"
         aria-label="Navegación principal"
@@ -169,7 +167,6 @@ export default function Sidebar() {
                       {item.label}
                     </span>
 
-                    {/* Status dot */}
                     {item.dot && !active && (
                       <span className={[
                         "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -177,7 +174,6 @@ export default function Sidebar() {
                       ].join(" ")} />
                     )}
 
-                    {/* Pending badge */}
                     {showPendingBadge && (
                       <span className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1.5 text-[9px] font-black text-black">
                         {pendingCount}
@@ -195,7 +191,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* NOVA quick-status footer */}
       <div className="mx-3 mb-3 shrink-0 overflow-hidden rounded-[18px] border border-sky-400/12 bg-gradient-to-b from-sky-400/8 to-transparent">
         <Link href="/chat" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-sky-400/5">
           <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-400/15">
@@ -204,7 +199,7 @@ export default function Sidebar() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">NOVA</p>
-            <p className="truncate text-[10px] font-medium text-slate-500">Activa · Haz click para chatear</p>
+            <p className="truncate text-[10px] font-medium text-slate-500">Activa · Abrir chat y aprobaciones</p>
           </div>
           <ChevronRight size={12} className="shrink-0 text-sky-400/40" />
         </Link>
