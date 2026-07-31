@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { executeApprovedAgiAction } from "@/lib/agi-action-execution";
+import { executeApprovedAgiActionUniversal } from "@/lib/agi-action-execution-router";
 import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
 
 export const runtime = "nodejs";
@@ -14,13 +14,17 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const parsed = ExecuteSchema.parse(await parseBody(req));
     const ctx = await requireProjectRole(parsed.project_id, ["owner"]);
-    const item = await executeApprovedAgiAction({ project_id: ctx.project_id, action_id: parsed.action_id, actor_id: ctx.user.id });
+    const item = await executeApprovedAgiActionUniversal({
+      project_id: ctx.project_id,
+      action_id: parsed.action_id,
+      actor_id: ctx.user.id,
+    });
 
     return json({
       ok: true,
       executed: true,
       item,
-      message: "Acción aprobada ejecutada por worker seguro. Resultado guardado en auditoría.",
+      message: "Acción aprobada ejecutada por el trabajador seguro correspondiente. Resultado guardado en auditoría.",
     });
   } catch (error) {
     const apiError = toApiError(error);
