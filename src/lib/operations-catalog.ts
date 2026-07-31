@@ -93,7 +93,7 @@ const CORE_ITEMS: OperationsCatalogItem[] = [
     kind: "app",
     status: "operational",
     summary: "Sitio público corporativo, comercial, informativo y legal de Hocker AGI Technologies.",
-    href: "https://hocker.agi",
+    href: "https://hockeragi.vercel.app",
     keywords: ["sitio", "web", "publico", "marketing", "seo", "empresa"],
     ownerAgis: ["NOVA", "Nova Ads", "Candy Ads", "Jurix"],
     capabilities: ["Sitio público", "SEO", "Servicios", "Contacto"],
@@ -133,14 +133,14 @@ const CORE_ITEMS: OperationsCatalogItem[] = [
 const APP_STATUS: Record<string, OperationsCatalogStatus> = {
   "hocker-one": "operational",
   "chido-casino": "operational",
-  "hocker-supply": "limited",
+  "hocker-supply": "development",
   "hocker-ads": "development",
-  "hocker-hub": "planned",
+  "hocker-hub": "development",
   "hocker-wallet": "planned",
-  "hocker-drive-cloud": "planned",
+  "hocker-drive-cloud": "development",
   trackhok: "planned",
   "nexpa-app": "planned",
-  "hocker-up": "planned",
+  "hocker-up": "development",
 };
 
 const APP_REPOSITORY: Record<string, string> = {
