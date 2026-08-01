@@ -31,6 +31,7 @@ const REMOTE_MIGRATIONS = new Map([
   ["20260731233428", 1572],
   ["20260801000251", 415],
   ["20260801044102", 1594],
+  ["20260801050515", 3740],
 ]);
 
 const APPLIED_VERSION_ONLY = ["20260216"];
@@ -91,16 +92,32 @@ test("restored migration files match remote SQL length without truncation", asyn
   assert.deepEqual(mismatches, [], `Restored SQL byte mismatches:\n${mismatches.join("\n")}`);
 });
 
-test("known timestamp aliases cannot reapply the same production change", async () => {
+test("safe audit replacement does not grant authenticated access", async () => {
+  const sql = await readFile(
+    new URL("20260801050515_safe_audit_index_cleanup.sql", migrationsUrl),
+    "utf8",
+  );
+
+  assert.doesNotMatch(sql, /create\s+policy/i);
+  assert.doesNotMatch(sql, /to\s+authenticated/i);
+  assert.match(sql, /Service-only command execution logs/);
+});
+
+test("known timestamp aliases and unsafe legacy replays are absent", async () => {
   const files = await readdir(migrationsUrl);
   const forbidden = [
     "20260216_0001_supply.sql",
+    "20260612_103000_hocker_core_schema.sql",
+    "20260612_103000_audit_chain_signatures.sql",
+    "20260620_000000_consolidated_security_hotfixes.sql",
+    "20260620_000001_universal_rls_lockdown.sql",
+    "20260701_000000_supabase_audit_improvements.sql",
     "20260731_160000_verifiable_agi_workers.sql",
     "20260731234000_jurix_compliance_events.sql",
     "20260731035500_restrict_hocker_dashboard_snapshot.sql",
   ];
 
   for (const file of forbidden) {
-    assert.equal(files.includes(file), false, `${file} duplicates a remotely applied migration.`);
+    assert.equal(files.includes(file), false, `${file} must not be replayed.`);
   }
 });
