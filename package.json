@@ -60,6 +60,7 @@
   },
   "overrides": {
     "axios": "1.18.1",
+    "brace-expansion": "1.1.17",
     "fast-uri": "3.1.4",
     "form-data": "4.0.6",
     "postcss": "8.5.18",
