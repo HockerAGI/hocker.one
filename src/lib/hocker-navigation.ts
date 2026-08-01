@@ -112,6 +112,8 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
   },
 ];
 
+const DEFAULT_HOCKER_SECTION = HOCKER_NAVIGATION[0]!;
+
 export function isHockerRouteActive(pathname: string, href: string): boolean {
   if (href === "/owner") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -128,7 +130,7 @@ export function getActiveHockerSection(pathname: string): HockerNavigationSectio
   ).sort((a, b) => b.item.href.length - a.item.href.length);
 
   return candidates.find(({ item }) => isHockerRouteActive(pathname, item.href))?.section
-    ?? HOCKER_NAVIGATION[0];
+    ?? DEFAULT_HOCKER_SECTION;
 }
 
 export function getActiveHockerItem(pathname: string): HockerNavigationItem | undefined {
