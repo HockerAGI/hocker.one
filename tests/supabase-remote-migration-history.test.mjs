@@ -34,6 +34,7 @@ const REMOTE_MIGRATIONS = new Map([
   ["20260801050515", 3740],
   ["20260801051257", 184],
   ["20260801052656", 441],
+  ["20260801053314", 343],
 ]);
 
 const APPLIED_VERSION_ONLY = ["20260216"];
@@ -124,7 +125,18 @@ test("AGI registry writes remain service-only", async () => {
   assert.match(sql, /drop policy if exists agis_insert_admin/i);
   assert.match(sql, /drop policy if exists agis_update_admin/i);
   assert.match(sql, /revoke insert, update, delete, truncate, references, trigger/i);
-  assert.match(sql, /grant select on table public\.agis to authenticated/i);
+});
+
+test("AGI discovery uses the sanitized catalog, not the internal registry", async () => {
+  const sql = await readFile(
+    new URL("20260801053314_restrict_agi_registry_to_public_catalog.sql", migrationsUrl),
+    "utf8",
+  );
+
+  assert.match(sql, /drop policy if exists agis_select_authed/i);
+  assert.match(sql, /revoke all on table public\.agis from anon, authenticated/i);
+  assert.match(sql, /grant select, insert, update, delete, truncate, references, trigger on table public\.agis to service_role/i);
+  assert.match(sql, /must use agis_public_catalog/i);
 });
 
 test("known timestamp aliases and unsafe legacy replays are absent", async () => {
