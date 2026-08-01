@@ -8,10 +8,10 @@ test("private navigation exposes exactly five persistent domains", async () => {
   const source = await read("src/lib/hocker-navigation.ts");
 
   for (const id of ["inicio", "operacion", "nova", "ecosistema", "control"]) {
-    assert.match(source, new RegExp(`id: "${id}"`));
+    assert.match(source, new RegExp(`\\n  \\{\\n    id: "${id}"`));
   }
 
-  const sectionDeclarations = source.match(/id: "(?:inicio|operacion|nova|ecosistema|control)"/g) ?? [];
+  const sectionDeclarations = source.match(/\n  \{\n    id: "(?:inicio|operacion|nova|ecosistema|control)"/g) ?? [];
   assert.equal(sectionDeclarations.length, 5);
   assert.match(source, /id: "workers"/);
   assert.match(source, /href: "\/owner\/actions"/);
@@ -45,10 +45,12 @@ test("page layouts use a cinematic header without wrapping the whole page in one
 });
 
 test("command palette starts with curated navigation and searches the full catalog", async () => {
-  const source = await read("src/components/CommandPalette.tsx");
+  const palette = await read("src/components/CommandPalette.tsx");
+  const navigation = await read("src/lib/hocker-navigation.ts");
 
-  assert.match(source, /if \(!normalized\) return BASE_ITEMS/);
-  assert.match(source, /SEARCHABLE_ITEMS/);
-  assert.match(source, /role="dialog"/);
-  assert.match(source, /id: "workers"|nav-workers/);
+  assert.match(palette, /if \(!normalized\) return BASE_ITEMS/);
+  assert.match(palette, /SEARCHABLE_ITEMS/);
+  assert.match(palette, /HOCKER_NAVIGATION\.flatMap/);
+  assert.match(palette, /role="dialog"/);
+  assert.match(navigation, /id: "workers"[\s\S]*href: "\/workers"/);
 });
