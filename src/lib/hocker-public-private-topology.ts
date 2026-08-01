@@ -1,4 +1,4 @@
-export const HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION = "12.7L-2C-A.1";
+export const HOCKER_PUBLIC_PRIVATE_TOPOLOGY_VERSION = "12.7L-2C-A.2";
 
 export const HOCKER_PUBLIC_TOPOLOGY_HEADER = "12.7L-2C-public-indexable-clean";
 export const HOCKER_PRIVATE_TOPOLOGY_HEADER = "12.7L-2C-private-noindex-clean";
@@ -37,11 +37,13 @@ export const HOCKER_APP_ALIAS_ROUTES = [
 export const HOCKER_PRIVATE_ROUTES = [
   ...HOCKER_APP_ALIAS_ROUTES,
   "/dashboard",
+  "/catalog",
   "/chat",
   "/live",
   "/map",
   "/apps",
   "/agis",
+  "/workers",
   "/nodes",
   "/owner",
   "/commands",
