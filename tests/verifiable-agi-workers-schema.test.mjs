@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const migrationPath = "supabase/migrations/20260731_160000_verifiable_agi_workers.sql";
+const migrationPath = "supabase/migrations/20260731173018_verifiable_agi_workers_v1.sql";
 
 test("AGI tasks have correlation, evidence, idempotency and retry fields", async () => {
   const sql = await read(migrationPath);
