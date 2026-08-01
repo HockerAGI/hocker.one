@@ -47,7 +47,7 @@ test("Git contains every migration version already applied remotely", async () =
   }
 });
 
-test("remote migration SQL was not truncated while restoring history", async () => {
+test("restored migration files match the exact SQL byte lengths recorded remotely", async () => {
   const files = await readdir(migrationsUrl);
   const mismatches = [];
 
@@ -56,7 +56,7 @@ test("remote migration SQL was not truncated while restoring history", async () 
     assert.ok(file, `Missing migration for ${version}`);
 
     const sql = await readFile(new URL(file, migrationsUrl), "utf8");
-    const actualBytes = Buffer.byteLength(sql.trimEnd(), "utf8");
+    const actualBytes = Buffer.byteLength(sql, "utf8");
     if (actualBytes !== expectedBytes) {
       mismatches.push(`${file}: ${actualBytes} !== ${expectedBytes}`);
     }
