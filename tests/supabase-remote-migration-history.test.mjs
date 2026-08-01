@@ -35,6 +35,7 @@ const REMOTE_MIGRATIONS = new Map([
   ["20260801051257", 184],
   ["20260801052656", 441],
   ["20260801053314", 343],
+  ["20260801195511", 1606],
 ]);
 
 const APPLIED_VERSION_ONLY = ["20260216"];
@@ -137,6 +138,32 @@ test("AGI discovery uses the sanitized catalog, not the internal registry", asyn
   assert.match(sql, /revoke all on table public\.agis from anon, authenticated/i);
   assert.match(sql, /grant select, insert, update, delete, truncate, references, trigger on table public\.agis to service_role/i);
   assert.match(sql, /must use agis_public_catalog/i);
+});
+
+test("RLS performance cleanup preserves least privilege and removes exact duplicates", async () => {
+  const sql = await readFile(
+    new URL("20260801195511_optimize_rls_and_remove_duplicate_indexes_20260801.sql", migrationsUrl),
+    "utf8",
+  );
+
+  assert.match(sql, /create policy hocker_tenants_owner_service_only[\s\S]*to service_role/i);
+  assert.match(sql, /create policy hocker_portal_grants_owner_service_only[\s\S]*to service_role/i);
+  assert.match(sql, /create policy agi_agents_project_members_read[\s\S]*to authenticated/i);
+  assert.match(sql, /pm\.user_id = \(select auth\.uid\(\)\)/i);
+  assert.match(sql, /create policy agi_tools_authenticated_read[\s\S]*to authenticated[\s\S]*using \(true\)/i);
+  assert.match(sql, /drop policy if exists events_update_admin on public\.events/i);
+
+  for (const duplicateIndex of [
+    "agi_runs_project_idx",
+    "agi_tasks_project_idx",
+    "audit_logs_project_created_idx",
+    "nodes_project_status_idx",
+    "nova_messages_thread_created_idx",
+  ]) {
+    assert.match(sql, new RegExp(`drop index if exists public\\.${duplicateIndex}`, "i"));
+  }
+
+  assert.doesNotMatch(sql, /create policy[^;]+to public/is);
 });
 
 test("known timestamp aliases and unsafe legacy replays are absent", async () => {
