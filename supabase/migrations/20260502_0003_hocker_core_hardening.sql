@@ -90,23 +90,23 @@ end $$;
 
 insert into public.audit_logs (
   project_id,
-  actor_type,
   action,
-  target_type,
-  level,
-  message,
-  data
+  context
 )
-values (
+select
   'hocker-one',
-  'migration',
   'hocker.core.hardening',
-  'supabase',
-  'info',
-  'Supabase hardening migration registered for Hocker ONE, NOVA, SYNTIA, node agents and future Chido integration.',
   jsonb_build_object(
     'migration', '20260502_0003_hocker_core_hardening',
-    'source', 'hocker.one'
+    'source', 'hocker.one',
+    'target_type', 'supabase',
+    'level', 'info',
+    'message', 'Supabase hardening migration registered for Hocker ONE, NOVA, SYNTIA, node agents and future Chido integration.'
   )
-)
-on conflict do nothing;
+where not exists (
+  select 1
+  from public.audit_logs existing
+  where existing.project_id = 'hocker-one'
+    and existing.action = 'hocker.core.hardening'
+    and existing.context ->> 'migration' = '20260502_0003_hocker_core_hardening'
+);
