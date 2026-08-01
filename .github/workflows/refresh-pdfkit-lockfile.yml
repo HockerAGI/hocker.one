@@ -29,12 +29,16 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Upgrade PDFKit and declarations
-        run: npm install --save-exact pdfkit@0.19.1 --save-dev --save-exact @types/pdfkit@0.17.6
-
-      - name: Verify deprecated package was removed
+      - name: Upgrade PDFKit runtime and declarations
         shell: bash
         run: |
+          npm install --save-exact pdfkit@0.19.1
+          npm install --save-dev --save-exact @types/pdfkit@0.17.6
+
+      - name: Verify dependency placement and deprecated package removal
+        shell: bash
+        run: |
+          node -e "const p=require('./package.json'); if(p.dependencies?.pdfkit !== '0.19.1' || p.devDependencies?.pdfkit) process.exit(1)"
           if npm ls jpeg-exif --all 2>/dev/null | grep -q jpeg-exif; then
             echo "jpeg-exif remains in the dependency tree" >&2
             exit 1
@@ -52,5 +56,5 @@ jobs:
             echo "No dependency changes generated"
             exit 1
           fi
-          git commit -m "fix(deps): upgrade PDFKit and remove deprecated JPEG parser"
+          git commit -m "fix(deps): keep PDFKit runtime-safe and remove deprecated JPEG parser"
           git push origin HEAD:fix/upgrade-pdfkit-20260801
