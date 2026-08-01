@@ -124,6 +124,7 @@ test("known timestamp aliases and unsafe legacy replays are absent", async () =>
     "20260620_000001_universal_rls_lockdown.sql",
     "20260701_000000_supabase_audit_improvements.sql",
     "20260714_033000_security_rls_lint_fixes.sql",
+    "20260730221800_move_admin_helper_to_private_schema.sql",
     "20260731_160000_verifiable_agi_workers.sql",
     "20260731234000_jurix_compliance_events.sql",
     "20260731035500_restrict_hocker_dashboard_snapshot.sql",
