@@ -30,14 +30,36 @@ const REMOTE_MIGRATIONS = new Map([
   ["20260731173018", 8200],
   ["20260731233428", 1572],
   ["20260801000251", 415],
+  ["20260801044102", 1594],
 ]);
 
+const APPLIED_VERSION_ONLY = ["20260216"];
 const migrationsUrl = new URL("../supabase/migrations/", import.meta.url);
+
+function migrationVersion(file) {
+  return file.split("_", 1)[0];
+}
+
+test("every Supabase migration filename has a unique version", async () => {
+  const files = (await readdir(migrationsUrl)).filter((file) => file.endsWith(".sql"));
+  const seen = new Map();
+  const duplicates = [];
+
+  for (const file of files) {
+    const version = migrationVersion(file);
+    assert.match(version, /^\d{8}(?:\d{6})?$/, `Invalid migration version in ${file}`);
+    const previous = seen.get(version);
+    if (previous) duplicates.push(`${version}: ${previous}, ${file}`);
+    else seen.set(version, file);
+  }
+
+  assert.deepEqual(duplicates, [], `Duplicate Supabase migration versions:\n${duplicates.join("\n")}`);
+});
 
 test("Git contains every migration version already applied remotely", async () => {
   const files = await readdir(migrationsUrl);
 
-  for (const version of REMOTE_MIGRATIONS.keys()) {
+  for (const version of [...APPLIED_VERSION_ONLY, ...REMOTE_MIGRATIONS.keys()]) {
     const matches = files.filter((file) => file.startsWith(`${version}_`));
     assert.equal(
       matches.length,
@@ -72,6 +94,7 @@ test("restored migration files match remote SQL length without truncation", asyn
 test("known timestamp aliases cannot reapply the same production change", async () => {
   const files = await readdir(migrationsUrl);
   const forbidden = [
+    "20260216_0001_supply.sql",
     "20260731_160000_verifiable_agi_workers.sql",
     "20260731234000_jurix_compliance_events.sql",
     "20260731035500_restrict_hocker_dashboard_snapshot.sql",
