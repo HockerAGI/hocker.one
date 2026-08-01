@@ -33,6 +33,7 @@ const REMOTE_MIGRATIONS = new Map([
   ["20260801044102", 1594],
   ["20260801050515", 3740],
   ["20260801051257", 184],
+  ["20260801052656", 441],
 ]);
 
 const APPLIED_VERSION_ONLY = ["20260216"];
@@ -112,6 +113,18 @@ test("RLS lint replacement only fixes the trigger search path", async () => {
 
   assert.match(sql, /alter function public\.set_updated_at\(\) set search_path = public, pg_temp/i);
   assert.doesNotMatch(sql, /create\s+policy|drop\s+policy|drop\s+function/i);
+});
+
+test("AGI registry writes remain service-only", async () => {
+  const sql = await readFile(
+    new URL("20260801052656_harden_shared_trigger_and_agi_registry.sql", migrationsUrl),
+    "utf8",
+  );
+
+  assert.match(sql, /drop policy if exists agis_insert_admin/i);
+  assert.match(sql, /drop policy if exists agis_update_admin/i);
+  assert.match(sql, /revoke insert, update, delete, truncate, references, trigger/i);
+  assert.match(sql, /grant select on table public\.agis to authenticated/i);
 });
 
 test("known timestamp aliases and unsafe legacy replays are absent", async () => {
