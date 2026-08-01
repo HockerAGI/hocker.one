@@ -15,14 +15,17 @@ test("operations catalog separates verified runtime from roadmap", async () => {
   assert.doesNotMatch(catalog, /status: "conscious"/i);
 });
 
-test("global discovery is reachable from navigation and command search", async () => {
+test("global discovery is reachable from shared navigation and command search", async () => {
+  const navigation = await read("src/lib/hocker-navigation.ts");
   const sidebar = await read("src/components/Sidebar.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
   const catalogPage = await read("src/app/catalog/page.tsx");
 
-  assert.match(sidebar, /href: "\/catalog"/);
+  assert.match(navigation, /href: "\/catalog"/);
+  assert.match(sidebar, /HOCKER_NAVIGATION/);
+  assert.match(palette, /HOCKER_NAVIGATION/);
   assert.match(palette, /OPERATIONS_CATALOG/);
-  assert.match(palette, /repositorio o función/);
+  assert.match(palette, /vista, app, AGI, herramienta o función/);
   assert.match(catalogPage, /OperationsDiscovery/);
 });
 
