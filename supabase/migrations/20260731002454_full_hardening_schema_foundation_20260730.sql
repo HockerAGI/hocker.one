@@ -1,0 +1,10 @@
+alter table public.profiles add column if not exists public_display_name text, add column if not exists leaderboard_opt_in boolean not null default false;
+alter table public.free_round_entitlements add column if not exists ref_id text;
+create unique index if not exists free_round_entitlements_ref_id_uidx on public.free_round_entitlements(ref_id) where ref_id is not null;
+alter table public.daily_streak_claims add column if not exists free_rounds_awarded integer not null default 0, add column if not exists wagering_required numeric not null default 0, add column if not exists wagering_progress numeric not null default 0, add column if not exists reward_kind text not null default 'bonus';
+create table if not exists public.wager_progress_ledger (id uuid primary key default gen_random_uuid(), user_id uuid not null, wager_ref text not null, wager_amount numeric not null check (wager_amount > 0), game text, result jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), constraint wager_progress_ledger_wager_ref_key unique (wager_ref));
+create index if not exists wager_progress_ledger_user_created_idx on public.wager_progress_ledger(user_id, created_at desc);
+alter table public.wager_progress_ledger enable row level security;
+revoke all on table public.wager_progress_ledger from anon, authenticated;
+grant all on table public.wager_progress_ledger to service_role;
+insert into public.system_controls(id, project_id, kill_switch, allow_write, meta, updated_at) values ('chido-casino-games','chido-casino',false,true,jsonb_build_object('reason','Seeded by full financial hardening migration','source','supabase-migration','fail_closed',true),now()) on conflict (project_id,id) do update set meta=coalesce(public.system_controls.meta,'{}'::jsonb)||excluded.meta, updated_at=now();

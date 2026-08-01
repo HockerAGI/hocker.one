@@ -1,0 +1,16 @@
+drop policy if exists hocker_portal_grants_owner_service_only on public.hocker_portal_grants;
+drop policy if exists hocker_portal_grants_select_own on public.hocker_portal_grants;
+create policy hocker_portal_grants_select_own on public.hocker_portal_grants for select to authenticated using (lower(grantee_email)=lower(((select auth.jwt())->>'email')));
+drop policy if exists project_members_admin_write on public.project_members;
+drop policy if exists project_members_select_own on public.project_members;
+drop policy if exists project_members_service_all on public.project_members;
+create policy project_members_select_authorized on public.project_members for select to authenticated using ((select auth.uid())=user_id or private.is_project_admin(project_id));
+create policy project_members_insert_admin on public.project_members for insert to authenticated with check (private.is_project_admin(project_id));
+create policy project_members_update_admin on public.project_members for update to authenticated using (private.is_project_admin(project_id)) with check (private.is_project_admin(project_id));
+create policy project_members_delete_admin on public.project_members for delete to authenticated using (private.is_project_admin(project_id));
+drop policy if exists system_controls_admin_write on public.system_controls;
+drop policy if exists system_controls_select_admin on public.system_controls;
+create policy system_controls_select_admin on public.system_controls for select to authenticated using (private.is_project_admin(project_id));
+create policy system_controls_insert_admin on public.system_controls for insert to authenticated with check (private.is_project_admin(project_id));
+create policy system_controls_update_admin on public.system_controls for update to authenticated using (private.is_project_admin(project_id)) with check (private.is_project_admin(project_id));
+create policy system_controls_delete_admin on public.system_controls for delete to authenticated using (private.is_project_admin(project_id));
