@@ -19,5 +19,7 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci --include=optional
+      - name: Trace brace-expansion dependency chain
+        run: npm ls brace-expansion --all
       - name: Full audit report
         run: npm audit --audit-level=high
