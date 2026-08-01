@@ -5,17 +5,17 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
-function extractPublicIndexableRoutes(source) {
+function extractRouteArray(source, constantName) {
   const match = source.match(
-    /HOCKER_PUBLIC_INDEXABLE_ROUTES\s*=\s*\[([\s\S]*?)\]\s*as const/,
+    new RegExp(`${constantName}\\s*=\\s*\\[([\\s\\S]*?)\\]\\s*as const`),
   );
-  assert.ok(match, "Public indexable route declaration must exist");
+  assert.ok(match, `${constantName} declaration must exist`);
   return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
 }
 
 test("every declared public indexable route has a physical page", async () => {
   const topology = await read("src/lib/hocker-public-private-topology.ts");
-  const routes = extractPublicIndexableRoutes(topology);
+  const routes = extractRouteArray(topology, "HOCKER_PUBLIC_INDEXABLE_ROUTES");
 
   assert.ok(routes.includes("/ecosistema"));
   assert.ok(routes.includes("/seguridad"));
@@ -30,6 +30,17 @@ test("every declared public indexable route has a physical page", async () => {
       `Declared public route ${route} must have ${pagePath}`,
     );
   }
+});
+
+test("private discovery and worker consoles remain noindex", async () => {
+  const topology = await read("src/lib/hocker-public-private-topology.ts");
+  const privateRoutes = extractRouteArray(topology, "HOCKER_PRIVATE_ROUTES");
+
+  assert.ok(privateRoutes.includes("/catalog"));
+  assert.ok(privateRoutes.includes("/workers"));
+  assert.match(topology, /\.\.\.HOCKER_PRIVATE_ROUTES/);
+  assert.match(topology, /X-Robots-Tag/);
+  assert.match(topology, /noindex, nofollow, noarchive/);
 });
 
 test("public marketing shell links every declared commercial destination", async () => {
