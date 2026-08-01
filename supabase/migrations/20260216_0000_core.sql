@@ -12,6 +12,7 @@ create extension if not exists pgcrypto;
 create or replace function public.tg_set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.updated_at = now();
@@ -79,43 +80,47 @@ $$;
 
 -- ---------------------------------------------------------
 -- Helpers de roles (create or replace, no rompe)
+-- Conservan el nombre de parámetro existente en producción.
 -- ---------------------------------------------------------
-create or replace function public.is_project_member(pid text)
+create or replace function public.is_project_member(p_project_id text)
 returns boolean
 language sql
 stable
+set search_path = public, pg_temp
 as $$
   select exists (
     select 1
     from public.project_members m
-    where m.project_id = pid
+    where m.project_id = p_project_id
       and m.user_id = auth.uid()
   );
 $$;
 
-create or replace function public.is_project_admin(pid text)
+create or replace function public.is_project_admin(p_project_id text)
 returns boolean
 language sql
 stable
+set search_path = public, pg_temp
 as $$
   select exists (
     select 1
     from public.project_members m
-    where m.project_id = pid
+    where m.project_id = p_project_id
       and m.user_id = auth.uid()
       and m.role in ('owner','admin')
   );
 $$;
 
-create or replace function public.is_project_operator(pid text)
+create or replace function public.is_project_operator(p_project_id text)
 returns boolean
 language sql
 stable
+set search_path = public, pg_temp
 as $$
   select exists (
     select 1
     from public.project_members m
-    where m.project_id = pid
+    where m.project_id = p_project_id
       and m.user_id = auth.uid()
       and m.role in ('owner','admin','operator')
   );
@@ -384,11 +389,16 @@ begin
       alter table public.commands add column if not exists approved_at timestamptz;
     $sql$;
 
-    -- constraint status (solo si no existe; no intentamos “reemplazar”)
+    -- constraint status (reconoce también el nombre existente en producción)
     execute $sql$
       do $inner$
       begin
-        if not exists (select 1 from pg_constraint where conname = 'commands_status_check') then
+        if not exists (
+          select 1
+          from pg_constraint
+          where conname in ('commands_status_check', 'commands_status_ck')
+            and conrelid = 'public.commands'::regclass
+        ) then
           alter table public.commands
           add constraint commands_status_check
           check (status in ('queued','needs_approval','running','done','error','canceled'));
