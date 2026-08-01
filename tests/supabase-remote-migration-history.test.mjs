@@ -49,18 +49,20 @@ test("Git contains every migration version already applied remotely", async () =
 
 test("remote migration SQL was not truncated while restoring history", async () => {
   const files = await readdir(migrationsUrl);
+  const mismatches = [];
 
   for (const [version, expectedBytes] of REMOTE_MIGRATIONS) {
     const file = files.find((candidate) => candidate.startsWith(`${version}_`));
     assert.ok(file, `Missing migration for ${version}`);
 
     const sql = await readFile(new URL(file, migrationsUrl), "utf8");
-    assert.equal(
-      Buffer.byteLength(sql.trimEnd(), "utf8"),
-      expectedBytes,
-      `${file} does not match the SQL byte length stored in supabase_migrations.schema_migrations`,
-    );
+    const actualBytes = Buffer.byteLength(sql.trimEnd(), "utf8");
+    if (actualBytes !== expectedBytes) {
+      mismatches.push(`${file}: ${actualBytes} !== ${expectedBytes}`);
+    }
   }
+
+  assert.deepEqual(mismatches, [], `Restored SQL byte mismatches:\n${mismatches.join("\n")}`);
 });
 
 test("known timestamp aliases cannot reapply the same production change", async () => {
