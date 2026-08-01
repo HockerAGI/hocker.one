@@ -1,0 +1,23 @@
+name: Full dependency audit
+
+on:
+  push:
+    branches:
+      - audit/full-dependency-tree-20260801
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --include=optional
+      - name: Full audit report
+        run: npm audit --audit-level=high
