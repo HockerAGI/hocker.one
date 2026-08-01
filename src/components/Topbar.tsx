@@ -1,43 +1,20 @@
 "use client";
 
-import Link from "next/link";
-import { Activity, Bell, Bot, Map, X, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import {
+  Bell,
+  Bot,
+  CheckCircle,
+  Loader2,
+  Search,
+  X,
+  XCircle,
+} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import HealthIndicator from "@/components/HealthIndicator";
-import { useState, useEffect, useCallback } from "react";
-
-const titles: Record<string, string> = {
-  "/": "Sitio público",
-  "/owner": "Inicio",
-  "/map": "Mapa",
-  "/live": "Sistema en vivo",
-  "/dashboard": "Sistema",
-  "/chat": "NOVA",
-  "/apps": "Apps",
-  "/agis": "AGIs",
-  "/commands": "Tareas",
-  "/nodes": "Nodos",
-  "/governance": "Gobierno",
-  "/supply": "Supply",
-  "/servicios": "Servicios",
-  "/security": "Seguridad",
-  "/chido": "Chido Casino",
-  "/integrations": "Integraciones",
-  "/memory": "Memoria IA",
-  "/empresa": "Empresa",
-  "/launch": "Lanzamiento",
-  "/mobile": "Móvil",
-};
-
-function getTitle(pathname: string) {
-  const exact = titles[pathname];
-  if (exact) return exact;
-  const match = Object.entries(titles)
-    .filter(([href]) => href !== "/" && pathname.startsWith(`${href}/`))
-    .sort((a, b) => b[0].length - a[0].length)[0];
-  return match?.[1] || "Hocker ONE";
-}
+import { getHockerRouteTitle } from "@/lib/hocker-navigation";
 
 type PendingAction = {
   id: string;
@@ -50,9 +27,8 @@ type PendingAction = {
 };
 
 export default function Topbar() {
-  const pathname = usePathname() || "/";
-  const title = getTitle(pathname);
-
+  const pathname = usePathname() || "/owner";
+  const title = getHockerRouteTitle(pathname);
   const [showApprovals, setShowApprovals] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -64,7 +40,9 @@ export default function Topbar() {
         const data = await res.json() as { actions?: PendingAction[] };
         setPendingActions(Array.isArray(data.actions) ? data.actions : []);
       }
-    } catch { /* silencioso */ }
+    } catch {
+      // The header remains usable if the approval counter is offline.
+    }
   }, []);
 
   useEffect(() => {
@@ -72,6 +50,10 @@ export default function Topbar() {
     const id = setInterval(() => { void fetchPending(); }, 20_000);
     return () => clearInterval(id);
   }, [fetchPending]);
+
+  useEffect(() => {
+    setShowApprovals(false);
+  }, [pathname]);
 
   const handleDecision = useCallback(async (id: string, decision: "approve" | "reject") => {
     setProcessing(id);
@@ -82,161 +64,169 @@ export default function Topbar() {
         body: JSON.stringify({ action_id: id, decision }),
       });
       await fetchPending();
-    } catch { /* silencioso */ } finally {
+    } catch {
+      // The detailed Owner view remains available for retry and evidence.
+    } finally {
       setProcessing(null);
     }
   }, [fetchPending]);
+
+  function triggerPalette() {
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        metaKey: true,
+        ctrlKey: !navigator.platform.includes("Mac"),
+        bubbles: true,
+      }),
+    );
+  }
 
   const count = pendingActions.length;
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-[90] hidden border-b border-white/[0.06] bg-[#030711]/95 backdrop-blur-xl lg:left-[290px] lg:block">
-        <div className="mx-auto flex h-[60px] w-full max-w-[1800px] items-center gap-3 px-4">
+      <header className="fixed inset-x-0 top-0 z-[90] border-b border-white/[0.06] bg-[#030711]/92 backdrop-blur-2xl lg:left-[290px]">
+        <div className="mx-auto flex h-16 w-full max-w-[1800px] items-center gap-2 px-3 sm:gap-3 sm:px-4 lg:h-[60px]">
+          <Link
+            href="/owner"
+            className="flex h-10 w-[96px] shrink-0 items-center justify-center rounded-[14px] border border-white/[0.07] bg-white/[0.03] transition-colors hover:bg-white/[0.05] sm:w-[110px]"
+            aria-label="Ir al inicio"
+          >
+            <Image
+              src="/brand/hocker-one-logo.png"
+              alt="Hocker ONE"
+              className="max-h-7 w-[78px] object-contain sm:w-[88px]"
+              width={88}
+              height={28}
+              priority
+            />
+          </Link>
 
-          {/* Logo pequeño + título */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/owner"
-              className="flex h-10 w-[110px] items-center justify-center rounded-[14px] border border-white/[0.07] bg-white/[0.03] transition-colors hover:bg-white/[0.05]"
-              aria-label="Ir al inicio"
-            >
-              <Image
-                src="/brand/hocker-one-logo.png"
-                alt="Hocker ONE"
-                className="max-h-7 w-[88px] object-contain"
-                width={88}
-                height={28}
-              />
-            </Link>
-            <strong className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 sm:text-[11px] sm:tracking-[0.22em]">
               {title}
-            </strong>
+            </p>
+            <div className="mt-0.5 hidden sm:block lg:hidden">
+              <HealthIndicator />
+            </div>
           </div>
 
-          {/* Health + spacer */}
-          <div className="flex flex-1 items-center gap-2 overflow-hidden">
+          <div className="hidden flex-1 items-center gap-2 overflow-hidden lg:flex">
             <HealthIndicator />
-            <span className="hidden text-[9px] font-bold tracking-[0.2em] text-slate-700 xl:block">
-              <kbd className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[8px] font-black text-slate-500">⌘K</kbd>
-              {" "}Buscar
-            </span>
           </div>
 
-          {/* Right actions */}
-          <nav className="flex items-center gap-1.5" aria-label="Accesos rápidos">
-            <Link
-              href="/map"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 text-[10px] font-bold tracking-[0.12em] text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
-            >
-              <Map size={14} />
-              <span className="hidden xl:inline">Mapa</span>
-            </Link>
-            <Link
-              href="/live"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 text-[10px] font-bold tracking-[0.12em] text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
-            >
-              <Activity size={14} />
-              <span className="hidden xl:inline">En vivo</span>
-            </Link>
-            <Link
-              href="/chat"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-400/20 bg-sky-400/8 px-3 text-[10px] font-bold tracking-[0.12em] text-sky-300 transition-colors hover:bg-sky-400/12"
-            >
-              <Bot size={14} />
-              <span className="hidden xl:inline">NOVA</span>
-            </Link>
-
-            {/* Approvals bell */}
+          <nav className="flex shrink-0 items-center gap-1.5" aria-label="Accesos rápidos">
             <button
               type="button"
-              onClick={() => setShowApprovals((v) => !v)}
+              onClick={triggerPalette}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-100"
+              aria-label="Buscar en Hocker ONE"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden text-[10px] font-bold tracking-[0.12em] xl:inline">Buscar</span>
+              <kbd className="hidden rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[8px] font-black text-slate-500 2xl:inline">⌘K</kbd>
+            </button>
+
+            <Link
+              href="/chat"
               className={[
-                "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors",
+                "inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 transition-colors",
+                pathname === "/chat"
+                  ? "border-sky-400/30 bg-sky-400/14 text-sky-200"
+                  : "border-sky-400/18 bg-sky-400/8 text-sky-300 hover:bg-sky-400/12",
+              ].join(" ")}
+              aria-label="Abrir NOVA"
+            >
+              <Bot className="h-4 w-4" />
+              <span className="hidden text-[10px] font-bold tracking-[0.12em] sm:inline">NOVA</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setShowApprovals((current) => !current)}
+              className={[
+                "relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors",
                 count > 0
                   ? "border-amber-400/25 bg-amber-400/10 text-amber-300 hover:bg-amber-400/15"
                   : "border-white/[0.07] bg-white/[0.03] text-slate-500 hover:bg-white/[0.06] hover:text-slate-300",
               ].join(" ")}
               aria-label={`${count} aprobaciones pendientes`}
+              aria-expanded={showApprovals}
             >
-              <Bell size={15} />
-              {count > 0 && (
+              <Bell className="h-4 w-4" />
+              {count > 0 ? (
                 <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[8px] font-black text-black">
                   {count}
                 </span>
-              )}
+              ) : null}
             </button>
           </nav>
         </div>
       </header>
 
-      {/* Approvals dropdown panel */}
-      {showApprovals && (
-        <div className="fixed right-4 top-[68px] z-[100] hidden w-[380px] overflow-hidden rounded-[20px] border border-white/[0.08] bg-[#050d1a]/98 shadow-[0_24px_64px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:block">
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+      {showApprovals ? (
+        <div className="fixed inset-x-3 top-[72px] z-[110] overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#050d1a]/98 shadow-[0_24px_64px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:left-auto lg:right-4 lg:top-[68px] lg:w-[400px]">
+          <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
                 Aprobaciones pendientes
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {count === 0 ? "Sin acciones pendientes" : `${count} acción${count !== 1 ? "es" : ""} esperando tu aprobación`}
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {count === 0 ? "No hay decisiones esperando." : `${count} acción${count !== 1 ? "es" : ""} requiere${count === 1 ? "" : "n"} tu decisión.`}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowApprovals(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
+              aria-label="Cerrar aprobaciones"
             >
-              <X size={14} />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="max-h-[420px] overflow-y-auto">
+          <div className="max-h-[min(56dvh,440px)] overflow-y-auto hko-sidebar-scroll">
             {count === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10">
-                <CheckCircle size={28} className="text-emerald-500/50" />
-                <p className="text-[11px] text-slate-600">Todo al día</p>
+                <CheckCircle className="h-8 w-8 text-emerald-500/50" />
+                <p className="text-[11px] text-slate-500">Todo al día</p>
               </div>
             ) : (
               <div className="divide-y divide-white/[0.04]">
                 {pendingActions.map((action) => (
-                  <div key={action.id} className="px-5 py-4">
-                    <div className="mb-3">
-                      <p className="text-[11px] font-bold text-slate-200">{action.title || action.action_type || "Acción AGI"}</p>
-                      {action.action_type && (
-                        <p className="mt-0.5 text-[10px] text-slate-500">
-                          {action.action_type}{action.tool_key ? ` · ${action.tool_key}` : ""}{action.risk_level ? ` · ${action.risk_level}` : ""}
-                        </p>
-                      )}
-                      <p className="mt-1 text-[9px] text-slate-700">
-                        {new Date(action.created_at).toLocaleString("es-MX")}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
+                  <article key={action.id} className="px-5 py-4">
+                    <p className="text-[12px] font-bold text-slate-200">
+                      {action.title || action.action_type || "Acción AGI"}
+                    </p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">
+                      {[action.action_type, action.tool_key, action.risk_level].filter(Boolean).join(" · ")}
+                    </p>
+                    <p className="mt-1 text-[9px] text-slate-700">
+                      {new Date(action.created_at).toLocaleString("es-MX")}
+                    </p>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         disabled={processing === action.id}
                         onClick={() => { void handleDecision(action.id, "approve"); }}
-                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-400/10 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300 transition-colors hover:bg-emerald-400/15 disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-300 transition-colors hover:bg-emerald-400/15 disabled:opacity-50"
                       >
-                        {processing === action.id ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <CheckCircle size={12} />
-                        )}
+                        {processing === action.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
                         Aprobar
                       </button>
                       <button
                         type="button"
                         disabled={processing === action.id}
                         onClick={() => { void handleDecision(action.id, "reject"); }}
-                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-400/20 bg-red-400/8 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-red-400 transition-colors hover:bg-red-400/12 disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-red-400/20 bg-red-400/8 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-red-400 transition-colors hover:bg-red-400/12 disabled:opacity-50"
                       >
-                        <XCircle size={12} />
+                        <XCircle className="h-3 w-3" />
                         Rechazar
                       </button>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
@@ -244,16 +234,15 @@ export default function Topbar() {
 
           <div className="border-t border-white/[0.06] p-4">
             <Link
-              href="/chat"
+              href="/owner/actions"
               onClick={() => setShowApprovals(false)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/8 py-2.5 text-[10px] font-black uppercase tracking-[0.18em] text-sky-300 transition-colors hover:bg-sky-400/12"
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/8 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-sky-300 transition-colors hover:bg-sky-400/12"
             >
-              <Bot size={13} />
-              Abrir NOVA para contexto completo
+              Ver contexto y evidencia
             </Link>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

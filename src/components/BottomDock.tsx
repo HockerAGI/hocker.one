@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Bell, Bot, Home, Map, Search } from "lucide-react";
-import { useState, useEffect } from "react";
-
-const ITEMS = [
-  { href: "/owner", label: "Inicio", icon: Home },
-  { href: "/map", label: "Mapa", icon: Map },
-  { href: "/live", label: "Vivo", icon: Activity },
-  { href: "/chat", label: "NOVA", icon: Bot },
-];
+import { useEffect, useState } from "react";
+import {
+  getActiveHockerSection,
+  HOCKER_NAVIGATION,
+} from "@/lib/hocker-navigation";
 
 export default function BottomDock() {
-  const pathname = usePathname() || "/";
+  const pathname = usePathname() || "/owner";
+  const activeSection = getActiveHockerSection(pathname);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -24,71 +21,45 @@ export default function BottomDock() {
           const data = await res.json() as { actions?: unknown[] };
           setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
         }
-      } catch { /* silencioso */ }
+      } catch {
+        // Mobile navigation remains functional if the counter is unavailable.
+      }
     };
+
     void fetchPending();
     const id = setInterval(() => { void fetchPending(); }, 30_000);
     return () => clearInterval(id);
   }, []);
 
-  function triggerPalette() {
-    window.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "k",
-        metaKey: true,
-        ctrlKey: !navigator.platform.includes("Mac"),
-        bubbles: true,
-      }),
-    );
-  }
-
   return (
-    <div className="hko-bottom-dock-wrap">
-      <nav data-hocker-bottom-dock className="hko-bottom-dock" aria-label="Navegación principal">
-        {ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active =
-            item.href === "/owner"
-              ? pathname === item.href
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    <div className="hko-bottom-dock-wrap lg:hidden">
+      <nav className="hko-bottom-dock" aria-label="Navegación principal móvil">
+        {HOCKER_NAVIGATION.map((section) => {
+          const Icon = section.icon;
+          const active = section.id === activeSection.id;
+          const showPending = section.id === "control" && pendingCount > 0;
 
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={section.id}
+              href={section.href}
               aria-current={active ? "page" : undefined}
-              className={active ? "is-active" : ""}
+              className={[
+                active ? "is-active" : "",
+                section.id === "nova" ? "is-nova" : "",
+                "relative",
+              ].join(" ")}
             >
               <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              {showPending ? (
+                <span className="absolute right-[18%] top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[7px] font-black text-black">
+                  {pendingCount}
+                </span>
+              ) : null}
+              <span>{section.shortLabel}</span>
             </Link>
           );
         })}
-
-        {/* Approvals bell */}
-        <Link
-          href="/chat"
-          aria-label={`${pendingCount} aprobaciones pendientes`}
-          className="relative"
-        >
-          <Bell className="h-5 w-5" />
-          {pendingCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[7px] font-black text-black">
-              {pendingCount}
-            </span>
-          )}
-          <span>Alertas</span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={triggerPalette}
-          aria-label="Buscar (⌘K)"
-          className="hko-bottom-dock-search-btn"
-        >
-          <Search className="h-5 w-5" />
-          <span>Buscar</span>
-        </button>
       </nav>
     </div>
   );

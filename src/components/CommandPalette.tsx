@@ -2,65 +2,55 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   AppWindow,
   Bot,
-  Brain,
-  CheckSquare,
-  CircleDot,
-  Dices,
-  Grid2X2,
-  Home,
-  Landmark,
-  Map as MapIcon,
-  Network,
-  Package,
-  Plug,
+  Boxes,
+  Database,
+  FileCheck2,
   Search,
   ServerCog,
   ShieldCheck,
-  Sparkles,
-  Database,
-  Boxes,
 } from "lucide-react";
+import { HOCKER_NAVIGATION } from "@/lib/hocker-navigation";
 import { OPERATIONS_CATALOG, type OperationsCatalogKind } from "@/lib/operations-catalog";
-
-type IconType = typeof Home;
 
 type PaletteItem = {
   id: string;
   label: string;
   href: string;
-  icon: IconType;
+  icon: LucideIcon;
   group: string;
   keywords?: string;
 };
 
-const BASE_ITEMS: PaletteItem[] = [
-  { id: "owner", label: "Inicio", href: "/owner", icon: Home, group: "Núcleo", keywords: "home dashboard inicio panel" },
-  { id: "catalog", label: "Buscar en el ecosistema", href: "/catalog", icon: Search, group: "Núcleo", keywords: "catalogo buscador apps agis herramientas repositorios" },
-  { id: "map", label: "Mapa", href: "/map", icon: MapIcon, group: "Núcleo", keywords: "map mapa overview" },
-  { id: "live", label: "Sistema en vivo", href: "/live", icon: Activity, group: "Núcleo", keywords: "live vivo realtime monitoreo" },
-  { id: "chat", label: "NOVA Chat", href: "/chat", icon: Bot, group: "Núcleo", keywords: "nova chat ai agente conversacion aprobar ejecutar" },
-  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: CircleDot, group: "Núcleo", keywords: "dashboard sistema panel" },
-  { id: "commands", label: "Tareas y aprobaciones", href: "/commands", icon: CheckSquare, group: "Operación", keywords: "commands tareas queue cola owner gate evidencia" },
-  { id: "nodes", label: "Nodos y agentes", href: "/nodes", icon: Network, group: "Operación", keywords: "nodes nodos agent agente local sandbox" },
-  { id: "status", label: "Salud del sistema", href: "/status", icon: Activity, group: "Operación", keywords: "status estado health salud" },
-  { id: "apps", label: "Apps", href: "/apps", icon: Grid2X2, group: "Ecosistema", keywords: "apps aplicaciones productos" },
-  { id: "agis", label: "AGIs y funciones", href: "/agis", icon: Sparkles, group: "Ecosistema", keywords: "agis agentes funciones especialistas" },
-  { id: "integrations", label: "Herramientas y APIs", href: "/integrations", icon: Plug, group: "Ecosistema", keywords: "integrations integraciones mcp conectores api herramientas" },
-  { id: "memory", label: "Memoria y aprendizaje", href: "/memory", icon: Brain, group: "Ecosistema", keywords: "memory memoria aprendizaje evidencia" },
-  { id: "supply", label: "Supply", href: "/supply", icon: Package, group: "Ecosistema", keywords: "supply suministros inventario pedidos" },
-  { id: "chido", label: "Chido Casino", href: "/chido", icon: Dices, group: "Ecosistema", keywords: "chido casino juegos wallet operacion" },
-  { id: "chido-dashboard", label: "Chido Dashboard", href: "/chido/dashboard", icon: Activity, group: "Ecosistema", keywords: "chido dashboard casino monitoreo" },
-  { id: "chido-admin", label: "Chido Admin", href: "/chido/admin", icon: ShieldCheck, group: "Ecosistema", keywords: "chido admin kyc depositos retiros pausa" },
-  { id: "chido-ops", label: "Chido Ops", href: "/chido/ops", icon: Database, group: "Ecosistema", keywords: "chido ops operaciones monitoring" },
-  { id: "security", label: "Seguridad", href: "/security", icon: ShieldCheck, group: "Gobernanza", keywords: "security seguridad rls permisos" },
-  { id: "governance", label: "Reglas y gobierno", href: "/governance", icon: Landmark, group: "Gobernanza", keywords: "governance gobierno auditoria reglas" },
+const NAVIGATION_ITEMS: PaletteItem[] = HOCKER_NAVIGATION.flatMap((section) =>
+  section.items.map((item) => ({
+    id: `nav-${item.id}`,
+    label: item.label,
+    href: item.href,
+    icon: item.icon,
+    group: section.label,
+    keywords: item.keywords,
+  })),
+);
+
+const SPECIAL_ITEMS: PaletteItem[] = [
+  { id: "security-rls", label: "Políticas RLS", href: "/security/rls", icon: ShieldCheck, group: "Control", keywords: "seguridad supabase rls policies tablas" },
+  { id: "security-grants", label: "Permisos y grants", href: "/security/grants", icon: ShieldCheck, group: "Control", keywords: "seguridad permisos grants roles" },
+  { id: "security-hardening", label: "Hardening", href: "/security/hardening", icon: ShieldCheck, group: "Control", keywords: "seguridad hardening vulnerabilidades" },
+  { id: "memory-review", label: "Revisión de memoria", href: "/memory/review", icon: FileCheck2, group: "Ecosistema", keywords: "memoria revisión evidencia aprendizaje" },
+  { id: "chido-dashboard", label: "Chido Dashboard", href: "/chido/dashboard", icon: Activity, group: "Chido", keywords: "casino dashboard monitoreo" },
+  { id: "chido-admin", label: "Chido Admin", href: "/chido/admin", icon: ShieldCheck, group: "Chido", keywords: "casino admin kyc depósitos retiros pausa" },
+  { id: "chido-ops", label: "Chido Ops", href: "/chido/ops", icon: Database, group: "Chido", keywords: "casino operaciones monitoring" },
+  { id: "jurix", label: "Jurix Compliance", href: "/admin/jurix", icon: FileCheck2, group: "Control", keywords: "jurix legal compliance auditoria exportar" },
 ];
 
-function catalogIcon(kind: OperationsCatalogKind): IconType {
+const BASE_ITEMS = [...NAVIGATION_ITEMS, ...SPECIAL_ITEMS];
+
+function catalogIcon(kind: OperationsCatalogKind): LucideIcon {
   if (kind === "app") return AppWindow;
   if (kind === "service") return ServerCog;
   if (kind === "agent") return Bot;
@@ -93,7 +83,7 @@ const CATALOG_ITEMS: PaletteItem[] = OPERATIONS_CATALOG
     ].join(" "),
   }));
 
-const PALETTE_ITEMS = [...BASE_ITEMS, ...CATALOG_ITEMS].filter(
+const SEARCHABLE_ITEMS = [...BASE_ITEMS, ...CATALOG_ITEMS].filter(
   (item, index, all) => all.findIndex((candidate) => candidate.href === item.href && candidate.label === item.label) === index,
 );
 
@@ -128,9 +118,9 @@ export default function CommandPalette() {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("es-MX");
-    if (!normalized) return PALETTE_ITEMS;
+    if (!normalized) return BASE_ITEMS;
 
-    return PALETTE_ITEMS.filter((item) =>
+    return SEARCHABLE_ITEMS.filter((item) =>
       `${item.label} ${item.group} ${item.keywords ?? ""}`
         .toLocaleLowerCase("es-MX")
         .includes(normalized),
@@ -176,19 +166,29 @@ export default function CommandPalette() {
 
   return (
     <>
-      <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
+      <button
+        type="button"
+        className="fixed inset-0 z-[200] cursor-default bg-black/60 backdrop-blur-sm"
+        onClick={() => setOpen(false)}
+        aria-label="Cerrar búsqueda"
+      />
 
-      <div className="fixed left-1/2 top-[10%] z-[201] w-[92vw] max-w-[680px] -translate-x-1/2">
-        <div className="overflow-hidden rounded-[24px] border border-white/15 bg-[#070d1a] shadow-[0_40px_120px_rgba(0,0,0,0.6)]">
+      <div className="fixed left-1/2 top-[8%] z-[201] w-[94vw] max-w-[700px] -translate-x-1/2 sm:top-[10%]">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Buscar en Hocker ONE"
+          className="overflow-hidden rounded-[26px] border border-white/15 bg-[#070d1a]/98 shadow-[0_40px_120px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
+        >
           <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
-            <Search size={20} className="shrink-0 text-slate-500" />
+            <Search className="h-5 w-5 shrink-0 text-slate-500" />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Buscar app, AGI, herramienta, repositorio o función…"
+              placeholder="Buscar vista, app, AGI, herramienta o función…"
               className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-white placeholder:text-slate-500 focus:outline-none"
               aria-label="Buscar en Hocker ONE"
               autoComplete="off"
@@ -197,11 +197,11 @@ export default function CommandPalette() {
             <kbd className="hidden shrink-0 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[10px] font-bold text-slate-400 sm:block">ESC</kbd>
           </div>
 
-          <div ref={listRef} className="max-h-[68vh] overflow-y-auto p-2 hko-sidebar-scroll">
+          <div ref={listRef} className="max-h-[68dvh] overflow-y-auto p-2 hko-sidebar-scroll">
             {filtered.length === 0 ? (
               <div className="px-4 py-10 text-center">
-                <p className="text-sm font-medium text-slate-400">Sin resultados para “{query}”</p>
-                <p className="mt-1 text-xs text-slate-600">Prueba con una capacidad, repositorio o responsable.</p>
+                <p className="text-sm font-medium text-slate-300">Sin resultados para “{query}”</p>
+                <p className="mt-1 text-xs text-slate-600">Prueba con una capacidad, repositorio, módulo o responsable.</p>
               </div>
             ) : (
               Array.from(grouped.entries()).map(([group, items]) => (
@@ -215,17 +215,18 @@ export default function CommandPalette() {
                     return (
                       <button
                         key={item.id}
+                        type="button"
                         data-idx={index}
                         onClick={() => navigate(item)}
                         onMouseEnter={() => setActiveIndex(index)}
                         className={[
-                          "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
+                          "flex min-h-11 w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
                           active
                             ? "border-sky-300/25 bg-sky-400/12 text-white"
                             : "border-transparent text-slate-400 hover:bg-white/[0.04]",
                         ].join(" ")}
                       >
-                        <Icon size={18} className={active ? "text-sky-300" : "text-slate-500"} />
+                        <Icon className={active ? "h-[18px] w-[18px] text-sky-300" : "h-[18px] w-[18px] text-slate-500"} />
                         <span className="flex-1 text-[13px] font-bold tracking-[0.02em]">{item.label}</span>
                         {active ? <kbd className="rounded-lg border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-bold text-slate-400">↵</kbd> : null}
                       </button>

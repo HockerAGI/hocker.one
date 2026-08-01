@@ -1,87 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Activity,
-  Bell,
-  Bot,
-  Brain,
-  CheckSquare,
-  ChevronRight,
-  CircleDot,
-  Dices,
-  Grid2X2,
-  Home,
-  Landmark,
-  Map,
-  Network,
-  Package,
-  Plug,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Workflow,
-} from "lucide-react";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { Bell, ChevronRight, Search } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof Home;
-  badge?: string;
-  dot?: "green" | "amber" | "red";
-};
-type NavGroup = { title: string; items: NavItem[] };
-
-const navGroups: NavGroup[] = [
-  {
-    title: "Núcleo",
-    items: [
-      { href: "/owner", label: "Inicio", icon: Home },
-      { href: "/catalog", label: "Buscar en el ecosistema", icon: Search },
-      { href: "/map", label: "Mapa del ecosistema", icon: Map },
-      { href: "/live", label: "Operación en vivo", icon: Activity, dot: "green" },
-      { href: "/chat", label: "NOVA Chat", icon: Bot, dot: "green" },
-    ],
-  },
-  {
-    title: "Operación",
-    items: [
-      { href: "/commands", label: "Tareas y aprobaciones", icon: CheckSquare },
-      { href: "/workers", label: "Trabajadores AGI", icon: Workflow },
-      { href: "/nodes", label: "Nodos y agentes", icon: Network },
-      { href: "/status", label: "Salud del sistema", icon: CircleDot },
-    ],
-  },
-  {
-    title: "Ecosistema",
-    items: [
-      { href: "/apps", label: "Apps", icon: Grid2X2 },
-      { href: "/agis", label: "AGIs y funciones", icon: Sparkles },
-      { href: "/integrations", label: "Herramientas y APIs", icon: Plug },
-      { href: "/memory", label: "Memoria y aprendizaje", icon: Brain },
-      { href: "/supply", label: "Supply", icon: Package },
-      { href: "/chido", label: "Chido Casino", icon: Dices, dot: "amber" },
-    ],
-  },
-  {
-    title: "Gobernanza",
-    items: [
-      { href: "/security", label: "Seguridad", icon: ShieldCheck },
-      { href: "/governance", label: "Reglas y gobierno", icon: Landmark },
-    ],
-  },
-];
-
-function isActive(pathname: string, href: string) {
-  if (href === "/owner") return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import {
+  getActiveHockerSection,
+  HOCKER_NAVIGATION,
+  isHockerRouteActive,
+} from "@/lib/hocker-navigation";
 
 export default function Sidebar() {
-  const pathname = usePathname() || "/";
+  const pathname = usePathname() || "/owner";
+  const activeSection = getActiveHockerSection(pathname);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -93,18 +25,30 @@ export default function Sidebar() {
           setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
         }
       } catch {
-        // El menú no debe bloquear la navegación si el contador no responde.
+        // Navigation must remain available when the counter is offline.
       }
     };
+
     void fetchPending();
     const id = setInterval(() => { void fetchPending(); }, 30_000);
     return () => clearInterval(id);
   }, []);
 
+  function triggerPalette() {
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        metaKey: true,
+        ctrlKey: !navigator.platform.includes("Mac"),
+        bubbles: true,
+      }),
+    );
+  }
+
   return (
     <aside
       className="hko-sidebar fixed left-3 top-3 z-[95] hidden h-[calc(100dvh-1.5rem)] w-[264px] flex-col overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#050d1a]/90 text-white shadow-[0_32px_80px_rgba(0,0,0,0.5)] backdrop-blur-3xl lg:flex"
-      aria-label="Menú lateral"
+      aria-label="Navegación principal"
     >
       <Link
         href="/owner"
@@ -117,97 +61,117 @@ export default function Sidebar() {
           className="max-h-10 w-[152px] object-contain drop-shadow-[0_0_20px_rgba(85,220,255,0.2)]"
           width={152}
           height={40}
+          priority
         />
       </Link>
 
-      {pendingCount > 0 && (
+      {pendingCount > 0 ? (
         <Link
-          href="/chat"
-          className="mx-3 mt-2.5 flex items-center gap-2.5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-3.5 py-2.5 transition-colors hover:bg-amber-400/15"
+          href="/owner/actions"
+          className="mx-3 mt-2.5 flex min-h-11 items-center gap-2.5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-3.5 py-2.5 transition-colors hover:bg-amber-400/15"
         >
           <Bell className="h-3.5 w-3.5 shrink-0 text-amber-300" />
-          <span className="flex-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">
-            {pendingCount} aprobación{pendingCount !== 1 ? "es" : ""} pendiente{pendingCount !== 1 ? "s" : ""}
+          <span className="flex-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">
+            {pendingCount} por aprobar
           </span>
           <ChevronRight className="h-3 w-3 text-amber-400/60" />
         </Link>
-      )}
+      ) : null}
 
-      <nav
-        className="mt-3 flex-1 overflow-y-auto px-3 pb-2 hko-sidebar-scroll"
-        aria-label="Navegación principal"
-      >
-        {navGroups.map((group) => (
-          <div key={group.title} className="mb-3">
-            <p className="mb-1.5 px-2 text-[8.5px] font-black uppercase tracking-[0.28em] text-slate-600">
-              {group.title}
-            </p>
-            <div className="grid gap-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(pathname, item.href);
-                const showPendingBadge = item.href === "/commands" && pendingCount > 0;
+      <nav className="mt-3 flex-1 overflow-y-auto px-3 pb-2 hko-sidebar-scroll">
+        <div className="mb-4">
+          <p className="mb-1.5 px-2 text-[8.5px] font-black uppercase tracking-[0.28em] text-slate-600">
+            Dominios
+          </p>
+          <div className="grid gap-1">
+            {HOCKER_NAVIGATION.map((section) => {
+              const Icon = section.icon;
+              const active = section.id === activeSection.id;
+              const showPending = section.id === "control" && pendingCount > 0;
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={[
-                      "group flex min-h-[42px] items-center gap-3 rounded-[14px] border px-3.5 transition-all duration-150",
-                      active
-                        ? "border-sky-400/20 bg-gradient-to-r from-sky-400/10 to-sky-500/5 text-sky-100 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.08)]"
-                        : "border-transparent text-slate-500 hover:border-white/[0.06] hover:bg-white/[0.035] hover:text-slate-200",
-                    ].join(" ")}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon
-                      size={15}
-                      className={active ? "text-sky-300" : "text-slate-600 group-hover:text-slate-400"}
-                    />
-                    <span className={[
-                      "flex-1 text-[12px] tracking-[0.01em]",
-                      active ? "font-bold text-sky-100" : "font-semibold",
-                    ].join(" ")}>
-                      {item.label}
+              return (
+                <Link
+                  key={section.id}
+                  href={section.href}
+                  aria-current={active ? "page" : undefined}
+                  className={[
+                    "group flex min-h-11 items-center gap-3 rounded-[15px] border px-3.5 transition-all duration-150",
+                    active
+                      ? "border-sky-400/20 bg-gradient-to-r from-sky-400/12 to-sky-500/5 text-sky-100 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.08)]"
+                      : "border-transparent text-slate-500 hover:border-white/[0.06] hover:bg-white/[0.035] hover:text-slate-200",
+                  ].join(" ")}
+                >
+                  <Icon
+                    className={active ? "h-4 w-4 text-sky-300" : "h-4 w-4 text-slate-600 group-hover:text-slate-400"}
+                  />
+                  <span className={active ? "flex-1 text-[12px] font-bold" : "flex-1 text-[12px] font-semibold"}>
+                    {section.label}
+                  </span>
+                  {showPending ? (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-[9px] font-black text-black">
+                      {pendingCount}
                     </span>
-
-                    {item.dot && !active && (
-                      <span className={[
-                        "h-1.5 w-1.5 shrink-0 rounded-full",
-                        item.dot === "green" ? "bg-emerald-400" : item.dot === "amber" ? "bg-amber-400" : "bg-red-400",
-                      ].join(" ")} />
-                    )}
-
-                    {showPendingBadge && (
-                      <span className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1.5 text-[9px] font-black text-black">
-                        {pendingCount}
-                      </span>
-                    )}
-
-                    {active && (
-                      <ChevronRight size={12} className="shrink-0 text-sky-400/50" />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+                  ) : null}
+                  {active ? <ChevronRight className="h-3 w-3 text-sky-400/55" /> : null}
+                </Link>
+              );
+            })}
           </div>
-        ))}
+        </div>
+
+        <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.025] p-2">
+          <p className="mb-1.5 px-2 pt-1 text-[8.5px] font-black uppercase tracking-[0.25em] text-slate-600">
+            Vistas · {activeSection.label}
+          </p>
+          <div className="grid gap-0.5">
+            {activeSection.items.map((item) => {
+              const Icon = item.icon;
+              const active = isHockerRouteActive(pathname, item.href);
+              const showPending = item.id === "owner-actions" && pendingCount > 0;
+
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={[
+                    "group flex min-h-10 items-center gap-2.5 rounded-[13px] border px-3 transition-all",
+                    active
+                      ? "border-sky-400/15 bg-sky-400/9 text-sky-100"
+                      : "border-transparent text-slate-500 hover:bg-white/[0.04] hover:text-slate-200",
+                  ].join(" ")}
+                >
+                  <Icon className={active ? "h-3.5 w-3.5 text-sky-300" : "h-3.5 w-3.5 text-slate-600"} />
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">
+                    {item.label}
+                  </span>
+                  {showPending ? (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[8px] font-black text-black">
+                      {pendingCount}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
-      <div className="mx-3 mb-3 shrink-0 overflow-hidden rounded-[18px] border border-sky-400/12 bg-gradient-to-b from-sky-400/8 to-transparent">
-        <Link href="/chat" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-sky-400/5">
-          <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-400/15">
-            <Bot size={16} className="text-sky-300" />
-            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#050d1a] bg-emerald-400" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-200">NOVA</p>
-            <p className="truncate text-[10px] font-medium text-slate-500">Activa · Abrir chat y aprobaciones</p>
-          </div>
-          <ChevronRight size={12} className="shrink-0 text-sky-400/40" />
-        </Link>
-      </div>
+      <button
+        type="button"
+        onClick={triggerPalette}
+        className="mx-3 mb-3 flex min-h-12 shrink-0 items-center gap-3 rounded-[18px] border border-sky-400/12 bg-gradient-to-r from-sky-400/8 to-transparent px-4 text-left transition-colors hover:bg-sky-400/10"
+        aria-label="Buscar en Hocker ONE"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-400/12">
+          <Search className="h-4 w-4 text-sky-300" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-sky-200">Buscar</span>
+          <span className="block truncate text-[10px] font-medium text-slate-500">Apps, AGIs, herramientas y vistas</span>
+        </span>
+        <kbd className="rounded-lg border border-white/10 bg-white/[0.04] px-1.5 py-1 text-[8px] font-black text-slate-500">⌘K</kbd>
+      </button>
     </aside>
   );
 }
