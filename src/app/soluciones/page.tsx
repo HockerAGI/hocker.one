@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import PageShell from "@/components/PageShell";
-import { GlassCard } from "@/components/system";
+import HockerPublicPage from "@/components/public-marketing/HockerPublicPage";
 
 export const metadata: Metadata = {
   title: "Soluciones | Hocker AGI Technologies",
@@ -9,30 +7,42 @@ export const metadata: Metadata = {
     "Soluciones comerciales y operativas del ecosistema HOCKER AGI Technologies.",
 };
 
-const solutions = [
-  { title: "Ecosistema IA", text: "NOVA + AGIs + apps + control para operar como un sistema único." },
-  { title: "Ventas y leads", text: "Captación, seguimiento y cierre con automatización real." },
-  { title: "Operación interna", text: "Menos ruido, más control y mejores tiempos de respuesta." },
-  { title: "Marca y contenido", text: "Narrativa, visuales y comunicación con identidad propia." },
-];
-
 export default function SolucionesPage() {
   return (
-    <PageShell
+    <HockerPublicPage
       eyebrow="Soluciones"
-      title="Soluciones que venden"
-      description="No se trata de páginas; se trata de resolver problemas de negocio con software, IA y operación."
-      actions={
-        <Link href="/contacto" className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300">
-          Hablar de mi caso
-        </Link>
-      }
-    >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {solutions.map((solution) => (
-          <GlassCard key={solution.title} title={solution.title} description={solution.text} interactive />
-        ))}
-      </div>
-    </PageShell>
+      title="Sistemas diseñados alrededor del resultado."
+      description="No se trata de acumular páginas o herramientas. Se trata de integrar estrategia, software, inteligencia y operación para resolver cuellos de botella comerciales concretos."
+      primaryHref="/contacto"
+      primaryLabel="Hablar de mi caso"
+      secondaryHref="/ecosistema"
+      secondaryLabel="Ver arquitectura"
+      cards={[
+        {
+          title: "Ecosistema inteligente",
+          text: "NOVA, AGIs, aplicaciones y control humano coordinados como un sistema operativo único.",
+        },
+        {
+          title: "Ventas y leads",
+          text: "Captación, calificación, seguimiento y cierre conectados mediante automatización y contexto.",
+        },
+        {
+          title: "Operación interna",
+          text: "Menos ruido, tareas más claras, evidencia centralizada y mejores tiempos de respuesta.",
+        },
+        {
+          title: "Marca y contenido",
+          text: "Narrativa, identidad visual, piezas y campañas consistentes con la estrategia comercial.",
+        },
+        {
+          title: "Control ejecutivo",
+          text: "Dashboards, alertas, aprobaciones y trazabilidad para decidir sin perder profundidad operativa.",
+        },
+        {
+          title: "Escalabilidad técnica",
+          text: "Arquitectura modular, seguridad, observabilidad y despliegue continuo para crecer con control.",
+        },
+      ]}
+    />
   );
 }
