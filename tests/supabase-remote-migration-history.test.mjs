@@ -32,6 +32,7 @@ const REMOTE_MIGRATIONS = new Map([
   ["20260801000251", 415],
   ["20260801044102", 1594],
   ["20260801050515", 3740],
+  ["20260801051257", 184],
 ]);
 
 const APPLIED_VERSION_ONLY = ["20260216"];
@@ -103,6 +104,16 @@ test("safe audit replacement does not grant authenticated access", async () => {
   assert.match(sql, /Service-only command execution logs/);
 });
 
+test("RLS lint replacement only fixes the trigger search path", async () => {
+  const sql = await readFile(
+    new URL("20260801051257_secure_set_updated_at_search_path.sql", migrationsUrl),
+    "utf8",
+  );
+
+  assert.match(sql, /alter function public\.set_updated_at\(\) set search_path = public, pg_temp/i);
+  assert.doesNotMatch(sql, /create\s+policy|drop\s+policy|drop\s+function/i);
+});
+
 test("known timestamp aliases and unsafe legacy replays are absent", async () => {
   const files = await readdir(migrationsUrl);
   const forbidden = [
@@ -112,6 +123,7 @@ test("known timestamp aliases and unsafe legacy replays are absent", async () =>
     "20260620_000000_consolidated_security_hotfixes.sql",
     "20260620_000001_universal_rls_lockdown.sql",
     "20260701_000000_supabase_audit_improvements.sql",
+    "20260714_033000_security_rls_lint_fixes.sql",
     "20260731_160000_verifiable_agi_workers.sql",
     "20260731234000_jurix_compliance_events.sql",
     "20260731035500_restrict_hocker_dashboard_snapshot.sql",
