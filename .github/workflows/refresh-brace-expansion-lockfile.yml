@@ -1,0 +1,47 @@
+name: Refresh brace-expansion lockfile
+
+on:
+  push:
+    branches:
+      - fix/brace-expansion-audit-20260801
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-brace-expansion-lockfile
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/brace-expansion-audit-20260801
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Regenerate lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify complete tree
+        shell: bash
+        run: |
+          npm ci --include=optional
+          npm ls brace-expansion --all
+          npm audit --audit-level=high
+      - name: Commit generated lockfile
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes generated" >&2
+            exit 1
+          fi
+          git commit -m "fix(deps): resolve brace-expansion high severity advisory"
+          git push origin HEAD:fix/brace-expansion-audit-20260801
