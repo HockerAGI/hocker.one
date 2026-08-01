@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { HOCKER_PUBLIC_ROUTES } from "@/lib/hocker-public-private-topology";
 
 // The whole private shell (sidebar, topbar, dock, background, VFX) is code-split
-// into its own chunk so the public/marketing routes never download it.
+// into its own chunk so public/marketing and not-found routes never download it.
 const PrivateShell = dynamic(() => import("@/components/PrivateShell"));
 
 export default function ShellFrame({ children }: { children: React.ReactNode }) {
@@ -13,8 +13,9 @@ export default function ShellFrame({ children }: { children: React.ReactNode }) 
   const isPublicRoute = HOCKER_PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
+  const isFrameworkNotFound = pathname === "/_not-found" || pathname === "/404";
 
-  if (isPublicRoute) return <>{children}</>;
+  if (isPublicRoute || isFrameworkNotFound) return <>{children}</>;
 
   return <PrivateShell>{children}</PrivateShell>;
 }
