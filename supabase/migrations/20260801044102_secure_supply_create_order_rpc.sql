@@ -1,12 +1,3 @@
-begin;
-
-alter table if exists public.supply_orders
-  drop constraint if exists supply_orders_status_check;
-
-alter table if exists public.supply_orders
-  add constraint supply_orders_status_check
-  check (status in ('pending','paid','producing','shipped','delivered','canceled','cancelled'));
-
 create or replace function public.supply_create_order(
   p_project_id text,
   p_customer_name text,
@@ -19,11 +10,16 @@ create or replace function public.supply_create_order(
 returns public.supply_orders
 language plpgsql
 security definer
+set search_path = public, pg_temp
 as $$
 declare
   v_status text := lower(coalesce(p_status, 'pending'));
   v_row public.supply_orders;
 begin
+  if nullif(trim(p_project_id), '') is null then
+    raise exception 'PROJECT_REQUIRED';
+  end if;
+
   if v_status not in ('pending','paid','producing','shipped','delivered','canceled','cancelled') then
     raise exception 'Estado inválido para supply_create_order: %', v_status;
   end if;
@@ -38,7 +34,7 @@ begin
     meta
   )
   values (
-    p_project_id,
+    trim(p_project_id),
     v_status,
     p_customer_name,
     p_customer_phone,
@@ -52,4 +48,8 @@ begin
 end;
 $$;
 
-commit;
+revoke all on function public.supply_create_order(text, text, text, integer, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.supply_create_order(text, text, text, integer, text, text, jsonb) to service_role;
+
+comment on function public.supply_create_order(text, text, text, integer, text, text, jsonb) is
+  'Service-only supply order creation RPC with fixed search_path.';
