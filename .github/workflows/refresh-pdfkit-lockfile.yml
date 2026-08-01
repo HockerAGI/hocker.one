@@ -1,0 +1,56 @@
+name: Refresh PDFKit lockfile
+
+on:
+  push:
+    branches:
+      - fix/upgrade-pdfkit-20260801
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-pdfkit-lockfile
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/upgrade-pdfkit-20260801
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Upgrade PDFKit and declarations
+        run: npm install --save-exact pdfkit@0.19.1 --save-dev --save-exact @types/pdfkit@0.17.6
+
+      - name: Verify deprecated package was removed
+        shell: bash
+        run: |
+          if npm ls jpeg-exif --all 2>/dev/null | grep -q jpeg-exif; then
+            echo "jpeg-exif remains in the dependency tree" >&2
+            exit 1
+          fi
+          npm test
+          npm run typecheck
+
+      - name: Commit generated manifest and lockfile
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No dependency changes generated"
+            exit 1
+          fi
+          git commit -m "fix(deps): upgrade PDFKit and remove deprecated JPEG parser"
+          git push origin HEAD:fix/upgrade-pdfkit-20260801
