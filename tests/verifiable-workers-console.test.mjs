@@ -4,14 +4,16 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("workers console is discoverable from navigation and global catalog", async () => {
+test("workers console is discoverable from shared navigation and global catalog", async () => {
+  const navigation = await read("src/lib/hocker-navigation.ts");
   const sidebar = await read("src/components/Sidebar.tsx");
+  const palette = await read("src/components/CommandPalette.tsx");
   const page = await read("src/app/workers/page.tsx");
   const catalog = await read("src/lib/operations-catalog.ts");
 
-  assert.match(sidebar, /href: "\/workers"/);
-  assert.match(sidebar, /Trabajadores AGI/);
-  assert.match(sidebar, /Workflow/);
+  assert.match(navigation, /id: "workers"[\s\S]*href: "\/workers"[\s\S]*label: "Trabajadores AGI"/);
+  assert.match(sidebar, /HOCKER_NAVIGATION/);
+  assert.match(palette, /HOCKER_NAVIGATION/);
   assert.match(page, /VerifiableWorkersConsole/);
   assert.match(catalog, /id: "verifiable-agi-workers"/);
   assert.match(catalog, /href: "\/workers"/);
