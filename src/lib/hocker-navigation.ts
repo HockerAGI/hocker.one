@@ -50,8 +50,8 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     items: [
       { id: "owner", href: "/owner", label: "Resumen ejecutivo", shortLabel: "Resumen", icon: Home, keywords: "inicio home owner resumen panel" },
       { id: "catalog", href: "/catalog", label: "Buscar en el ecosistema", shortLabel: "Buscar", icon: Search, keywords: "buscar catalogo apps agis herramientas repositorios" },
-      { id: "map", href: "/map", label: "Mapa del ecosistema", shortLabel: "Mapa", icon: Map, keywords: "mapa arquitectura relaciones ecosistema" },
-      { id: "dashboard", href: "/dashboard", label: "Dashboard técnico", shortLabel: "Dashboard", icon: LayoutDashboard, keywords: "dashboard tecnico sistema métricas" },
+      { id: "map", href: "/map", label: "Mapa operativo", shortLabel: "Mapa", icon: Map, keywords: "mapa arquitectura evidencia relaciones ecosistema" },
+      { id: "dashboard", href: "/dashboard", label: "Dashboard técnico", shortLabel: "Dashboard", icon: LayoutDashboard, keywords: "dashboard tecnico señales métricas" },
     ],
   },
   {
@@ -61,11 +61,11 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     href: "/live",
     icon: Activity,
     items: [
-      { id: "live", href: "/live", label: "Operación en vivo", shortLabel: "En vivo", icon: Activity, keywords: "live vivo realtime actividad monitoreo" },
+      { id: "live", href: "/live", label: "Señales operativas", shortLabel: "Señales", icon: Activity, keywords: "health heartbeat señal actividad monitoreo" },
       { id: "commands", href: "/commands", label: "Tareas y aprobaciones", shortLabel: "Tareas", icon: CheckSquare, keywords: "tareas commands cola aprobaciones owner gate" },
-      { id: "workers", href: "/workers", label: "Trabajadores AGI", shortLabel: "Workers", icon: Workflow, keywords: "workers trabajadores agi ejecuciones" },
-      { id: "nodes", href: "/nodes", label: "Nodos y agentes", shortLabel: "Nodos", icon: Network, keywords: "nodes nodos agentes sandbox local" },
-      { id: "status", href: "/status", label: "Salud del sistema", shortLabel: "Salud", icon: CircleDot, keywords: "status salud health disponibilidad" },
+      { id: "workers", href: "/workers", label: "Workers AGI", shortLabel: "Workers", icon: Workflow, keywords: "workers trabajadores agi ejecuciones evidencia" },
+      { id: "nodes", href: "/nodes", label: "Nodos y heartbeat", shortLabel: "Nodos", icon: Network, keywords: "nodes nodos heartbeat agentes sandbox local" },
+      { id: "status", href: "/status", label: "Estado verificable", shortLabel: "Estado", icon: CircleDot, keywords: "status estado health disponibilidad evidencia" },
     ],
   },
   {
@@ -76,8 +76,7 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     icon: Bot,
     matchPrefixes: ["/owner/nova", "/app/nova"],
     items: [
-      { id: "chat", href: "/chat", label: "NOVA Chat", shortLabel: "Chat", icon: Bot, keywords: "nova chat conversación ejecutar aprobar" },
-      { id: "nova-owner", href: "/owner/nova", label: "Estado de NOVA", shortLabel: "Estado", icon: Activity, keywords: "nova estado runtime railway proveedor" },
+      { id: "chat", href: "/chat", label: "NOVA Chat", shortLabel: "Chat", icon: Bot, keywords: "nova chat conversación estado runtime ejecutar aprobar" },
     ],
   },
   {
@@ -88,11 +87,11 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     icon: Grid2X2,
     matchPrefixes: ["/owner/apps", "/owner/agis"],
     items: [
-      { id: "apps", href: "/apps", label: "Apps", icon: Grid2X2, keywords: "apps aplicaciones productos plataformas" },
-      { id: "agis", href: "/agis", label: "AGIs y funciones", shortLabel: "AGIs", icon: Sparkles, keywords: "agis agentes funciones especialistas" },
+      { id: "apps", href: "/apps", label: "Aplicaciones y módulos", shortLabel: "Apps", icon: Grid2X2, keywords: "apps aplicaciones módulos inventario existencia" },
+      { id: "agis", href: "/agis", label: "Perfiles y workers AGI", shortLabel: "AGIs", icon: Sparkles, keywords: "agis agentes perfiles workers evidencia" },
       { id: "integrations", href: "/integrations", label: "Herramientas y APIs", shortLabel: "Integraciones", icon: Plug, keywords: "integraciones mcp conectores apis herramientas" },
-      { id: "memory", href: "/memory", label: "Memoria y aprendizaje", shortLabel: "Memoria", icon: Brain, keywords: "memoria aprendizaje contexto evidencia" },
-      { id: "supply", href: "/supply", label: "Supply", icon: Package, keywords: "supply inventario pedidos productos" },
+      { id: "memory", href: "/memory", label: "Registros de memoria", shortLabel: "Memoria", icon: Brain, keywords: "memoria registros aprendizaje contexto evidencia" },
+      { id: "supply", href: "/supply", label: "Hocker Supply", shortLabel: "Supply", icon: Package, keywords: "supply inventario pedidos productos" },
       { id: "chido", href: "/chido", label: "Chido Casino", shortLabel: "Chido", icon: Dices, keywords: "chido casino juegos wallet operación" },
     ],
   },

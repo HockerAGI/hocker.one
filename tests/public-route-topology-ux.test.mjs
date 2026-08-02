@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -13,22 +13,50 @@ function extractRouteArray(source, constantName) {
   return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
 }
 
-test("every declared public indexable route has a physical page", async () => {
+test("Hocker ONE has no duplicate corporate indexable routes", async () => {
   const topology = await read("src/lib/hocker-public-private-topology.ts");
+  const sitemap = await read("src/app/sitemap.ts");
+  const robots = await read("src/app/robots.ts");
   const routes = extractRouteArray(topology, "HOCKER_PUBLIC_INDEXABLE_ROUTES");
 
-  assert.ok(routes.includes("/ecosistema"));
-  assert.ok(routes.includes("/seguridad"));
+  assert.deepEqual(routes, []);
+  assert.match(topology, /HockerAGI\/hocker\.agi/);
+  assert.match(topology, /configured_is_not_connected: true/);
+  assert.match(sitemap, /return \[\]/);
+  assert.match(robots, /disallow: "\/"/);
+});
 
-  for (const route of routes) {
-    const pagePath = route === "/"
-      ? "src/app/page.tsx"
-      : `src/app${route}/page.tsx`;
+test("Hocker ONE root enters control and corporate destinations use the official website", async () => {
+  const config = await read("next.config.ts");
 
-    await assert.doesNotReject(
-      access(new URL(pagePath, root)),
-      `Declared public route ${route} must have ${pagePath}`,
-    );
+  assert.match(config, /source: "\/", destination: "\/owner", permanent: false/);
+  assert.match(config, /https:\/\/hockeragi\.vercel\.app/);
+  for (const route of ["/one", "/empresa", "/servicios", "/ecosistema", "/soluciones", "/casos", "/seguridad", "/contacto"]) {
+    assert.match(config, new RegExp(`source: "${route.replaceAll("/", "\\/")}"`));
+  }
+});
+
+test("legacy private interfaces redirect to canonical evidence-backed pages", async () => {
+  const config = await read("next.config.ts");
+  const aliases = [
+    ["/app", "/owner"],
+    ["/app/nova", "/chat"],
+    ["/app/actividad", "/live"],
+    ["/app/pendientes", "/commands"],
+    ["/app/ecosistema", "/apps"],
+    ["/app/ajustes", "/governance"],
+    ["/owner/apps", "/apps"],
+    ["/owner/agis", "/agis"],
+    ["/owner/ecosystem", "/map"],
+    ["/owner/command-center", "/owner"],
+    ["/system", "/status"],
+    ["/mobile", "/owner"],
+  ];
+
+  for (const [source, destination] of aliases) {
+    const escapedSource = source.replaceAll("/", "\\/");
+    const escapedDestination = destination.replaceAll("/", "\\/");
+    assert.match(config, new RegExp(`source: "${escapedSource}", destination: "${escapedDestination}"`));
   }
 });
 
@@ -38,30 +66,67 @@ test("private discovery and worker consoles remain noindex", async () => {
 
   assert.ok(privateRoutes.includes("/catalog"));
   assert.ok(privateRoutes.includes("/workers"));
-  assert.match(topology, /\.\.\.HOCKER_PRIVATE_ROUTES/);
+  assert.ok(privateRoutes.includes("/apps"));
+  assert.ok(privateRoutes.includes("/agis"));
   assert.match(topology, /X-Robots-Tag/);
   assert.match(topology, /noindex, nofollow, noarchive/);
 });
 
-test("public marketing shell links every declared commercial destination", async () => {
-  const source = await read("src/components/public-marketing/HockerPublicPage.tsx");
+test("apps and AGIs pages are operational inventories, not marketing pages", async () => {
+  const apps = await read("src/app/apps/page.tsx");
+  const agis = await read("src/app/agis/page.tsx");
 
-  for (const href of [
-    "/empresa",
-    "/servicios",
-    "/soluciones",
-    "/casos",
-    "/ecosistema",
-    "/seguridad",
-    "/contacto",
-  ]) {
-    assert.match(source, new RegExp(`href: "${href.replaceAll("/", "\\/")}"`));
-  }
+  assert.match(apps, /getHockerOperationalSnapshot/);
+  assert.match(apps, /Los conceptos documentados no se presentan como productos activos/);
+  assert.doesNotMatch(apps, /PUBLIC_APPS|Solicitar implementación|Productos para acelerar tu negocio/);
 
-  assert.match(source, /min-h-11/);
-  assert.match(source, /focus-visible:ring-2/);
-  assert.match(source, /radial-gradient/);
-  assert.doesNotMatch(source, /supabase|service_role|runtime\/actions/i);
+  assert.match(agis, /Worker verificado/);
+  assert.match(agis, /Un perfil documentado no equivale a un worker activo/);
+  assert.doesNotMatch(agis, /NovaCorePanel/);
+});
+
+test("NOVA status requires a verified health check", async () => {
+  const owner = await read("src/app/owner/page.tsx");
+  const chat = await read("src/components/NovaRealtimeChat.tsx");
+  const runtimeRoute = await read("src/app/api/agi/runtime/summary/route.ts");
+  const verifiedRuntime = await read("src/lib/verified-agi-runtime.ts");
+
+  assert.doesNotMatch(owner, />NOVA activa</);
+  assert.doesNotMatch(owner, />En vivo</);
+  assert.match(owner, /novaService\.status/);
+
+  assert.match(chat, /service_status\?\.nova/);
+  assert.match(chat, /verificadas ·/);
+  assert.doesNotMatch(chat, /NOVA respondió sin texto visible/);
+
+  assert.match(runtimeRoute, /getVerifiedAgiRuntimeSummary/);
+  assert.match(verifiedRuntime, /status === "online"/);
+  assert.match(verifiedRuntime, /status === "connected"/);
+  assert.match(verifiedRuntime, /status === "configured"/);
+});
+
+test("map, Chido, Supply and memory use evidence instead of static live claims", async () => {
+  const map = await read("src/components/map/EcosystemVfxNetwork.tsx");
+  const pulse = await read("src/components/map/MapLivePulse.tsx");
+  const chido = await read("src/app/chido/page.tsx");
+  const supply = await read("src/app/supply/page.tsx");
+  const memory = await read("src/app/memory/page.tsx");
+
+  assert.match(map, /getHockerOperationalSnapshot/);
+  assert.doesNotMatch(map, /Mapa vivo|NOVA coordina el ecosistema/);
+  assert.match(pulse, /Registros persistidos/);
+  assert.doesNotMatch(pulse, /Pulso real|Errores prevenidos/);
+
+  assert.match(chido, /getHockerOperationalSnapshot/);
+  assert.doesNotMatch(chido, />Operativo<|>Activa</);
+  assert.match(chido, /statusLabel\(status\)/);
+
+  assert.match(supply, /supply_products/);
+  assert.match(supply, /supply_orders/);
+  assert.doesNotMatch(supply, /value: "En vivo"|value: "Activo"|value: "Listo"/);
+
+  assert.match(memory, /eventos almacenados en Supabase/);
+  assert.doesNotMatch(memory, /SYNTIA está activa/);
 });
 
 test("framework not-found route never receives the private shell", async () => {
@@ -72,12 +137,4 @@ test("framework not-found route never receives the private shell", async () => {
   assert.match(shell, /isPublicRoute \|\| isFrameworkNotFound/);
   assert.match(notFound, /HockerPublicPage/);
   assert.doesNotMatch(notFound, /PrivateShell|WorkspaceBar|Owner Gate/);
-});
-
-test("missing public routes are implemented without private runtime state", async () => {
-  for (const path of ["src/app/ecosistema/page.tsx", "src/app/seguridad/page.tsx"]) {
-    const source = await read(path);
-    assert.match(source, /HockerPublicPage/);
-    assert.doesNotMatch(source, /createClient|service_role|runtime\/actions|requireProjectRole/i);
-  }
 });

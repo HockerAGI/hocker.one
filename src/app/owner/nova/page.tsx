@@ -1,14 +1,12 @@
-import { OwnerShell } from "@/components/hocker-2c/owner";
-import { OwnerNovaBridge } from "@/components/hocker-2c/owner/nova";
+import type { Metadata } from "next";
 
-export default function OwnerNovaPage() {
-  return (
-    <OwnerShell
-      eyebrow="NOVA Workspace"
-      title="NOVA"
-      description="Un espacio para conversar, analizar y preparar acciones con aprobación owner."
-    >
-      <OwnerNovaBridge />
-    </OwnerShell>
-  );
-}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Estado de NOVA | Hocker ONE",
+  description: "Canal privado de NOVA con health check y conexión verificable.",
+  robots: { index: false, follow: false, noarchive: true },
+};
+
+export { default } from "../../chat/page";

@@ -1,14 +1,17 @@
 import { Bot, ShieldCheck, Cpu, Zap } from "lucide-react";
 import type { HockerLiveSummary } from "@/lib/hocker-live-summary";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
+import type { VerifiedServiceState } from "@/lib/verified-agi-runtime";
 
 type Props = {
   liveSummary: HockerLiveSummary | null;
   pulse: HockerLivePulseSummary;
+  novaService: VerifiedServiceState;
+  checkedAt: string;
 };
 
 function timeAgo(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "sin fecha";
   const diff = Date.now() - new Date(iso).getTime();
   if (diff < 60_000) return "hace segundos";
   if (diff < 3_600_000) return `hace ${Math.round(diff / 60_000)} min`;
@@ -22,7 +25,7 @@ function levelTone(level: string | null): "info" | "warn" | "error" {
   return "info";
 }
 
-export default function OwnerUnifiedStatus({ liveSummary, pulse }: Props) {
+export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, checkedAt }: Props) {
   const agent = liveSummary?.agent;
   const agentState = agent?.state_label ?? "Sin señal";
   const agentTone = agent?.state === "activo" ? "ok" : agent?.state === "sin_senal_reciente" ? "warn" : "err";
@@ -30,8 +33,8 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse }: Props) {
   const security = liveSummary?.security;
   const ownerGate = security?.owner_gate === "activo" ? "ok" : "warn";
   const executionLock = liveSummary?.production?.execution_lock ? "ok" : "warn";
-
-  const novaTone = pulse.source === "supabase" ? "ok" : "warn";
+  const novaTone = novaService.status === "online" ? "ok" : novaService.status === "offline" ? "err" : "warn";
+  const novaLabel = novaService.status === "online" ? "Verificada" : novaService.status === "offline" ? "Sin señal" : "Sin verificar";
 
   const counts = pulse.counts;
   const events = liveSummary?.recent_events?.slice(0, 6) ?? [];
@@ -41,22 +44,21 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse }: Props) {
     <section className="hko-uni-panel hko-uni-status">
       <div className="hko-uni-panel-head">
         <div>
-          <p className="hko-uni-panel-kicker">Sistema en vivo</p>
-          <p className="hko-uni-panel-title">Estado real</p>
+          <p className="hko-uni-panel-kicker">Estado operativo</p>
+          <p className="hko-uni-panel-title">Señal y evidencia</p>
         </div>
-        <span className="hko-status-val ok">Tiempo real</span>
+        <span className="hko-status-val warn">{timeAgo(checkedAt)}</span>
       </div>
       <div className="hko-uni-panel-body">
-        {/* Status rows */}
         <div className="hko-status-row">
           <div className="hko-status-row-left">
             <span className="hko-status-icon"><Zap className="h-4 w-4" /></span>
             <div>
-              <div className="hko-status-label">NOVA orquestador</div>
-              <div className="hko-status-detail">{pulse.source === "supabase" ? "Conectado · Railway" : "Verificando"}</div>
+              <div className="hko-status-label">NOVA runtime</div>
+              <div className="hko-status-detail">{novaService.detail}</div>
             </div>
           </div>
-          <span className={`hko-status-val ${novaTone}`}>{novaTone === "ok" ? "Activo" : "Pendiente"}</span>
+          <span className={`hko-status-val ${novaTone}`}>{novaLabel}</span>
         </div>
 
         <div className="hko-status-row">
@@ -64,7 +66,7 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse }: Props) {
             <span className="hko-status-icon"><Bot className="h-4 w-4" /></span>
             <div>
               <div className="hko-status-label">Agente físico</div>
-              <div className="hko-status-detail">{agent?.platform ? `· ${agent.platform}` : "Nodo espejo"} · {timeAgo(agent?.last_seen_at ?? null)}</div>
+              <div className="hko-status-detail">{agent?.platform ?? "Nodo local"} · {timeAgo(agent?.last_seen_at ?? null)}</div>
             </div>
           </div>
           <span className={`hko-status-val ${agentTone}`}>{agentState}</span>
@@ -75,36 +77,35 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse }: Props) {
             <span className="hko-status-icon"><ShieldCheck className="h-4 w-4" /></span>
             <div>
               <div className="hko-status-label">Owner Gate</div>
-              <div className="hko-status-detail">Permisos protegidos</div>
+              <div className="hko-status-detail">Regla de aprobación en la sesión privada</div>
             </div>
           </div>
-          <span className={`hko-status-val ${ownerGate}`}>{ownerGate === "ok" ? "Activo" : "Revisar"}</span>
+          <span className={`hko-status-val ${ownerGate}`}>{ownerGate === "ok" ? "Configurado" : "Revisar"}</span>
         </div>
 
         <div className="hko-status-row">
           <div className="hko-status-row-left">
             <span className="hko-status-icon"><Cpu className="h-4 w-4" /></span>
             <div>
-              <div className="hko-status-label">Ejecución</div>
-              <div className="hko-status-detail">Bloqueada sin aprobación</div>
+              <div className="hko-status-label">Escritura automática</div>
+              <div className="hko-status-detail">Debe permanecer bloqueada sin aprobación</div>
             </div>
           </div>
-          <span className={`hko-status-val ${executionLock}`}>Bloqueada</span>
+          <span className={`hko-status-val ${executionLock}`}>{executionLock === "ok" ? "Bloqueada" : "Revisar"}</span>
         </div>
 
-        {/* Pulse stat grid */}
         <div>
-          <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Pulso IA</p>
+          <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Registros en Supabase</p>
           <div className="hko-uni-statgrid">
-            <div className="hko-uni-stat"><span>Memoria</span><strong>{counts.active_memory}</strong></div>
-            <div className="hko-uni-stat"><span>AGIs activos</span><strong>{counts.active_agi_updates}</strong></div>
-            <div className="hko-uni-stat"><span>Errores</span><strong>{counts.prevented_errors}</strong></div>
-            <div className="hko-uni-stat"><span>Aprendizaje</span><strong>{counts.approved_learning}</strong></div>
+            <div className="hko-uni-stat"><span>Memorias registradas</span><strong>{counts.active_memory}</strong></div>
+            <div className="hko-uni-stat"><span>Actualizaciones AGI</span><strong>{counts.active_agi_updates}</strong></div>
+            <div className="hko-uni-stat"><span>Patrones de error</span><strong>{counts.prevented_errors}</strong></div>
+            <div className="hko-uni-stat"><span>Aprendizajes aprobados</span><strong>{counts.approved_learning}</strong></div>
           </div>
+          <p className="mt-2 text-[11px] leading-5 text-slate-500">Estos valores son registros persistidos; no prueban actividad en tiempo real.</p>
         </div>
 
-        {/* Recent commands */}
-        {commands.length > 0 && (
+        {commands.length > 0 ? (
           <div>
             <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Comandos recientes</p>
             <div className="hko-uni-feed">
@@ -119,14 +120,13 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse }: Props) {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
-        {/* Recent events */}
         <div>
-          <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Eventos recientes</p>
+          <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Eventos registrados</p>
           <div className="hko-uni-feed">
             {events.length === 0 ? (
-              <p className="hko-uni-feed-empty">Sin eventos recientes.</p>
+              <p className="hko-uni-feed-empty">Sin eventos disponibles.</p>
             ) : (
               events.map((evt) => (
                 <div key={evt.id} className="hko-uni-feed-item">

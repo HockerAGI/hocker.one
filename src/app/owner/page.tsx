@@ -16,7 +16,7 @@ import "@/styles/owner-unified.css";
 
 import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
 import { getHockerLiveSummary } from "@/lib/hocker-live-summary";
-import { getAgiRuntimeSummary } from "@/lib/agi-runtime-core";
+import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
 import type { AgiRuntimeSummaryLike } from "@/types/agi-runtime-summary";
 
 import NovaRealtimeChatLazy from "@/components/NovaRealtimeChatLazy";
@@ -40,65 +40,74 @@ export const metadata: Metadata = {
 };
 
 const QUICK_LINKS = [
-  { href: "/map", icon: MapIcon, title: "Mapa", text: "Todo el ecosistema ordenado" },
-  { href: "/live", icon: Activity, title: "Sistema en vivo", text: "Agente, nodos y memoria IA" },
-  { href: "/agis", icon: Brain, title: "AGIs", text: "Los 8 agentes del ecosistema" },
-  { href: "/apps", icon: Network, title: "Apps", text: "Plataformas conectadas" },
-  { href: "/integrations", icon: Workflow, title: "Integraciones", text: "Conexiones y herramientas" },
+  { href: "/map", icon: MapIcon, title: "Mapa", text: "Dependencias y estado operativo" },
+  { href: "/live", icon: Activity, title: "Sistema en vivo", text: "Nodos, señales y actividad" },
+  { href: "/agis", icon: Brain, title: "AGIs", text: "Perfiles y workers verificables" },
+  { href: "/apps", icon: Network, title: "Aplicaciones", text: "Existencia, señal y evidencia" },
+  { href: "/integrations", icon: Workflow, title: "Integraciones", text: "Configuradas frente a verificadas" },
   { href: "/security", icon: ShieldCheck, title: "Seguridad", text: "Permisos y acceso owner" },
-  { href: "/memory", icon: DatabaseZap, title: "Memoria IA", text: "Contexto que aprende" },
-  { href: "/status", icon: GitBranch, title: "Estado general", text: "Sistema, login y seguridad" },
+  { href: "/memory", icon: DatabaseZap, title: "Memoria IA", text: "Registros y última actividad" },
+  { href: "/status", icon: GitBranch, title: "Estado general", text: "Servicios y controles" },
 ];
+
+function novaLabel(status: string): string {
+  if (status === "online") return "NOVA verificada";
+  if (status === "offline") return "NOVA sin señal";
+  if (status === "configured") return "NOVA configurada";
+  return "NOVA sin verificar";
+}
 
 export default async function OwnerPage() {
   const projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
 
-  const [pulse, liveSummary, runtimeSummary] = await Promise.all([
+  const [pulse, liveSummary, operational] = await Promise.all([
     getHockerLivePulseSummary(),
     getHockerLiveSummary().catch(() => null),
-    getAgiRuntimeSummary(projectId).catch(() => ({ ok: false, integrations: [], counts: {} }) as AgiRuntimeSummaryLike),
+    getHockerOperationalSnapshot(projectId),
   ]);
 
   const liveSummaryTyped = liveSummary as Awaited<ReturnType<typeof getHockerLiveSummary>> | null;
-  const runtimeTyped = runtimeSummary as AgiRuntimeSummaryLike;
-
-  const pendingCount = (runtimeTyped.counts?.actions ?? 0);
+  const runtimeTyped = operational.runtime as AgiRuntimeSummaryLike;
+  const novaService = operational.runtime.service_status.nova;
+  const pendingCount = operational.metrics.pending_actions;
+  const novaIsOnline = novaService.status === "online";
 
   return (
     <div className="hko-uni-grid">
-      {/* ── Hero band ─────────────────────────────────────────────── */}
-      <div className="hko-uni-hero hko-uni-hero">
+      <div className="hko-uni-hero">
         <div>
           <div className="flex items-center gap-2">
             <span className="relative grid h-9 w-9 place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_28px_rgba(30,200,255,0.18)]">
               <Sparkles className="h-5 w-5" />
-              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 bg-emerald-400" />
+              <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaIsOnline ? "bg-emerald-400" : novaService.status === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
             </span>
             <h1 className="hko-uni-hero-title">Hocker ONE</h1>
           </div>
           <p className="hko-uni-hero-sub">
-            Todo tu ecosistema en una sola pantalla. Habla con NOVA, revisa el estado real del sistema,
-            aprueba acciones y revisa herramientas conectadas — sin cambiar de página.
+            Centro privado de control. Cada estado distingue configuración, señal reciente y evidencia operativa.
           </p>
         </div>
         <div className="hko-uni-hero-pills">
-          <span className="hko-uni-hero-pill is-live"><span className="dot" /> NOVA activa</span>
+          <span className={`hko-uni-hero-pill ${novaIsOnline ? "is-live" : novaService.status === "offline" ? "is-pending" : "is-protect"}`}>
+            <span className="dot" /> {novaLabel(novaService.status)}
+          </span>
           <span className="hko-uni-hero-pill is-protect"><span className="dot" /> Owner Gate</span>
-          <span className="hko-uni-hero-pill is-protect"><span className="dot" /> Railway · Vercel</span>
-          {pendingCount > 0 && (
-            <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por aprobar</span>
-          )}
+          <span className="hko-uni-hero-pill is-protect"><span className="dot" /> {operational.metrics.verified_services} servicios verificados</span>
+          {pendingCount > 0 ? (
+            <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por revisar</span>
+          ) : null}
         </div>
       </div>
 
-      {/* ── NOVA chat (embedded, full-height) ─────────────────────── */}
-      <section className="hko-uni-panel hko-uni-chat hko-uni-chat">
+      <section className="hko-uni-panel hko-uni-chat">
         <div className="hko-uni-panel-head">
           <div>
             <p className="hko-uni-panel-kicker">Canal central</p>
             <p className="hko-uni-panel-title">Hablar con NOVA</p>
           </div>
-          <span className="hko-status-val ok">En vivo</span>
+          <span className={`hko-status-val ${novaIsOnline ? "ok" : novaService.status === "offline" ? "err" : "warn"}`}>
+            {novaIsOnline ? "Conectada" : novaService.status === "offline" ? "Sin señal" : "Sin verificar"}
+          </span>
         </div>
         <div className="hko-uni-panel-body">
           <div className="hko-uni-chat-inner">
@@ -107,21 +116,15 @@ export default async function OwnerPage() {
         </div>
       </section>
 
-      {/* ── Live status (right column) ────────────────────────────── */}
-      <OwnerUnifiedStatus liveSummary={liveSummaryTyped} pulse={pulse} />
-
-      {/* ── Approvals queue (right column) ────────────────────────── */}
+      <OwnerUnifiedStatus liveSummary={liveSummaryTyped} pulse={pulse} novaService={novaService} checkedAt={operational.checked_at} />
       <OwnerUnifiedApprovals projectId={projectId} />
-
-      {/* ── Tools / integrations (bottom) ─────────────────────────── */}
       <OwnerUnifiedTools summary={runtimeTyped} />
 
-      {/* ── Quick access strip (bottom) ───────────────────────────── */}
       <section className="hko-uni-panel hko-uni-quick">
         <div className="hko-uni-panel-head" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: 0, paddingBottom: "0.85rem", marginBottom: "0.85rem" }}>
           <div>
             <p className="hko-uni-panel-kicker">Navegación rápida</p>
-            <p className="hko-uni-panel-title">Vistas detalladas cuando las necesites</p>
+            <p className="hko-uni-panel-title">Vistas de control y evidencia</p>
           </div>
         </div>
         <div className="hko-uni-quick-grid">

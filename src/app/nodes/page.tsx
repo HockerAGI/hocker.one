@@ -5,9 +5,12 @@ import Hint from "@/components/Hint";
 import PageShell from "@/components/PageShell";
 import NodesPanel from "@/components/NodesPanel";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Nodos",
-  description: "Estado operativo, heartbeat y lectura clara de infraestructura.",
+  description: "Heartbeat, última señal y estado verificable de infraestructura.",
 };
 
 function SignalCard({
@@ -29,7 +32,7 @@ function SignalCard({
           </div>
           <div>
             <p className="text-sm font-black text-white">{title}</p>
-            <p className="text-xs text-slate-500">infraestructura viva</p>
+            <p className="text-xs text-slate-500">criterio de lectura</p>
           </div>
         </div>
         <p className="mt-3 text-sm leading-relaxed text-slate-400">{text}</p>
@@ -41,47 +44,26 @@ function SignalCard({
 export default function NodesPage() {
   return (
     <PageShell
-      eyebrow="Infraestructura · Heartbeat y mapa vivo"
+      eyebrow="Infraestructura · heartbeat verificable"
       title="Nodos"
-      description="Vista simple para saber qué está online, qué está degradado y qué necesita atención sin perder tiempo."
+      description="El estado conectado se calcula por la fecha de la última señal; no por el valor guardado en el catálogo."
       actions={
         <>
-          <Link href="/dashboard" className="shell-button-secondary">
-            Dashboard
-          </Link>
-          <Link href="/commands" className="shell-button-primary">
-            Operaciones
-          </Link>
+          <Link href="/dashboard" className="shell-button-secondary">Dashboard</Link>
+          <Link href="/commands" className="shell-button-primary">Operaciones</Link>
         </>
       }
     >
       <div className="space-y-6">
         <Hint title="Qué leer primero">
-          Antes del detalle técnico, revisa la señal. Después entra al nodo específico si ves
-          algo raro.
+          Revisa la última señal. Un nodo registrado sin heartbeat reciente se muestra como “Sin señal reciente”.
         </Hint>
 
         <section className="grid gap-4 md:grid-cols-4">
-          <SignalCard
-            title="Heartbeat"
-            text="Si no reporta vida reciente, el nodo necesita atención."
-            icon={Activity}
-          />
-          <SignalCard
-            title="Rol"
-            text="Debe quedar claro si es cloud, físico, agente o auxiliar."
-            icon={Cpu}
-          />
-          <SignalCard
-            title="Ruta"
-            text="El mapa debe dejar ver por dónde corre la operación real."
-            icon={Radar}
-          />
-          <SignalCard
-            title="Seguridad"
-            text="Toda lectura de estado también se cruza con control y permisos."
-            icon={ShieldCheck}
-          />
+          <SignalCard title="Heartbeat" text="Se considera reciente durante cinco minutos desde el último reporte." icon={Activity} />
+          <SignalCard title="Rol" text="Distingue cloud, físico, agente o auxiliar sin asumir actividad." icon={Cpu} />
+          <SignalCard title="Ruta" text="Permite identificar por dónde debería ejecutarse la operación." icon={Radar} />
+          <SignalCard title="Seguridad" text="La señal no reemplaza permisos, Owner Gate ni controles de ejecución." icon={ShieldCheck} />
         </section>
 
         <section className="shell-panel relative overflow-hidden p-5">
@@ -89,16 +71,13 @@ export default function NodesPage() {
           <div className="relative">
             <div className="mb-5 flex flex-col gap-4 border-b border-white/6 pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="section-kicker">Mapa operativo</p>
-                <h2 className="section-title">Señal en tiempo real</h2>
-                <p className="section-copy">
-                  Diseñado para leerse rápido en móvil y escalar bien en pantalla grande.
-                </p>
+                <p className="section-kicker">Inventario operativo</p>
+                <h2 className="section-title">Señales registradas</h2>
+                <p className="section-copy">Actualización automática cada 30 segundos y mediante eventos de Supabase Realtime.</p>
               </div>
-
               <div className="flex flex-wrap gap-2">
-                <span className="shell-chip-success">señal activa</span>
-                <span className="shell-chip">lectura rápida</span>
+                <span className="shell-chip">umbral: 5 minutos</span>
+                <span className="shell-chip">fuente: Supabase</span>
               </div>
             </div>
 

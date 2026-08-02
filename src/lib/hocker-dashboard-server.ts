@@ -1,41 +1,17 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { resolveExternalServices } from "@/lib/external-services";
+import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hocker-operational-state";
 import type {
+  AppStatus,
   DashboardCommandItem,
   DashboardEventItem,
-  DashboardMetric,
   DashboardSummary,
 } from "@/lib/hocker-dashboard";
 import {
   APP_REGISTRY,
   AGI_REGISTRY,
   REPO_REGISTRY,
-  getAppStatus,
-  getNodeStatus,
 } from "@/lib/hocker-dashboard";
-
-type SnapshotRow = {
-  total_projects?: number | null;
-  total_nodes?: number | null;
-  total_commands?: number | null;
-  total_events?: number | null;
-  total_orders?: number | null;
-  total_cents?: number | null;
-};
-
-type ProjectRow = {
-  id: string;
-  name?: string | null;
-  created_at?: string | null;
-};
-
-type NodeRow = {
-  id: string;
-  project_id: string;
-  name?: string | null;
-  status?: string | null;
-  updated_at?: string | null;
-};
 
 type EventRow = {
   id: string;
@@ -54,19 +30,7 @@ type CommandRow = {
   created_at: string;
 };
 
-type OrderRow = {
-  id: string;
-  project_id: string;
-  status?: string | null;
-  total_cents?: number | null;
-  created_at: string;
-};
-
 type DashboardCommandStatus = DashboardCommandItem["status"];
-
-function moneyFromCents(totalCents: number): string {
-  return `$${(totalCents / 100).toFixed(2)}`;
-}
 
 function normalizeCommandStatus(value?: string | null): DashboardCommandStatus {
   switch (value) {
@@ -82,22 +46,27 @@ function normalizeCommandStatus(value?: string | null): DashboardCommandStatus {
   }
 }
 
+function legacyStatus(status: OperationalStatus): AppStatus {
+  switch (status) {
+    case "online": return "live";
+    case "protected": return "protected";
+    case "configured": return "integration";
+    case "degraded":
+    case "offline": return "blocked";
+    case "not_created": return "not_created";
+    case "stale":
+    case "planned":
+    case "unknown":
+    default: return "pending";
+  }
+}
+
 export async function buildDashboardSummary(): Promise<DashboardSummary> {
   const sb = await createServerSupabase();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const operational = await getHockerOperationalSnapshot();
 
-  const [
-    snapshotRes,
-    projectsRes,
-    nodesRes,
-    eventsRes,
-    commandsRes,
-    ordersRes,
-    servicesRes,
-  ] = await Promise.all([
-    sb.from("hocker_dashboard_snapshot").select("*").maybeSingle(),
-    sb.from("projects").select("id,name,created_at"),
-    sb.from("nodes").select("id,project_id,name,status,updated_at"),
+  const [eventsRes, commandsRes, servicesRes] = await Promise.all([
     sb
       .from("events")
       .select("id,project_id,level,type,message,created_at")
@@ -109,53 +78,31 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
       .select("id,project_id,command,status,created_at")
       .order("created_at", { ascending: false })
       .limit(12),
-    sb.from("supply_orders").select("id,project_id,status,total_cents,created_at"),
     resolveExternalServices(),
   ]);
 
-  const snapshot = (snapshotRes.data ?? {}) as SnapshotRow;
-  const projects = (projectsRes.data ?? []) as ProjectRow[];
-  const nodes = (nodesRes.data ?? []) as NodeRow[];
   const events = (eventsRes.data ?? []) as EventRow[];
   const commands = (commandsRes.data ?? []) as CommandRow[];
-  const orders = (ordersRes.data ?? []) as OrderRow[];
+  const appState = new Map(operational.apps.map((item) => [item.key, item]));
+  const agiState = new Map(operational.agis.map((item) => [item.key, item]));
 
-  const apps = APP_REGISTRY.map((item) => ({
-    ...item,
-    status: getAppStatus(item.status),
-  }));
+  const apps = APP_REGISTRY.map((item) => {
+    const state = appState.get(item.key);
+    return {
+      ...item,
+      status: state ? legacyStatus(state.status) : "pending" as AppStatus,
+      note: state?.evidence ?? "Sin comprobación operativa disponible.",
+    };
+  });
 
-  const agis = AGI_REGISTRY.map((item) => ({
-    ...item,
-    status: getNodeStatus(item.status),
-  }));
-
-  const totalOrdersCents =
-    snapshot.total_cents ??
-    orders.reduce((sum, order) => sum + (Number(order.total_cents ?? 0) || 0), 0);
-
-  const metrics: DashboardMetric[] = [
-    {
-      label: "Proyectos",
-      value: String(snapshot.total_projects ?? projects.length),
-      hint: "Apps registradas",
-    },
-    {
-      label: "Nodos vivos",
-      value: String(snapshot.total_nodes ?? nodes.filter((n) => n.status === "online").length),
-      hint: "Señal activa",
-    },
-    {
-      label: "Eventos 24h",
-      value: String(snapshot.total_events ?? events.length),
-      hint: "Actividad real",
-    },
-    {
-      label: "Movimientos",
-      value: moneyFromCents(Number(totalOrdersCents || 0)),
-      hint: "Flujo económico",
-    },
-  ];
+  const agis = AGI_REGISTRY.map((item) => {
+    const state = agiState.get(item.key);
+    return {
+      ...item,
+      status: state ? legacyStatus(state.status) : "pending" as AppStatus,
+      note: state?.evidence ?? "Sin comprobación operativa disponible.",
+    };
+  });
 
   const recentEvents: DashboardEventItem[] = events.map((event) => ({
     id: event.id,
@@ -174,11 +121,36 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
   }));
 
   return {
-    snapshotAt: new Date().toISOString(),
-    metrics,
+    snapshotAt: operational.checked_at,
+    metrics: [
+      {
+        label: "Servicios verificados",
+        value: String(operational.metrics.verified_services),
+        hint: "Health check o consulta real",
+      },
+      {
+        label: "Nodos con señal",
+        value: String(operational.metrics.fresh_nodes),
+        hint: "Últimos 5 minutos",
+      },
+      {
+        label: "Ejecuciones 24h",
+        value: String(operational.metrics.runs_24h),
+        hint: "Runs realmente registrados",
+      },
+      {
+        label: "Por aprobar",
+        value: String(operational.metrics.pending_actions),
+        hint: "Acciones bloqueantes",
+      },
+    ],
     apps,
     agis,
-    repos: REPO_REGISTRY,
+    repos: REPO_REGISTRY.map((repo) => ({
+      ...repo,
+      status: "pending" as const,
+      note: "Repositorio conocido; estado en vivo no verificado desde esta vista.",
+    })),
     services: servicesRes,
     recentEvents,
     recentCommands,

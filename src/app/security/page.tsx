@@ -1,145 +1,136 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Hint from "@/components/Hint";
-import PageShell from "@/components/PageShell";
-import {
-  HOCKER_CLIENT_PORTALS,
-  HOCKER_CLIENT_PORTAL_VERSION,
-  evaluateSecurityReadiness,
-} from "@/lib/hocker-client-portals";
+import { Database, Lock, RefreshCw, ShieldCheck, Users } from "lucide-react";
+
+import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
+import { HOCKER_CLIENT_PORTALS } from "@/lib/hocker-client-portals";
+import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
+import { HOCKER_GLOBAL_REAL_EXECUTION_LOCK, HOCKER_ROLE_DEFINITIONS } from "@/lib/hocker-roles";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Security Readiness · Hocker ONE",
-  description: "Owner access, portales derivados y matriz de control de Hocker ONE.",
+  title: "Seguridad | Hocker ONE",
+  description: "Controles aplicados, estados verificables y modelos de seguridad todavía planificados.",
+  robots: { index: false, follow: false, noarchive: true },
 };
 
-function statusClass(status: string): string {
-  if (status === "ready") return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
-  return "border-rose-400/20 bg-rose-500/10 text-rose-300";
+function serviceTone(status: string) {
+  if (status === "online") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+  if (status === "configured") return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+  if (status === "offline") return "border-rose-300/25 bg-rose-300/10 text-rose-100";
+  return "border-white/10 bg-white/[0.04] text-slate-300";
 }
 
-function riskClass(risk: string): string {
-  if (risk === "critical") return "border-rose-400/20 bg-rose-500/10 text-rose-300";
-  if (risk === "high") return "border-amber-400/20 bg-amber-500/10 text-amber-300";
-  return "border-cyan-400/20 bg-cyan-500/10 text-cyan-300";
+function serviceLabel(status: string) {
+  if (status === "online") return "Verificado";
+  if (status === "configured") return "Configurado";
+  if (status === "offline") return "Sin conexión";
+  return "Sin verificar";
 }
 
-export default function SecurityPage() {
-  const readiness = evaluateSecurityReadiness();
+function portalTone(status: string) {
+  if (status === "locked") return "border-rose-300/20 bg-rose-300/10 text-rose-100";
+  if (status === "ready") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
+  return "border-white/10 bg-white/[0.04] text-slate-300";
+}
+
+export default async function SecurityPage() {
+  const operational = await getHockerOperationalSnapshot();
+  const supabase = operational.runtime.service_status.supabase;
+  const plannedPortals = HOCKER_CLIENT_PORTALS.filter((portal) => portal.status === "planned").length;
+  const lockedPortals = HOCKER_CLIENT_PORTALS.filter((portal) => portal.status === "locked").length;
+  const rolesWithRealExecution = HOCKER_ROLE_DEFINITIONS.filter((role) => role.can_execute_real_actions !== false);
 
   return (
-    <PageShell
-      title="Security Readiness"
-      subtitle="Hocker ONE privado, portales derivados y accesos temporales/permanentes controlados."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <Link href="/launch" className="hocker-button-secondary">Launch</Link>
-          <Link href="/security/rls" className="hocker-button-secondary">RLS</Link>
-          <Link href="/security/hardening" className="hocker-button-secondary">Hardening</Link>
-          <Link href="/security/grants" className="hocker-button-secondary">Grants</Link>
-          <Link href="/access" className="hocker-button-secondary">Access</Link>
-          <Link href="/mobile" className="hocker-button-secondary">Mobile</Link>
-          <Link href="/dashboard" className="hocker-button-primary">Dashboard</Link>
+    <div className="hko-page-flow space-y-5">
+      <HockerPageHeader
+        eyebrow="Controles y alcance"
+        title="Seguridad verificable"
+        text="Esta vista distingue controles presentes en el runtime, políticas declaradas en código y modelos que todavía no están desplegados."
+      />
+
+      <section className="hko-map-panel">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="hko-kicker">Última comprobación</p>
+            <p className="mt-2 text-sm text-slate-300">{new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Tijuana" }).format(new Date(operational.checked_at))}</p>
+            <p className="mt-1 text-xs text-slate-500">La lectura de Supabase confirma acceso autenticado; no sustituye una inspección en vivo de todas las políticas RLS.</p>
+          </div>
+          <Link href="/security" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
         </div>
-      }
-    >
-      <div className="flex flex-col gap-6">
-        <Hint title="Regla de arquitectura">
-          Hocker ONE es el panel maestro privado. Los clientes usan portales derivados con branding y módulos específicos. Todo acceso se controla desde Hocker ONE.
-        </Hint>
+      </section>
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Estado</p>
-            <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(readiness.status)}`}>
-              {readiness.status}
-            </p>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <article className="hko-module-card hko-card-tight">
+          <Database className="h-5 w-5 text-cyan-200" />
+          <div className="mt-4 flex items-start justify-between gap-3">
+            <h2 className="text-lg font-black text-white">Supabase</h2>
+            <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] ${serviceTone(supabase.status)}`}>{serviceLabel(supabase.status)}</span>
           </div>
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Portales derivados</p>
-            <p className="mt-1 text-3xl font-black text-white">{HOCKER_CLIENT_PORTALS.length}</p>
-          </div>
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Critical blocked</p>
-            <p className="mt-1 text-3xl font-black text-rose-300">{readiness.summary.critical_blocked}</p>
-          </div>
-          <div className="hocker-panel-pro p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Versión</p>
-            <p className="mt-1 text-xs font-black text-white">{HOCKER_CLIENT_PORTAL_VERSION}</p>
-          </div>
-        </section>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{supabase.detail}</p>
+        </article>
 
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {readiness.checks.map((check) => (
-            <article key={check.id} className="hocker-panel-pro overflow-hidden">
-              <div className="border-b border-white/5 p-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-cyan-300">
-                      {check.critical ? "critical" : "standard"}
-                    </p>
-                    <h2 className="mt-1 text-lg font-black text-white">{check.label}</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{check.detail}</p>
-                  </div>
-                  <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(check.status)}`}>
-                    {check.status}
-                  </span>
+        <article className="hko-module-card hko-card-tight">
+          <Lock className="h-5 w-5 text-cyan-200" />
+          <h2 className="mt-4 text-lg font-black text-white">Bloqueo global</h2>
+          <p className="mt-2 text-3xl font-black text-white">{HOCKER_GLOBAL_REAL_EXECUTION_LOCK ? "Habilitado" : "Deshabilitado"}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Valor declarado en la política de ejecución del repositorio.</p>
+        </article>
+
+        <article className="hko-module-card hko-card-tight">
+          <Users className="h-5 w-5 text-cyan-200" />
+          <h2 className="mt-4 text-lg font-black text-white">Roles declarados</h2>
+          <p className="mt-2 text-3xl font-black text-white">{HOCKER_ROLE_DEFINITIONS.length}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{rolesWithRealExecution.length} rol(es) permiten ejecución real según la definición de código.</p>
+        </article>
+
+        <article className="hko-module-card hko-card-tight">
+          <ShieldCheck className="h-5 w-5 text-cyan-200" />
+          <h2 className="mt-4 text-lg font-black text-white">Portales derivados</h2>
+          <p className="mt-2 text-3xl font-black text-white">{HOCKER_CLIENT_PORTALS.length}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{plannedPortals} planificados · {lockedPortals} bloqueados. Ninguno se presenta aquí como despliegue verificado.</p>
+        </article>
+      </section>
+
+      <section className="hko-map-panel">
+        <p className="hko-kicker">Matriz declarada</p>
+        <h2 className="mt-2 text-xl font-black text-white">Modelos de portales, no aplicaciones operativas</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+          Los siguientes registros describen arquitectura, permisos previstos y nivel de riesgo. “Planificado” significa que el portal no existe como producto verificado.
+        </p>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {HOCKER_CLIENT_PORTALS.map((portal) => (
+            <article key={portal.portal_id} className="rounded-2xl border border-white/8 bg-slate-950/40 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{portal.brand_scope}</p>
+                  <h3 className="mt-2 font-black text-white">{portal.name}</h3>
                 </div>
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] ${portalTone(portal.status)}`}>{portal.status === "planned" ? "Planificado" : portal.status === "locked" ? "Bloqueado" : "Definido"}</span>
               </div>
+              <p className="mt-3 text-sm leading-6 text-slate-400">{portal.notes}</p>
+              <p className="mt-3 text-xs text-slate-500">Ruta prevista: {portal.route_prefix}</p>
+              <p className="mt-1 text-xs text-slate-500">Riesgo: {portal.risk_level} · acceso cliente: {portal.client_panel_access ? "previsto" : "no permitido"}</p>
             </article>
           ))}
-        </section>
+        </div>
+      </section>
 
-        <section className="hocker-panel-pro overflow-hidden">
-          <div className="border-b border-white/5 p-5">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Client Portal Foundation</p>
-            <h2 className="mt-1 text-lg font-black text-white">Portales derivados por servicio</h2>
-          </div>
-
-          <div className="divide-y divide-white/5">
-            {HOCKER_CLIENT_PORTALS.map((portal) => (
-              <article key={portal.portal_id} className="p-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-cyan-300">
-                        {portal.brand_scope}
-                      </span>
-                      <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${riskClass(portal.risk_level)}`}>
-                        {portal.risk_level}
-                      </span>
-                    </div>
-                    <h3 className="mt-3 text-base font-black text-white">{portal.name}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{portal.notes}</p>
-                    <p className="mt-2 text-xs text-slate-500">route_prefix: {portal.route_prefix}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {portal.modules.map((module) => (
-                        <span key={module} className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-300">
-                          {module}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClass(portal.status === "locked" ? "blocked" : "ready")}`}>
-                    {portal.status}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="hocker-panel-pro p-5">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Control</p>
-          <h2 className="mt-1 text-xl font-black text-white">Los clientes no entran al núcleo.</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-400">
-            Hocker ONE controla accesos, módulos, permisos, caducidad y auditoría. Los clientes operan únicamente portales derivados con branding y capacidades contratadas.
-          </p>
-        </section>
-      </div>
-    </PageShell>
+      <section className="hko-map-panel">
+        <p className="hko-kicker">Límite de verificación</p>
+        <h2 className="mt-2 text-xl font-black text-white">RLS, grants y hardening requieren telemetría dedicada</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+          Hocker ONE todavía no ejecuta una inspección completa y recurrente de políticas RLS, grants efectivos, autenticación y configuración del proyecto Supabase. Hasta implementar ese colector, no se mostrará “ready” basándose solo en constantes del repositorio.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/governance" className="hko-action-primary">Revisar gobierno</Link>
+          <Link href="/status" className="hko-action-secondary">Ver servicios</Link>
+          <Link href="/owner/evidence" className="hko-action-secondary">Ver evidencia</Link>
+        </div>
+      </section>
+    </div>
   );
 }

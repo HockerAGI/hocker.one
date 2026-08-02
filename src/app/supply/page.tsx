@@ -1,154 +1,163 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageShell from "@/components/PageShell";
-import Hint from "@/components/Hint";
+import { Database, Package, RefreshCw, ShoppingCart, Warehouse } from "lucide-react";
+
+import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
+import { createAdminSupabase } from "@/lib/supabase-admin";
+import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Supply",
-  description: "Supervisión de la cadena de suministro, inventarios y cumplimiento.",
+  title: "Supply | Hocker ONE",
+  description: "Registros operativos de productos, stock y pedidos de Hocker Supply.",
+  robots: { index: false, follow: false, noarchive: true },
 };
 
-const supply = [
-  {
-    title: "Carga real",
-    desc: "Activos, pedidos y stock con lectura clara.",
-    accent: "sky",
-  },
-  {
-    title: "Sincronía",
-    desc: "Órdenes y estados alineados con el resto del ecosistema.",
-    accent: "emerald",
-  },
-  {
-    title: "Inventario",
-    desc: "Visibilidad multi-proyecto y operación simple.",
-    accent: "cyan",
-  },
-  {
-    title: "HKR Supply",
-    desc: "Identidad de línea con enfoque operativo y visual.",
-    accent: "rose",
-  },
-] as const;
+type SupplySummary = {
+  ok: boolean;
+  error: string | null;
+  checkedAt: string;
+  products: number;
+  activeProducts: number;
+  stockUnits: number;
+  orders: number;
+  pendingOrders: number;
+  latestActivityAt: string | null;
+};
 
-const roadmap = [
-  "Carga de activos reales",
-  "Sincronización de órdenes",
-  "Inventario multi-proyecto",
-  "Enlace HKR Supply",
-] as const;
+async function loadSupplySummary(): Promise<SupplySummary> {
+  const checkedAt = new Date().toISOString();
+  try {
+    const sb = createAdminSupabase();
+    const [products, activeProducts, stockRows, orders, pendingOrders, latestProduct, latestOrder] = await Promise.all([
+      sb.from("supply_products").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one"),
+      sb.from("supply_products").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one").eq("active", true),
+      sb.from("supply_products").select("stock").eq("project_id", "hocker-one"),
+      sb.from("supply_orders").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one"),
+      sb.from("supply_orders").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one").in("status", ["pending", "queued", "processing"]),
+      sb.from("supply_products").select("updated_at").eq("project_id", "hocker-one").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      sb.from("supply_orders").select("updated_at").eq("project_id", "hocker-one").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    const firstError = [
+      products.error,
+      activeProducts.error,
+      stockRows.error,
+      orders.error,
+      pendingOrders.error,
+      latestProduct.error,
+      latestOrder.error,
+    ].find(Boolean);
+    const activityDates = [latestProduct.data?.updated_at, latestOrder.data?.updated_at]
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
-const metrics = [
-  { label: "Pedidos", value: "En vivo" },
-  { label: "Stock", value: "Activo" },
-  { label: "Entregas", value: "Rastreables" },
-  { label: "Estado", value: "Listo" },
-] as const;
-
-function accentClass(accent: (typeof supply)[number]["accent"]): string {
-  switch (accent) {
-    case "emerald":
-      return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300 shadow-[0_0_24px_rgba(16,185,129,0.12)]";
-    case "cyan":
-      return "border-cyan-400/20 bg-cyan-500/10 text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.12)]";
-    case "rose":
-      return "border-rose-400/20 bg-rose-500/10 text-rose-300 shadow-[0_0_24px_rgba(244,63,94,0.12)]";
-    default:
-      return "border-sky-400/20 bg-sky-500/10 text-sky-300 shadow-[0_0_24px_rgba(14,165,233,0.12)]";
+    return {
+      ok: !firstError,
+      error: firstError?.message ?? null,
+      checkedAt,
+      products: products.count ?? 0,
+      activeProducts: activeProducts.count ?? 0,
+      stockUnits: (stockRows.data ?? []).reduce((total, row) => total + Number(row.stock ?? 0), 0),
+      orders: orders.count ?? 0,
+      pendingOrders: pendingOrders.count ?? 0,
+      latestActivityAt: activityDates[0] ?? null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo consultar Hocker Supply.",
+      checkedAt,
+      products: 0,
+      activeProducts: 0,
+      stockUnits: 0,
+      orders: 0,
+      pendingOrders: 0,
+      latestActivityAt: null,
+    };
   }
 }
 
-export default function SupplyPage() {
+function formatDate(value: string | null) {
+  if (!value) return "Sin actividad registrada";
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "America/Tijuana",
+  }).format(new Date(value));
+}
+
+export default async function SupplyPage() {
+  const [data, operational] = await Promise.all([
+    loadSupplySummary(),
+    getHockerOperationalSnapshot(),
+  ]);
+  const supplyModule = operational.apps.find((app) => app.key === "hocker-supply");
+
   return (
-    <PageShell
-      title="Supply"
-      subtitle="Una vista limpia para pedidos y stock."
-      actions={
-        <Link href="/dashboard" className="hocker-button-primary">
-          Panel
-        </Link>
-      }
-    >
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-4 rounded-[28px] border border-white/5 bg-slate-950/40 p-4 sm:p-5">
-          <div className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-sky-300">
-            Supply visible
+    <div className="hko-page-flow space-y-5">
+      <HockerPageHeader
+        eyebrow="Módulo interno parcial"
+        title="Hocker Supply"
+        text="Lectura directa de productos, stock y pedidos almacenados. No se presenta como aplicación independiente ni como operación en vivo sin evidencia."
+      />
+
+      <section className="hko-map-panel">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="hko-kicker">Estado del módulo</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{supplyModule?.evidence ?? "No hay evidencia del módulo."}</p>
+            <p className="mt-1 text-xs text-slate-500">Consulta: {formatDate(data.checkedAt)} · Última actividad: {formatDate(data.latestActivityAt)}</p>
+          </div>
+          <Link href="/supply" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
+        </div>
+      </section>
+
+      {!data.ok ? (
+        <section className="rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4 text-sm text-rose-100">
+          No se pudo verificar Supply. Los valores se muestran en cero y no deben interpretarse como ausencia confirmada de datos. {data.error}
+        </section>
+      ) : null}
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <article className="hko-mini-stat"><span>Productos registrados</span><strong>{data.products}</strong></article>
+        <article className="hko-mini-stat"><span>Productos habilitados</span><strong>{data.activeProducts}</strong></article>
+        <article className="hko-mini-stat"><span>Unidades de stock</span><strong>{data.stockUnits}</strong></article>
+        <article className="hko-mini-stat"><span>Pedidos registrados</span><strong>{data.orders}</strong></article>
+        <article className="hko-mini-stat"><span>Pedidos pendientes</span><strong>{data.pendingOrders}</strong></article>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <article className="hko-module-card hko-card-tight">
+          <Package className="h-5 w-5 text-cyan-200" />
+          <h2 className="mt-4 text-lg font-black text-white">Catálogo interno</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Tabla `supply_products`. Hoy contiene {data.products} registro(s) para Hocker ONE.</p>
+        </article>
+        <article className="hko-module-card hko-card-tight">
+          <Warehouse className="h-5 w-5 text-cyan-200" />
+          <h2 className="mt-4 text-lg font-black text-white">Inventario</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">La suma almacenada de stock es {data.stockUnits}. No existe telemetría de almacén independiente conectada.</p>
+        </article>
+        <article className="hko-module-card hko-card-tight">
+          <ShoppingCart className="h-5 w-5 text-cyan-200" />
+          <h2 className="mt-4 text-lg font-black text-white">Pedidos</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Tabla `supply_orders`. Hay {data.pendingOrders} pedido(s) en estados pendientes o de procesamiento.</p>
+        </article>
+      </section>
+
+      <section className="hko-map-panel">
+        <div className="flex items-start gap-3">
+          <Database className="mt-1 h-5 w-5 text-cyan-200" />
+          <div>
+            <p className="hko-kicker">Alcance actual</p>
+            <h2 className="mt-2 text-xl font-black text-white">Esquema y lectura; no aplicación autónoma</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Para considerar Hocker Supply operativo todavía se requieren flujo de altas, movimientos de inventario, estados de entrega, auditoría y un runtime propio o integración verificada.
+            </p>
           </div>
         </div>
-
-        <Hint title="Operación simple">
-          La idea es ver rápido qué está listo, qué sigue y qué falta.
-        </Hint>
-
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {supply.map((card) => (
-            <article
-              key={card.title}
-              className={`rounded-[26px] border p-5 shadow-[0_18px_60px_rgba(2,6,23,0.14)] ${accentClass(
-                card.accent,
-              )}`}
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.35em]">
-                {card.title}
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-slate-300">
-                {card.desc}
-              </p>
-            </article>
-          ))}
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="hocker-panel-pro p-5 sm:p-6">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-              Ruta
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
-              Flujo comercial
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              Una vista que permite entender el avance sin buscar demasiado.
-            </p>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {roadmap.map((step, index) => (
-                <div
-                  key={step}
-                  className="rounded-2xl border border-white/5 bg-white/[0.03] p-4"
-                >
-                  <p className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
-                    Paso {index + 1}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-white">{step}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="hocker-panel-pro p-5 sm:p-6">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-sky-300">
-              Estado
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
-              Diseño listo para crecer
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              Todo va con espacio, aire y lectura rápida.
-            </p>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {metrics.map((metric) => (
-                <div key={metric.label} className="rounded-2xl border border-white/5 bg-white/[0.03] p-4">
-                  <p className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
-                    {metric.label}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-white">{metric.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-    </PageShell>
+      </section>
+    </div>
   );
 }
