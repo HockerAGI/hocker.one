@@ -8,7 +8,7 @@ import { HOCKER_PRODUCT_BLUEPRINT_2C } from "@/lib/hocker-product-blueprint-2c";
 const loginSignals = [
   "Owner Gate",
   "Sesión privada",
-  "NOVA lista",
+  "Estado verificable al ingresar",
   "Acciones protegidas",
 ];
 
@@ -28,11 +28,11 @@ export function HockerOwnerLoginSurface() {
           </Link>
 
           <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-white md:text-6xl">
-            Entra al centro privado de NOVA
+            Entra al centro privado de control
           </h1>
 
           <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--hocker-text-soft)]">
-            {HOCKER_PRODUCT_BLUEPRINT_2C.publicPromise} El acceso owner mantiene acciones, evidencia y ejecución real bajo control.
+            {HOCKER_PRODUCT_BLUEPRINT_2C.publicPromise} El acceso owner mantiene acciones, evidencia y ejecución bajo control.
           </p>
 
           <div className="mt-7 flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export function HockerOwnerLoginSurface() {
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--hocker-cyan)]">Acceso owner</p>
             <h2 className="mt-3 text-2xl font-semibold text-white">Iniciar sesión</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--hocker-text-soft)]">
-              Usa tus credenciales privadas. El flujo conserva el endpoint real de autenticación del sistema.
+              Usa tus credenciales privadas. El estado operativo se consulta después de autenticarte.
             </p>
 
             <div className="mt-5">
