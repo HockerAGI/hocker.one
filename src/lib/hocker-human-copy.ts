@@ -2,7 +2,7 @@ export const HOCKER_HUMAN_COPY = {
   app_name: "Hocker ONE",
   product_category: "AI Command OS",
   public_tagline: "Tu empresa operando desde una sola inteligencia.",
-  private_tagline: "NOVA está lista. ¿Qué movemos hoy?",
+  private_tagline: "NOVA coordina acciones bajo verificación y control humano.",
   sales_tagline: "Crea, analiza, automatiza y ejecuta con IA bajo control humano.",
 
   runtime_tools_partial: "Algunas funciones avanzadas todavía se están preparando.",
@@ -38,4 +38,3 @@ export type HockerHumanCopyKey = keyof typeof HOCKER_HUMAN_COPY;
 export function hockerCopy(key: HockerHumanCopyKey): string {
   return HOCKER_HUMAN_COPY[key];
 }
-
