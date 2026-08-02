@@ -7,6 +7,7 @@ import { compact, formatScope, humanRisk, humanTool } from "./nova-chat-helpers"
 export function DraftCard({ draft, onShowSummary, onCancel }: { draft: ChatActionDraft; onShowSummary: () => void; onCancel: () => void }) {
   const flow = Array.isArray(draft.draft?.proposed_flow) ? draft.draft?.proposed_flow ?? [] : [];
   const safe = draft.executed === false && draft.enqueued === false;
+  const canCancelLocally = draft.enqueued !== true;
 
   return (
     <div className="mt-3 overflow-hidden rounded-[1.6rem] border border-sky-300/20 bg-[radial-gradient(circle_at_top_left,rgba(30,200,255,0.10),transparent_34%),rgba(255,255,255,0.045)] shadow-[0_18px_64px_rgba(14,165,233,0.10)]">
@@ -67,8 +68,14 @@ export function DraftCard({ draft, onShowSummary, onCancel }: { draft: ChatActio
           <button type="button" disabled className="min-h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-500">
             Requiere materialización segura
           </button>
-          <button type="button" onClick={onCancel} className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15">
-            Cancelar flujo
+          <button
+            type="button"
+            onClick={canCancelLocally ? onCancel : undefined}
+            disabled={!canCancelLocally}
+            title={canCancelLocally ? "Descartar este preview local" : "Estas acciones ya existen en la cola y deben rechazarse desde Owner Gate"}
+            className="min-h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-slate-500"
+          >
+            {canCancelLocally ? "Cancelar preview" : "Rechazar en Owner Gate"}
           </button>
         </div>
       </div>
