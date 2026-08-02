@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
       { source: "/owner/apps", destination: "/apps", permanent: false },
       { source: "/owner/agis", destination: "/agis", permanent: false },
       { source: "/owner/nova", destination: "/chat", permanent: false },
+      { source: "/owner/actions", destination: "/commands", permanent: false },
       { source: "/owner/ecosystem", destination: "/map", permanent: false },
       { source: "/owner/command-center", destination: "/owner", permanent: false },
       { source: "/system", destination: "/status", permanent: false },
