@@ -26,11 +26,12 @@ test("Hocker ONE has no duplicate corporate indexable routes", async () => {
   assert.match(robots, /disallow: "\/"/);
 });
 
-test("corporate destinations redirect to the official website", async () => {
+test("Hocker ONE root enters control and corporate destinations use the official website", async () => {
   const config = await read("next.config.ts");
 
+  assert.match(config, /source: "\/", destination: "\/owner", permanent: false/);
   assert.match(config, /https:\/\/hockeragi\.vercel\.app/);
-  for (const route of ["/", "/empresa", "/servicios", "/ecosistema", "/soluciones", "/casos", "/seguridad", "/contacto"]) {
+  for (const route of ["/one", "/empresa", "/servicios", "/ecosistema", "/soluciones", "/casos", "/seguridad", "/contacto"]) {
     assert.match(config, new RegExp(`source: "${route.replaceAll("/", "\\/")}"`));
   }
 });
