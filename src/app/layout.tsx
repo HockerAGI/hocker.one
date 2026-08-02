@@ -5,7 +5,6 @@ import { Toaster } from "sonner";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import ShellFrame from "@/components/ShellFrame";
 import PwaRegister from "@/components/PwaRegister";
-import { getHockerPublicJsonLdGraph } from "@/lib/hocker-structured-data";
 import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
@@ -15,18 +14,25 @@ const inter = Inter({
   weight: ["400", "500", "600", "700", "800", "900"],
 });
 
-const HOCKER_PUBLIC_URL =
+const HOCKER_APP_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://hockerone.vercel.app";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(HOCKER_PUBLIC_URL),
+  metadataBase: new URL(HOCKER_APP_URL),
   title: {
     default: "Hocker ONE",
     template: "%s | Hocker ONE",
   },
-  description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
+  description: "Centro privado de control, evidencia y operación supervisada del ecosistema HOCKER.",
   applicationName: "Hocker ONE",
   manifest: "/manifest.webmanifest",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -45,13 +51,13 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Hocker ONE",
-    description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
+    description: "Centro privado de control y operación supervisada.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Hocker ONE",
-    description: "Centro visual y operativo de NOVA dentro del ecosistema Hocker.",
+    description: "Centro privado de control y operación supervisada.",
   },
 };
 
@@ -64,8 +70,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const hockerPublicJsonLd = getHockerPublicJsonLdGraph();
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -74,11 +78,6 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning className={inter.variable}>
       <body className="bg-[#020617] font-sans text-slate-50 antialiased selection:bg-sky-400/30 selection:text-white">
-        <script
-          type="application/ld+json"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(hockerPublicJsonLd) }}
-        />
         <WorkspaceProvider>
           <ShellFrame>{children}</ShellFrame>
           <PwaRegister />
