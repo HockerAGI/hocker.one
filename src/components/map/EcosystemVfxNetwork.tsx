@@ -1,43 +1,14 @@
 import Link from "next/link";
-import { Activity, Brain, DatabaseZap, Network, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, Brain, Network, Search, ShieldCheck, Sparkles } from "lucide-react";
 import type { HockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
 import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
-import { operationsCatalogCounts } from "@/lib/operations-catalog";
-
-function n(value: unknown) {
-  const number = Number(value ?? 0);
-  return Number.isFinite(number) ? Math.max(0, Math.round(number)) : 0;
-}
-
-function cleanTitle(value: unknown) {
-  const text = String(value || "Sin memoria activa todavía");
-  return text
-    .replace(/^Sprint\s+\S+\s+/i, "")
-    .replace(/\d{4}-\d{2}-\d{2}T\S+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function sourceName(value: unknown) {
-  const raw = String(value || "syntia").replace(/[-_]/g, " ");
-  return raw
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
+import {
+  getHockerOperationalSnapshot,
+  type OperationalStatus,
+} from "@/lib/hocker-operational-state";
 
 function agiDisplayName(agi: (typeof AGI_REGISTRY)[number]) {
-  const item = agi as unknown as {
-    name?: string;
-    title?: string;
-    label?: string;
-    key?: string;
-    id?: string;
-    slug?: string;
-  };
-  const raw = item.name || item.title || item.label || item.key || item.id || item.slug || "AGI";
-
+  const raw = agi.title || agi.key || "AGI";
   return String(raw)
     .replace(/^nova-ads$/i, "Nova Ads")
     .replace(/^candy-ads$/i, "Candy Ads")
@@ -46,16 +17,35 @@ function agiDisplayName(agi: (typeof AGI_REGISTRY)[number]) {
     .replace(/^chido-gerente$/i, "Chido Gerente")
     .replace(/^nexpa-agi$/i, "NEXPA")
     .replace(/^trackhok-agi$/i, "TrackHok")
-    .replace(/[-_]/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => {
-      if (word.toLowerCase() === "ia") return "IA";
-      if (word.toLowerCase() === "agi") return "AGI";
-      if (word.toLowerCase() === "nova") return "NOVA";
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(" ");
+    .replace(/[-_]/g, " ");
+}
+
+function canonicalKey(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", "-")
+    .replace(/^candy$/, "candy-ads")
+    .replace(/^nexpa$/, "nexpa-agi")
+    .replace(/^trackhok$/, "trackhok-agi");
+}
+
+function statusLabel(status: OperationalStatus) {
+  if (status === "online") return "Verificado";
+  if (status === "degraded") return "Degradado";
+  if (status === "configured") return "Configurado";
+  if (status === "stale") return "Histórico";
+  if (status === "offline") return "Sin señal";
+  if (status === "not_created") return "Sin worker";
+  return "Sin verificar";
+}
+
+function statusClass(status: OperationalStatus) {
+  if (status === "online") return "is-online";
+  if (status === "degraded" || status === "offline") return "is-error";
+  if (status === "configured") return "is-configured";
+  if (status === "stale") return "is-stale";
+  return "is-missing";
 }
 
 function CoreMetric({ label, value, text, tone }: { label: string; value: number; text: string; tone: string }) {
@@ -68,16 +58,15 @@ function CoreMetric({ label, value, text, tone }: { label: string; value: number
   );
 }
 
-export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePulseSummary }) {
-  const counts = summary.counts;
-  const catalog = operationsCatalogCounts();
-  const activeMemory = n(counts.active_memory);
-  const activeUpdates = n(counts.active_agi_updates);
-  const preventedErrors = n(counts.prevented_errors);
-  const repeatedSeen = n(counts.repeated_seen);
-  const approved = n(counts.approved_learning);
-  const latest = summary.latest_memory;
-  const topAgis = AGI_REGISTRY.slice(0, 16);
+export default async function EcosystemVfxNetwork({ summary }: { summary: HockerLivePulseSummary }) {
+  const operational = await getHockerOperationalSnapshot();
+  const nova = operational.agis.find((agi) => canonicalKey(agi.key) === "nova");
+  const agiByKey = new Map(operational.agis.map((agi) => [canonicalKey(agi.key), agi]));
+  const visibleProfiles = AGI_REGISTRY.slice(0, 16);
+  const verifiedWorkers = operational.agis.filter((agi) => agi.status === "online").length;
+  const historicalWorkers = operational.agis.filter((agi) => agi.status === "stale").length;
+  const createdApps = operational.apps.filter((app) => app.status !== "not_created").length;
+  const notCreatedApps = operational.apps.filter((app) => app.status === "not_created").length;
 
   return (
     <section className="hko-final-map" aria-labelledby="final-map-title">
@@ -86,16 +75,16 @@ export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePu
       <header className="hko-final-map-head">
         <span className="hko-final-pill">
           <Network className="h-4 w-4" />
-          Mapa vivo
+          Mapa operativo
         </span>
-        <h2 id="final-map-title">NOVA coordina el ecosistema.</h2>
+        <h2 id="final-map-title">Arquitectura y evidencia del ecosistema.</h2>
         <p>
-          Una vista para entender qué está operativo, qué tiene límites, qué sigue en desarrollo y qué solamente pertenece al roadmap.
+          Esta vista separa perfiles documentados, componentes existentes, señales recientes y servicios realmente verificados.
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <Link href="/catalog" className="hko-final-button inline-flex items-center gap-2">
             <Search className="h-4 w-4" />
-            Buscar y ver estados
+            Buscar y verificar estados
           </Link>
           <Link href="/integrations" className="hko-final-button">Herramientas y APIs</Link>
         </div>
@@ -119,86 +108,93 @@ export default function EcosystemVfxNetwork({ summary }: { summary: HockerLivePu
           <circle cx="50" cy="50" r="43" />
         </svg>
 
-        <div className="hko-final-core">
+        <div className={`hko-final-core ${nova ? statusClass(nova.status) : "is-missing"}`}>
           <span className="hko-final-core-halo halo-a" />
           <span className="hko-final-core-halo halo-b" />
           <span className="hko-final-core-halo halo-c" />
           <Brain className="hko-final-core-icon" />
           <strong>NOVA</strong>
-          <small>Orquestador central</small>
-          <em>analiza · coordina · propone</em>
+          <small>Perfil orquestador</small>
+          <em>{nova ? statusLabel(nova.status) : "Sin verificación"}</em>
         </div>
 
-        <CoreMetric label="Memoria IA" value={activeMemory} text="registros activos" tone="mint" />
-        <CoreMetric label="Señales AGI" value={activeUpdates} text="actualizaciones observadas" tone="violet" />
-        <CoreMetric label="Duplicados" value={repeatedSeen} text="detectados" tone="cyan" />
-        <CoreMetric label="Errores" value={preventedErrors} text="prevenidos" tone="amber" />
+        <CoreMetric label="Servicios" value={operational.metrics.verified_services} text="verificados ahora" tone="mint" />
+        <CoreMetric label="Nodos" value={operational.metrics.fresh_nodes} text="heartbeat ≤ 5 min" tone="violet" />
+        <CoreMetric label="Runs" value={operational.metrics.runs_24h} text="registrados en 24 h" tone="cyan" />
+        <CoreMetric label="Aprobaciones" value={operational.metrics.pending_actions} text="acciones pendientes" tone="amber" />
       </div>
 
-      <div className="hko-final-route" aria-label="Flujo de aprendizaje revisado">
-        <span>Dato</span>
-        <i />
-        <span>Syntia</span>
+      <div className="hko-final-route" aria-label="Flujo supervisado documentado">
+        <span>Solicitud</span>
         <i />
         <span>NOVA</span>
         <i />
-        <span>Memoria aprobada</span>
+        <span>Worker</span>
+        <i />
+        <span>Owner Gate</span>
+        <i />
+        <span>Evidencia</span>
       </div>
 
       <div className="hko-final-map-dashboard">
         <article className="hko-final-panel">
           <div className="hko-final-panel-title">
-            <DatabaseZap className="h-5 w-5" />
+            <Activity className="h-5 w-5" />
             <div>
-              <span>Última memoria</span>
-              <strong>{cleanTitle(latest?.title)}</strong>
+              <span>Workers AGI</span>
+              <strong>{verifiedWorkers} verificados · {historicalWorkers} históricos</strong>
             </div>
           </div>
-          <p>Fuente: {sourceName(latest?.source_agi_id)} · Veces vista: {n(latest?.times_seen)}</p>
+          <p>Un perfil registrado no se considera activo sin health check o ejecución reciente.</p>
         </article>
 
         <article className="hko-final-panel">
           <div className="hko-final-panel-title">
-            <Activity className="h-5 w-5" />
+            <Network className="h-5 w-5" />
             <div>
-              <span>Catálogo operativo</span>
-              <strong>{catalog.operational} operativos · {catalog.limited} limitados</strong>
+              <span>Aplicaciones y módulos</span>
+              <strong>{createdApps} existentes · {notCreatedApps} no creados</strong>
             </div>
           </div>
-          <p>{catalog.development} en desarrollo y {catalog.planned} planificados. Los estados no se presentan como equivalentes.</p>
+          <p>Hocker Hub, Hocker Ads y otros conceptos permanecen identificados como no creados hasta tener repositorio y runtime verificable.</p>
         </article>
 
         <article className="hko-final-panel">
           <div className="hko-final-panel-title">
             <ShieldCheck className="h-5 w-5" />
             <div>
-              <span>Aprendizaje y control</span>
-              <strong>{approved} aprendizajes aprobados</strong>
+              <span>Registros de memoria</span>
+              <strong>{summary.counts.active_memory} habilitados</strong>
             </div>
           </div>
-          <p>Las acciones de escritura compatibles pasan por Owner Gate y guardan evidencia de ejecución.</p>
+          <p>Son registros persistidos; no se usan como prueba de que SYNTIA u otra AGI esté ejecutándose ahora.</p>
         </article>
       </div>
 
       <div className="hko-final-agi-board">
         <div className="hko-final-board-head">
           <div>
-            <span>{topAgis.length} perfiles especializados</span>
-            <strong>Funciones y responsables visibles</strong>
+            <span>{visibleProfiles.length} perfiles canónicos</span>
+            <strong>Estado individual basado en evidencia</strong>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/agis" className="hko-final-button">Ver perfiles</Link>
-            <Link href="/catalog" className="hko-final-button">Ver madurez</Link>
+            <Link href="/agis" className="hko-final-button">Ver workers</Link>
+            <Link href="/status" className="hko-final-button">Ver comprobaciones</Link>
           </div>
         </div>
 
         <div className="hko-final-agi-grid">
-          {topAgis.map((agi, index) => (
-            <Link key={agi.key} href="/agis" className={`hko-final-agi-chip ${index < 4 ? "is-core" : ""}`}>
-              <Sparkles className="h-4 w-4" />
-              <span>{agiDisplayName(agi)}</span>
-            </Link>
-          ))}
+          {visibleProfiles.map((agi) => {
+            const state = agiByKey.get(canonicalKey(agi.key));
+            const status = state?.status ?? "unknown";
+            return (
+              <Link key={agi.key} href="/agis" className={`hko-final-agi-chip ${statusClass(status)}`} title={state?.evidence ?? "Sin evidencia disponible"}>
+                <Sparkles className="h-4 w-4" />
+                <span>{agiDisplayName(agi)}</span>
+                <small>{statusLabel(status)}</small>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>
