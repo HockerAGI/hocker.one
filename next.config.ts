@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
       { source: "/system", destination: "/status", permanent: false },
       { source: "/launch", destination: "/status", permanent: false },
       { source: "/mobile", destination: "/owner", permanent: false },
+      { source: "/security/rls", destination: "/security", permanent: false },
+      { source: "/security/hardening", destination: "/security", permanent: false },
+      { source: "/security/grants", destination: "/security", permanent: false },
+      { source: "/access", destination: "/security", permanent: false },
 
       // Corporate content belongs exclusively to HockerAGI/hocker.agi.
       { source: "/one", destination: CORPORATE_SITE, permanent: true },
