@@ -16,6 +16,17 @@ export type IntegrationLike = {
   safe_note?: string;
   next_step?: string;
   execution_enabled?: boolean;
+  verified?: boolean;
+  last_verified_at?: string | null;
+  latency_ms?: number | null;
+  check_message?: string | null;
+};
+
+export type VerifiedServiceLike = {
+  status: "online" | "configured" | "offline" | "unknown";
+  checked_at: string;
+  last_verified_at: string | null;
+  detail: string;
 };
 
 export type AgiRuntimeSummaryLike = {
@@ -40,6 +51,10 @@ export type AgiRuntimeSummaryLike = {
     tools_missing_code?: number;
     tools_blocked?: number;
     tools_missing?: number;
+  };
+  service_status?: {
+    nova?: VerifiedServiceLike;
+    supabase?: VerifiedServiceLike;
   };
   integrations?: IntegrationLike[];
   recent_actions?: unknown[];
