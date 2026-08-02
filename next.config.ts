@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
-      { source: "/", destination: CORPORATE_SITE, permanent: true },
+      { source: "/", destination: "/owner", permanent: false },
       { source: "/one", destination: CORPORATE_SITE, permanent: true },
       { source: "/empresa", destination: `${CORPORATE_SITE}/#empresa`, permanent: true },
       { source: "/servicios", destination: `${CORPORATE_SITE}/#soluciones`, permanent: true },
