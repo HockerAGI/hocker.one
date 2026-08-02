@@ -22,9 +22,11 @@ const nextConfig: NextConfig = {
       { source: "/app/ajustes", destination: "/governance", permanent: false },
       { source: "/owner/apps", destination: "/apps", permanent: false },
       { source: "/owner/agis", destination: "/agis", permanent: false },
+      { source: "/owner/nova", destination: "/chat", permanent: false },
       { source: "/owner/ecosystem", destination: "/map", permanent: false },
       { source: "/owner/command-center", destination: "/owner", permanent: false },
       { source: "/system", destination: "/status", permanent: false },
+      { source: "/launch", destination: "/status", permanent: false },
       { source: "/mobile", destination: "/owner", permanent: false },
 
       // Corporate content belongs exclusively to HockerAGI/hocker.agi.
