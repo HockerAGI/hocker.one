@@ -1,4 +1,5 @@
 import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
+import { AGI_QUEUE_BLOCKING_STATUSES } from "@/lib/agi-queue-lock";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { getVerifiedAgiRuntimeSummary } from "@/lib/verified-agi-runtime";
 
@@ -66,9 +67,19 @@ type RunRow = {
   worker_id: string | null;
 };
 type NodeRow = { id: string; project_id: string; status: string | null; last_seen_at: string | null };
+type WebsiteHealth = { online: boolean; checkedAt: string };
+type OperationalData = {
+  agents: AgentRow[];
+  latestRunByAgi: Map<string, RunRow>;
+  nodes: NodeRow[];
+  pendingActions: number;
+  runs24h: number;
+  databaseOk: boolean;
+};
 
 const AGI_RUNTIME_FRESH_MS = 30 * 60 * 1000;
 const NODE_FRESH_MS = 5 * 60 * 1000;
+const WEBSITE_HEALTH_TTL_MS = 60 * 1000;
 const NOT_CREATED_APPS: Array<[string, string, string]> = [
   ["hocker-ads", "Hocker Ads", "Aplicación de publicidad aún no creada."],
   ["hocker-hub", "Hocker Hub", "CRM aún no creado."],
@@ -79,11 +90,29 @@ const NOT_CREATED_APPS: Array<[string, string, string]> = [
   ["hocker-up", "Hocker Up", "Aplicación educativa aún no creada."],
 ];
 
+let websiteHealthCache: { url: string; expiresAt: number; value: WebsiteHealth } | null = null;
+
 function canonicalAgiId(value: string): string {
   return value.trim().toLowerCase().replaceAll("_", "-")
     .replace(/^candy$/, "candy-ads")
     .replace(/^nexpa$/, "nexpa-agi")
     .replace(/^trackhok$/, "trackhok-agi");
+}
+
+function agiIdCandidates(value: string): string[] {
+  const canonical = canonicalAgiId(value);
+  const candidates = new Set([
+    value,
+    value.replaceAll("-", "_"),
+    canonical,
+    canonical.replaceAll("-", "_"),
+  ]);
+
+  if (canonical === "candy-ads") candidates.add("candy");
+  if (canonical === "nexpa-agi") candidates.add("nexpa");
+  if (canonical === "trackhok-agi") candidates.add("trackhok");
+
+  return [...candidates].filter(Boolean);
 }
 
 function newestDate(...values: Array<string | null | undefined>): string | null {
@@ -107,10 +136,10 @@ function isFailedRun(status: string | null): boolean {
   return ["error", "failed", "execution_failed", "cancelled", "canceled"].includes(String(status ?? "").toLowerCase());
 }
 
-async function checkPublicWebsite(url: string): Promise<{ online: boolean; checkedAt: string }> {
+async function checkPublicWebsite(url: string): Promise<WebsiteHealth> {
   const checkedAt = new Date().toISOString();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3500);
+  const timeout = setTimeout(() => controller.abort(), 1500);
   try {
     const response = await fetch(url, {
       method: "HEAD",
@@ -126,54 +155,102 @@ async function checkPublicWebsite(url: string): Promise<{ online: boolean; check
   }
 }
 
-export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Promise<OperationalSnapshot> {
-  const checkedAt = new Date().toISOString();
-  const runtime = await getVerifiedAgiRuntimeSummary(projectId);
-  const websiteHealth = await checkPublicWebsite("https://hockeragi.vercel.app");
+async function getCachedWebsiteHealth(url: string): Promise<WebsiteHealth> {
+  if (websiteHealthCache && websiteHealthCache.url === url && websiteHealthCache.expiresAt > Date.now()) {
+    return websiteHealthCache.value;
+  }
 
-  let agents: AgentRow[] = [];
-  let runs: RunRow[] = [];
-  let nodes: NodeRow[] = [];
-  let pendingActions = 0;
-  let databaseOk = false;
+  const value = await checkPublicWebsite(url);
+  websiteHealthCache = { url, value, expiresAt: Date.now() + WEBSITE_HEALTH_TTL_MS };
+  return value;
+}
 
+async function loadOperationalData(projectId: string): Promise<OperationalData> {
   try {
     const sb = createAdminSupabase();
-    const [agentsRes, runsRes, nodesRes, actionsRes] = await Promise.all([
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const corePromise = Promise.all([
       sb.from("agi_agents").select("agi_id,status,updated_at").eq("project_id", projectId),
-      sb
-        .from("agi_runs")
-        .select("agi_id,status,created_at,started_at,finished_at,worker_id")
-        .eq("project_id", projectId)
-        .gte("created_at", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
-        .order("created_at", { ascending: false })
-        .limit(250),
       sb.from("nodes").select("id,project_id,status,last_seen_at"),
       sb
         .from("agi_action_queue")
         .select("id", { count: "exact", head: true })
         .eq("project_id", projectId)
-        .in("status", ["needs_approval", "approved", "queued", "dry_run_queued", "running", "executing"]),
+        .in("status", [...AGI_QUEUE_BLOCKING_STATUSES]),
+      sb
+        .from("agi_runs")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .gte("created_at", since24h),
     ]);
 
-    databaseOk = !agentsRes.error && !runsRes.error && !nodesRes.error && !actionsRes.error;
-    agents = (agentsRes.data ?? []) as AgentRow[];
-    runs = (runsRes.data ?? []) as RunRow[];
-    nodes = (nodesRes.data ?? []) as NodeRow[];
-    pendingActions = actionsRes.count ?? 0;
+    const latestRunsPromise = Promise.all(AGI_REGISTRY.map(async (definition) => {
+      const result = await sb
+        .from("agi_runs")
+        .select("agi_id,status,created_at,started_at,finished_at,worker_id")
+        .eq("project_id", projectId)
+        .in("agi_id", agiIdCandidates(definition.key))
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      return {
+        key: canonicalAgiId(definition.key),
+        row: (result.data ?? null) as RunRow | null,
+        error: result.error,
+      };
+    }));
+
+    const [[agentsRes, nodesRes, actionsRes, runs24hRes], latestRuns] = await Promise.all([
+      corePromise,
+      latestRunsPromise,
+    ]);
+
+    const latestRunByAgi = new Map<string, RunRow>();
+    for (const result of latestRuns) {
+      if (result.row) latestRunByAgi.set(result.key, result.row);
+    }
+
+    const databaseOk =
+      !agentsRes.error &&
+      !nodesRes.error &&
+      !actionsRes.error &&
+      !runs24hRes.error &&
+      latestRuns.every((result) => !result.error);
+
+    return {
+      agents: (agentsRes.data ?? []) as AgentRow[],
+      latestRunByAgi,
+      nodes: (nodesRes.data ?? []) as NodeRow[],
+      pendingActions: actionsRes.count ?? 0,
+      runs24h: runs24hRes.count ?? 0,
+      databaseOk,
+    };
   } catch {
-    databaseOk = false;
+    return {
+      agents: [],
+      latestRunByAgi: new Map<string, RunRow>(),
+      nodes: [],
+      pendingActions: 0,
+      runs24h: 0,
+      databaseOk: false,
+    };
   }
+}
+
+export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Promise<OperationalSnapshot> {
+  const checkedAt = new Date().toISOString();
+  const [runtime, websiteHealth, operationalData] = await Promise.all([
+    getVerifiedAgiRuntimeSummary(projectId),
+    getCachedWebsiteHealth("https://hockeragi.vercel.app"),
+    loadOperationalData(projectId),
+  ]);
+
+  const { agents, latestRunByAgi, nodes, pendingActions, runs24h, databaseOk } = operationalData;
 
   const canonicalAgents = new Map<string, AgentRow>();
   for (const agent of agents) canonicalAgents.set(canonicalAgiId(agent.agi_id), agent);
-
-  const latestRunByAgi = new Map<string, RunRow>();
-  for (const run of runs) {
-    if (!run.agi_id) continue;
-    const key = canonicalAgiId(run.agi_id);
-    if (!latestRunByAgi.has(key)) latestRunByAgi.set(key, run);
-  }
 
   const agis: OperationalAgi[] = AGI_REGISTRY.map((definition) => {
     const key = canonicalAgiId(definition.key);
@@ -289,7 +366,6 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
     })),
   ];
 
-  const runs24h = runs.filter((run) => isFresh(newestDate(run.finished_at, run.started_at, run.created_at), 24 * 60 * 60 * 1000)).length;
   const freshNodes = nodes.filter((node) => isFresh(node.last_seen_at, NODE_FRESH_MS)).length;
   const verifiedServices = [runtime.service_status.nova, runtime.service_status.supabase]
     .filter((service) => service.status === "online").length + (websiteHealth.online ? 1 : 0);
