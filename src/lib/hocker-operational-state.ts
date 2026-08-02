@@ -56,12 +56,7 @@ export type OperationalSnapshot = {
   runtime: Awaited<ReturnType<typeof getVerifiedAgiRuntimeSummary>>;
 };
 
-type AgentRow = {
-  agi_id: string;
-  status: string | null;
-  updated_at: string | null;
-};
-
+type AgentRow = { agi_id: string; status: string | null; updated_at: string | null };
 type RunRow = {
   agi_id: string | null;
   status: string | null;
@@ -70,16 +65,19 @@ type RunRow = {
   finished_at: string | null;
   worker_id: string | null;
 };
-
-type NodeRow = {
-  id: string;
-  project_id: string;
-  status: string | null;
-  last_seen_at: string | null;
-};
+type NodeRow = { id: string; project_id: string; status: string | null; last_seen_at: string | null };
 
 const AGI_RUNTIME_FRESH_MS = 30 * 60 * 1000;
 const NODE_FRESH_MS = 5 * 60 * 1000;
+const NOT_CREATED_APPS: Array<[string, string, string]> = [
+  ["hocker-ads", "Hocker Ads", "Aplicación de publicidad aún no creada."],
+  ["hocker-hub", "Hocker Hub", "CRM aún no creado."],
+  ["hocker-wallet", "Hocker Wallet", "Aplicación financiera aún no creada."],
+  ["hocker-drive-cloud", "Hocker Drive Cloud", "Aplicación de nube aún no creada."],
+  ["trackhok", "TrackHok", "Aplicación de rastreo aún no creada."],
+  ["nexpa-app", "NEXPA App", "Aplicación de seguridad aún no creada."],
+  ["hocker-up", "Hocker Up", "Aplicación educativa aún no creada."],
+];
 
 function canonicalAgiId(value: string): string {
   return value.trim().toLowerCase().replaceAll("_", "-")
@@ -89,11 +87,10 @@ function canonicalAgiId(value: string): string {
 }
 
 function newestDate(...values: Array<string | null | undefined>): string | null {
-  const valid = values
+  return values
     .filter((value): value is string => Boolean(value))
     .filter((value) => Number.isFinite(new Date(value).getTime()))
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  return valid[0] ?? null;
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 }
 
 function isFresh(value: string | null, maxAgeMs: number): boolean {
@@ -114,7 +111,6 @@ async function checkPublicWebsite(url: string): Promise<{ online: boolean; check
   const checkedAt = new Date().toISOString();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3500);
-
   try {
     const response = await fetch(url, {
       method: "HEAD",
@@ -143,7 +139,6 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
 
   try {
     const sb = createAdminSupabase();
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const [agentsRes, runsRes, nodesRes, actionsRes] = await Promise.all([
       sb.from("agi_agents").select("agi_id,status,updated_at").eq("project_id", projectId),
       sb
@@ -166,8 +161,6 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
     runs = (runsRes.data ?? []) as RunRow[];
     nodes = (nodesRes.data ?? []) as NodeRow[];
     pendingActions = actionsRes.count ?? 0;
-
-    void since24h;
   } catch {
     databaseOk = false;
   }
@@ -282,19 +275,11 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
       last_activity_at: null,
       checked_at: checkedAt,
     },
-    ...[
-      ["hocker-ads", "Hocker Ads", "Aplicación de publicidad aún no creada."],
-      ["hocker-hub", "Hocker Hub", "CRM aún no creado."],
-      ["hocker-wallet", "Hocker Wallet", "Aplicación financiera aún no creada."],
-      ["hocker-drive-cloud", "Hocker Drive Cloud", "Aplicación de nube aún no creada."],
-      ["trackhok", "TrackHok", "Aplicación de rastreo aún no creada."],
-      ["nexpa-app", "NEXPA App", "Aplicación de seguridad aún no creada."],
-      ["hocker-up", "Hocker Up", "Aplicación educativa aún no creada."],
-    ].map(([key, title, summary]) => ({
+    ...NOT_CREATED_APPS.map(([key, title, summary]): OperationalApp => ({
       key,
       title,
-      kind: "application" as const,
-      status: "not_created" as const,
+      kind: "application",
+      status: "not_created",
       summary,
       evidence: "Concepto documentado sin repositorio, despliegue ni health check operativo verificado.",
       href: null,
