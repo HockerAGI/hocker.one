@@ -90,7 +90,7 @@ async function loadChidoOverview(): Promise<ChidoOverview> {
       sb.from("manual_deposit_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
       sb.from("withdraw_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
       sb.from("kyc_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
-      sb.from("fraud_events").select("*", { count: "exact", head: true),
+      sb.from("fraud_events").select("*", { count: "exact", head: true }),
     ]);
     const firstError = [players.error, deposits.error, withdrawals.error, kyc.error, fraud.error].find(Boolean);
     return {
