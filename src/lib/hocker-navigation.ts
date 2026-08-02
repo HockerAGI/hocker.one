@@ -76,8 +76,7 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     icon: Bot,
     matchPrefixes: ["/owner/nova", "/app/nova"],
     items: [
-      { id: "chat", href: "/chat", label: "NOVA Chat", shortLabel: "Chat", icon: Bot, keywords: "nova chat conversación ejecutar aprobar" },
-      { id: "nova-owner", href: "/owner/nova", label: "Estado de NOVA", shortLabel: "Estado", icon: Activity, keywords: "nova estado runtime railway proveedor health" },
+      { id: "chat", href: "/chat", label: "NOVA Chat", shortLabel: "Chat", icon: Bot, keywords: "nova chat conversación estado runtime ejecutar aprobar" },
     ],
   },
   {
