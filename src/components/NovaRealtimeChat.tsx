@@ -49,6 +49,17 @@ function buildLocalLock(actions: RuntimeAction[]): QueueLock {
   };
 }
 
+function unreadableQueueLock(message: string, current: QueueLock): QueueLock {
+  return {
+    ...current,
+    locked: true,
+    can_start_new_task: false,
+    reason: "No se pudo confirmar que Owner Gate esté libre. Por seguridad, se bloquean tareas nuevas.",
+    checked_at: new Date().toISOString(),
+    error: message,
+  };
+}
+
 function readableError(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (!raw) return "No se pudo obtener respuesta de NOVA.";
@@ -76,6 +87,7 @@ function serviceTone(status: string): string {
 
 export default function NovaRealtimeChat() {
   const { projectId, ready } = useWorkspace();
+  const [threadId] = useState(() => generateId());
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -103,15 +115,30 @@ export default function NovaRealtimeChat() {
 
       const summaryBody = (await summaryResponse.json().catch(() => ({}))) as SummaryResponse;
       const actionsBody = (await actionsResponse.json().catch(() => ({}))) as ActionResponse;
+      let nextError: string | null = null;
 
-      if (summaryResponse.ok && summaryBody.summary) setSummary(summaryBody.summary);
-      const actions = Array.isArray(actionsBody.actions) ? actionsBody.actions : [];
-      setQueueLock(extractQueueLock(actionsBody) ?? actionsBody.queue_lock ?? buildLocalLock(actions));
+      if (summaryResponse.ok && summaryBody.summary) {
+        setSummary(summaryBody.summary);
+      } else {
+        nextError = readableError(summaryBody.error ?? `Estado HTTP ${summaryResponse.status}`);
+      }
 
-      if (!summaryResponse.ok) setError(readableError(summaryBody.error ?? `Estado HTTP ${summaryResponse.status}`));
-      else setError(null);
+      const remoteLock = extractQueueLock(actionsBody) ?? actionsBody.queue_lock ?? null;
+      if (actionsResponse.ok && remoteLock) {
+        setQueueLock(remoteLock);
+      } else if (actionsResponse.ok && Array.isArray(actionsBody.actions)) {
+        setQueueLock(buildLocalLock(actionsBody.actions));
+      } else {
+        const actionError = readableError(actionsBody.error ?? `Owner Gate HTTP ${actionsResponse.status}`);
+        setQueueLock((current) => unreadableQueueLock(actionError, current));
+        nextError = nextError ? `${nextError} · ${actionError}` : actionError;
+      }
+
+      setError(nextError);
     } catch (runtimeError) {
-      setError(readableError(runtimeError instanceof Error ? runtimeError.message : runtimeError));
+      const message = readableError(runtimeError instanceof Error ? runtimeError.message : runtimeError);
+      setQueueLock((current) => unreadableQueueLock(message, current));
+      setError(message);
     } finally {
       setRefreshing(false);
     }
@@ -158,7 +185,7 @@ export default function NovaRealtimeChat() {
     const response = await fetch("/api/nova/chat/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      body: JSON.stringify({ project_id: projectId, message: prompt, allow_actions: false }),
+      body: JSON.stringify({ project_id: projectId, thread_id: threadId, message: prompt, allow_actions: false }),
       signal,
       cache: "no-store",
     });
@@ -181,10 +208,18 @@ export default function NovaRealtimeChat() {
       const payloadText = lines
         .filter((line) => line.startsWith("data:"))
         .map((line) => line.slice(5).trimStart())
-        .join("\n");
-      if (!payloadText) return;
+        .join("\n")
+        .trim();
+      if (!payloadText || payloadText === "[DONE]") return;
 
-      const payload = JSON.parse(payloadText) as Record<string, unknown>;
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(payloadText) as Record<string, unknown>;
+      } catch {
+        if (eventName === "message") appendNovaText(novaMessageId, payloadText);
+        return;
+      }
+
       const lock = extractQueueLock(payload);
       if (lock) setQueueLock(lock);
 
@@ -213,13 +248,13 @@ export default function NovaRealtimeChat() {
     if (streamError) throw new Error(streamError);
 
     finishNovaMessage(novaMessageId, actions, meta);
-  }, [appendNovaText, finishNovaMessage, projectId]);
+  }, [appendNovaText, finishNovaMessage, projectId, threadId]);
 
   const sendSingleResponse = useCallback(async (prompt: string, novaMessageId: string, signal: AbortSignal) => {
     const response = await fetch("/api/nova/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, message: prompt, allow_actions: true }),
+      body: JSON.stringify({ project_id: projectId, thread_id: threadId, message: prompt, allow_actions: true }),
       signal,
       cache: "no-store",
     });
@@ -230,7 +265,7 @@ export default function NovaRealtimeChat() {
     if (!content.trim()) throw new Error("NOVA respondió sin contenido. Revisa el runtime antes de reintentar.");
     appendNovaText(novaMessageId, content);
     finishNovaMessage(novaMessageId, body.actions ?? extractActions(body), body.meta ?? null);
-  }, [appendNovaText, finishNovaMessage, projectId]);
+  }, [appendNovaText, finishNovaMessage, projectId, threadId]);
 
   const send = useCallback(async () => {
     const prompt = input.trim();
@@ -296,8 +331,8 @@ export default function NovaRealtimeChat() {
           <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
             {verifiedConnections} verificadas · {configuredConnections} configuradas
           </span>
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
-            {queueLock.blocking_count} pendientes
+          <span className={`rounded-full border px-3 py-2 ${queueLock.error ? "border-rose-300/20 bg-rose-300/10 text-rose-100" : "border-white/10 bg-white/[0.04]"}`}>
+            {queueLock.error ? "Owner Gate sin verificar" : `${queueLock.blocking_count} pendientes`}
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-emerald-100">
             <ShieldCheck className="h-3.5 w-3.5" /> Owner Gate
