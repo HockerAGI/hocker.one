@@ -46,11 +46,13 @@ export type Integration = {
   tool_key: string;
   name: string;
   provider: string;
-  status: "configured" | "connected" | "partial" | "missing" | "blocked" | "missing_key" | "missing_code";
+  status: "configured" | "connected" | "partial" | "missing" | "blocked" | "missing_key" | "missing_code" | "offline";
   supports_read: boolean;
   supports_write: boolean;
   supports_realtime: boolean;
   safe_note?: string;
+  verified?: boolean;
+  last_verified_at?: string | null;
 };
 
 export type RuntimeAction = {
@@ -79,9 +81,28 @@ export type QueueLock = {
   error?: string;
 };
 
+export type RuntimeServiceStatus = {
+  status: "online" | "configured" | "offline" | "unknown";
+  checked_at: string;
+  last_verified_at: string | null;
+  detail: string;
+};
+
 export type RuntimeSummary = {
-  counts?: { agents: number; tools_configured: number; tools_total: number; actions: number; runs: number };
+  counts?: {
+    agents: number;
+    tools_configured: number;
+    tools_connected?: number;
+    tools_total: number;
+    actions: number;
+    runs: number;
+  };
   integrations?: Integration[];
+  service_status?: {
+    nova?: RuntimeServiceStatus;
+    supabase?: RuntimeServiceStatus;
+  };
+  checked_at?: string;
   schema_ready?: boolean;
   message?: string;
 };
