@@ -93,7 +93,7 @@ export default async function SupplyPage() {
     loadSupplySummary(),
     getHockerOperationalSnapshot(),
   ]);
-  const module = operational.apps.find((app) => app.key === "hocker-supply");
+  const supplyModule = operational.apps.find((app) => app.key === "hocker-supply");
 
   return (
     <div className="hko-page-flow space-y-5">
@@ -107,7 +107,7 @@ export default async function SupplyPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="hko-kicker">Estado del módulo</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{module?.evidence ?? "No hay evidencia del módulo."}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{supplyModule?.evidence ?? "No hay evidencia del módulo."}</p>
             <p className="mt-1 text-xs text-slate-500">Consulta: {formatDate(data.checkedAt)} · Última actividad: {formatDate(data.latestActivityAt)}</p>
           </div>
           <Link href="/supply" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
