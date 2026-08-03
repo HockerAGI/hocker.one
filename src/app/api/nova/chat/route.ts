@@ -8,6 +8,7 @@ import { materializeNovaMcpActionsFromUpstream } from "@/lib/nova-mcp-action-mat
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 import { log } from "@/lib/logger";
 import { sanitizePublicError } from "@/lib/sanitize-error";
+import { runServerlessNovaChat } from "@/lib/serverless-agi-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,13 +98,6 @@ function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<str
 export async function POST(req: Request): Promise<Response> {
   const baseUrl = getNovaBaseUrl();
   const key = getNovaKey();
-
-  if (!baseUrl || !key) {
-    return NextResponse.json(
-      { ok: false, error: "NOVA no está configurada en el entorno de producción." },
-      { status: 500 },
-    );
-  }
 
   const jsonBody: unknown = await req.json().catch(() => ({}));
   const parsed = ChatSchema.safeParse(jsonBody);
@@ -228,6 +222,47 @@ export async function POST(req: Request): Promise<Response> {
     },
   };
 
+  const serverlessFallback = async (reason: string): Promise<Response> => {
+    const local = await runServerlessNovaChat({
+      project_id: parsed.data.project_id,
+      thread_id: parsed.data.thread_id ?? null,
+      message: parsed.data.message,
+      user_id: parsed.data.user_id ?? null,
+      user_email: parsed.data.user_email ?? null,
+      context_data: parsed.data.context_data ?? {},
+    });
+
+    const safe = sanitizeNovaPayload(
+      local as unknown as NovaChatResponse,
+      {
+        ...injectedMeta,
+        runtime_fallback: {
+          active: true,
+          reason,
+          runtime: "hocker-one-serverless",
+          upstream_called: Boolean(baseUrl && key),
+        },
+      },
+      null,
+    );
+
+    return NextResponse.json(safe, {
+      status: 200,
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
+  };
+
+  if (!baseUrl || !key) {
+    try {
+      return await serverlessFallback("NOVA_UPSTREAM_NOT_CONFIGURED");
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: sanitizePublicError(error), meta: injectedMeta },
+        { status: 503 },
+      );
+    }
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 55_000);
 
@@ -317,16 +352,22 @@ export async function POST(req: Request): Promise<Response> {
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
     log.error("NOVA chat upstream failure", { route: "/api/nova/chat", timeout: isTimeout });
-    return NextResponse.json(
-      {
-        ok: false,
-        error: isTimeout
-          ? "Timeout: NOVA excedió la ventana de respuesta de 55s."
-          : sanitizePublicError(error),
-        meta: injectedMeta,
-      },
-      { status: 502 },
-    );
+    try {
+      return await serverlessFallback(isTimeout ? "NOVA_UPSTREAM_TIMEOUT" : "NOVA_UPSTREAM_UNAVAILABLE");
+    } catch (fallbackError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: sanitizePublicError(fallbackError),
+          meta: {
+            ...injectedMeta,
+            upstream_error: isTimeout ? "timeout" : "unavailable",
+            fallback_error: true,
+          },
+        },
+        { status: 502 },
+      );
+    }
   } finally {
     clearTimeout(timeoutId);
   }

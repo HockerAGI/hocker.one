@@ -24,6 +24,7 @@ type AgiTask = {
   write_policy: string;
   attempt_count: number;
   max_attempts: number;
+  assigned_to?: string | null;
 };
 
 type GeminiResponse = {
