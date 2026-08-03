@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - ci-repair-no-deploy-20260803
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
