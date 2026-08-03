@@ -70,10 +70,10 @@ test("serverless gateway prefers Vercel OIDC and falls back only on authenticati
 
   assert.ok(oidcPosition >= 0);
   assert.ok(apiKeyPosition > oidcPosition);
-  assert.match(runtime, /gatewayCredentials().length > 0/);
-  assert.match(runtime, /response.status === 401 || response.status === 403/);
-  assert.match(runtime, /authenticationRejected && hasFallback/);
-  assert.match(runtime, /continue;/);
+  assert.ok(runtime.includes("return gatewayCredentials().length > 0;"));
+  assert.ok(runtime.includes("response.status === 401 || response.status === 403"));
+  assert.ok(runtime.includes("authenticationRejected && hasFallback"));
+  assert.ok(runtime.includes("continue;"));
 });
 
 test("chat fallback authenticates membership and reserves execution budget", async () => {
