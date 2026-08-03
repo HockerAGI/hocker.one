@@ -413,12 +413,16 @@ export async function runServerlessAgiWorkerOnce(params: {
       error_code: message.split(":")[0],
     }];
 
-    await db().rpc("fail_agi_task", {
-      p_task_id: task.id,
-      p_worker_id: workerId,
-      p_error: message,
-      p_evidence: failureEvidence,
-    }).catch(() => undefined);
+    try {
+      await db().rpc("fail_agi_task", {
+        p_task_id: task.id,
+        p_worker_id: workerId,
+        p_error: message,
+        p_evidence: failureEvidence,
+      });
+    } catch {
+      // The original verified failure remains returned even when persistence is unavailable.
+    }
 
     if (runId) {
       await finishRun({
