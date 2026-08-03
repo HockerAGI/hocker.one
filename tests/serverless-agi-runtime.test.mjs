@@ -82,6 +82,21 @@ test("chat persistence fails closed on reads and every Supabase write", async ()
   assert.match(runtime, /NOVA_USAGE_WRITE_FAILED/);
 });
 
+test("verified run startup requires a locked task, provider, model and worker", async () => {
+  const runtime = await read("src/lib/serverless-agi-runtime.ts");
+  const migration = await read("supabase/migrations/20260803004700_start_serverless_agi_execution.sql");
+
+  assert.match(runtime, /start_serverless_agi_execution/);
+  assert.doesNotMatch(runtime, /from\("agi_runs"\)\s*\.insert/);
+  assert.match(migration, /VERIFIED_WORKER_ID_REQUIRED/);
+  assert.match(migration, /VERIFIED_PROVIDER_REQUIRED/);
+  assert.match(migration, /VERIFIED_MODEL_REQUIRED/);
+  assert.match(migration, /VERIFIED_TASK_NOT_OWNED/);
+  assert.match(migration, /task\.status = 'working'/);
+  assert.match(migration, /task\.lock_owner = p_worker_id/);
+  assert.match(migration, /revoke all on function public\.start_serverless_agi_execution/);
+});
+
 test("verified task and run completion is atomic", async () => {
   const runtime = await read("src/lib/serverless-agi-runtime.ts");
   const migration = await read("supabase/migrations/20260803004500_atomic_serverless_agi_completion.sql");
