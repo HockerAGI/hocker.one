@@ -71,15 +71,15 @@ test("chat fallback authenticates membership and reserves execution budget", asy
   assert.match(route, /controller\.abort\(\), 8_000/);
 });
 
-test("chat persistence fails closed on reads and every Supabase write", async () => {
+test("chat persistence fails closed through the atomic persistence RPC", async () => {
   const runtime = await read("src/lib/serverless-agi-runtime.ts");
   assert.match(runtime, /NOVA_CHAT_AUTH_REQUIRED/);
   assert.match(runtime, /NOVA_THREAD_LOOKUP_FAILED/);
   assert.match(runtime, /NOVA_THREAD_ACCESS_DENIED/);
   assert.match(runtime, /NOVA_HISTORY_READ_FAILED/);
-  assert.match(runtime, /NOVA_THREAD_WRITE_FAILED/);
-  assert.match(runtime, /NOVA_MESSAGE_WRITE_FAILED/);
-  assert.match(runtime, /NOVA_USAGE_WRITE_FAILED/);
+  assert.match(runtime, /persist_serverless_nova_chat/);
+  assert.match(runtime, /NOVA_CHAT_PERSISTENCE_FAILED/);
+  assert.doesNotMatch(runtime, /NOVA_THREAD_WRITE_FAILED|NOVA_MESSAGE_WRITE_FAILED|NOVA_USAGE_WRITE_FAILED/);
 });
 
 test("verified run startup requires a locked task, provider, model and worker", async () => {
