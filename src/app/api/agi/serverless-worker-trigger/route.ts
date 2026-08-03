@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { runServerlessAgiWorkerOnce } from "@/lib/serverless-agi-runtime";
 
@@ -8,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-type UntypedSupabase = SupabaseClient<any, "public", any>;
+type AdminSupabase = ReturnType<typeof createAdminSupabase>;
 
 type RuntimeToken = {
   id: string;
@@ -20,8 +19,8 @@ type RuntimeToken = {
   expires_at: string;
 };
 
-function db(): UntypedSupabase {
-  return createAdminSupabase() as unknown as UntypedSupabase;
+function db(): AdminSupabase {
+  return createAdminSupabase();
 }
 
 function sha256(value: string): string {
@@ -71,12 +70,15 @@ async function authorizeAndConsume(req: Request): Promise<RuntimeToken | null> {
     return { ...data, active: false, used_at: now };
   }
 
-  await db()
+  const { data: audited, error: auditError } = await db()
     .from("agi_runtime_tokens")
     .update({ used_at: now })
     .eq("id", data.id)
-    .eq("active", true);
+    .eq("active", true)
+    .select("id")
+    .maybeSingle();
 
+  if (auditError || !audited) return null;
   return { ...data, used_at: now };
 }
 
