@@ -1,0 +1,36 @@
+name: Generate lockfile CI repair
+
+on:
+  push:
+    branches:
+      - ci-repair-no-deploy-20260803
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Regenerate lockfile only
+        run: npm install --package-lock-only --ignore-scripts --include=optional
+
+      - name: Validate patched dependency tree
+        run: npm audit --audit-level=high
+
+      - name: Upload generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock-ci-repair
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
