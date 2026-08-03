@@ -1,0 +1,47 @@
+name: Patch Final Executor Allowlist
+
+on:
+  push:
+    branches:
+      - fix/final-executor-five-repositories-20260802
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/final-executor-five-repositories-20260802
+      - name: Patch executor fallback and add regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/lib/agi-action-execution.ts')
+          text = source.read_text()
+          old = '"HockerAGI/hocker.one,HockerAGI/nova.agi";'
+          new = '"HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi";'
+          if old not in text:
+              raise SystemExit('executor allowlist anchor not found')
+          source.write_text(text.replace(old, new, 1))
+
+          test = Path('tests/agi-final-executor-repository-allowlist.test.mjs')
+          test.write_text('''import assert from "node:assert/strict";\nimport { readFile } from "node:fs/promises";\nimport test from "node:test";\n\nconst read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");\n\ntest("final GitHub executor covers all five HOCKER repositories", async () => {\n  const source = await read("src/lib/agi-action-execution.ts");\n\n  assert.match(source, /HockerAGI\\/hocker\\.one,HockerAGI\\/nova\\.agi,HockerAGI\\/hocker-node-agent,HockerAGI\\/chido\\.casino,HockerAGI\\/hocker\\.agi/);\n  assert.match(source, /HOCKER_GITHUB_ALLOWED_REPOS/);\n  assert.match(source, /Repositorio no permitido para ejecución AGI/);\n});\n\ntest("final executor still blocks principal branches and sensitive paths", async () => {\n  const source = await read("src/lib/agi-action-execution.ts");\n\n  assert.match(source, /Escritura directa a rama principal bloqueada por Owner Gate/);\n  assert.match(source, /Path sensible bloqueado/);\n  assert.match(source, /isMockedGithubBoundary/);\n});\n''')
+          PY
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/agi-action-execution.ts tests/agi-final-executor-repository-allowlist.test.mjs
+          git commit -m "fix(owner-gate): align final executor repository scope"
+          git push origin HEAD:fix/final-executor-five-repositories-20260802
