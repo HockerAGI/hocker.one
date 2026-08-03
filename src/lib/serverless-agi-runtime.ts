@@ -489,7 +489,7 @@ export async function createServerlessAgiTask(params: {
       .eq("idempotency_key", params.idempotency_key)
       .maybeSingle();
     if (error) throw new Error(`AGI_IDEMPOTENCY_LOOKUP_FAILED: ${error.message}`);
-    if (existing) return { ok: true, created: false, task: existing };
+    if (existing) return { ok: true, created: false, task_id: existing.id, task: existing };
   }
 
   const { data, error } = await client
@@ -528,7 +528,7 @@ export async function createServerlessAgiTask(params: {
     .single();
 
   if (error || !data) throw new Error(`AGI_TASK_CREATE_FAILED: ${error?.message ?? "unknown"}`);
-  return { ok: true, created: true, task: data };
+  return { ok: true, created: true, task_id: data.id, task: data };
 }
 
 export async function recoverStaleServerlessAgiTasks(projectId: string): Promise<JsonRecord> {
@@ -563,6 +563,7 @@ export async function getServerlessAgiWorkerStatus(projectId: string): Promise<J
     run.evidence.length > 0,
   ) ?? null;
   const configured = serverlessGatewayConfigured();
+  const schemaReady = !queuedResult.error && !workingResult.error && !recentRunsResult.error;
 
   return {
     ok: true,
@@ -571,7 +572,8 @@ export async function getServerlessAgiWorkerStatus(projectId: string): Promise<J
     project_id: projectId,
     provider: "vercel-ai-gateway",
     provider_configured: configured,
-    ready: configured && !queuedResult.error && !workingResult.error && !recentRunsResult.error,
+    schema_ready: schemaReady,
+    ready: configured && schemaReady,
     queued_tasks: queuedResult.count ?? 0,
     working_tasks: workingResult.count ?? 0,
     last_verified_run: lastVerified,
@@ -643,60 +645,52 @@ export async function runServerlessNovaChat(params: {
     timeout_ms: 40_000,
   });
 
-  const now = new Date().toISOString();
-  const { error: threadWriteError } = await client.from("nova_threads").upsert({
-    thread_id: threadId,
-    project_id: params.project_id,
-    user_id: params.user_id,
-    title: params.message.slice(0, 120),
-    updated_at: now,
-  }, { onConflict: "thread_id" });
-  if (threadWriteError) throw new Error(`NOVA_THREAD_WRITE_FAILED: ${threadWriteError.message}`);
-
-  const { error: messageWriteError } = await client.from("nova_messages").insert([
-    {
-      project_id: params.project_id,
-      thread_id: threadId,
-      role: "user",
-      content: params.message,
-      meta: {
-        trace_id: traceId,
-        user_email: params.user_email ?? null,
-        runtime: "hocker-one-serverless",
-      },
-    },
-    {
-      project_id: params.project_id,
-      thread_id: threadId,
-      role: "assistant",
-      content: completion.text,
-      meta: {
-        trace_id: traceId,
-        provider: completion.provider,
-        model: completion.model,
-        agi_id: profile.id,
-        runtime: "hocker-one-serverless",
-        verified_execution: true,
-      },
-    },
-  ]);
-  if (messageWriteError) throw new Error(`NOVA_MESSAGE_WRITE_FAILED: ${messageWriteError.message}`);
-
-  const { error: usageWriteError } = await client.from("llm_usage").insert({
-    project_id: params.project_id,
-    thread_id: threadId,
+  const userMeta: JsonRecord = {
+    trace_id: traceId,
+    user_email: params.user_email ?? null,
+    runtime: "hocker-one-serverless",
+  };
+  const assistantMeta: JsonRecord = {
+    trace_id: traceId,
     provider: completion.provider,
     model: completion.model,
-    tokens_in: completion.usage.tokens_in,
-    tokens_out: completion.usage.tokens_out,
-    meta: {
-      trace_id: traceId,
-      agi_id: profile.id,
-      runtime: "hocker-one-serverless",
-      verified_execution: true,
-    },
+    agi_id: profile.id,
+    runtime: "hocker-one-serverless",
+    verified_execution: true,
+  };
+  const usageMeta: JsonRecord = {
+    trace_id: traceId,
+    agi_id: profile.id,
+    runtime: "hocker-one-serverless",
+    verified_execution: true,
+  };
+
+  const { data: persisted, error: persistenceError } = await rpcDb().rpc<
+    Array<{
+      thread_id: string;
+      user_message_id: string;
+      assistant_message_id: string;
+      usage_id: string;
+    }>
+  >("persist_serverless_nova_chat", {
+    p_thread_id: threadId,
+    p_project_id: params.project_id,
+    p_user_id: params.user_id,
+    p_title: params.message.slice(0, 120),
+    p_user_content: params.message,
+    p_assistant_content: completion.text,
+    p_user_meta: userMeta,
+    p_assistant_meta: assistantMeta,
+    p_provider: completion.provider,
+    p_model: completion.model,
+    p_tokens_in: completion.usage.tokens_in,
+    p_tokens_out: completion.usage.tokens_out,
+    p_usage_meta: usageMeta,
   });
-  if (usageWriteError) throw new Error(`NOVA_USAGE_WRITE_FAILED: ${usageWriteError.message}`);
+
+  if (persistenceError || !persisted?.length) {
+    throw new Error(`NOVA_CHAT_PERSISTENCE_FAILED: ${persistenceError?.message ?? "transaction_empty"}`);
+  }
 
   return {
     ok: true,
@@ -716,6 +710,7 @@ export async function runServerlessNovaChat(params: {
       provider: completion.provider,
       model: completion.model,
       usage: completion.usage,
+      persistence: persisted[0],
       context_data: params.context_data ?? {},
       controls: {
         allow_write: false,
