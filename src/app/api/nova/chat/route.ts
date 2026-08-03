@@ -341,12 +341,13 @@ export async function POST(req: Request): Promise<Response> {
       rejected: [],
     };
 
+    const responseMeta = responseJson.meta;
     const upstreamMcp =
-      responseJson.meta &&
-      typeof responseJson.meta.mcp === "object" &&
-      responseJson.meta.mcp !== null &&
-      !Array.isArray(responseJson.meta.mcp)
-        ? (responseJson.meta.mcp as Record<string, unknown>)
+      responseMeta &&
+      typeof responseMeta.mcp === "object" &&
+      responseMeta.mcp !== null &&
+      !Array.isArray(responseMeta.mcp)
+        ? (responseMeta.mcp as Record<string, unknown>)
         : {};
     const hasDeferredMcpActions =
       Array.isArray(upstreamMcp.deferred_actions) && upstreamMcp.deferred_actions.length > 0;
@@ -358,7 +359,7 @@ export async function POST(req: Request): Promise<Response> {
           created_by: upstreamActionActorId,
           original_message: parsed.data.message,
           trace_id: responseJson.trace_id ?? null,
-          upstream_meta: responseJson.meta,
+          upstream_meta: responseMeta,
         });
       } catch (error) {
         mcpBridge = {
