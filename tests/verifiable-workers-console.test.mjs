@@ -22,13 +22,16 @@ test("workers console is discoverable from shared navigation and global catalog"
 
 test("workers API keeps reads private and writes role-gated", async () => {
   const route = await read("src/app/api/agi/workers/route.ts");
+  const runtime = await read("src/lib/serverless-agi-runtime.ts");
 
   assert.match(route, /requireProjectRole\(projectId, \["owner", "admin", "operator", "viewer"\]\)/);
   assert.match(route, /requireProjectRole\(action\.project_id, \["owner", "admin", "operator"\]\)/);
   assert.match(route, /requireProjectRole\(action\.project_id, \["owner"\]\)/);
-  assert.match(route, /authorization: `Bearer \$\{key\}`/);
-  assert.match(route, /NOVA_ORCHESTRATOR_KEY/);
-  assert.doesNotMatch(route, /NEXT_PUBLIC_NOVA_ORCHESTRATOR_KEY/);
+  assert.match(route, /runServerlessAgiWorkerOnce/);
+  assert.match(runtime, /claim_next_agi_task/);
+  assert.match(runtime, /complete_agi_task/);
+  assert.match(runtime, /fail_agi_task/);
+  assert.doesNotMatch(route, /NOVA_ORCHESTRATOR_KEY|NEXT_PUBLIC_NOVA_ORCHESTRATOR_KEY/);
 });
 
 test("console displays evidence and does not imply direct AGI writes", async () => {
@@ -50,6 +53,6 @@ test("manual execution processes one task and stale recovery remains explicit", 
 
   assert.match(console, /operation: "run_once"/);
   assert.match(console, /operation: "recover_stale"/);
-  assert.match(route, /\/api\/v1\/agi\/workers\/run-once/);
-  assert.match(route, /\/api\/v1\/agi\/workers\/recover-stale/);
+  assert.match(route, /runServerlessAgiWorkerOnce/);
+  assert.match(route, /recoverStaleServerlessAgiTasks/);
 });

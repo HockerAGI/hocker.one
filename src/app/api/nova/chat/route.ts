@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
-import { requireProjectRole } from "@/app/api/_lib";
+import { requireProjectRole, toApiError } from "@/app/api/_lib";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
 import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
 import { materializeNovaMcpActionsFromUpstream } from "@/lib/nova-mcp-action-materializer";
-import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
+import {
+  buildNovaCapabilitiesReply,
+  buildNovaChatCapabilitiesContext,
+  buildNovaUpstreamRuntimeContext,
+  shouldAnswerCapabilitiesLocally,
+} from "@/lib/hocker-tool-router";
 import { log } from "@/lib/logger";
 import { sanitizePublicError } from "@/lib/sanitize-error";
+import { runServerlessNovaChat } from "@/lib/serverless-agi-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +54,11 @@ function getNovaKey(): string {
   return String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
 }
 
-function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<string, unknown>, localActionDraft: Record<string, unknown> | null = null): Record<string, unknown> {
+function sanitizeNovaPayload(
+  payload: NovaChatResponse,
+  injectedMeta: Record<string, unknown>,
+  localActionDraft: Record<string, unknown> | null = null,
+): Record<string, unknown> {
   if (!payload.ok) {
     return {
       ok: false,
@@ -84,7 +94,9 @@ function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<str
         allow_write: false,
         requested_actions: false,
         enqueued_actions: localActionDraft ? [localActionDraft] : [],
-        action_policy: localActionDraft ? "nova_chat_action_draft_12_7j_no_execution" : "production_gate_12_7c_1_chat_does_not_enqueue_actions",
+        action_policy: localActionDraft
+          ? "nova_chat_action_draft_12_7j_no_execution"
+          : "production_gate_12_7c_1_chat_does_not_enqueue_actions",
         upstream_requested_actions: controls.requested_actions,
       },
       context_data: payload.meta?.context_data ?? {},
@@ -97,14 +109,6 @@ function sanitizeNovaPayload(payload: NovaChatResponse, injectedMeta: Record<str
 export async function POST(req: Request): Promise<Response> {
   const baseUrl = getNovaBaseUrl();
   const key = getNovaKey();
-
-  if (!baseUrl || !key) {
-    return NextResponse.json(
-      { ok: false, error: "NOVA no está configurada en el entorno de producción." },
-      { status: 500 },
-    );
-  }
-
   const jsonBody: unknown = await req.json().catch(() => ({}));
   const parsed = ChatSchema.safeParse(jsonBody);
 
@@ -115,27 +119,45 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const queueLock = await getAgiQueueLock(parsed.data.project_id);
+  let chatCtx: Awaited<ReturnType<typeof requireProjectRole>>;
+  try {
+    chatCtx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator", "viewer"]);
+  } catch (error) {
+    const apiError = toApiError(error);
+    return NextResponse.json(apiError.payload, { status: apiError.status });
+  }
+
+  const queueLock = await getAgiQueueLock(chatCtx.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
-  const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, parsed.data.project_id);
+  const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, chatCtx.project_id);
   const injectedMeta = { ...productionGateContext, capabilities_contract: capabilitiesContract };
-  const upstreamRuntimeContext = buildNovaUpstreamRuntimeContext(capabilitiesContract, productionGateContext);
+  const upstreamRuntimeContext = buildNovaUpstreamRuntimeContext(
+    capabilitiesContract,
+    productionGateContext,
+  );
 
   let localActionDraft: Record<string, unknown> | null = null;
+  let upstreamActionActorId: string | null = null;
   const draftPreview = buildNovaChatActionDraftPreview({
-    project_id: parsed.data.project_id,
+    project_id: chatCtx.project_id,
     message: parsed.data.message,
     queue_lock: queueLock,
   });
 
   if (draftPreview && parsed.data.allow_actions) {
-    const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
-    localActionDraft = await materializeNovaGitHubActionsFromChat({
-      project_id: ctx.project_id,
-      message: parsed.data.message,
-      queue_lock: queueLock,
-      created_by: ctx.user.id,
-    }) as Record<string, unknown> | null;
+    try {
+      const actionCtx = await requireProjectRole(chatCtx.project_id, ["owner", "admin", "operator"]);
+      upstreamActionActorId = actionCtx.user.id;
+      localActionDraft = await materializeNovaGitHubActionsFromChat({
+        project_id: actionCtx.project_id,
+        message: parsed.data.message,
+        queue_lock: queueLock,
+        created_by: actionCtx.user.id,
+      }) as Record<string, unknown> | null;
+    } catch (error) {
+      const apiError = toApiError(error);
+      return NextResponse.json(apiError.payload, { status: apiError.status });
+    }
   } else if (draftPreview) {
     localActionDraft = draftPreview as Record<string, unknown>;
   }
@@ -149,7 +171,7 @@ export async function POST(req: Request): Promise<Response> {
 
     return Response.json({
       ok: true,
-      project_id: parsed.data.project_id,
+      project_id: chatCtx.project_id,
       thread_id: null,
       reply: materialized
         ? "Preparé acciones GitHub reales en cola segura. No ejecuté nada: quedaron esperando autorización Owner Gate."
@@ -185,7 +207,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json(
       {
         ok: true,
-        project_id: parsed.data.project_id,
+        project_id: chatCtx.project_id,
         thread_id: parsed.data.thread_id ?? null,
         reply: buildNovaCapabilitiesReply(capabilitiesContract),
         intent: "capabilities",
@@ -208,28 +230,78 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  let upstreamActionActorId: string | null = null;
-  if (parsed.data.allow_actions) {
-    const ctx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator"]);
-    upstreamActionActorId = ctx.user.id;
+  if (parsed.data.allow_actions && !upstreamActionActorId) {
+    try {
+      const actionCtx = await requireProjectRole(chatCtx.project_id, ["owner", "admin", "operator"]);
+      upstreamActionActorId = actionCtx.user.id;
+    } catch (error) {
+      const apiError = toApiError(error);
+      return NextResponse.json(apiError.payload, { status: apiError.status });
+    }
   }
 
   const guardedPayload = {
     ...parsed.data,
+    project_id: chatCtx.project_id,
+    user_id: chatCtx.user.id,
+    user_email: chatCtx.user.email ?? null,
     mode: "auto",
     prefer: "auto",
     allow_actions: Boolean(upstreamActionActorId),
     context_data: {
       ...(parsed.data.context_data ?? {}),
       hocker_runtime: {
-        ...(typeof parsed.data.context_data?.hocker_runtime === "object" ? parsed.data.context_data.hocker_runtime : {}),
+        ...(typeof parsed.data.context_data?.hocker_runtime === "object"
+          ? parsed.data.context_data.hocker_runtime
+          : {}),
         ...upstreamRuntimeContext,
       },
     },
   };
 
+  const serverlessFallback = async (reason: string): Promise<Response> => {
+    const local = await runServerlessNovaChat({
+      project_id: chatCtx.project_id,
+      thread_id: parsed.data.thread_id ?? null,
+      message: parsed.data.message,
+      user_id: chatCtx.user.id,
+      user_email: chatCtx.user.email ?? null,
+      context_data: guardedPayload.context_data,
+    });
+
+    const safe = sanitizeNovaPayload(
+      local as unknown as NovaChatResponse,
+      {
+        ...injectedMeta,
+        runtime_fallback: {
+          active: true,
+          reason,
+          runtime: "hocker-one-serverless",
+          upstream_called: Boolean(baseUrl && key),
+        },
+      },
+      null,
+    );
+
+    return NextResponse.json(safe, {
+      status: 200,
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
+  };
+
+  if (!baseUrl || !key) {
+    try {
+      return await serverlessFallback("NOVA_UPSTREAM_NOT_CONFIGURED");
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: sanitizePublicError(error), meta: injectedMeta },
+        { status: 503 },
+      );
+    }
+  }
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 55_000);
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
 
   try {
     const res = await fetch(`${baseUrl}/api/v1/chat`, {
@@ -245,29 +317,49 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
+    if (!res.ok || responseJson.ok !== true) {
+      try {
+        return await serverlessFallback(`NOVA_UPSTREAM_HTTP_${res.status}`);
+      } catch (fallbackError) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: sanitizePublicError(fallbackError),
+            meta: {
+              ...injectedMeta,
+              upstream_error: `http_${res.status}`,
+              fallback_error: true,
+            },
+          },
+          { status: 502 },
+        );
+      }
+    }
+
     let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
       actions: [],
       rejected: [],
     };
 
+    const responseMeta = responseJson.meta;
     const upstreamMcp =
-      responseJson.meta &&
-      typeof responseJson.meta.mcp === "object" &&
-      responseJson.meta.mcp !== null &&
-      !Array.isArray(responseJson.meta.mcp)
-        ? (responseJson.meta.mcp as Record<string, unknown>)
+      responseMeta &&
+      typeof responseMeta.mcp === "object" &&
+      responseMeta.mcp !== null &&
+      !Array.isArray(responseMeta.mcp)
+        ? (responseMeta.mcp as Record<string, unknown>)
         : {};
     const hasDeferredMcpActions =
       Array.isArray(upstreamMcp.deferred_actions) && upstreamMcp.deferred_actions.length > 0;
 
-    if (upstreamActionActorId && responseJson.ok && hasDeferredMcpActions) {
+    if (upstreamActionActorId && hasDeferredMcpActions) {
       try {
         mcpBridge = await materializeNovaMcpActionsFromUpstream({
-          project_id: parsed.data.project_id,
+          project_id: chatCtx.project_id,
           created_by: upstreamActionActorId,
           original_message: parsed.data.message,
           trace_id: responseJson.trace_id ?? null,
-          upstream_meta: responseJson.meta,
+          upstream_meta: responseMeta,
         });
       } catch (error) {
         mcpBridge = {
@@ -316,17 +408,29 @@ export async function POST(req: Request): Promise<Response> {
     });
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
-    log.error("NOVA chat upstream failure", { route: "/api/nova/chat", timeout: isTimeout });
-    return NextResponse.json(
-      {
-        ok: false,
-        error: isTimeout
-          ? "Timeout: NOVA excedió la ventana de respuesta de 55s."
-          : sanitizePublicError(error),
-        meta: injectedMeta,
-      },
-      { status: 502 },
-    );
+    log.error("NOVA chat upstream failure", {
+      route: "/api/nova/chat",
+      timeout: isTimeout,
+    });
+
+    try {
+      return await serverlessFallback(
+        isTimeout ? "NOVA_UPSTREAM_TIMEOUT" : "NOVA_UPSTREAM_UNAVAILABLE",
+      );
+    } catch (fallbackError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: sanitizePublicError(fallbackError),
+          meta: {
+            ...injectedMeta,
+            upstream_error: isTimeout ? "timeout" : "unavailable",
+            fallback_error: true,
+          },
+        },
+        { status: 502 },
+      );
+    }
   } finally {
     clearTimeout(timeoutId);
   }

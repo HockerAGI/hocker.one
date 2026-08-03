@@ -2,9 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import {
+  createServerlessAgiTask,
+  getServerlessAgiWorkerStatus,
+  recoverStaleServerlessAgiTasks,
+  runServerlessAgiWorkerOnce,
+} from "@/lib/serverless-agi-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const ProjectSchema = z.string().min(1).default(process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one");
 const CreateSchema = z.object({
@@ -34,30 +41,6 @@ type UntypedSupabase = SupabaseClient<any, "public", any>;
 
 function db(): UntypedSupabase {
   return createAdminSupabase() as unknown as UntypedSupabase;
-}
-
-function novaConfig(): { baseUrl: string; key: string } {
-  const baseUrl = String(process.env.NOVA_AGI_URL ?? "").trim().replace(/\/$/, "");
-  const key = String(process.env.NOVA_ORCHESTRATOR_KEY ?? "").trim();
-  if (!baseUrl || !key) throw new Error("NOVA_WORKERS_NOT_CONFIGURED");
-  return { baseUrl, key };
-}
-
-async function novaRequest(path: string, init: RequestInit = {}): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const { baseUrl, key } = novaConfig();
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    cache: "no-store",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${key}`,
-      "x-hocker-source": "hocker.one.workers-console",
-      ...(init.headers ?? {}),
-    },
-    signal: AbortSignal.timeout(60_000),
-  });
-  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
-  return { status: response.status, payload };
 }
 
 async function loadTasks(projectId: string) {
@@ -94,20 +77,17 @@ export async function GET(req: Request): Promise<Response> {
     const projectId = ProjectSchema.parse(url.searchParams.get("project_id") || undefined);
     await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
 
-    const [taskState, runs, statusResponse] = await Promise.all([
+    const [taskState, runs, status] = await Promise.all([
       loadTasks(projectId),
       loadRuns(projectId),
-      novaRequest("/api/v1/agi/workers/status").catch((error) => ({
-        status: 503,
-        payload: { ok: false, error: error instanceof Error ? error.message : "NOVA_WORKERS_UNAVAILABLE" },
-      })),
+      getServerlessAgiWorkerStatus(projectId),
     ]);
 
     return json({
       ok: true,
       project_id: projectId,
-      status: statusResponse.payload,
-      status_http: statusResponse.status,
+      status,
+      status_http: status.ready === true ? 200 : 503,
       tasks: taskState.tasks,
       runs,
       schema_query_ready: taskState.schema_query_ready,
@@ -125,42 +105,33 @@ export async function POST(req: Request): Promise<Response> {
 
     if (action.operation === "create") {
       const ctx = await requireProjectRole(action.project_id, ["owner", "admin", "operator"]);
-      const response = await novaRequest("/api/v1/agi/tasks", {
-        method: "POST",
-        body: JSON.stringify({
-          project_id: ctx.project_id,
-          from_agi: "NOVA",
-          to_agi: action.to_agi,
-          intent: action.intent,
-          subject: action.subject,
-          body: action.body,
-          context: action.context,
-          priority: action.priority,
-          write_policy: action.write_policy,
-          ...(action.idempotency_key ? { idempotency_key: action.idempotency_key } : {}),
-        }),
+      const result = await createServerlessAgiTask({
+        project_id: ctx.project_id,
+        to_agi: action.to_agi,
+        subject: action.subject,
+        body: action.body,
+        intent: action.intent,
+        priority: action.priority,
+        write_policy: action.write_policy,
+        context: action.context,
+        idempotency_key: action.idempotency_key,
+        created_by: ctx.user.id,
       });
-      return json(response.payload, response.status);
+      return json(result, result.created === false ? 200 : 201);
     }
 
     const ctx = await requireProjectRole(action.project_id, ["owner"]);
     if (action.operation === "run_once") {
-      const response = await novaRequest("/api/v1/agi/workers/run-once", {
-        method: "POST",
-        body: JSON.stringify({
-          project_id: ctx.project_id,
-          worker_id: `hocker-one-owner-${ctx.user.id}`,
-          assigned_agi: action.assigned_agi ?? null,
-        }),
+      const result = await runServerlessAgiWorkerOnce({
+        project_id: ctx.project_id,
+        assigned_agi: action.assigned_agi ?? null,
+        requested_by: ctx.user.id,
       });
-      return json(response.payload, response.status);
+      return json(result, result.ok === false ? 502 : 200);
     }
 
-    const response = await novaRequest("/api/v1/agi/workers/recover-stale", {
-      method: "POST",
-      body: JSON.stringify({ project_id: ctx.project_id }),
-    });
-    return json(response.payload, response.status);
+    const result = await recoverStaleServerlessAgiTasks(ctx.project_id);
+    return json(result, 200);
   } catch (error) {
     const apiError = toApiError(error);
     return json(apiError.payload, apiError.status);
