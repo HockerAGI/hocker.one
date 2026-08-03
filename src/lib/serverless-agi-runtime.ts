@@ -15,6 +15,7 @@ type AgiTask = {
   id: string;
   project_id: string;
   agi_id: string | null;
+  assigned_to?: string | null;
   title: string;
   details: string | null;
   status: string;
@@ -24,24 +25,23 @@ type AgiTask = {
   write_policy: string;
   attempt_count: number;
   max_attempts: number;
-  assigned_to?: string | null;
 };
 
-type GeminiResponse = {
-  candidates?: Array<{
-    content?: { parts?: Array<{ text?: string }> };
-    finishReason?: string;
+type GatewayResponse = {
+  choices?: Array<{
+    message?: { content?: string };
+    finish_reason?: string;
   }>;
-  usageMetadata?: {
-    promptTokenCount?: number;
-    candidatesTokenCount?: number;
-    totalTokenCount?: number;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
   };
   error?: { message?: string };
 };
 
 type ModelCompletion = {
-  provider: "gemini";
+  provider: "vercel-ai-gateway";
   model: string;
   text: string;
   usage: {
@@ -112,6 +112,10 @@ function safeError(error: unknown): string {
   return message.slice(0, 1000) || "SERVERLESS_AGI_RUNTIME_FAILED";
 }
 
+function gatewayModel(): string {
+  return env("AI_GATEWAY_MODEL_AUTO", "AI_GATEWAY_MODEL_FAST") || "google/gemini-2.5-flash";
+}
+
 async function loadProfile(rawId: string): Promise<AgiProfile> {
   const agiId = canonicalAgiId(rawId);
   const { data, error } = await db()
@@ -150,8 +154,8 @@ function profilePrompt(profile: AgiProfile): string {
   ].filter(Boolean).join("\n\n");
 }
 
-export function serverlessGeminiConfigured(): boolean {
-  return Boolean(env("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"));
+export function serverlessGatewayConfigured(): boolean {
+  return Boolean(env("AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN"));
 }
 
 export async function callServerlessAgiModel(args: {
@@ -159,57 +163,58 @@ export async function callServerlessAgiModel(args: {
   prompt: string;
   timeout_ms?: number;
 }): Promise<ModelCompletion> {
-  const apiKey = env("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY");
-  if (!apiKey) throw new Error("GEMINI_API_KEY_NOT_CONFIGURED");
+  const gatewayToken = env("AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN");
+  if (!gatewayToken) throw new Error("AI_GATEWAY_AUTH_NOT_CONFIGURED");
 
-  const model = env("GEMINI_MODEL_AUTO", "GEMINI_MODEL_FAST") || "gemini-2.5-flash";
+  const model = gatewayModel();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Math.max(5_000, Math.min(args.timeout_ms ?? 45_000, 50_000)));
+  const timer = setTimeout(
+    () => controller.abort(),
+    Math.max(5_000, Math.min(args.timeout_ms ?? 40_000, 45_000)),
+  );
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        signal: controller.signal,
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: profilePrompt(args.profile) }] },
-          contents: [{ role: "user", parts: [{ text: args.prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-          },
-        }),
+    const response = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${gatewayToken}`,
+        "Content-Type": "application/json",
       },
-    );
+      cache: "no-store",
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: profilePrompt(args.profile) },
+          { role: "user", content: args.prompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 4096,
+        stream: false,
+      }),
+    });
 
-    const payload = (await response.json().catch(() => ({}))) as GeminiResponse;
+    const payload = (await response.json().catch(() => ({}))) as GatewayResponse;
     if (!response.ok) {
-      throw new Error(payload.error?.message || `GEMINI_HTTP_${response.status}`);
+      throw new Error(payload.error?.message || `AI_GATEWAY_HTTP_${response.status}`);
     }
 
-    const text = (payload.candidates?.[0]?.content?.parts ?? [])
-      .map((part) => String(part.text ?? ""))
-      .join("")
-      .trim();
-
-    if (!text) throw new Error("GEMINI_EMPTY_RESPONSE");
+    const text = String(payload.choices?.[0]?.message?.content ?? "").trim();
+    if (!text) throw new Error("AI_GATEWAY_EMPTY_RESPONSE");
 
     return {
-      provider: "gemini",
+      provider: "vercel-ai-gateway",
       model,
       text,
       usage: {
-        tokens_in: payload.usageMetadata?.promptTokenCount ?? null,
-        tokens_out: payload.usageMetadata?.candidatesTokenCount ?? null,
-        total_tokens: payload.usageMetadata?.totalTokenCount ?? null,
+        tokens_in: payload.usage?.prompt_tokens ?? null,
+        tokens_out: payload.usage?.completion_tokens ?? null,
+        total_tokens: payload.usage?.total_tokens ?? null,
       },
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("GEMINI_TIMEOUT");
+      throw new Error("AI_GATEWAY_TIMEOUT");
     }
     throw error;
   } finally {
@@ -268,27 +273,26 @@ async function insertRun(args: {
   return data.id;
 }
 
-async function finishRun(args: {
+async function markRunFailed(args: {
   run_id: string;
-  status: "completed" | "failed";
-  output?: JsonRecord;
-  evidence?: JsonRecord[];
-  result_hash?: string | null;
-  error?: string | null;
+  output: JsonRecord;
+  evidence: JsonRecord[];
+  error: string;
 }): Promise<void> {
   const { error } = await db()
     .from("agi_runs")
     .update({
-      status: args.status,
-      output: args.output ?? {},
-      evidence: args.evidence ?? [],
-      result_hash: args.result_hash ?? null,
-      error: args.error ?? null,
+      status: "failed",
+      output: args.output,
+      evidence: args.evidence,
+      result_hash: null,
+      error: args.error,
       finished_at: new Date().toISOString(),
     })
-    .eq("id", args.run_id);
+    .eq("id", args.run_id)
+    .eq("status", "running");
 
-  if (error) throw new Error(`AGI_RUN_UPDATE_FAILED: ${error.message}`);
+  if (error) throw new Error(`AGI_RUN_FAILURE_UPDATE_FAILED: ${error.message}`);
 }
 
 export async function runServerlessAgiWorkerOnce(params: {
@@ -298,8 +302,9 @@ export async function runServerlessAgiWorkerOnce(params: {
 }): Promise<JsonRecord> {
   const workerId = `hocker-one-serverless:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
+  const client = db();
 
-  const { data: claimed, error: claimError } = await db().rpc("claim_next_agi_task", {
+  const { data: claimed, error: claimError } = await client.rpc("claim_next_agi_task", {
     p_project_id: params.project_id,
     p_worker_id: workerId,
     p_assigned_agi: assignedAgi,
@@ -321,8 +326,14 @@ export async function runServerlessAgiWorkerOnce(params: {
   let runId: string | null = null;
   try {
     const profile = await loadProfile(task.agi_id || task.assigned_to || assignedAgi || "nova");
-    const model = env("GEMINI_MODEL_AUTO", "GEMINI_MODEL_FAST") || "gemini-2.5-flash";
-    runId = await insertRun({ task, profile, worker_id: workerId, provider: "gemini", model });
+    const model = gatewayModel();
+    runId = await insertRun({
+      task,
+      profile,
+      worker_id: workerId,
+      provider: "vercel-ai-gateway",
+      model,
+    });
 
     const inputHash = sha256({
       task_id: task.id,
@@ -335,7 +346,7 @@ export async function runServerlessAgiWorkerOnce(params: {
     const completion = await callServerlessAgiModel({
       profile,
       prompt: taskPrompt(task),
-      timeout_ms: 45_000,
+      timeout_ms: 42_000,
     });
     const completedAt = new Date().toISOString();
     const output: JsonRecord = {
@@ -367,25 +378,20 @@ export async function runServerlessAgiWorkerOnce(params: {
       external_writes_executed: false,
     }];
 
-    const { data: completed, error: completeError } = await db().rpc("complete_agi_task", {
-      p_task_id: task.id,
-      p_worker_id: workerId,
-      p_output: output,
-      p_evidence: evidence,
-      p_result_hash: resultHash,
-    });
+    const { data: completed, error: completeError } = await client.rpc(
+      "complete_serverless_agi_execution",
+      {
+        p_task_id: task.id,
+        p_worker_id: workerId,
+        p_run_id: runId,
+        p_output: output,
+        p_evidence: evidence,
+        p_result_hash: resultHash,
+      },
+    );
     if (completeError || !Array.isArray(completed) || completed.length === 0) {
-      throw new Error(`AGI_TASK_COMPLETE_FAILED: ${completeError?.message ?? "lock_not_owned"}`);
+      throw new Error(`AGI_ATOMIC_COMPLETE_FAILED: ${completeError?.message ?? "lock_or_run_not_owned"}`);
     }
-
-    await finishRun({
-      run_id: runId,
-      status: "completed",
-      output,
-      evidence,
-      result_hash: resultHash,
-      error: null,
-    });
 
     return {
       ok: true,
@@ -413,26 +419,33 @@ export async function runServerlessAgiWorkerOnce(params: {
       error_code: message.split(":")[0],
     }];
 
-    try {
-      await db().rpc("fail_agi_task", {
-        p_task_id: task.id,
-        p_worker_id: workerId,
-        p_error: message,
-        p_evidence: failureEvidence,
+    const failResult = await client.rpc("fail_agi_task", {
+      p_task_id: task.id,
+      p_worker_id: workerId,
+      p_error: message,
+      p_evidence: failureEvidence,
+    });
+    if (failResult.error) {
+      failureEvidence.push({
+        kind: "failure_persistence_error",
+        message: failResult.error.message,
       });
-    } catch {
-      // The original verified failure remains returned even when persistence is unavailable.
     }
 
     if (runId) {
-      await finishRun({
-        run_id: runId,
-        status: "failed",
-        output: { ok: false, verified_execution: false },
-        evidence: failureEvidence,
-        result_hash: null,
-        error: message,
-      }).catch(() => undefined);
+      try {
+        await markRunFailed({
+          run_id: runId,
+          output: { ok: false, verified_execution: false },
+          evidence: failureEvidence,
+          error: message,
+        });
+      } catch (persistenceError) {
+        failureEvidence.push({
+          kind: "run_failure_persistence_error",
+          message: safeError(persistenceError),
+        });
+      }
     }
 
     return {
@@ -460,9 +473,10 @@ export async function createServerlessAgiTask(params: {
   created_by?: string | null;
 }): Promise<JsonRecord> {
   const profile = await loadProfile(params.to_agi);
+  const client = db();
 
   if (params.idempotency_key) {
-    const { data: existing, error } = await db()
+    const { data: existing, error } = await client
       .from("agi_tasks")
       .select("id,project_id,agi_id,title,status,created_at")
       .eq("project_id", params.project_id)
@@ -472,7 +486,7 @@ export async function createServerlessAgiTask(params: {
     if (existing) return { ok: true, created: false, task: existing };
   }
 
-  const { data, error } = await db()
+  const { data, error } = await client
     .from("agi_tasks")
     .insert({
       project_id: params.project_id,
@@ -521,10 +535,11 @@ export async function recoverStaleServerlessAgiTasks(projectId: string): Promise
 }
 
 export async function getServerlessAgiWorkerStatus(projectId: string): Promise<JsonRecord> {
+  const client = db();
   const [queuedResult, workingResult, recentRunsResult] = await Promise.all([
-    db().from("agi_tasks").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("status", "queued"),
-    db().from("agi_tasks").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("status", "working"),
-    db().from("agi_runs")
+    client.from("agi_tasks").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("status", "queued"),
+    client.from("agi_tasks").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("status", "working"),
+    client.from("agi_runs")
       .select("id,agi_id,status,provider,model,worker_id,result_hash,evidence,finished_at,created_at")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
@@ -541,14 +556,16 @@ export async function getServerlessAgiWorkerStatus(projectId: string): Promise<J
     Array.isArray(run.evidence) &&
     run.evidence.length > 0,
   ) ?? null;
+  const configured = serverlessGatewayConfigured();
 
   return {
     ok: true,
     service: "hocker-one-serverless-agi",
     mode: "on_demand",
     project_id: projectId,
-    provider_configured: serverlessGeminiConfigured(),
-    ready: serverlessGeminiConfigured() && !queuedResult.error && !workingResult.error && !recentRunsResult.error,
+    provider: "vercel-ai-gateway",
+    provider_configured: configured,
+    ready: configured && !queuedResult.error && !workingResult.error && !recentRunsResult.error,
     queued_tasks: queuedResult.count ?? 0,
     working_tasks: workingResult.count ?? 0,
     last_verified_run: lastVerified,
@@ -565,21 +582,40 @@ export async function runServerlessNovaChat(params: {
   project_id: string;
   thread_id?: string | null;
   message: string;
-  user_id?: string | null;
+  user_id: string;
   user_email?: string | null;
   context_data?: JsonRecord;
 }): Promise<JsonRecord> {
+  if (!params.user_id) throw new Error("NOVA_CHAT_AUTH_REQUIRED");
+
   const threadId = params.thread_id || randomUUID();
   const profile = await loadProfile(chatProfile(params.message));
   const traceId = randomUUID();
+  const client = db();
 
-  const { data: historyData } = await db()
+  const { data: existingThread, error: threadLookupError } = await client
+    .from("nova_threads")
+    .select("thread_id,user_id,project_id")
+    .eq("project_id", params.project_id)
+    .eq("thread_id", threadId)
+    .maybeSingle<{ thread_id: string; user_id: string | null; project_id: string | null }>();
+
+  if (threadLookupError) {
+    throw new Error(`NOVA_THREAD_LOOKUP_FAILED: ${threadLookupError.message}`);
+  }
+  if (existingThread?.user_id && existingThread.user_id !== params.user_id) {
+    throw new Error("NOVA_THREAD_ACCESS_DENIED");
+  }
+
+  const { data: historyData, error: historyError } = await client
     .from("nova_messages")
     .select("role,content,created_at")
     .eq("project_id", params.project_id)
     .eq("thread_id", threadId)
     .order("created_at", { ascending: false })
     .limit(12);
+
+  if (historyError) throw new Error(`NOVA_HISTORY_READ_FAILED: ${historyError.message}`);
 
   const history = ((historyData ?? []) as Array<{ role: string; content: string }>).reverse();
   const conversation = history
@@ -596,25 +632,30 @@ export async function runServerlessNovaChat(params: {
         : "",
       "Responde como NOVA. El perfil especializado es apoyo interno y no debe reemplazar la identidad pública de NOVA.",
     ].filter(Boolean).join("\n\n"),
-    timeout_ms: 45_000,
+    timeout_ms: 40_000,
   });
 
   const now = new Date().toISOString();
-  await db().from("nova_threads").upsert({
+  const { error: threadWriteError } = await client.from("nova_threads").upsert({
     thread_id: threadId,
     project_id: params.project_id,
-    user_id: params.user_id ?? null,
+    user_id: params.user_id,
     title: params.message.slice(0, 120),
     updated_at: now,
   }, { onConflict: "thread_id" });
+  if (threadWriteError) throw new Error(`NOVA_THREAD_WRITE_FAILED: ${threadWriteError.message}`);
 
-  await db().from("nova_messages").insert([
+  const { error: messageWriteError } = await client.from("nova_messages").insert([
     {
       project_id: params.project_id,
       thread_id: threadId,
       role: "user",
       content: params.message,
-      meta: { trace_id: traceId, user_email: params.user_email ?? null, runtime: "hocker-one-serverless" },
+      meta: {
+        trace_id: traceId,
+        user_email: params.user_email ?? null,
+        runtime: "hocker-one-serverless",
+      },
     },
     {
       project_id: params.project_id,
@@ -631,8 +672,9 @@ export async function runServerlessNovaChat(params: {
       },
     },
   ]);
+  if (messageWriteError) throw new Error(`NOVA_MESSAGE_WRITE_FAILED: ${messageWriteError.message}`);
 
-  await db().from("llm_usage").insert({
+  const { error: usageWriteError } = await client.from("llm_usage").insert({
     project_id: params.project_id,
     thread_id: threadId,
     provider: completion.provider,
@@ -646,6 +688,7 @@ export async function runServerlessNovaChat(params: {
       verified_execution: true,
     },
   });
+  if (usageWriteError) throw new Error(`NOVA_USAGE_WRITE_FAILED: ${usageWriteError.message}`);
 
   return {
     ok: true,
@@ -659,7 +702,7 @@ export async function runServerlessNovaChat(params: {
     actions: [],
     trace_id: traceId,
     meta: {
-      reason: "Respuesta real generada por el runtime serverless de Hocker ONE.",
+      reason: "Respuesta real generada por el runtime serverless de Hocker ONE mediante Vercel AI Gateway.",
       runtime: "hocker-one-serverless",
       verified_execution: true,
       provider: completion.provider,
