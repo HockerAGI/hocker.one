@@ -7,7 +7,8 @@
   "regions": ["iad1"],
   "git": {
     "deploymentEnabled": {
-      "ci-repair-no-deploy-20260803": false
+      "ci-repair-no-deploy-20260803": false,
+      "fix/oidc-gateway-auth-20260803": false
     }
   },
   "headers": [

@@ -124,6 +124,23 @@ function gatewayModel(): string {
   return env("AI_GATEWAY_MODEL_AUTO", "AI_GATEWAY_MODEL_FAST") || "google/gemini-2.5-flash";
 }
 
+type GatewayCredential = {
+  source: "oidc" | "api_key";
+  token: string;
+};
+
+function gatewayCredentials(): GatewayCredential[] {
+  const oidcToken = env("VERCEL_OIDC_TOKEN");
+  const apiKey = env("AI_GATEWAY_API_KEY");
+  const credentials: GatewayCredential[] = [];
+
+  // Vercel injects OIDC automatically for deployments. Prefer it so an old or
+  // mistyped manual key cannot shadow the deployment identity.
+  if (oidcToken) credentials.push({ source: "oidc", token: oidcToken });
+  if (apiKey && apiKey !== oidcToken) credentials.push({ source: "api_key", token: apiKey });
+  return credentials;
+}
+
 async function loadProfile(rawId: string): Promise<AgiProfile> {
   const agiId = canonicalAgiId(rawId);
   const { data, error } = await db()
@@ -163,7 +180,7 @@ function profilePrompt(profile: AgiProfile): string {
 }
 
 export function serverlessGatewayConfigured(): boolean {
-  return Boolean(env("AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN"));
+  return gatewayCredentials().length > 0;
 }
 
 export async function callServerlessAgiModel(args: {
@@ -171,8 +188,8 @@ export async function callServerlessAgiModel(args: {
   prompt: string;
   timeout_ms?: number;
 }): Promise<ModelCompletion> {
-  const gatewayToken = env("AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN");
-  if (!gatewayToken) throw new Error("AI_GATEWAY_AUTH_NOT_CONFIGURED");
+  const credentials = gatewayCredentials();
+  if (!credentials.length) throw new Error("AI_GATEWAY_AUTH_NOT_CONFIGURED");
 
   const model = gatewayModel();
   const controller = new AbortController();
@@ -180,46 +197,60 @@ export async function callServerlessAgiModel(args: {
     () => controller.abort(),
     Math.max(5_000, Math.min(args.timeout_ms ?? 40_000, 45_000)),
   );
+  const requestBody = JSON.stringify({
+    model,
+    messages: [
+      { role: "system", content: profilePrompt(args.profile) },
+      { role: "user", content: args.prompt },
+    ],
+    temperature: 0.2,
+    max_tokens: 4096,
+    stream: false,
+  });
 
   try {
-    const response = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${gatewayToken}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: profilePrompt(args.profile) },
-          { role: "user", content: args.prompt },
-        ],
-        temperature: 0.2,
-        max_tokens: 4096,
-        stream: false,
-      }),
-    });
+    let lastAuthError = "AI_GATEWAY_AUTH_FAILED";
 
-    const payload = (await response.json().catch(() => ({}))) as GatewayResponse;
-    if (!response.ok) {
-      throw new Error(payload.error?.message || `AI_GATEWAY_HTTP_${response.status}`);
+    for (const [index, credential] of credentials.entries()) {
+      const response = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${credential.token}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        signal: controller.signal,
+        body: requestBody,
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as GatewayResponse;
+      if (!response.ok) {
+        const message = payload.error?.message || `AI_GATEWAY_HTTP_${response.status}`;
+        const authenticationRejected = response.status === 401 || response.status === 403;
+        const hasFallback = index < credentials.length - 1;
+        if (authenticationRejected && hasFallback) {
+          lastAuthError = message;
+          continue;
+        }
+        throw new Error(message);
+      }
+
+      const text = String(payload.choices?.[0]?.message?.content ?? "").trim();
+      if (!text) throw new Error("AI_GATEWAY_EMPTY_RESPONSE");
+
+      return {
+        provider: "vercel-ai-gateway",
+        model,
+        text,
+        usage: {
+          tokens_in: payload.usage?.prompt_tokens ?? null,
+          tokens_out: payload.usage?.completion_tokens ?? null,
+          total_tokens: payload.usage?.total_tokens ?? null,
+        },
+      };
     }
 
-    const text = String(payload.choices?.[0]?.message?.content ?? "").trim();
-    if (!text) throw new Error("AI_GATEWAY_EMPTY_RESPONSE");
-
-    return {
-      provider: "vercel-ai-gateway",
-      model,
-      text,
-      usage: {
-        tokens_in: payload.usage?.prompt_tokens ?? null,
-        tokens_out: payload.usage?.completion_tokens ?? null,
-        total_tokens: payload.usage?.total_tokens ?? null,
-      },
-    };
+    throw new Error(lastAuthError);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("AI_GATEWAY_TIMEOUT");
