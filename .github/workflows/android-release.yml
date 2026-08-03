@@ -68,6 +68,7 @@ jobs:
           elif [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             password="$(openssl rand -hex 24)"
             alias_name="hocker-one-pr-verification"
+            echo "::add-mask::$password"
             keytool -genkeypair -v \
               -keystore "$keystore" \
               -storepass "$password" \
@@ -160,8 +161,11 @@ jobs:
           grep -Fq "targetSdkVersion:'35'" "$verification/APK-BADGING.txt"
           grep -Fq "versionName='${ANDROID_VERSION_NAME}'" "$verification/APK-BADGING.txt"
 
-          jarsigner -verify -strict -verbose -certs "$aab" > "$verification/AAB-JARSIGNER.txt"
-          grep -Eq 'jar verified|smk' "$verification/AAB-JARSIGNER.txt"
+          # Android app signing keys are normally self-signed. `-strict` turns the
+          # expected trust-chain warning into exit code 4 even when the bundle is
+          # correctly signed, so verify cryptographic integrity without `-strict`.
+          jarsigner -verify -verbose -certs "$aab" > "$verification/AAB-JARSIGNER.txt" 2>&1
+          grep -Fq 'jar verified.' "$verification/AAB-JARSIGNER.txt"
           unzip -t "$aab" | tee "$verification/AAB-ZIP-TEST.txt"
 
           bundletool="$RUNNER_TEMP/bundletool-all-${BUNDLETOOL_VERSION}.jar"
