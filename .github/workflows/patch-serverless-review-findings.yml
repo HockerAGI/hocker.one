@@ -1,0 +1,409 @@
+name: Patch Serverless Review Findings
+
+on:
+  push:
+    branches:
+      - feat/serverless-nova-worker-20260802
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/serverless-nova-worker-20260802
+
+      - name: Apply authenticated AI Gateway runtime fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path('src/lib/serverless-agi-runtime.ts')
+          text = runtime.read_text()
+
+          start = text.index('type GeminiResponse = {')
+          end = text.index('\nconst AGI_ALIASES:', start)
+          replacement = '''type GatewayResponse = {
+            choices?: Array<{
+              message?: { content?: string };
+              finish_reason?: string;
+            }>;
+            usage?: {
+              prompt_tokens?: number;
+              completion_tokens?: number;
+              total_tokens?: number;
+            };
+            error?: { message?: string };
+          };
+
+          type ModelCompletion = {
+            provider: "vercel-ai-gateway";
+            model: string;
+            text: string;
+            usage: {
+              tokens_in: number | null;
+              tokens_out: number | null;
+              total_tokens: number | null;
+            };
+          };
+          '''
+          text = text[:start] + replacement + text[end:]
+
+          start = text.index('export function serverlessGeminiConfigured()')
+          end = text.index('\nfunction taskPrompt', start)
+          replacement = '''export function serverlessGatewayConfigured(): boolean {
+            return Boolean(env("AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN"));
+          }
+
+          export async function callServerlessAgiModel(args: {
+            profile: AgiProfile;
+            prompt: string;
+            timeout_ms?: number;
+          }): Promise<ModelCompletion> {
+            const gatewayToken = env("AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN");
+            if (!gatewayToken) throw new Error("AI_GATEWAY_AUTH_NOT_CONFIGURED");
+
+            const model = env("AI_GATEWAY_MODEL_AUTO", "AI_GATEWAY_MODEL_FAST") || "google/gemini-2.5-flash";
+            const controller = new AbortController();
+            const timer = setTimeout(
+              () => controller.abort(),
+              Math.max(5_000, Math.min(args.timeout_ms ?? 40_000, 45_000)),
+            );
+
+            try {
+              const response = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${gatewayToken}`,
+                  "Content-Type": "application/json",
+                },
+                cache: "no-store",
+                signal: controller.signal,
+                body: JSON.stringify({
+                  model,
+                  messages: [
+                    { role: "system", content: profilePrompt(args.profile) },
+                    { role: "user", content: args.prompt },
+                  ],
+                  temperature: 0.2,
+                  max_tokens: 4096,
+                  stream: false,
+                }),
+              });
+
+              const payload = (await response.json().catch(() => ({}))) as GatewayResponse;
+              if (!response.ok) {
+                throw new Error(payload.error?.message || `AI_GATEWAY_HTTP_${response.status}`);
+              }
+
+              const answer = String(payload.choices?.[0]?.message?.content ?? "").trim();
+              if (!answer) throw new Error("AI_GATEWAY_EMPTY_RESPONSE");
+
+              return {
+                provider: "vercel-ai-gateway",
+                model,
+                text: answer,
+                usage: {
+                  tokens_in: payload.usage?.prompt_tokens ?? null,
+                  tokens_out: payload.usage?.completion_tokens ?? null,
+                  total_tokens: payload.usage?.total_tokens ?? null,
+                },
+              };
+            } catch (error) {
+              if (error instanceof Error && error.name === "AbortError") {
+                throw new Error("AI_GATEWAY_TIMEOUT");
+              }
+              throw error;
+            } finally {
+              clearTimeout(timer);
+            }
+          }
+          '''
+          text = text[:start] + replacement + text[end:]
+
+          text = text.replace(
+            'const model = env("GEMINI_MODEL_AUTO", "GEMINI_MODEL_FAST") || "gemini-2.5-flash";\n    runId = await insertRun({ task, profile, worker_id: workerId, provider: "gemini", model });',
+            'const model = env("AI_GATEWAY_MODEL_AUTO", "AI_GATEWAY_MODEL_FAST") || "google/gemini-2.5-flash";\n    runId = await insertRun({ task, profile, worker_id: workerId, provider: "vercel-ai-gateway", model });',
+            1,
+          )
+          text = text.replace('serverlessGeminiConfigured()', 'serverlessGatewayConfigured()')
+
+          start = text.index('export async function runServerlessNovaChat(')
+          replacement = '''export async function runServerlessNovaChat(params: {
+            project_id: string;
+            thread_id?: string | null;
+            message: string;
+            user_id: string;
+            user_email?: string | null;
+            context_data?: JsonRecord;
+          }): Promise<JsonRecord> {
+            if (!params.user_id) throw new Error("NOVA_CHAT_AUTH_REQUIRED");
+
+            const threadId = params.thread_id || randomUUID();
+            const profile = await loadProfile(chatProfile(params.message));
+            const traceId = randomUUID();
+            const client = db();
+
+            const { data: existingThread, error: threadLookupError } = await client
+              .from("nova_threads")
+              .select("thread_id,user_id,project_id")
+              .eq("project_id", params.project_id)
+              .eq("thread_id", threadId)
+              .maybeSingle<{ thread_id: string; user_id: string | null; project_id: string | null }>();
+
+            if (threadLookupError) {
+              throw new Error(`NOVA_THREAD_LOOKUP_FAILED: ${threadLookupError.message}`);
+            }
+            if (existingThread?.user_id && existingThread.user_id !== params.user_id) {
+              throw new Error("NOVA_THREAD_ACCESS_DENIED");
+            }
+
+            const { data: historyData, error: historyError } = await client
+              .from("nova_messages")
+              .select("role,content,created_at")
+              .eq("project_id", params.project_id)
+              .eq("thread_id", threadId)
+              .order("created_at", { ascending: false })
+              .limit(12);
+
+            if (historyError) throw new Error(`NOVA_HISTORY_READ_FAILED: ${historyError.message}`);
+
+            const history = ((historyData ?? []) as Array<{ role: string; content: string }>).reverse();
+            const conversation = history
+              .map((item) => `${item.role === "assistant" || item.role === "nova" ? "NOVA" : "Usuario"}: ${item.content}`)
+              .join("\\n\\n");
+
+            const completion = await callServerlessAgiModel({
+              profile,
+              prompt: [
+                conversation ? `Historial reciente:\\n${conversation}` : "",
+                `Solicitud actual:\\n${params.message}`,
+                params.context_data && Object.keys(params.context_data).length
+                  ? `Contexto estructurado:\\n${JSON.stringify(params.context_data, null, 2)}`
+                  : "",
+                "Responde como NOVA. El perfil especializado es apoyo interno y no debe reemplazar la identidad pública de NOVA.",
+              ].filter(Boolean).join("\\n\\n"),
+              timeout_ms: 40_000,
+            });
+
+            const now = new Date().toISOString();
+            const { error: threadWriteError } = await client.from("nova_threads").upsert({
+              thread_id: threadId,
+              project_id: params.project_id,
+              user_id: params.user_id,
+              title: params.message.slice(0, 120),
+              updated_at: now,
+            }, { onConflict: "thread_id" });
+            if (threadWriteError) throw new Error(`NOVA_THREAD_WRITE_FAILED: ${threadWriteError.message}`);
+
+            const { error: messageWriteError } = await client.from("nova_messages").insert([
+              {
+                project_id: params.project_id,
+                thread_id: threadId,
+                role: "user",
+                content: params.message,
+                meta: { trace_id: traceId, user_email: params.user_email ?? null, runtime: "hocker-one-serverless" },
+              },
+              {
+                project_id: params.project_id,
+                thread_id: threadId,
+                role: "assistant",
+                content: completion.text,
+                meta: {
+                  trace_id: traceId,
+                  provider: completion.provider,
+                  model: completion.model,
+                  agi_id: profile.id,
+                  runtime: "hocker-one-serverless",
+                  verified_execution: true,
+                },
+              },
+            ]);
+            if (messageWriteError) throw new Error(`NOVA_MESSAGE_WRITE_FAILED: ${messageWriteError.message}`);
+
+            const { error: usageWriteError } = await client.from("llm_usage").insert({
+              project_id: params.project_id,
+              thread_id: threadId,
+              provider: completion.provider,
+              model: completion.model,
+              tokens_in: completion.usage.tokens_in,
+              tokens_out: completion.usage.tokens_out,
+              meta: {
+                trace_id: traceId,
+                agi_id: profile.id,
+                runtime: "hocker-one-serverless",
+                verified_execution: true,
+              },
+            });
+            if (usageWriteError) throw new Error(`NOVA_USAGE_WRITE_FAILED: ${usageWriteError.message}`);
+
+            return {
+              ok: true,
+              project_id: params.project_id,
+              thread_id: threadId,
+              reply: completion.text,
+              provider: completion.provider,
+              model: completion.model,
+              intent: "general",
+              agi_id: profile.id,
+              actions: [],
+              trace_id: traceId,
+              meta: {
+                reason: "Respuesta real generada por el runtime serverless de Hocker ONE mediante Vercel AI Gateway.",
+                runtime: "hocker-one-serverless",
+                verified_execution: true,
+                provider: completion.provider,
+                model: completion.model,
+                usage: completion.usage,
+                context_data: params.context_data ?? {},
+                controls: {
+                  allow_write: false,
+                  requested_actions: false,
+                  enqueued_actions: [],
+                  action_policy: "owner_gate_only",
+                },
+              },
+            };
+          }
+          '''
+          text = text[:start] + replacement
+          runtime.write_text(text)
+
+          route = Path('src/app/api/nova/chat/route.ts')
+          text = route.read_text()
+          text = text.replace(
+            'import { requireProjectRole } from "@/app/api/_lib";',
+            'import { requireProjectRole, toApiError } from "@/app/api/_lib";',
+            1,
+          )
+
+          auth_anchor = '''  if (!parsed.success) {
+            return NextResponse.json(
+              { ok: false, error: "Payload inválido para NOVA.", issues: parsed.error.flatten() },
+              { status: 400 },
+            );
+          }
+
+          '''
+          auth_replacement = auth_anchor + '''  let chatCtx: Awaited<ReturnType<typeof requireProjectRole>>;
+          try {
+            chatCtx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator", "viewer"]);
+          } catch (error) {
+            const apiError = toApiError(error);
+            return NextResponse.json(apiError.payload, { status: apiError.status });
+          }
+
+          '''
+          if auth_anchor not in text:
+              raise SystemExit('chat auth anchor missing')
+          text = text.replace(auth_anchor, auth_replacement, 1)
+
+          text = text.replace(
+            '      user_id: parsed.data.user_id ?? null,\n      user_email: parsed.data.user_email ?? null,',
+            '      user_id: chatCtx.user.id,\n      user_email: chatCtx.user.email ?? null,',
+            1,
+          )
+
+          guarded_anchor = '''  const guardedPayload = {
+            ...parsed.data,
+            mode: "auto",
+          '''
+          guarded_replacement = '''  const guardedPayload = {
+            ...parsed.data,
+            user_id: chatCtx.user.id,
+            user_email: chatCtx.user.email ?? null,
+            mode: "auto",
+          '''
+          if guarded_anchor not in text:
+              raise SystemExit('guarded payload anchor missing')
+          text = text.replace(guarded_anchor, guarded_replacement, 1)
+
+          text = text.replace(
+            'const timeoutId = setTimeout(() => controller.abort(), 55_000);',
+            'const timeoutId = setTimeout(() => controller.abort(), 8_000);',
+            1,
+          )
+
+          response_anchor = '''    const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
+            let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
+          '''
+          response_replacement = '''    const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
+            if (!res.ok || responseJson.ok !== true) {
+              try {
+                return await serverlessFallback(`NOVA_UPSTREAM_HTTP_${res.status}`);
+              } catch (fallbackError) {
+                return NextResponse.json(
+                  {
+                    ok: false,
+                    error: sanitizePublicError(fallbackError),
+                    meta: { ...injectedMeta, upstream_error: `http_${res.status}`, fallback_error: true },
+                  },
+                  { status: 502 },
+                );
+              }
+            }
+
+            let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
+          '''
+          if response_anchor not in text:
+              raise SystemExit('HTTP fallback anchor missing')
+          text = text.replace(response_anchor, response_replacement, 1)
+
+          text = text.replace(
+            'Timeout: NOVA excedió la ventana de respuesta de 55s.',
+            'Timeout: NOVA excedió la ventana upstream de 8s.',
+          )
+          route.write_text(text)
+
+          test = Path('tests/serverless-agi-runtime.test.mjs')
+          source = test.read_text()
+          source += '''
+
+          test("serverless inference uses Vercel AI Gateway and never calls Gemini directly", async () => {
+            const runtime = await read("src/lib/serverless-agi-runtime.ts");
+            assert.match(runtime, /https:\\/\\/ai-gateway\\.vercel\\.sh\\/v1\\/chat\\/completions/);
+            assert.match(runtime, /AI_GATEWAY_API_KEY/);
+            assert.match(runtime, /VERCEL_OIDC_TOKEN/);
+            assert.match(runtime, /google\\/gemini-2\\.5-flash/);
+            assert.doesNotMatch(runtime, /generativelanguage\\.googleapis\\.com/);
+          });
+
+          test("chat fallback authenticates membership and reserves execution budget", async () => {
+            const route = await read("src/app/api/nova/chat/route.ts");
+            assert.match(route, /requireProjectRole\\(parsed\\.data\\.project_id, \\["owner", "admin", "operator", "viewer"\\]\\)/);
+            assert.match(route, /user_id: chatCtx\\.user\\.id/);
+            assert.match(route, /responseJson\\.ok !== true/);
+            assert.match(route, /NOVA_UPSTREAM_HTTP_/);
+            assert.match(route, /controller\\.abort\\(\\), 8_000/);
+          });
+
+          test("chat persistence fails closed on every Supabase operation", async () => {
+            const runtime = await read("src/lib/serverless-agi-runtime.ts");
+            assert.match(runtime, /NOVA_THREAD_LOOKUP_FAILED/);
+            assert.match(runtime, /NOVA_THREAD_ACCESS_DENIED/);
+            assert.match(runtime, /NOVA_HISTORY_READ_FAILED/);
+            assert.match(runtime, /NOVA_THREAD_WRITE_FAILED/);
+            assert.match(runtime, /NOVA_MESSAGE_WRITE_FAILED/);
+            assert.match(runtime, /NOVA_USAGE_WRITE_FAILED/);
+          });
+          '''
+          test.write_text(source)
+          PY
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/serverless-agi-runtime.ts src/app/api/nova/chat/route.ts tests/serverless-agi-runtime.test.mjs
+          git commit -m "fix(agi): authenticate and route serverless inference through AI Gateway"
+          git push origin HEAD:feat/serverless-nova-worker-20260802
