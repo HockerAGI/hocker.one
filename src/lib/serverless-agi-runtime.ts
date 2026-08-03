@@ -4,6 +4,11 @@ import { createAdminSupabase } from "@/lib/supabase-admin";
 
 type JsonRecord = Record<string, unknown>;
 type UntypedSupabase = SupabaseClient<any, "public", any>;
+type RpcError = { message: string };
+type RpcResult<T> = { data: T | null; error: RpcError | null };
+type NarrowRpcClient = {
+  rpc<T>(functionName: string, args: JsonRecord): PromiseLike<RpcResult<T>>;
+};
 
 type AgiProfile = {
   id: string;
@@ -74,6 +79,10 @@ const CHAT_PROFILE_RULES: Array<{ profile: string; pattern: RegExp }> = [
 
 function db(): UntypedSupabase {
   return createAdminSupabase() as unknown as UntypedSupabase;
+}
+
+function rpcDb(): NarrowRpcClient {
+  return createAdminSupabase() as unknown as NarrowRpcClient;
 }
 
 function env(...names: string[]): string {
@@ -248,22 +257,22 @@ async function insertRun(args: {
     payload: args.task.payload,
     input: args.task.input,
   };
-  const { data, error } = await db().rpc("start_serverless_agi_execution", {
-    p_task_id: args.task.id,
-    p_project_id: args.task.project_id,
-    p_agi_id: args.profile.id,
-    p_worker_id: args.worker_id,
-    p_provider: args.provider,
-    p_model: args.model,
-    p_input: input,
-    p_trace_id: randomUUID(),
-    p_attempt: Math.max(1, Number(args.task.attempt_count || 1)),
-  });
+  const { data, error } = await rpcDb().rpc<Array<{ run_id: string }>>(
+    "start_serverless_agi_execution",
+    {
+      p_task_id: args.task.id,
+      p_project_id: args.task.project_id,
+      p_agi_id: args.profile.id,
+      p_worker_id: args.worker_id,
+      p_provider: args.provider,
+      p_model: args.model,
+      p_input: input,
+      p_trace_id: randomUUID(),
+      p_attempt: Math.max(1, Number(args.task.attempt_count || 1)),
+    },
+  );
 
-  const row = Array.isArray(data)
-    ? data[0] as { run_id?: string } | undefined
-    : undefined;
-  const runId = String(row?.run_id ?? "").trim();
+  const runId = String(data?.[0]?.run_id ?? "").trim();
   if (error || !runId) {
     throw new Error(`AGI_RUN_START_FAILED: ${error?.message ?? "run_id_missing"}`);
   }
@@ -299,16 +308,18 @@ export async function runServerlessAgiWorkerOnce(params: {
 }): Promise<JsonRecord> {
   const workerId = `hocker-one-serverless:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
-  const client = db();
 
-  const { data: claimed, error: claimError } = await client.rpc("claim_next_agi_task", {
-    p_project_id: params.project_id,
-    p_worker_id: workerId,
-    p_assigned_agi: assignedAgi,
-  });
+  const { data: claimed, error: claimError } = await rpcDb().rpc<AgiTask[]>(
+    "claim_next_agi_task",
+    {
+      p_project_id: params.project_id,
+      p_worker_id: workerId,
+      p_assigned_agi: assignedAgi,
+    },
+  );
 
   if (claimError) throw new Error(`AGI_TASK_CLAIM_FAILED: ${claimError.message}`);
-  const task = (Array.isArray(claimed) ? claimed[0] : null) as AgiTask | undefined;
+  const task = claimed?.[0];
   if (!task) {
     return {
       ok: true,
@@ -375,18 +386,17 @@ export async function runServerlessAgiWorkerOnce(params: {
       external_writes_executed: false,
     }];
 
-    const { data: completed, error: completeError } = await client.rpc(
-      "complete_serverless_agi_execution",
-      {
-        p_task_id: task.id,
-        p_worker_id: workerId,
-        p_run_id: runId,
-        p_output: output,
-        p_evidence: evidence,
-        p_result_hash: resultHash,
-      },
-    );
-    if (completeError || !Array.isArray(completed) || completed.length === 0) {
+    const { data: completed, error: completeError } = await rpcDb().rpc<
+      Array<{ task_id: string; run_id: string; status: string; result_hash: string }>
+    >("complete_serverless_agi_execution", {
+      p_task_id: task.id,
+      p_worker_id: workerId,
+      p_run_id: runId,
+      p_output: output,
+      p_evidence: evidence,
+      p_result_hash: resultHash,
+    });
+    if (completeError || !completed?.length) {
       throw new Error(`AGI_ATOMIC_COMPLETE_FAILED: ${completeError?.message ?? "lock_or_run_not_owned"}`);
     }
 
@@ -416,7 +426,7 @@ export async function runServerlessAgiWorkerOnce(params: {
       error_code: message.split(":")[0],
     }];
 
-    const failResult = await client.rpc("fail_agi_task", {
+    const failResult = await rpcDb().rpc<unknown>("fail_agi_task", {
       p_task_id: task.id,
       p_worker_id: workerId,
       p_error: message,
@@ -523,7 +533,7 @@ export async function createServerlessAgiTask(params: {
 }
 
 export async function recoverStaleServerlessAgiTasks(projectId: string): Promise<JsonRecord> {
-  const { data, error } = await db().rpc("recover_stale_agi_tasks", {
+  const { data, error } = await rpcDb().rpc<number>("recover_stale_agi_tasks", {
     p_project_id: projectId,
     p_stale_after: "00:10:00",
   });
@@ -593,12 +603,14 @@ export async function runServerlessNovaChat(params: {
   const { data: existingThread, error: threadLookupError } = await client
     .from("nova_threads")
     .select("thread_id,user_id,project_id")
-    .eq("project_id", params.project_id)
     .eq("thread_id", threadId)
     .maybeSingle<{ thread_id: string; user_id: string | null; project_id: string | null }>();
 
   if (threadLookupError) {
     throw new Error(`NOVA_THREAD_LOOKUP_FAILED: ${threadLookupError.message}`);
+  }
+  if (existingThread?.project_id && existingThread.project_id !== params.project_id) {
+    throw new Error("NOVA_THREAD_ACCESS_DENIED");
   }
   if (existingThread?.user_id && existingThread.user_id !== params.user_id) {
     throw new Error("NOVA_THREAD_ACCESS_DENIED");
