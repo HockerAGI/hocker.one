@@ -36,3 +36,18 @@ test("planned profiles remain fail-closed", async () => {
   assert.match(runtime, /AGI_PROFILE_NOT_OPERATIONAL/);
   assert.match(runtime, /status === "planned"/);
 });
+
+test("public worker trigger stores only hashes and consumes query credentials once", async () => {
+  const route = await read("src/app/api/agi/serverless-worker-trigger/route.ts");
+  const migration = await read("supabase/migrations/20260803003000_serverless_agi_runtime_tokens.sql");
+
+  assert.match(route, /createHash\("sha256"\)/);
+  assert.match(route, /x-hocker-worker-token/);
+  assert.match(route, /supplied\.source === "query" && !data\.one_time/);
+  assert.match(route, /eq\("active", true\)/);
+  assert.match(route, /is\("used_at", null\)/);
+  assert.match(route, /active: false, used_at: now/);
+  assert.match(migration, /token_hash text not null unique/);
+  assert.match(migration, /revoke all on table public\.agi_runtime_tokens from public, anon, authenticated/);
+  assert.doesNotMatch(route, /3933fe5dad93578|PREVIEW_NONCE/);
+});
