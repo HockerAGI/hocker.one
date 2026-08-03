@@ -5,6 +5,11 @@
   "installCommand": "npm ci",
   "outputDirectory": ".next",
   "regions": ["iad1"],
+  "git": {
+    "deploymentEnabled": {
+      "ci-repair-no-deploy-20260803": false
+    }
+  },
   "headers": [
     {
       "source": "/api/health/ping",

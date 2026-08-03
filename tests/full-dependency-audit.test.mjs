@@ -10,14 +10,24 @@ test("brace-expansion vulnerable 1.1.x release is overridden", async () => {
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
 
-  assert.equal(manifest.overrides?.["brace-expansion"], "1.1.17");
-  assert.equal(lockfile.packages?.["node_modules/brace-expansion"]?.version, "1.1.17");
+  assert.equal(manifest.overrides?.["brace-expansion"], "1.1.18");
+  assert.equal(lockfile.packages?.["node_modules/brace-expansion"]?.version, "1.1.18");
 
   for (const [path, metadata] of Object.entries(lockfile.packages ?? {})) {
     if (!path.endsWith("node_modules/brace-expansion")) continue;
     const version = metadata?.version;
     assert.notEqual(version, "1.1.16", `${path} must not use vulnerable brace-expansion 1.1.16`);
+    assert.notEqual(version, "1.1.17", `${path} must not use vulnerable brace-expansion 1.1.17`);
   }
+});
+
+test("postcss vulnerable releases are overridden", async () => {
+  const manifest = await readJson("package.json");
+  const lockfile = await readJson("package-lock.json");
+
+  assert.equal(manifest.devDependencies?.postcss, "8.5.23");
+  assert.equal(manifest.overrides?.postcss, "8.5.23");
+  assert.equal(lockfile.packages?.["node_modules/postcss"]?.version, "8.5.23");
 });
 
 test("CI audits production and development dependencies", async () => {

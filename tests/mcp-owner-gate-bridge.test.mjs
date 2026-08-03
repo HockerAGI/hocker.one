@@ -15,7 +15,8 @@ test("NOVA MCP drafts are validated and materialized into Owner Gate", async () 
   assert.match(materializer, /enqueueAgiAction/);
   assert.match(materializer, /requires_approval: true/);
   assert.match(chat, /materializeNovaMcpActionsFromUpstream/);
-  assert.match(chat, /requireProjectRole\(parsed\.data\.project_id, \["owner", "admin", "operator"\]\)/);
+  assert.match(chat, /requireProjectRole\(parsed\.data\.project_id, \["owner", "admin", "operator", "viewer"\]\)/);
+  assert.match(chat, /requireProjectRole\(chatCtx\.project_id, \["owner", "admin", "operator"\]\)/);
   assert.match(chat, /allow_actions: Boolean\(upstreamActionActorId\)/);
   assert.match(chat, /mcp_owner_gate/);
   assert.match(chat, /nova_mcp_actions_waiting_owner_gate/);
