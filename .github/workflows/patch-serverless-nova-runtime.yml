@@ -1,81 +1,13 @@
-name: Patch Serverless NOVA Runtime
+name: Completed Serverless Runtime Patch
 
 on:
-  push:
-    branches:
-      - feat/serverless-nova-worker-20260802
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
-    if: github.actor != 'github-actions[bot]'
+  completed:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: feat/serverless-nova-worker-20260802
-
-      - name: Wire chat fallback, preview verifier and regressions
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          runtime = Path('src/lib/serverless-agi-runtime.ts')
-          text = runtime.read_text()
-          text = text.replace(
-            '  attempt_count: number;\n  max_attempts: number;\n};',
-            '  attempt_count: number;\n  max_attempts: number;\n  assigned_to?: string | null;\n};',
-          )
-          runtime.write_text(text)
-
-          route = Path('src/app/api/nova/chat/route.ts')
-          text = route.read_text()
-          import_anchor = 'import { sanitizePublicError } from "@/lib/sanitize-error";\n'
-          if import_anchor not in text:
-              raise SystemExit('chat import anchor missing')
-          text = text.replace(
-            import_anchor,
-            import_anchor + 'import { runServerlessNovaChat } from "@/lib/serverless-agi-runtime";\n',
-            1,
-          )
-
-          early = '''  if (!baseUrl || !key) {\n    return NextResponse.json(\n      { ok: false, error: "NOVA no está configurada en el entorno de producción." },\n      { status: 500 },\n    );\n  }\n\n'''
-          if early not in text:
-              raise SystemExit('early NOVA configuration block missing')
-          text = text.replace(early, '', 1)
-
-          controller_anchor = '''  const controller = new AbortController();\n  const timeoutId = setTimeout(() => controller.abort(), 55_000);\n'''
-          fallback = '''  const serverlessFallback = async (reason: string): Promise<Response> => {\n    const local = await runServerlessNovaChat({\n      project_id: parsed.data.project_id,\n      thread_id: parsed.data.thread_id ?? null,\n      message: parsed.data.message,\n      user_id: parsed.data.user_id ?? null,\n      user_email: parsed.data.user_email ?? null,\n      context_data: parsed.data.context_data ?? {},\n    });\n\n    const safe = sanitizeNovaPayload(\n      local as unknown as NovaChatResponse,\n      {\n        ...injectedMeta,\n        runtime_fallback: {\n          active: true,\n          reason,\n          runtime: "hocker-one-serverless",\n          upstream_called: Boolean(baseUrl && key),\n        },\n      },\n      null,\n    );\n\n    return NextResponse.json(safe, {\n      status: 200,\n      headers: { "Cache-Control": "no-store, max-age=0" },\n    });\n  };\n\n  if (!baseUrl || !key) {\n    try {\n      return await serverlessFallback("NOVA_UPSTREAM_NOT_CONFIGURED");\n    } catch (error) {\n      return NextResponse.json(\n        { ok: false, error: sanitizePublicError(error), meta: injectedMeta },\n        { status: 503 },\n      );\n    }\n  }\n\n  const controller = new AbortController();\n  const timeoutId = setTimeout(() => controller.abort(), 55_000);\n'''
-          if controller_anchor not in text:
-              raise SystemExit('controller anchor missing')
-          text = text.replace(controller_anchor, fallback, 1)
-
-          catch_old = '''  } catch (error) {\n    const isTimeout = error instanceof Error && error.name === "AbortError";\n    log.error("NOVA chat upstream failure", { route: "/api/nova/chat", timeout: isTimeout });\n    return NextResponse.json(\n      {\n        ok: false,\n        error: isTimeout\n          ? "Timeout: NOVA excedió la ventana de respuesta de 55s."\n          : sanitizePublicError(error),\n        meta: injectedMeta,\n      },\n      { status: 502 },\n    );\n  } finally {\n'''
-          catch_new = '''  } catch (error) {\n    const isTimeout = error instanceof Error && error.name === "AbortError";\n    log.error("NOVA chat upstream failure", { route: "/api/nova/chat", timeout: isTimeout });\n    try {\n      return await serverlessFallback(isTimeout ? "NOVA_UPSTREAM_TIMEOUT" : "NOVA_UPSTREAM_UNAVAILABLE");\n    } catch (fallbackError) {\n      return NextResponse.json(\n        {\n          ok: false,\n          error: sanitizePublicError(fallbackError),\n          meta: {\n            ...injectedMeta,\n            upstream_error: isTimeout ? "timeout" : "unavailable",\n            fallback_error: true,\n          },\n        },\n        { status: 502 },\n      );\n    }\n  } finally {\n'''
-          if catch_old not in text:
-              raise SystemExit('chat catch anchor missing')
-          route.write_text(text.replace(catch_old, catch_new, 1))
-
-          preview = Path('src/app/api/agi/serverless-worker-preview/route.ts')
-          preview.parent.mkdir(parents=True, exist_ok=True)
-          preview.write_text('''import { NextResponse } from "next/server";\nimport { runServerlessAgiWorkerOnce } from "@/lib/serverless-agi-runtime";\n\nexport const runtime = "nodejs";\nexport const dynamic = "force-dynamic";\nexport const maxDuration = 60;\n\nconst PREVIEW_NONCE = "3933fe5dad93578cb023083e9772e565bdd9b40832557d4191f6db543c98387f";\n\nexport async function GET(req: Request): Promise<Response> {\n  if (process.env.VERCEL_ENV !== "preview") {\n    return new NextResponse(null, { status: 404 });\n  }\n\n  const url = new URL(req.url);\n  if (url.searchParams.get("nonce") !== PREVIEW_NONCE) {\n    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });\n  }\n\n  const assignedAgi = url.searchParams.get("agi");\n  const result = await runServerlessAgiWorkerOnce({\n    project_id: "hocker-one",\n    assigned_agi: assignedAgi || null,\n    requested_by: "preview-verification",\n  });\n\n  return NextResponse.json(result, {\n    status: result.ok === false ? 502 : 200,\n    headers: { "Cache-Control": "no-store, max-age=0" },\n  });\n}\n''')
-
-          test = Path('tests/serverless-agi-runtime.test.mjs')
-          test.write_text('''import assert from "node:assert/strict";\nimport { readFile } from "node:fs/promises";\nimport test from "node:test";\n\nconst read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");\n\ntest("worker console uses Hocker ONE serverless execution instead of Railway", async () => {\n  const route = await read("src/app/api/agi/workers/route.ts");\n  assert.match(route, /runServerlessAgiWorkerOnce/);\n  assert.match(route, /createServerlessAgiTask/);\n  assert.match(route, /recoverStaleServerlessAgiTasks/);\n  assert.doesNotMatch(route, /NOVA_WORKERS_NOT_CONFIGURED|novaRequest\\(/);\n});\n\ntest("NOVA chat falls back to real serverless inference", async () => {\n  const route = await read("src/app/api/nova/chat/route.ts");\n  assert.match(route, /runServerlessNovaChat/);\n  assert.match(route, /NOVA_UPSTREAM_NOT_CONFIGURED/);\n  assert.match(route, /NOVA_UPSTREAM_TIMEOUT/);\n  assert.doesNotMatch(route, /NOVA no está configurada en el entorno de producción/);\n});\n\ntest("verified worker evidence requires provider, model, worker and hashes", async () => {\n  const runtime = await read("src/lib/serverless-agi-runtime.ts");\n  assert.match(runtime, /kind: "verified_model_completion"/);\n  assert.match(runtime, /provider: completion\\.provider/);\n  assert.match(runtime, /model: completion\\.model/);\n  assert.match(runtime, /worker_id: workerId/);\n  assert.match(runtime, /input_sha256: inputHash/);\n  assert.match(runtime, /output_sha256: resultHash/);\n  assert.match(runtime, /external_writes_executed: false/);\n});\n\ntest("planned profiles remain fail-closed", async () => {\n  const runtime = await read("src/lib/serverless-agi-runtime.ts");\n  assert.match(runtime, /AGI_PROFILE_NOT_OPERATIONAL/);\n  assert.match(runtime, /status === "planned"/);\n});\n''')
-          PY
-
-      - name: Commit patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/lib/serverless-agi-runtime.ts src/app/api/nova/chat/route.ts src/app/api/agi/serverless-worker-preview/route.ts tests/serverless-agi-runtime.test.mjs
-          git commit -m "feat(agi): wire serverless NOVA fallback and worker verifier"
-          git push origin HEAD:feat/serverless-nova-worker-20260802
+      - run: echo "Patch already applied; this workflow is inert and will be removed before merge."
