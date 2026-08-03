@@ -29,7 +29,7 @@ test("workers API keeps reads private and writes role-gated", async () => {
   assert.match(route, /requireProjectRole\(action\.project_id, \["owner"\]\)/);
   assert.match(route, /runServerlessAgiWorkerOnce/);
   assert.match(runtime, /claim_next_agi_task/);
-  assert.match(runtime, /complete_agi_task/);
+  assert.match(runtime, /complete_serverless_agi_execution/);
   assert.match(runtime, /fail_agi_task/);
   assert.doesNotMatch(route, /NOVA_ORCHESTRATOR_KEY|NEXT_PUBLIC_NOVA_ORCHESTRATOR_KEY/);
 });
