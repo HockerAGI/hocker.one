@@ -63,6 +63,19 @@ test("serverless inference uses Vercel AI Gateway and never calls Gemini directl
   assert.doesNotMatch(runtime, /generativelanguage\.googleapis\.com/);
 });
 
+test("serverless gateway prefers Vercel OIDC and falls back only on authentication rejection", async () => {
+  const runtime = await read("src/lib/serverless-agi-runtime.ts");
+  const oidcPosition = runtime.indexOf('const oidcToken = env("VERCEL_OIDC_TOKEN")');
+  const apiKeyPosition = runtime.indexOf('const apiKey = env("AI_GATEWAY_API_KEY")');
+
+  assert.ok(oidcPosition >= 0);
+  assert.ok(apiKeyPosition > oidcPosition);
+  assert.match(runtime, /gatewayCredentials().length > 0/);
+  assert.match(runtime, /response.status === 401 || response.status === 403/);
+  assert.match(runtime, /authenticationRejected && hasFallback/);
+  assert.match(runtime, /continue;/);
+});
+
 test("chat fallback authenticates membership and reserves execution budget", async () => {
   const route = await read("src/app/api/nova/chat/route.ts");
   assert.match(route, /requireProjectRole\(parsed\.data\.project_id, \["owner", "admin", "operator", "viewer"\]\)/);
