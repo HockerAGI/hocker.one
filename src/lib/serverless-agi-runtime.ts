@@ -1,9 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 type JsonRecord = Record<string, unknown>;
-type UntypedSupabase = SupabaseClient<any, "public", any>;
+type AdminSupabase = ReturnType<typeof createAdminSupabase>;
 type RpcError = { message: string };
 type RpcResult<T> = { data: T | null; error: RpcError | null };
 type NarrowRpcClient = {
@@ -77,8 +76,8 @@ const CHAT_PROFILE_RULES: Array<{ profile: string; pattern: RegExp }> = [
   { profile: "hostia", pattern: /(código|codigo|repo|github|deploy|vercel|railway|servidor|api|supabase|android|apk|aab|bug|error)/i },
 ];
 
-function db(): UntypedSupabase {
-  return createAdminSupabase() as unknown as UntypedSupabase;
+function db(): AdminSupabase {
+  return createAdminSupabase();
 }
 
 function rpcDb(): NarrowRpcClient {
