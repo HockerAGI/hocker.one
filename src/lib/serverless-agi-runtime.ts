@@ -241,36 +241,33 @@ async function insertRun(args: {
   provider: string;
   model: string;
 }): Promise<string> {
-  const { data, error } = await db()
-    .from("agi_runs")
-    .insert({
-      project_id: args.task.project_id,
-      agi_id: args.profile.id,
-      tool_key: args.provider,
-      task_id: args.task.id,
-      status: "running",
-      input: {
-        title: args.task.title,
-        details: args.task.details,
-        priority: args.task.priority,
-        payload: args.task.payload,
-        input: args.task.input,
-      },
-      output: {},
-      error: null,
-      started_at: new Date().toISOString(),
-      trace_id: randomUUID(),
-      provider: args.provider,
-      model: args.model,
-      attempt: Math.max(1, Number(args.task.attempt_count || 1)),
-      worker_id: args.worker_id,
-      evidence: [],
-    })
-    .select("id")
-    .single<{ id: string }>();
+  const input = {
+    title: args.task.title,
+    details: args.task.details,
+    priority: args.task.priority,
+    payload: args.task.payload,
+    input: args.task.input,
+  };
+  const { data, error } = await db().rpc("start_serverless_agi_execution", {
+    p_task_id: args.task.id,
+    p_project_id: args.task.project_id,
+    p_agi_id: args.profile.id,
+    p_worker_id: args.worker_id,
+    p_provider: args.provider,
+    p_model: args.model,
+    p_input: input,
+    p_trace_id: randomUUID(),
+    p_attempt: Math.max(1, Number(args.task.attempt_count || 1)),
+  });
 
-  if (error || !data) throw new Error(`AGI_RUN_INSERT_FAILED: ${error?.message ?? "unknown"}`);
-  return data.id;
+  const row = Array.isArray(data)
+    ? data[0] as { run_id?: string } | undefined
+    : undefined;
+  const runId = String(row?.run_id ?? "").trim();
+  if (error || !runId) {
+    throw new Error(`AGI_RUN_START_FAILED: ${error?.message ?? "run_id_missing"}`);
+  }
+  return runId;
 }
 
 async function markRunFailed(args: {
