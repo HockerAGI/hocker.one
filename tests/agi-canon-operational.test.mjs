@@ -82,3 +82,23 @@ test("serverless worker executes canonical prompts and complete routing", async 
   assert.doesNotMatch(source, /const CHAT_PROFILE_RULES/);
   assert.doesNotMatch(source, /const functions = stringList\(meta\.functions\)/);
 });
+
+test("database migrations enforce canonical identities and complete Memory Mirror", async () => {
+  const runtime = await read("supabase/migrations/20260804012400_agi_runtime_normalization.sql");
+  const constraints = await read("supabase/migrations/20260804012430_agi_runtime_constraints.sql");
+  const memory = await read("supabase/migrations/20260804012500_agi_memory_mirror_completion.sql");
+  const validation = await read("supabase/migrations/20260804012600_agi_canon_validation.sql");
+
+  assert.match(runtime, /delete from public\.agi_agents/);
+  assert.match(runtime, /status='missing_code'/);
+  assert.match(runtime, /Vercel AI Gateway/);
+  assert.match(constraints, /normalize_agi_id_before_write/);
+  assert.match(constraints, /agi_agents_canonical_agi_id_fkey/);
+  assert.match(memory, /add column if not exists agi_id text/);
+  assert.match(memory, /add column if not exists update_type text/);
+  assert.match(memory, /distribute_agi_memory/);
+  assert.match(memory, /expire_agi_memory/);
+  assert.match(validation, /validate_hocker_agi_canon/);
+  assert.match(validation, /specialized_feeds=16/);
+  assert.match(validation, /shadows_enabled_tools=0/);
+});
