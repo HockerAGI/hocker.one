@@ -1,4 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
+import { HOCKER_AGI_CANON_VERSION, type HockerAgiCanonRecord } from "@/lib/hocker-agi-canon";
+import {
+  buildCanonicalProfilePrompt,
+  canonicalAgiId,
+  isOperationalAgi,
+  requireCanonicalAgi,
+  routeChatProfile,
+} from "@/lib/hocker-agi-operational";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 type JsonRecord = Record<string, unknown>;
@@ -10,8 +18,9 @@ type NarrowRpcClient = {
 };
 
 type AgiProfile = {
-  id: string;
+  id: HockerAgiCanonRecord["id"];
   name: string;
+  canon: HockerAgiCanonRecord;
   meta: JsonRecord;
 };
 
@@ -55,27 +64,6 @@ type ModelCompletion = {
   };
 };
 
-const AGI_ALIASES: Record<string, string> = {
-  "candy-ads": "candy",
-  candy_ads: "candy",
-  "chido-gerente": "chido_gerente",
-  "chido-wins": "chido_wins",
-  "nexpa-agi": "nexpa",
-  "nova-ads": "nova_ads",
-  "pro-ia": "pro_ia",
-  "trackhok-agi": "trackhok",
-};
-
-const CHAT_PROFILE_RULES: Array<{ profile: string; pattern: RegExp }> = [
-  { profile: "vertx", pattern: /(seguridad|vulnerabilidad|ataque|permiso|token|firma|hmac|rls|auth)/i },
-  { profile: "jurix", pattern: /(legal|contrato|privacidad|cumplimiento|ley|términos|terminos|consentimiento)/i },
-  { profile: "numia", pattern: /(finanzas|costo|presupuesto|roi|ingreso|gasto|pago|stripe|paypal)/i },
-  { profile: "nova_ads", pattern: /(campaña|campana|ads|publicidad|marketing|lead|meta ads|google ads|tiktok ads)/i },
-  { profile: "revia", pattern: /(venta|cliente|crm|seguimiento|cotización|cotizacion|prospecto|whatsapp)/i },
-  { profile: "syntia", pattern: /(memoria|contexto|recuerda|historial|resumen|continuidad)/i },
-  { profile: "hostia", pattern: /(código|codigo|repo|github|deploy|vercel|railway|servidor|api|supabase|android|apk|aab|bug|error)/i },
-];
-
 function db(): AdminSupabase {
   return createAdminSupabase();
 }
@@ -92,11 +80,6 @@ function env(...names: string[]): string {
   return "";
 }
 
-function canonicalAgiId(value: string): string {
-  const clean = String(value || "nova").trim().toLowerCase();
-  return AGI_ALIASES[clean] ?? clean.replace(/-/g, "_");
-}
-
 function sha256(value: unknown): string {
   const text = typeof value === "string" ? value : JSON.stringify(value);
   return createHash("sha256").update(text).digest("hex");
@@ -106,12 +89,6 @@ function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
     : {};
-}
-
-function stringList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.map((item) => String(item ?? "").trim()).filter(Boolean)
-    : [];
 }
 
 function safeError(error: unknown): string {
@@ -134,49 +111,42 @@ function gatewayCredentials(): GatewayCredential[] {
   const apiKey = env("AI_GATEWAY_API_KEY");
   const credentials: GatewayCredential[] = [];
 
-  // Vercel injects OIDC automatically for deployments. Prefer it so an old or
-  // mistyped manual key cannot shadow the deployment identity.
+  // Prefer the deployment identity. Fall back to the manually managed
+  // AI Gateway key only after a real 401/403 authentication rejection.
   if (oidcToken) credentials.push({ source: "oidc", token: oidcToken });
-  if (apiKey && apiKey !== oidcToken) credentials.push({ source: "api_key", token: apiKey });
+  if (apiKey && apiKey !== oidcToken) {
+    credentials.push({ source: "api_key", token: apiKey });
+  }
   return credentials;
 }
 
 async function loadProfile(rawId: string): Promise<AgiProfile> {
   const agiId = canonicalAgiId(rawId);
+  const canon = requireCanonicalAgi(agiId);
+  const status = canon.id === "shadows" ? "planned" : "active";
+  if (status === "planned" || !isOperationalAgi(canon.id)) {
+    throw new Error(`AGI_PROFILE_NOT_OPERATIONAL: ${canon.id}`);
+  }
+
   const { data, error } = await db()
     .from("agis")
     .select("id,name,meta")
-    .eq("id", agiId)
-    .maybeSingle<AgiProfile>();
+    .eq("id", canon.id)
+    .maybeSingle<{ id: string; name: string; meta: JsonRecord }>();
 
   if (error) throw new Error(`AGI_PROFILE_LOOKUP_FAILED: ${error.message}`);
-  if (!data) throw new Error(`AGI_PROFILE_NOT_FOUND: ${agiId}`);
+  if (!data) throw new Error(`AGI_PROFILE_NOT_FOUND: ${canon.id}`);
 
-  const status = String(asRecord(data.meta).status ?? "active").toLowerCase();
-  if (status === "planned") throw new Error(`AGI_PROFILE_NOT_OPERATIONAL: ${agiId}`);
-  return data;
+  return {
+    id: canon.id,
+    name: canon.name,
+    canon,
+    meta: asRecord(data.meta),
+  };
 }
 
 function profilePrompt(profile: AgiProfile): string {
-  const meta = asRecord(profile.meta);
-  const mission = String(meta.mission ?? "Resolver la tarea con precisión y evidencia.");
-  const systemPrompt = String(meta.system_prompt ?? `Eres ${profile.name}.`);
-  const functions = stringList(meta.functions);
-  const objectives = stringList(meta.objectives);
-  const limits = stringList(meta.limits);
-
-  return [
-    systemPrompt,
-    `Identidad operativa: ${profile.name} (${profile.id}).`,
-    `Misión: ${mission}`,
-    functions.length ? `Funciones:\n- ${functions.join("\n- ")}` : "",
-    objectives.length ? `Objetivos:\n- ${objectives.join("\n- ")}` : "",
-    limits.length ? `Límites obligatorios:\n- ${limits.join("\n- ")}` : "",
-    "Debes usar únicamente la información disponible. No inventes ejecuciones, herramientas, métricas ni evidencia.",
-    "Distingue hechos comprobados, inferencias y datos faltantes.",
-    "No ejecutes acciones externas. Cuando una acción sea necesaria, descríbela como propuesta para Owner Gate.",
-    "Responde en español, de forma clara y ejecutiva.",
-  ].filter(Boolean).join("\n\n");
+  return buildCanonicalProfilePrompt(profile.canon);
 }
 
 export function serverlessGatewayConfigured(): boolean {
@@ -217,6 +187,8 @@ export async function callServerlessAgiModel(args: {
         headers: {
           Authorization: `Bearer ${credential.token}`,
           "Content-Type": "application/json",
+          "X-Hocker-Canon-Version": HOCKER_AGI_CANON_VERSION,
+          "X-Hocker-Credential-Source": credential.source,
         },
         cache: "no-store",
         signal: controller.signal,
@@ -270,7 +242,9 @@ function taskPrompt(task: AgiTask): string {
     `Input:\n${JSON.stringify(task.input ?? {}, null, 2)}`,
     `Contexto adicional:\n${JSON.stringify(task.payload ?? {}, null, 2)}`,
     "Entrega: estado real, hallazgos verificables, riesgos, datos faltantes y siguientes acciones propuestas.",
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 async function insertRun(args: {
@@ -286,6 +260,12 @@ async function insertRun(args: {
     priority: args.task.priority,
     payload: args.task.payload,
     input: args.task.input,
+    canon_version: HOCKER_AGI_CANON_VERSION,
+    canonical_profile: {
+      id: args.profile.id,
+      level: args.profile.canon.level,
+      domain: args.profile.canon.domain,
+    },
   };
   const { data, error } = await rpcDb().rpc<Array<{ run_id: string }>>(
     "start_serverless_agi_execution",
@@ -376,6 +356,7 @@ export async function runServerlessAgiWorkerOnce(params: {
     const inputHash = sha256({
       task_id: task.id,
       agi_id: profile.id,
+      canon_version: HOCKER_AGI_CANON_VERSION,
       title: task.title,
       details: task.details,
       input: task.input,
@@ -390,8 +371,11 @@ export async function runServerlessAgiWorkerOnce(params: {
     const output: JsonRecord = {
       ok: true,
       verified_execution: true,
+      canon_version: HOCKER_AGI_CANON_VERSION,
       agi_id: profile.id,
       agi_name: profile.name,
+      agi_level: profile.canon.level,
+      agi_domain: profile.canon.domain,
       task_id: task.id,
       summary: completion.text,
       provider: completion.provider,
@@ -403,18 +387,21 @@ export async function runServerlessAgiWorkerOnce(params: {
       owner_gate_required_for_actions: true,
     };
     const resultHash = sha256(output);
-    const evidence: JsonRecord[] = [{
-      kind: "verified_model_completion",
-      provider: completion.provider,
-      model: completion.model,
-      worker_id: workerId,
-      task_id: task.id,
-      agi_id: profile.id,
-      input_sha256: inputHash,
-      output_sha256: resultHash,
-      completed_at: completedAt,
-      external_writes_executed: false,
-    }];
+    const evidence: JsonRecord[] = [
+      {
+        kind: "verified_model_completion",
+        canon_version: HOCKER_AGI_CANON_VERSION,
+        provider: completion.provider,
+        model: completion.model,
+        worker_id: workerId,
+        task_id: task.id,
+        agi_id: profile.id,
+        input_sha256: inputHash,
+        output_sha256: resultHash,
+        completed_at: completedAt,
+        external_writes_executed: false,
+      },
+    ];
 
     const { data: completed, error: completeError } = await rpcDb().rpc<
       Array<{ task_id: string; run_id: string; status: string; result_hash: string }>
@@ -427,12 +414,15 @@ export async function runServerlessAgiWorkerOnce(params: {
       p_result_hash: resultHash,
     });
     if (completeError || !completed?.length) {
-      throw new Error(`AGI_ATOMIC_COMPLETE_FAILED: ${completeError?.message ?? "lock_or_run_not_owned"}`);
+      throw new Error(
+        `AGI_ATOMIC_COMPLETE_FAILED: ${completeError?.message ?? "lock_or_run_not_owned"}`,
+      );
     }
 
     return {
       ok: true,
       processed: true,
+      canon_version: HOCKER_AGI_CANON_VERSION,
       worker_id: workerId,
       task: {
         id: task.id,
@@ -447,14 +437,17 @@ export async function runServerlessAgiWorkerOnce(params: {
     };
   } catch (error) {
     const message = safeError(error);
-    const failureEvidence: JsonRecord[] = [{
-      kind: "verified_worker_failure",
-      worker_id: workerId,
-      task_id: task.id,
-      agi_id: task.agi_id,
-      failed_at: new Date().toISOString(),
-      error_code: message.split(":")[0],
-    }];
+    const failureEvidence: JsonRecord[] = [
+      {
+        kind: "verified_worker_failure",
+        canon_version: HOCKER_AGI_CANON_VERSION,
+        worker_id: workerId,
+        task_id: task.id,
+        agi_id: canonicalAgiId(task.agi_id),
+        failed_at: new Date().toISOString(),
+        error_code: message.split(":")[0],
+      },
+    ];
 
     const failResult = await rpcDb().rpc<unknown>("fail_agi_task", {
       p_task_id: task.id,
@@ -473,7 +466,11 @@ export async function runServerlessAgiWorkerOnce(params: {
       try {
         await markRunFailed({
           run_id: runId,
-          output: { ok: false, verified_execution: false },
+          output: {
+            ok: false,
+            verified_execution: false,
+            canon_version: HOCKER_AGI_CANON_VERSION,
+          },
           evidence: failureEvidence,
           error: message,
         });
@@ -488,8 +485,9 @@ export async function runServerlessAgiWorkerOnce(params: {
     return {
       ok: false,
       processed: true,
+      canon_version: HOCKER_AGI_CANON_VERSION,
       worker_id: workerId,
-      task: { id: task.id, agi_id: task.agi_id },
+      task: { id: task.id, agi_id: canonicalAgiId(task.agi_id) },
       run_id: runId,
       error: message,
       evidence: failureEvidence,
@@ -536,6 +534,7 @@ export async function createServerlessAgiTask(params: {
         intent: params.intent,
         context: params.context,
         source: "hocker-one-serverless",
+        canon_version: HOCKER_AGI_CANON_VERSION,
         verified_worker_required: true,
       },
       created_by: params.created_by ?? null,
@@ -546,6 +545,7 @@ export async function createServerlessAgiTask(params: {
         subject: params.subject,
         body: params.body,
         context: params.context,
+        canon_version: HOCKER_AGI_CANON_VERSION,
       },
       output: {},
       evidence: [],
@@ -558,11 +558,15 @@ export async function createServerlessAgiTask(params: {
     .select("id,project_id,agi_id,title,status,priority,write_policy,idempotency_key,created_at")
     .single();
 
-  if (error || !data) throw new Error(`AGI_TASK_CREATE_FAILED: ${error?.message ?? "unknown"}`);
+  if (error || !data) {
+    throw new Error(`AGI_TASK_CREATE_FAILED: ${error?.message ?? "unknown"}`);
+  }
   return { ok: true, created: true, task_id: data.id, task: data };
 }
 
-export async function recoverStaleServerlessAgiTasks(projectId: string): Promise<JsonRecord> {
+export async function recoverStaleServerlessAgiTasks(
+  projectId: string,
+): Promise<JsonRecord> {
   const { data, error } = await rpcDb().rpc<number>("recover_stale_agi_tasks", {
     p_project_id: projectId,
     p_stale_after: "00:10:00",
@@ -571,50 +575,80 @@ export async function recoverStaleServerlessAgiTasks(projectId: string): Promise
   return { ok: true, project_id: projectId, recovered: Number(data ?? 0) };
 }
 
-export async function getServerlessAgiWorkerStatus(projectId: string): Promise<JsonRecord> {
+export async function getServerlessAgiWorkerStatus(
+  projectId: string,
+): Promise<JsonRecord> {
   const client = db();
-  const [queuedResult, workingResult, recentRunsResult] = await Promise.all([
-    client.from("agi_tasks").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("status", "queued"),
-    client.from("agi_tasks").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("status", "working"),
-    client.from("agi_runs")
-      .select("id,agi_id,status,provider,model,worker_id,result_hash,evidence,finished_at,created_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(30),
-  ]);
+  const [queuedResult, workingResult, recentRunsResult, registryResult] =
+    await Promise.all([
+      client
+        .from("agi_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "queued"),
+      client
+        .from("agi_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "working"),
+      client
+        .from("agi_runs")
+        .select(
+          "id,agi_id,status,provider,model,worker_id,result_hash,evidence,finished_at,created_at",
+        )
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(30),
+      client.from("agis").select("id,meta"),
+    ]);
 
   const recentRuns = (recentRunsResult.data ?? []) as Array<JsonRecord>;
-  const lastVerified = recentRuns.find((run) =>
-    run.status === "completed" &&
-    Boolean(run.provider) &&
-    Boolean(run.model) &&
-    Boolean(run.worker_id) &&
-    Boolean(run.result_hash) &&
-    Array.isArray(run.evidence) &&
-    run.evidence.length > 0,
-  ) ?? null;
+  const lastVerified =
+    recentRuns.find(
+      (run) =>
+        run.status === "completed" &&
+        Boolean(run.provider) &&
+        Boolean(run.model) &&
+        Boolean(run.worker_id) &&
+        Boolean(run.result_hash) &&
+        Array.isArray(run.evidence) &&
+        run.evidence.length > 0,
+    ) ?? null;
   const configured = serverlessGatewayConfigured();
-  const schemaReady = !queuedResult.error && !workingResult.error && !recentRunsResult.error;
+  const schemaReady =
+    !queuedResult.error &&
+    !workingResult.error &&
+    !recentRunsResult.error &&
+    !registryResult.error;
+  const profiles = ((registryResult.data ?? []) as Array<{ id: string; meta: JsonRecord }>).map(
+    (profile) => ({
+      id: canonicalAgiId(profile.id),
+      status:
+        canonicalAgiId(profile.id) === "shadows"
+          ? "planned"
+          : String(asRecord(profile.meta).status ?? "active"),
+    }),
+  );
 
   return {
     ok: true,
     service: "hocker-one-serverless-agi",
     mode: "on_demand",
     project_id: projectId,
+    canon_version: HOCKER_AGI_CANON_VERSION,
     provider: "vercel-ai-gateway",
     provider_configured: configured,
     schema_ready: schemaReady,
     ready: configured && schemaReady,
+    canonical_profiles: profiles.length,
+    operational_profiles: profiles.filter((profile) => profile.id !== "shadows").length,
+    planned_profiles: profiles.filter((profile) => profile.id === "shadows"),
     queued_tasks: queuedResult.count ?? 0,
     working_tasks: workingResult.count ?? 0,
     last_verified_run: lastVerified,
     checked_at: new Date().toISOString(),
     external_writes: "owner_gate_only",
   };
-}
-
-function chatProfile(message: string): string {
-  return CHAT_PROFILE_RULES.find((rule) => rule.pattern.test(message))?.profile ?? "nova";
 }
 
 export async function runServerlessNovaChat(params: {
@@ -628,7 +662,8 @@ export async function runServerlessNovaChat(params: {
   if (!params.user_id) throw new Error("NOVA_CHAT_AUTH_REQUIRED");
 
   const threadId = params.thread_id || randomUUID();
-  const profile = await loadProfile(chatProfile(params.message));
+  const selectedProfile = routeChatProfile(params.message);
+  const profile = await loadProfile(selectedProfile);
   const traceId = randomUUID();
   const client = db();
 
@@ -636,7 +671,11 @@ export async function runServerlessNovaChat(params: {
     .from("nova_threads")
     .select("thread_id,user_id,project_id")
     .eq("thread_id", threadId)
-    .maybeSingle<{ thread_id: string; user_id: string | null; project_id: string | null }>();
+    .maybeSingle<{
+      thread_id: string;
+      user_id: string | null;
+      project_id: string | null;
+    }>();
 
   if (threadLookupError) {
     throw new Error(`NOVA_THREAD_LOOKUP_FAILED: ${threadLookupError.message}`);
@@ -656,11 +695,16 @@ export async function runServerlessNovaChat(params: {
     .order("created_at", { ascending: false })
     .limit(12);
 
-  if (historyError) throw new Error(`NOVA_HISTORY_READ_FAILED: ${historyError.message}`);
+  if (historyError) {
+    throw new Error(`NOVA_HISTORY_READ_FAILED: ${historyError.message}`);
+  }
 
   const history = ((historyData ?? []) as Array<{ role: string; content: string }>).reverse();
   const conversation = history
-    .map((item) => `${item.role === "assistant" || item.role === "nova" ? "NOVA" : "Usuario"}: ${item.content}`)
+    .map(
+      (item) =>
+        `${item.role === "assistant" || item.role === "nova" ? "NOVA" : "Usuario"}: ${item.content}`,
+    )
     .join("\n\n");
 
   const completion = await callServerlessAgiModel({
@@ -671,8 +715,11 @@ export async function runServerlessNovaChat(params: {
       params.context_data && Object.keys(params.context_data).length
         ? `Contexto estructurado:\n${JSON.stringify(params.context_data, null, 2)}`
         : "",
+      `Perfil especializado seleccionado automáticamente: ${profile.name} (${profile.id}).`,
       "Responde como NOVA. El perfil especializado es apoyo interno y no debe reemplazar la identidad pública de NOVA.",
-    ].filter(Boolean).join("\n\n"),
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
     timeout_ms: 40_000,
   });
 
@@ -680,19 +727,23 @@ export async function runServerlessNovaChat(params: {
     trace_id: traceId,
     user_email: params.user_email ?? null,
     runtime: "hocker-one-serverless",
+    canon_version: HOCKER_AGI_CANON_VERSION,
   };
   const assistantMeta: JsonRecord = {
     trace_id: traceId,
     provider: completion.provider,
     model: completion.model,
     agi_id: profile.id,
+    agi_domain: profile.canon.domain,
     runtime: "hocker-one-serverless",
+    canon_version: HOCKER_AGI_CANON_VERSION,
     verified_execution: true,
   };
   const usageMeta: JsonRecord = {
     trace_id: traceId,
     agi_id: profile.id,
     runtime: "hocker-one-serverless",
+    canon_version: HOCKER_AGI_CANON_VERSION,
     verified_execution: true,
   };
 
@@ -720,7 +771,9 @@ export async function runServerlessNovaChat(params: {
   });
 
   if (persistenceError || !persisted?.length) {
-    throw new Error(`NOVA_CHAT_PERSISTENCE_FAILED: ${persistenceError?.message ?? "transaction_empty"}`);
+    throw new Error(
+      `NOVA_CHAT_PERSISTENCE_FAILED: ${persistenceError?.message ?? "transaction_empty"}`,
+    );
   }
 
   return {
@@ -732,14 +785,23 @@ export async function runServerlessNovaChat(params: {
     model: completion.model,
     intent: "general",
     agi_id: profile.id,
+    canon_version: HOCKER_AGI_CANON_VERSION,
     actions: [],
     trace_id: traceId,
     meta: {
-      reason: "Respuesta real generada por el runtime serverless de Hocker ONE mediante Vercel AI Gateway.",
+      reason:
+        "Respuesta real generada por el runtime serverless de Hocker ONE mediante Vercel AI Gateway y el canon de 16 AGIs.",
       runtime: "hocker-one-serverless",
       verified_execution: true,
       provider: completion.provider,
       model: completion.model,
+      agi_profile: {
+        id: profile.id,
+        name: profile.name,
+        level: profile.canon.level,
+        domain: profile.canon.domain,
+      },
+      canon_version: HOCKER_AGI_CANON_VERSION,
       usage: completion.usage,
       persistence: persisted[0],
       context_data: params.context_data ?? {},
