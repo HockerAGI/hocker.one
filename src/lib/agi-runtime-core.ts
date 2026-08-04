@@ -1,8 +1,22 @@
 import { createHash } from "node:crypto";
+import { HOCKER_AGI_CANON, HOCKER_AGI_CANON_VERSION, HOCKER_AGI_IDS } from "@/lib/hocker-agi-canon";
+import {
+  HOCKER_AGI_ALIASES,
+  agiToolKeys,
+  canonicalAgiId,
+  canonicalAgiMeta,
+  canonicalAgentRows,
+} from "@/lib/hocker-agi-operational";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { AGI_REGISTRY } from "@/lib/hocker-dashboard";
 
-export type RuntimeToolStatusKind = "configured" | "connected" | "partial" | "missing" | "blocked" | "missing_key" | "missing_code";
+export type RuntimeToolStatusKind =
+  | "configured"
+  | "connected"
+  | "partial"
+  | "missing"
+  | "blocked"
+  | "missing_key"
+  | "missing_code";
 
 type JsonObject = Record<string, unknown>;
 
@@ -20,7 +34,18 @@ type RuntimeToolCategory =
   | "observability"
   | "notifications";
 
-type RuntimeToolImplementation = "executor_ready" | "code_only" | "partial_env_detected" | "missing_credentials" | "missing_key" | "missing_code" | "configured" | "connected" | "partial" | "missing" | "blocked";
+type RuntimeToolImplementation =
+  | "executor_ready"
+  | "code_only"
+  | "partial_env_detected"
+  | "missing_credentials"
+  | "missing_key"
+  | "missing_code"
+  | "configured"
+  | "connected"
+  | "partial"
+  | "missing"
+  | "blocked";
 
 type EnvGroup = {
   label: string;
@@ -59,26 +84,358 @@ export type RuntimeToolStatus = RuntimeTool & {
 };
 
 const TOOL_CATALOG: RuntimeTool[] = [
-  { tool_key: "nova_orchestrator", name: "NOVA Orquestador", provider: "NOVA", category: "core", required_env: ["NOVA_AGI_URL", "NOVA_ORCHESTRATOR_KEY"], supports_read: true, supports_write: true, supports_realtime: true, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Chat, criterio, ruteo y decisiones bajo control." },
-  { tool_key: "supabase", name: "Supabase", provider: "Supabase", category: "data", required_env: ["SUPABASE_SERVICE_ROLE_KEY"], optional_env: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"], supports_read: true, supports_write: true, supports_realtime: true, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Datos, memoria, tareas, auditoría y estado." },
-  { tool_key: "github", name: "GitHub", provider: "GitHub", category: "code", required_env: ["HOCKER_GITHUB_TOKEN"], optional_env: ["GITHUB_TOKEN", "GH_TOKEN", "GITHUB_APP_ID", "GITHUB_INSTALLATION_ID", "HOCKER_GITHUB_REPO", "GITHUB_REPOSITORY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "executor_ready", next_step: "Lectura real habilitada. Escritura solo entra por Owner Gate y dry-run.", safe_note: "Repos, commits, ramas y revisión de código. Escritura solo con Owner Gate." },
-  { tool_key: "vercel", name: "Vercel", provider: "Vercel", category: "cloud", required_env: ["VERCEL_TOKEN"], optional_env: ["VERCEL_PROJECT_ID", "VERCEL_ORG_ID", "VERCEL_TEAM_ID", "VERCEL_OIDC_TOKEN"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Deploys, dominios, logs y estado de producción. OIDC cuenta como señal parcial." },
-  { tool_key: "trigger", name: "Trigger.dev", provider: "Trigger.dev", category: "core", required_env: ["TRIGGER_SECRET_KEY"], optional_env: ["TRIGGER_API_KEY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Jobs, tareas programadas y ejecución controlada." },
-  { tool_key: "langfuse", name: "Langfuse", provider: "Langfuse", category: "security", required_env: ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"], optional_env: ["LANGFUSE_HOST", "LANGFUSE_BASE_URL"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Trazas, auditoría, evaluación y observabilidad." },
-  { tool_key: "openai", name: "OpenAI", provider: "OpenAI", category: "core", required_env: ["OPENAI_API_KEY"], supports_read: true, supports_write: false, supports_realtime: true, dry_run_first: false, owner_gate_required: false, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Modelo, razonamiento, visión, archivos y herramientas según backend." },
-  { tool_key: "gemini", name: "Gemini", provider: "Google", category: "core", required_env: ["GEMINI_API_KEY"], optional_env: ["GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"], supports_read: true, supports_write: false, supports_realtime: true, dry_run_first: false, owner_gate_required: false, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Modelo alterno, análisis multimodal y razonamiento según backend." },
-  { tool_key: "meta_ads", name: "Meta Ads", provider: "Meta", category: "ads", required_env: ["META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID"], optional_env: ["FACEBOOK_ACCESS_TOKEN", "META_APP_ID", "META_APP_SECRET"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas, audiencias, anuncios y reportes." },
-  { tool_key: "google_ads", name: "Google Ads", provider: "Google", category: "ads", required_env: ["GOOGLE_ADS_DEVELOPER_TOKEN"], optional_env: ["GOOGLE_ADS_CLIENT_ID", "GOOGLE_ADS_CLIENT_SECRET", "GOOGLE_ADS_REFRESH_TOKEN", "GOOGLE_ADS_CUSTOMER_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas, búsqueda, performance y reportes." },
-  { tool_key: "tiktok_ads", name: "TikTok Ads", provider: "TikTok", category: "ads", required_env: ["TIKTOK_ACCESS_TOKEN"], optional_env: ["TIKTOK_APP_ID", "TIKTOK_SECRET", "TIKTOK_ADVERTISER_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas TikTok, creatividades y reportes." },
-  { tool_key: "linkedin_ads", name: "LinkedIn Ads", provider: "LinkedIn", category: "ads", required_env: ["LINKEDIN_ACCESS_TOKEN"], optional_env: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Campañas B2B, audiencias y reportes." },
-  { tool_key: "stripe", name: "Stripe", provider: "Stripe", category: "payments", required_env: ["STRIPE_SECRET_KEY"], optional_env: ["STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Pagos, clientes, facturación y eventos." },
-  { tool_key: "paypal", name: "PayPal", provider: "PayPal", category: "payments", required_env: ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"], optional_env: ["PAYPAL_WEBHOOK_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Pagos, órdenes, capturas y estado." },
-  { tool_key: "d24", name: "D24", provider: "D24", category: "payments", required_env: ["D24_API_KEY", "D24_SECRET_KEY"], optional_env: ["D24_MERCHANT_ID"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Pasarela de pagos para Chido Casino. Pendiente de credenciales reales." },
-  { tool_key: "namecheap", name: "Namecheap", provider: "Namecheap", category: "domain", required_env: ["NAMECHEAP_API_USER", "NAMECHEAP_API_KEY"], optional_env: ["NAMECHEAP_USERNAME", "NAMECHEAP_CLIENT_IP"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Dominios y disponibilidad." },
-  { tool_key: "cloudflare", name: "Cloudflare", provider: "Cloudflare", category: "security", required_env: ["CLOUDFLARE_API_TOKEN"], optional_env: ["CLOUDFLARE_ZONE_ID", "CF_API_TOKEN"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "DNS, seguridad, cache y reglas." },
-  { tool_key: "hetzner", name: "Hetzner", provider: "Hetzner", category: "cloud", required_env: ["HETZNER_TOKEN"], optional_env: ["HCLOUD_TOKEN", "HETZNER_API_TOKEN"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Servidor, red, backups y health." },
-  { tool_key: "heygen", name: "HeyGen", provider: "HeyGen", category: "media", required_env: ["HEYGEN_API_KEY"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Videos, avatares y assets." },
-  { tool_key: "email", name: "Email / Resend / SMTP", provider: "Email", category: "core", required_env: ["RESEND_API_KEY"], optional_env: ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"], supports_read: true, supports_write: true, supports_realtime: false, dry_run_first: true, owner_gate_required: true, implementation_status: "code_only", next_step: "Validar credenciales, permisos y executor real antes de permitir ejecución.", safe_note: "Alertas owner y notificaciones transaccionales." },
+  {
+    tool_key: "ai_gateway",
+    name: "Vercel AI Gateway",
+    provider: "Vercel",
+    category: "core",
+    required_env: [],
+    env_groups: [
+      {
+        label: "AI Gateway credential",
+        any_of: ["VERCEL_OIDC_TOKEN", "AI_GATEWAY_API_KEY"],
+        required: true,
+      },
+    ],
+    optional_env: ["AI_GATEWAY_MODEL_AUTO", "AI_GATEWAY_MODEL_FAST"],
+    supports_read: true,
+    supports_write: false,
+    supports_realtime: true,
+    dry_run_first: false,
+    owner_gate_required: false,
+    implementation_status: "executor_ready",
+    next_step: "Validar una inferencia real y conservar evidencia de proveedor, modelo y hashes.",
+    safe_note: "Inferencia serverless real. No habilita acciones externas.",
+  },
+  {
+    tool_key: "nova_orchestrator",
+    name: "NOVA Orquestador",
+    provider: "NOVA",
+    category: "core",
+    required_env: ["NOVA_AGI_URL", "NOVA_ORCHESTRATOR_KEY"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: true,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Mantener como upstream opcional; el runtime serverless usa AI Gateway como ruta verificada.",
+    safe_note: "Chat, criterio, ruteo y decisiones bajo control.",
+  },
+  {
+    tool_key: "supabase",
+    name: "Supabase",
+    provider: "Supabase",
+    category: "data",
+    required_env: ["SUPABASE_SERVICE_ROLE_KEY"],
+    optional_env: ["SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: true,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "executor_ready",
+    next_step: "Usar únicamente RPCs y escrituras auditadas con RLS, idempotencia y Owner Gate.",
+    safe_note: "Datos, memoria, tareas, auditoría y estado.",
+  },
+  {
+    tool_key: "github",
+    name: "GitHub",
+    provider: "GitHub",
+    category: "code",
+    required_env: ["HOCKER_GITHUB_TOKEN"],
+    optional_env: [
+      "GITHUB_TOKEN",
+      "GH_TOKEN",
+      "GITHUB_APP_ID",
+      "GITHUB_INSTALLATION_ID",
+      "HOCKER_GITHUB_REPO",
+      "GITHUB_REPOSITORY",
+    ],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "executor_ready",
+    next_step: "Lectura real habilitada. Escritura sólo por branch/PR y Owner Gate.",
+    safe_note: "Repos, commits, ramas y revisión de código.",
+  },
+  {
+    tool_key: "vercel",
+    name: "Vercel",
+    provider: "Vercel",
+    category: "cloud",
+    required_env: ["VERCEL_TOKEN"],
+    optional_env: ["VERCEL_PROJECT_ID", "VERCEL_ORG_ID", "VERCEL_TEAM_ID", "VERCEL_OIDC_TOKEN"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Validar executor de deployments, logs y dominios antes de habilitar escritura.",
+    safe_note: "Deploys, dominios, logs y estado de producción.",
+  },
+  {
+    tool_key: "trigger",
+    name: "Trigger.dev",
+    provider: "Trigger.dev",
+    category: "jobs",
+    required_env: ["TRIGGER_SECRET_KEY"],
+    optional_env: ["TRIGGER_API_KEY"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Validar jobs reales con idempotencia y evidencia.",
+    safe_note: "Jobs, tareas programadas y ejecución controlada.",
+  },
+  {
+    tool_key: "langfuse",
+    name: "Langfuse",
+    provider: "Langfuse",
+    category: "observability",
+    required_env: ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"],
+    optional_env: ["LANGFUSE_HOST", "LANGFUSE_BASE_URL"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Validar ingestión real de trazas sin secretos ni contenido sensible.",
+    safe_note: "Trazas, auditoría, evaluación y observabilidad.",
+  },
+  {
+    tool_key: "openai",
+    name: "OpenAI",
+    provider: "OpenAI",
+    category: "core",
+    required_env: ["OPENAI_API_KEY"],
+    supports_read: true,
+    supports_write: false,
+    supports_realtime: true,
+    dry_run_first: false,
+    owner_gate_required: false,
+    implementation_status: "code_only",
+    next_step: "El runtime productivo usa AI Gateway; esta integración directa permanece cerrada.",
+    safe_note: "Proveedor directo no utilizado por el worker verificado.",
+  },
+  {
+    tool_key: "gemini",
+    name: "Gemini",
+    provider: "Google",
+    category: "core",
+    required_env: ["GEMINI_API_KEY"],
+    optional_env: ["GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"],
+    supports_read: true,
+    supports_write: false,
+    supports_realtime: true,
+    dry_run_first: false,
+    owner_gate_required: false,
+    implementation_status: "code_only",
+    next_step: "El runtime productivo usa Gemini mediante AI Gateway, no llamadas directas.",
+    safe_note: "Proveedor directo no utilizado por el worker verificado.",
+  },
+  {
+    tool_key: "meta_ads",
+    name: "Meta Ads",
+    provider: "Meta",
+    category: "ads",
+    required_env: ["META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID"],
+    optional_env: ["FACEBOOK_ACCESS_TOKEN", "META_APP_ID", "META_APP_SECRET"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar reportes primero; escritura de campañas después con Owner Gate.",
+    safe_note: "Campañas, audiencias, anuncios y reportes.",
+  },
+  {
+    tool_key: "google_ads",
+    name: "Google Ads",
+    provider: "Google",
+    category: "ads",
+    required_env: ["GOOGLE_ADS_DEVELOPER_TOKEN"],
+    optional_env: [
+      "GOOGLE_ADS_CLIENT_ID",
+      "GOOGLE_ADS_CLIENT_SECRET",
+      "GOOGLE_ADS_REFRESH_TOKEN",
+      "GOOGLE_ADS_CUSTOMER_ID",
+    ],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar reportes primero; escritura de campañas después con Owner Gate.",
+    safe_note: "Campañas, búsqueda, performance y reportes.",
+  },
+  {
+    tool_key: "tiktok_ads",
+    name: "TikTok Ads",
+    provider: "TikTok",
+    category: "ads",
+    required_env: ["TIKTOK_ACCESS_TOKEN"],
+    optional_env: ["TIKTOK_APP_ID", "TIKTOK_SECRET", "TIKTOK_ADVERTISER_ID"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar reportes primero; escritura de campañas después con Owner Gate.",
+    safe_note: "Campañas TikTok, creatividades y reportes.",
+  },
+  {
+    tool_key: "linkedin_ads",
+    name: "LinkedIn Ads",
+    provider: "LinkedIn",
+    category: "ads",
+    required_env: ["LINKEDIN_ACCESS_TOKEN"],
+    optional_env: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar reportes primero; escritura de campañas después con Owner Gate.",
+    safe_note: "Campañas B2B, audiencias y reportes.",
+  },
+  {
+    tool_key: "stripe",
+    name: "Stripe",
+    provider: "Stripe",
+    category: "payments",
+    required_env: ["STRIPE_SECRET_KEY"],
+    optional_env: ["STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Mantener pagos bloqueados hasta contar con Payment Gate, doble aprobación y auditoría.",
+    safe_note: "Pagos, clientes, facturación y eventos.",
+  },
+  {
+    tool_key: "paypal",
+    name: "PayPal",
+    provider: "PayPal",
+    category: "payments",
+    required_env: ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"],
+    optional_env: ["PAYPAL_WEBHOOK_ID"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Mantener pagos bloqueados hasta contar con Payment Gate, doble aprobación y auditoría.",
+    safe_note: "Pagos, órdenes, capturas y estado.",
+  },
+  {
+    tool_key: "d24",
+    name: "D24",
+    provider: "D24",
+    category: "payments",
+    required_env: ["D24_API_KEY", "D24_SECRET_KEY"],
+    optional_env: ["D24_MERCHANT_ID"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Mantener operaciones Chido bloqueadas hasta cerrar gates legales y financieros.",
+    safe_note: "Pasarela de pagos para Chido Casino.",
+  },
+  {
+    tool_key: "namecheap",
+    name: "Namecheap",
+    provider: "Namecheap",
+    category: "domain",
+    required_env: ["NAMECHEAP_API_USER", "NAMECHEAP_API_KEY"],
+    optional_env: ["NAMECHEAP_USERNAME", "NAMECHEAP_CLIENT_IP"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar lectura de dominios antes de permitir cambios.",
+    safe_note: "Dominios y disponibilidad.",
+  },
+  {
+    tool_key: "cloudflare",
+    name: "Cloudflare",
+    provider: "Cloudflare",
+    category: "security",
+    required_env: ["CLOUDFLARE_API_TOKEN"],
+    optional_env: ["CLOUDFLARE_ZONE_ID", "CF_API_TOKEN"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar lectura de DNS y seguridad antes de permitir cambios.",
+    safe_note: "DNS, seguridad, cache y reglas.",
+  },
+  {
+    tool_key: "hetzner",
+    name: "Hetzner",
+    provider: "Hetzner",
+    category: "cloud",
+    required_env: ["HETZNER_TOKEN"],
+    optional_env: ["HCLOUD_TOKEN", "HETZNER_API_TOKEN"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar health y lectura antes de habilitar cambios.",
+    safe_note: "Servidor, red, backups y health.",
+  },
+  {
+    tool_key: "heygen",
+    name: "HeyGen",
+    provider: "HeyGen",
+    category: "media",
+    required_env: ["HEYGEN_API_KEY"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar jobs con evidencia antes de afirmar generación de video.",
+    safe_note: "Videos, avatares y assets.",
+  },
+  {
+    tool_key: "email",
+    name: "Email / Resend / SMTP",
+    provider: "Email",
+    category: "notifications",
+    required_env: ["RESEND_API_KEY"],
+    optional_env: ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"],
+    supports_read: true,
+    supports_write: true,
+    supports_realtime: false,
+    dry_run_first: true,
+    owner_gate_required: true,
+    implementation_status: "code_only",
+    next_step: "Conectar envío transaccional con consentimiento, opt-out y logs.",
+    safe_note: "Alertas owner y notificaciones transaccionales.",
+  },
 ];
 
 function envValue(key: string): string {
@@ -93,35 +450,65 @@ function statusFor(tool: RuntimeTool): RuntimeToolStatus {
   const missing = tool.required_env.filter((key) => !hasEnv(key));
   const configuredRequired = tool.required_env.length - missing.length;
   const optionalHits = (tool.optional_env ?? []).filter(hasEnv);
-  const configuredOptional = optionalHits.length;
-  const hasRequired = missing.length === 0;
-  const hasAnySignal = configuredRequired > 0 || configuredOptional > 0;
 
-  const status: RuntimeToolStatusKind = hasRequired ? "connected" : hasAnySignal ? "partial" : "missing_key";
+  const aliasHits: Record<string, string[]> = {};
+  const missingGroups: string[] = [];
+  let configuredGroupSignals = 0;
+
+  for (const group of tool.env_groups ?? []) {
+    const hits = group.any_of.filter(hasEnv);
+    aliasHits[group.label] = hits;
+    configuredGroupSignals += hits.length;
+    if ((group.required ?? true) && hits.length === 0) missingGroups.push(group.label);
+  }
+
+  const hasCredentials = missing.length === 0 && missingGroups.length === 0;
+  const hasAnySignal =
+    configuredRequired > 0 || optionalHits.length > 0 || configuredGroupSignals > 0;
+
+  let status: RuntimeToolStatusKind;
+  let statusLabel: RuntimeToolStatus["status_label"];
+  let statusHint: string;
+
+  if (tool.implementation_status === "blocked") {
+    status = "blocked";
+    statusLabel = "Bloqueado";
+    statusHint = "La integración está bloqueada por política.";
+  } else if (
+    tool.implementation_status === "code_only" ||
+    tool.implementation_status === "missing_code"
+  ) {
+    status = "missing_code";
+    statusLabel = "Falta código";
+    statusHint = hasCredentials
+      ? "Las credenciales pueden existir, pero no hay executor productivo verificado."
+      : "Faltan executor productivo y credenciales completas.";
+  } else if (hasCredentials) {
+    status = "connected";
+    statusLabel = "Conectado";
+    statusHint = "Credenciales mínimas detectadas y executor disponible para validación controlada.";
+  } else if (hasAnySignal) {
+    status = "partial";
+    statusLabel = "Parcial";
+    statusHint = "Hay señales parciales. Faltan credenciales o permisos.";
+  } else {
+    status = "missing_key";
+    statusLabel = "Falta llave";
+    statusHint = "Sin credenciales suficientes para ejecutar.";
+  }
 
   return {
-    status_label: hasRequired ? "Conectado" : hasAnySignal ? "Parcial" : "Falta llave",
-    status_hint: hasRequired ? "Variables mínimas detectadas. Lista para validación controlada." : hasAnySignal ? "Hay señales parciales. Falta completar credenciales o permisos." : "Sin variables reales suficientes para ejecutar.",
-    env_present: [],
-    alias_hits: {},
-    missing_groups: [],
-    execution_enabled: Boolean(hasRequired && ((tool.implementation_status ?? "code_only") === "executor_ready" || (tool.implementation_status ?? "code_only") === "configured" || (tool.implementation_status ?? "code_only") === "connected")),
     ...tool,
     status,
-    configured_env_count: configuredRequired + configuredOptional,
+    status_label: statusLabel,
+    status_hint: statusHint,
+    configured_env_count: configuredRequired + optionalHits.length + configuredGroupSignals,
+    env_present: [],
     missing_env: missing,
-    implementation_status:
-      tool.implementation_status ??
-      (hasRequired ? "executor_ready" : hasAnySignal ? "partial_env_detected" : "missing_credentials"),
-    owner_gate_required: tool.owner_gate_required ?? tool.supports_write,
-    dry_run_first: tool.dry_run_first ?? true,
-    next_step:
-      tool.next_step ??
-      (hasRequired
-        ? "Listo para prueba controlada en dry-run."
-        : hasAnySignal
-          ? `Completar configuración faltante: ${missing.join(", ")}.`
-          : `Configurar credenciales: ${tool.required_env.join(", ")}.`),
+    missing_groups: missingGroups,
+    alias_hits: aliasHits,
+    execution_enabled:
+      hasCredentials && tool.implementation_status === "executor_ready",
   };
 }
 
@@ -140,11 +527,11 @@ export function getRuntimeToolSummary() {
       missing_key: tools.filter((tool) => tool.status === "missing_key").length,
       missing_code: tools.filter((tool) => tool.status === "missing_code").length,
       blocked: tools.filter((tool) => tool.status === "blocked").length,
+      executor_ready: tools.filter((tool) => tool.execution_enabled).length,
     },
     tools,
   };
 }
-
 
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) {
@@ -171,7 +558,7 @@ function buildAgiActionIdempotencyKey(input: {
 }): string {
   const source = stableJson({
     project_id: input.project_id,
-    agi_id: input.agi_id,
+    agi_id: canonicalAgiId(input.agi_id),
     tool_key: input.tool_key ?? null,
     action_type: input.action_type,
     title: input.title,
@@ -185,66 +572,42 @@ function getAdminSupabase() {
   return createAdminSupabase();
 }
 
-async function safeCount(sb: ReturnType<typeof createAdminSupabase>, table: string, project_id: string): Promise<{ count: number; ok: boolean; error?: string }> {
-  const { count, error } = await sb.from(table).select("*", { count: "exact", head: true }).eq("project_id", project_id);
+async function safeCount(
+  sb: ReturnType<typeof createAdminSupabase>,
+  table: string,
+  project_id: string,
+): Promise<{ count: number; ok: boolean; error?: string }> {
+  const { count, error } = await sb
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("project_id", project_id);
   if (error) return { count: 0, ok: false, error: error.message };
   return { count: count ?? 0, ok: true };
 }
 
-function agentDisplayName(raw: unknown): string {
-  const agi = raw as { key?: string; title?: string; name?: string };
-  return agi.title ?? agi.name ?? agi.key ?? "AGI";
+function nonCanonicalAliases(): string[] {
+  return Object.keys(HOCKER_AGI_ALIASES).filter((alias) => {
+    const normalized = alias.replace(/-/g, "_");
+    return !HOCKER_AGI_IDS.includes(normalized as (typeof HOCKER_AGI_IDS)[number]);
+  });
 }
 
-function agentRole(key: string): string {
-  if (key === "nova") return "orchestrator";
-  if (key === "syntia") return "memory";
-  if (key === "vertx") return "security";
-  if (key === "curvewind") return "prediction";
-  return "agent";
-}
-
-function toolKeysForAgent(agentId: string): string[] {
-  const baseTools = ["nova_orchestrator", "supabase"];
-  const extra =
-    agentId === "hostia" ? ["github", "vercel", "cloudflare", "hetzner", "namecheap"] :
-    agentId === "nova-ads" ? ["meta_ads", "google_ads", "tiktok_ads", "linkedin_ads"] :
-    agentId === "candy-ads" ? ["openai", "gemini"] :
-    agentId === "pro-ia" ? ["heygen", "openai", "gemini"] :
-    agentId === "numia" ? ["stripe", "paypal"] :
-    agentId === "jurix" ? ["github", "supabase"] :
-    agentId === "chido-wins" ? ["supabase", "d24"] :
-    agentId === "chido-gerente" ? ["supabase", "d24", "paypal"] :
-    agentId === "revia" ? ["email", "supabase"] :
-    agentId === "nova" ? ["github", "vercel", "meta_ads", "google_ads", "tiktok_ads", "linkedin_ads", "stripe", "paypal", "namecheap", "cloudflare", "hetzner", "openai", "gemini", "trigger", "langfuse", "email"] : [];
-
-  return Array.from(new Set([...baseTools, ...extra]));
-}
-
-export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: boolean; error?: string }> {
+export async function syncAgiRuntimeCatalog(
+  project_id: string,
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const sb = getAdminSupabase();
     const now = new Date().toISOString();
     const tools = getRuntimeToolCatalog();
-
-    const agents = AGI_REGISTRY.map((raw) => {
-      const agi = raw as { key: string; title?: string; name?: string; description?: string; status?: string; category?: string };
-      const key = agi.key;
-
-      return {
-        project_id,
-        agi_id: key,
-        name: agentDisplayName(agi),
-        role: agentRole(key),
-        status: agi.status ?? "registered",
-        autonomy_level: key === "nova" || key === "syntia" || key === "vertx" ? "guarded" : "manual",
-        allow_actions: false,
-        capabilities: [agi.category ?? "ecosystem"],
-        meta: { source: "hocker-dashboard", description: agi.description ?? null },
-        created_at: now,
-        updated_at: now,
-      };
-    });
+    const agents = canonicalAgentRows(project_id, now);
+    const canonRows = HOCKER_AGI_CANON.map((agi) => ({
+      id: agi.id,
+      name: agi.name,
+      description: agi.role,
+      version: HOCKER_AGI_CANON_VERSION,
+      tags: [agi.domain, ...agi.modules],
+      meta: canonicalAgiMeta(agi),
+    }));
 
     const toolRows = tools.map((tool) => ({
       tool_key: tool.tool_key,
@@ -252,7 +615,10 @@ export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: b
       provider: tool.provider,
       category: tool.category,
       status: tool.status,
-      requires_secret_keys: tool.required_env,
+      requires_secret_keys: [
+        ...tool.required_env,
+        ...(tool.env_groups ?? []).flatMap((group) => group.any_of),
+      ],
       supports_read: tool.supports_read,
       supports_write: tool.supports_write,
       supports_realtime: tool.supports_realtime,
@@ -262,34 +628,38 @@ export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: b
         env_groups: tool.env_groups ?? [],
         env_present: tool.env_present,
         missing_env: tool.missing_env,
+        missing_groups: tool.missing_groups,
         status_label: tool.status_label,
         status_hint: tool.status_hint,
         implementation_status: tool.implementation_status,
-        owner_gate_required: tool.owner_gate_required ?? Boolean(tool.supports_write),
-        dry_run_first: tool.dry_run_first ?? Boolean(tool.supports_write),
-        next_step: tool.next_step ?? "Validar credenciales, permisos y executor real antes de permitir ejecución.",
+        execution_enabled: tool.execution_enabled,
+        owner_gate_required: tool.owner_gate_required,
+        dry_run_first: tool.dry_run_first,
+        next_step: tool.next_step,
       },
       created_at: now,
       updated_at: now,
     }));
 
     const toolByKey = new Map(tools.map((tool) => [tool.tool_key, tool]));
-
     const agentTools = agents.flatMap((agent) =>
-      toolKeysForAgent(agent.agi_id).map((tool_key) => {
+      agiToolKeys(canonicalAgiId(agent.agi_id)).map((tool_key) => {
         const tool = toolByKey.get(tool_key);
+        const planned = canonicalAgiId(agent.agi_id) === "shadows";
 
         return {
           project_id,
-          agi_id: agent.agi_id,
+          agi_id: canonicalAgiId(agent.agi_id),
           tool_key,
           permission_level: agent.agi_id === "nova" ? "admin_guarded" : "read_guarded",
-          enabled: tool?.status === "connected",
+          enabled: Boolean(tool?.execution_enabled && !planned),
           policy: {
-            owner_gate_required: true,
-            dry_run_first: true,
+            owner_gate_required: tool?.owner_gate_required ?? true,
+            dry_run_first: tool?.dry_run_first ?? true,
             writes_blocked_by_default: true,
             normalized_status: tool?.status ?? "missing_code",
+            implementation_status: tool?.implementation_status ?? "missing_code",
+            execution_enabled: tool?.execution_enabled ?? false,
             next_step: tool?.next_step ?? "Registrar herramienta.",
           },
           created_at: now,
@@ -298,18 +668,43 @@ export async function syncAgiRuntimeCatalog(project_id: string): Promise<{ ok: b
       }),
     );
 
+    const aliases = nonCanonicalAliases();
+    if (aliases.length > 0) {
+      const aliasTools = await sb
+        .from("agi_agent_tools")
+        .delete()
+        .eq("project_id", project_id)
+        .in("agi_id", aliases);
+      if (aliasTools.error) throw aliasTools.error;
+
+      const aliasAgents = await sb
+        .from("agi_agents")
+        .delete()
+        .eq("project_id", project_id)
+        .in("agi_id", aliases);
+      if (aliasAgents.error) throw aliasAgents.error;
+    }
+
+    const canon = await sb.from("agis").upsert(canonRows, { onConflict: "id" });
+    if (canon.error) throw canon.error;
+
     const a = await sb.from("agi_agents").upsert(agents, { onConflict: "project_id,agi_id" });
     if (a.error) throw a.error;
 
     const t = await sb.from("agi_tools").upsert(toolRows, { onConflict: "tool_key" });
     if (t.error) throw t.error;
 
-    const at = await sb.from("agi_agent_tools").upsert(agentTools, { onConflict: "project_id,agi_id,tool_key" });
+    const at = await sb
+      .from("agi_agent_tools")
+      .upsert(agentTools, { onConflict: "project_id,agi_id,tool_key" });
     if (at.error) throw at.error;
 
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "No se pudo sincronizar Herramientas reales." };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo sincronizar el runtime AGI.",
+    };
   }
 }
 
@@ -339,12 +734,14 @@ export async function getAgiRuntimeSummary(project_id: string) {
     return {
       ok: true,
       project_id,
+      canon_version: HOCKER_AGI_CANON_VERSION,
       checked_at: new Date().toISOString(),
       schema_ready: [agents, tasks, runs, actions, feedback, threads].every((item) => item.ok),
       catalog_synced: sync.ok,
       sync_error: sync.error ?? null,
       counts: {
-        agents: agents.count || AGI_REGISTRY.length,
+        agents: agents.count || HOCKER_AGI_CANON.length,
+        canonical_agents_expected: HOCKER_AGI_CANON.length,
         tasks: tasks.count,
         runs: runs.count,
         actions: actions.count,
@@ -353,11 +750,15 @@ export async function getAgiRuntimeSummary(project_id: string) {
         tools_total: toolSummary.counts.total,
         tools_configured: toolSummary.counts.connected,
         tools_connected: toolSummary.counts.connected,
+        tools_executor_ready: toolSummary.counts.executor_ready,
         tools_partial: toolSummary.counts.partial,
         tools_missing_key: toolSummary.counts.missing_key,
         tools_missing_code: toolSummary.counts.missing_code,
         tools_blocked: toolSummary.counts.blocked,
-        tools_missing: toolSummary.counts.missing_key + toolSummary.counts.missing_code + toolSummary.counts.blocked,
+        tools_missing:
+          toolSummary.counts.missing_key +
+          toolSummary.counts.missing_code +
+          toolSummary.counts.blocked,
       },
       integrations: tools.map((tool) => ({
         tool_key: tool.tool_key,
@@ -375,24 +776,27 @@ export async function getAgiRuntimeSummary(project_id: string) {
         missing_env: tool.missing_env,
         missing_groups: tool.missing_groups,
         safe_note: tool.safe_note,
-        next_step: tool.next_step ?? "Validar credenciales, permisos y executor real antes de permitir ejecución.",
+        next_step: tool.next_step,
+        implementation_status: tool.implementation_status,
         execution_enabled: tool.execution_enabled,
       })),
       recent_actions: recentActions ?? [],
       message: sync.ok
-        ? "Herramientas reales normalizado: estados reales, llaves detectadas y herramientas protegidas por Owner Gate."
-        : "Herramientas reales definido; falta aplicar migración o configurar Supabase admin.",
+        ? "Canon de 16 AGIs sincronizado. Sólo se habilitan herramientas con credenciales y executor verificado."
+        : "El canon está definido, pero la sincronización de Supabase falló.",
     };
   } catch (error) {
     return {
       ok: false,
       project_id,
+      canon_version: HOCKER_AGI_CANON_VERSION,
       checked_at: new Date().toISOString(),
       schema_ready: false,
       catalog_synced: sync.ok,
       sync_error: sync.error ?? null,
       counts: {
-        agents: AGI_REGISTRY.length,
+        agents: HOCKER_AGI_CANON.length,
+        canonical_agents_expected: HOCKER_AGI_CANON.length,
         tasks: 0,
         runs: 0,
         actions: 0,
@@ -401,15 +805,19 @@ export async function getAgiRuntimeSummary(project_id: string) {
         tools_total: toolSummary.counts.total,
         tools_configured: toolSummary.counts.connected,
         tools_connected: toolSummary.counts.connected,
+        tools_executor_ready: toolSummary.counts.executor_ready,
         tools_partial: toolSummary.counts.partial,
         tools_missing_key: toolSummary.counts.missing_key,
         tools_missing_code: toolSummary.counts.missing_code,
         tools_blocked: toolSummary.counts.blocked,
-        tools_missing: toolSummary.counts.missing_key + toolSummary.counts.missing_code + toolSummary.counts.blocked,
+        tools_missing:
+          toolSummary.counts.missing_key +
+          toolSummary.counts.missing_code +
+          toolSummary.counts.blocked,
       },
       integrations: tools,
       recent_actions: [],
-      message: error instanceof Error ? error.message : "No se pudo leer Herramientas reales.",
+      message: error instanceof Error ? error.message : "No se pudo leer el runtime AGI.",
     };
   }
 }
@@ -427,11 +835,16 @@ export async function enqueueAgiAction(input: {
   created_by?: string | null;
 }) {
   const sb = getAdminSupabase();
+  const agiId = canonicalAgiId(input.agi_id);
+  if (agiId === "shadows") {
+    throw new Error("SHADOWS_ACTION_BLOCKED_UNTIL_EPHEMERAL_SANDBOX");
+  }
+
   const dryRun = input.dry_run ?? true;
   const requiresApproval = input.requires_approval ?? true;
   const status = requiresApproval ? "needs_approval" : dryRun ? "dry_run_queued" : "queued";
-
-  const idempotencyKey = buildAgiActionIdempotencyKey(input);
+  const normalizedInput = { ...input, agi_id: agiId };
+  const idempotencyKey = buildAgiActionIdempotencyKey(normalizedInput);
 
   const existing = await sb
     .from("agi_action_queue")
@@ -445,7 +858,7 @@ export async function enqueueAgiAction(input: {
 
   const row = {
     project_id: input.project_id,
-    agi_id: input.agi_id,
+    agi_id: agiId,
     tool_key: input.tool_key ?? null,
     action_type: input.action_type,
     title: input.title,
@@ -471,7 +884,6 @@ export async function enqueueAgiAction(input: {
       .maybeSingle();
 
     if (!duplicate.error && duplicate.data) return duplicate.data;
-
     throw new Error(error.message);
   }
 
