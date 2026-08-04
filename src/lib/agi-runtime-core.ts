@@ -483,6 +483,10 @@ function statusFor(tool: RuntimeTool): RuntimeToolStatus {
     statusHint = hasCredentials
       ? "Las credenciales pueden existir, pero no hay executor productivo verificado."
       : "Faltan executor productivo y credenciales completas.";
+  } else if (tool.tool_key === "ai_gateway" && hasCredentials) {
+    status = "partial";
+    statusLabel = "Parcial";
+    statusHint = "Credencial detectada. Falta una inferencia real verificada antes de marcar AI Gateway como conectado.";
   } else if (hasCredentials) {
     status = "connected";
     statusLabel = "Conectado";
@@ -508,7 +512,9 @@ function statusFor(tool: RuntimeTool): RuntimeToolStatus {
     missing_groups: missingGroups,
     alias_hits: aliasHits,
     execution_enabled:
-      hasCredentials && tool.implementation_status === "executor_ready",
+      hasCredentials &&
+      tool.implementation_status === "executor_ready" &&
+      tool.tool_key !== "ai_gateway",
   };
 }
 
@@ -599,6 +605,29 @@ export async function syncAgiRuntimeCatalog(
     const sb = getAdminSupabase();
     const now = new Date().toISOString();
     const tools = getRuntimeToolCatalog();
+    const { data: gatewayChecks, error: gatewayCheckError } = await sb
+      .from("agi_integration_checks")
+      .select("status,configured,last_checked_at")
+      .eq("project_id", project_id)
+      .eq("tool_key", "ai_gateway")
+      .order("last_checked_at", { ascending: false })
+      .limit(1);
+    if (gatewayCheckError) throw gatewayCheckError;
+
+    const gatewayHealthy =
+      gatewayChecks?.[0]?.status === "healthy" &&
+      gatewayChecks?.[0]?.configured === true;
+    const effectiveTools = tools.map((tool) =>
+      tool.tool_key === "ai_gateway" && gatewayHealthy
+        ? {
+            ...tool,
+            status: "connected" as const,
+            status_label: "Conectado" as const,
+            status_hint: "Inferencia real verificada y registrada en agi_integration_checks.",
+            execution_enabled: true,
+          }
+        : tool,
+    );
     const agents = canonicalAgentRows(project_id, now);
     const canonRows = HOCKER_AGI_CANON.map((agi) => ({
       id: agi.id,
@@ -609,7 +638,7 @@ export async function syncAgiRuntimeCatalog(
       meta: canonicalAgiMeta(agi),
     }));
 
-    const toolRows = tools.map((tool) => ({
+    const toolRows = effectiveTools.map((tool) => ({
       tool_key: tool.tool_key,
       name: tool.name,
       provider: tool.provider,
@@ -641,7 +670,7 @@ export async function syncAgiRuntimeCatalog(
       updated_at: now,
     }));
 
-    const toolByKey = new Map(tools.map((tool) => [tool.tool_key, tool]));
+    const toolByKey = new Map(effectiveTools.map((tool) => [tool.tool_key, tool]));
     const agentTools = agents.flatMap((agent) =>
       agiToolKeys(canonicalAgiId(agent.agi_id)).map((tool_key) => {
         const tool = toolByKey.get(tool_key);
