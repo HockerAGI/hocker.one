@@ -70,6 +70,16 @@ test("runtime catalog uses canon and never enables code-only tools", async () =>
   assert.doesNotMatch(source, /capabilities: \[agi\.category \?\? "ecosystem"\]/);
 });
 
+test("AI Gateway remains partial until a real healthy integration check exists", async () => {
+  const source = await read("src/lib/agi-runtime-core.ts");
+
+  assert.match(source, /tool\.tool_key === "ai_gateway" && hasCredentials/);
+  assert.match(source, /tool\.tool_key !== "ai_gateway"/);
+  assert.match(source, /const gatewayHealthy =/);
+  assert.match(source, /gatewayChecks\?\.\[0\]\?\.status === "healthy"/);
+  assert.match(source, /Inferencia real verificada y registrada/);
+});
+
 test("serverless worker executes canonical prompts and complete routing", async () => {
   const source = await read("src/lib/serverless-agi-runtime.ts");
 
@@ -101,4 +111,5 @@ test("database migrations enforce canonical identities and complete Memory Mirro
   assert.match(validation, /validate_hocker_agi_canon/);
   assert.match(validation, /specialized_feeds=16/);
   assert.match(validation, /shadows_enabled_tools=0/);
+  assert.match(validation, /'ai_gateway','auth_failed'/);
 });
