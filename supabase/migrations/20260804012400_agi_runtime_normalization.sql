@@ -1,0 +1,26 @@
+-- Canonicalize runtime identities and truthfully classify tools.
+update public.agi_tasks set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_tasks set assigned_to=public.canonical_agi_id(assigned_to) where assigned_to is not null and assigned_to<>public.canonical_agi_id(assigned_to);
+update public.agi_runs set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_action_queue set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_chat_messages set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_chat_threads set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_error_patterns set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_feedback set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_update_feed set agi_id=public.canonical_agi_id(agi_id) where agi_id is not null and agi_id<>public.canonical_agi_id(agi_id);
+update public.agi_learning_events set source_agi_id=public.canonical_agi_id(source_agi_id) where source_agi_id is not null and source_agi_id<>public.canonical_agi_id(source_agi_id);
+update public.agi_memory_mirror set source_agi_id=public.canonical_agi_id(source_agi_id) where source_agi_id is not null and source_agi_id<>public.canonical_agi_id(source_agi_id);
+update public.agi_memory_mirror set target_agi_ids=array(select distinct public.canonical_agi_id(x) from unnest(target_agi_ids) x where public.canonical_agi_id(x)<>'' order by public.canonical_agi_id(x)) where exists(select 1 from unnest(target_agi_ids) x where x<>public.canonical_agi_id(x));
+
+delete from public.agi_agent_tools where project_id='hocker-one' and agi_id not in ('nova','syntia','vertx','jurix','curvewind','numia','nova_ads','candy','pro_ia','hostia','trackhok','nexpa','chido_wins','chido_gerente','shadows','revia');
+delete from public.agi_agents where project_id='hocker-one' and agi_id not in ('nova','syntia','vertx','jurix','curvewind','numia','nova_ads','candy','pro_ia','hostia','trackhok','nexpa','chido_wins','chido_gerente','shadows','revia');
+
+insert into public.agi_agents(project_id,agi_id,name,role,status,autonomy_level,allow_actions,capabilities,meta)
+select 'hocker-one',a.id,a.name,a.meta->>'kind', case when a.id='nova' then 'live' when a.id in ('syntia','vertx','numia') then 'integration' when a.meta->>'status' in ('guarded','planned') then 'protected' else 'development' end, case when a.id in ('nova','syntia','vertx','jurix','numia','nexpa','chido_wins','chido_gerente') then 'guarded' else 'manual' end, false, jsonb_build_array(a.meta->>'domain')||coalesce(a.meta->'modules','[]')||coalesce(a.meta->'learns','[]')||coalesce(a.meta->'sources','[]')||coalesce(a.meta->'can_propose','[]')||coalesce(a.meta->'memory_feed','[]'), jsonb_build_object('source','hocker-agi-canon','canon_version','12.6C.1B','level',a.meta->>'level','domain',a.meta->>'domain','description',a.description,'operational',a.id<>'shadows')
+from public.agis a where a.id in ('nova','syntia','vertx','jurix','curvewind','numia','nova_ads','candy','pro_ia','hostia','trackhok','nexpa','chido_wins','chido_gerente','shadows','revia')
+on conflict(project_id,agi_id) do update set name=excluded.name,role=excluded.role,status=excluded.status,autonomy_level=excluded.autonomy_level,allow_actions=false,capabilities=excluded.capabilities,meta=excluded.meta,updated_at=now();
+
+update public.agi_tools set status='missing_code',meta=jsonb_set(jsonb_set(meta,'{execution_enabled}','false',true),'{status_label}',to_jsonb('Falta código'::text),true),updated_at=now() where coalesce(meta->>'implementation_status','')='code_only';
+update public.agi_tools set status='connected',meta=meta||jsonb_build_object('implementation_status','executor_ready','execution_enabled',true,'status_label','Conectado'),updated_at=now() where tool_key in ('github','supabase');
+insert into public.agi_tools(tool_key,name,provider,category,status,requires_secret_keys,supports_read,supports_write,supports_realtime,meta) values('ai_gateway','Vercel AI Gateway','Vercel','core','partial','["VERCEL_OIDC_TOKEN","AI_GATEWAY_API_KEY"]',true,false,true,jsonb_build_object('implementation_status','executor_ready','execution_enabled',false,'owner_gate_required',false,'dry_run_first',false,'canon_version','12.6C.1B','status_label','Parcial','status_hint','Credencial pendiente de finalización real verificada.')) on conflict(tool_key) do update set name=excluded.name,provider=excluded.provider,category=excluded.category,status=case when agi_tools.status='connected' then 'connected' else 'partial' end,requires_secret_keys=excluded.requires_secret_keys,supports_read=true,supports_write=false,supports_realtime=true,meta=agi_tools.meta||excluded.meta,updated_at=now();
+delete from public.agi_agent_tools where project_id='hocker-one';
