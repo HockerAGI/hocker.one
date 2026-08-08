@@ -7,15 +7,24 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const REQUIRED_FILES = [
   ".github/CODEOWNERS",
   ".github/dependabot.yml",
-  ".github/workflows/codeql.yml",
   "SECURITY.md",
 ];
 
-test("repository declares code ownership, dependency updates, CodeQL and security reporting", async () => {
+test("repository declares code ownership, dependency updates and security reporting", async () => {
   for (const path of REQUIRED_FILES) {
     const content = await read(path);
     assert.ok(content.trim().length > 0, `${path} must exist and be non-empty`);
   }
+});
+
+test("CodeQL advanced workflow is absent because repository uses GitHub default setup", async () => {
+  const workflowsDir = new URL("../.github/workflows/", import.meta.url);
+  const files = (await readdir(workflowsDir)).filter((name) => /\.ya?ml$/i.test(name));
+  assert.equal(
+    files.some((name) => /^codeql\.ya?ml$/i.test(name)),
+    false,
+    "Do not add an advanced CodeQL workflow while GitHub CodeQL default setup is enabled",
+  );
 });
 
 test("every external GitHub Action is pinned to a full immutable commit SHA", async () => {
