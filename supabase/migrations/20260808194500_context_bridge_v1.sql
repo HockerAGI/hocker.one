@@ -106,6 +106,8 @@ create index if not exists context_bridge_checkpoints_source_observed_idx
   on public.context_bridge_checkpoints(project_id, source_id, observed_at desc);
 create index if not exists context_bridge_manifests_state_created_idx
   on public.context_bridge_manifests(project_id, state, created_at desc);
+create index if not exists context_bridge_manifests_previous_manifest_idx
+  on public.context_bridge_manifests(previous_manifest_id);
 create unique index if not exists context_bridge_one_active_manifest_per_project_idx
   on public.context_bridge_manifests(project_id) where state = 'active';
 create index if not exists context_bridge_capabilities_provider_idx
@@ -130,25 +132,41 @@ grant all on table public.context_bridge_manifests to service_role;
 grant all on table public.context_bridge_coverage to service_role;
 grant all on table public.context_bridge_capabilities to service_role;
 
+-- Keep this migration portable: do not depend on a helper created by another
+-- feature migration or by the current production schema state.
+create or replace function public.context_bridge_set_updated_at()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+revoke all on function public.context_bridge_set_updated_at() from public, anon, authenticated;
+grant execute on function public.context_bridge_set_updated_at() to service_role;
+
 drop trigger if exists set_context_bridge_sources_updated_at on public.context_bridge_sources;
 create trigger set_context_bridge_sources_updated_at
 before update on public.context_bridge_sources
-for each row execute function public.set_updated_at();
+for each row execute function public.context_bridge_set_updated_at();
 
 drop trigger if exists set_context_bridge_manifests_updated_at on public.context_bridge_manifests;
 create trigger set_context_bridge_manifests_updated_at
 before update on public.context_bridge_manifests
-for each row execute function public.set_updated_at();
+for each row execute function public.context_bridge_set_updated_at();
 
 drop trigger if exists set_context_bridge_coverage_updated_at on public.context_bridge_coverage;
 create trigger set_context_bridge_coverage_updated_at
 before update on public.context_bridge_coverage
-for each row execute function public.set_updated_at();
+for each row execute function public.context_bridge_set_updated_at();
 
 drop trigger if exists set_context_bridge_capabilities_updated_at on public.context_bridge_capabilities;
 create trigger set_context_bridge_capabilities_updated_at
 before update on public.context_bridge_capabilities
-for each row execute function public.set_updated_at();
+for each row execute function public.context_bridge_set_updated_at();
 
 create or replace function public.record_context_bridge_checkpoint(p_payload jsonb)
 returns public.context_bridge_checkpoints

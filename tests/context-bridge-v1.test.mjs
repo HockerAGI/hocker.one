@@ -49,6 +49,10 @@ test("Context Bridge persistence is service-only, evidence-backed and owner-gate
   assert.match(sql, /grant execute on function public\.activate_context_bridge_manifest\(uuid, text\) to service_role/i);
   assert.match(sql, /revoke all on function public\.record_context_bridge_checkpoint\(jsonb\) from public, anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.record_context_bridge_checkpoint\(jsonb\) to service_role/i);
+  assert.match(sql, /create or replace function public\.context_bridge_set_updated_at\(\)/i);
+  assert.match(sql, /execute function public\.context_bridge_set_updated_at\(\)/i);
+  assert.doesNotMatch(sql, /execute function public\.set_updated_at\(\)/i);
+  assert.match(sql, /context_bridge_manifests_previous_manifest_idx[\s\S]*previous_manifest_id/i);
   assert.doesNotMatch(sql, /create\s+policy/i);
 });
 
