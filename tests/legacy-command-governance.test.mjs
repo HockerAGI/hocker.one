@@ -21,3 +21,20 @@ test("legacy cloud executor proves an atomic claim before executing side effects
   assert.match(source, /if\s*\(!claimedCommand\)/);
   assert.match(source, /const\s+claimed\s*=\s*claimedCommand\s+as\s+CloudCommandRow/);
 });
+
+test("owner approval re-signs the command before making it executable", async () => {
+  const approval = await read("src/app/api/commands/approve/route.ts");
+
+  assert.match(approval, /requireProjectRole\(project_id,\s*\["owner",\s*"admin"\]\)/);
+  assert.match(approval, /signCommand\(/);
+  assert.match(approval, /status:\s*"queued"/);
+  assert.match(approval, /needs_approval:\s*false/);
+  assert.match(approval, /approved_at:\s*approvedAt/);
+  assert.match(approval, /created_at:\s*approvedAt/);
+  assert.match(approval, /signature,/);
+
+  const auditBeforeQueue = approval.indexOf('event_type: "command.approved"');
+  const queueEnable = approval.indexOf('status: "queued"');
+  assert.ok(auditBeforeQueue >= 0 && queueEnable >= 0 && auditBeforeQueue < queueEnable,
+    "approval audit evidence must be sealed before the command is queued");
+});
