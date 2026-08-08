@@ -7,24 +7,20 @@ on:
     paths:
       - package.json
       - .github/workflows/dependency-lock-refresh.yml
-  pull_request:
-    branches:
-      - main
-    paths:
-      - package.json
-      - .github/workflows/dependency-lock-refresh.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   regenerate-lock:
+    if: github.repository == 'HockerAGI/hocker.one' && github.ref == 'refs/heads/hardening/production-readiness-20260807'
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout repository
+      - name: Checkout hardening branch
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          persist-credentials: false
+          ref: hardening/production-readiness-20260807
+          persist-credentials: true
 
       - name: Setup Node 22
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -38,11 +34,19 @@ jobs:
       - name: Verify high-severity dependency audit
         run: npm audit --audit-level=high
 
-      - name: Upload regenerated lockfile
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: hocker-one-package-lock
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
+      - name: Verify generated diff scope
+        shell: bash
+        run: |
+          changed="$(git diff --name-only)"
+          test "$changed" = "package-lock.json"
+          git add package-lock.json
+          staged="$(git diff --cached --name-only)"
+          test "$staged" = "package-lock.json"
+
+      - name: Commit generated lockfile only
+        shell: bash
+        run: |
+          git config user.name "hocker-one-hardening-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: refresh patched dependency lockfile"
+          git push origin HEAD:hardening/production-readiness-20260807
