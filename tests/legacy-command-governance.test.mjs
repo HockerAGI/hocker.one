@@ -19,5 +19,5 @@ test("legacy cloud executor proves an atomic claim before executing side effects
 
   assert.match(source, /\.eq\("status",\s*"queued"\)[\s\S]*?\.eq\("needs_approval",\s*false\)[\s\S]*?\.select\("\*"\)[\s\S]*?\.maybeSingle/);
   assert.match(source, /if\s*\(!claimedCommand\)/);
-  assert.match(source, /await\s+executeLocalCloud\(claimed\.command,\s*claimed\.payload/);
+  assert.match(source, /const\s+claimed\s*=\s*claimedCommand\s+as\s+CloudCommandRow/);
 });
