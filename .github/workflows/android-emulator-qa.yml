@@ -63,8 +63,16 @@ jobs:
       - name: Install Android 36 emulator image
         shell: bash
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libpulse0
+
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          export ANDROID_AVD_HOME
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
+
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" \
             "platform-tools" \
@@ -76,6 +84,8 @@ jobs:
             --force \
             --name hocker_api36 \
             --package "system-images;android-36;google_apis;x86_64"
+          "$AVDMANAGER" list avd -c | grep -Fx hocker_api36
+          test -f "$ANDROID_AVD_HOME/hocker_api36.ini"
 
       - name: Boot Android 36 emulator
         shell: bash

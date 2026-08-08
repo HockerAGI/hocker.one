@@ -75,7 +75,9 @@ boot_emulator() {
 
   local deadline=$((SECONDS + boot_timeout_seconds))
   while (( SECONDS < deadline )); do
-    if ! kill -0 "$emulator_pid" 2>/dev/null; then
+    local emulator_state=""
+    emulator_state="$(ps -o stat= -p "$emulator_pid" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [[ -z "$emulator_state" || "$emulator_state" == Z* ]]; then
       wait "$emulator_pid" 2>/dev/null || true
       echo "emulator exited before registering with ADB" >&2
       print_emulator_diagnostics
