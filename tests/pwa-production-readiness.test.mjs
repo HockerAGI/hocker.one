@@ -34,9 +34,17 @@ test("offline fallback is static and contains no authentication form or private 
   assert.doesNotMatch(offline, /token|secret|api[_-]?key|password/i);
 });
 
-test("Android verification records the exact bundletool artifact hash", async () => {
+test("Android verifies the pinned bundletool artifact before executing it", async () => {
   const script = await read(".github/scripts/android-build-verify.sh");
+  const expectedSha = "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29";
 
+  assert.match(script, new RegExp(`BUNDLETOOL_SHA256:=?${expectedSha}`));
   assert.match(script, /BUNDLETOOL-SHA256\.txt/);
   assert.match(script, /sha256sum\s+["']?\$bundletool/);
+  assert.match(script, /sha256sum\s+--check\s+--strict/);
+
+  const verifyIndex = script.indexOf("sha256sum --check --strict");
+  const executeIndex = script.indexOf('java -jar "$bundletool"');
+  assert.ok(verifyIndex >= 0 && executeIndex >= 0 && verifyIndex < executeIndex,
+    "bundletool checksum verification must happen before java executes the downloaded JAR");
 });
