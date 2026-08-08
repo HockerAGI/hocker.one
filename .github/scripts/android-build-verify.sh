@@ -60,7 +60,7 @@ fi
 
 grep -Fq "package: name='com.hocker.one'" "$verification/APK-BADGING.txt"
 grep -Fq "sdkVersion:'24'" "$verification/APK-BADGING.txt"
-grep -Fq "targetSdkVersion:'35'" "$verification/APK-BADGING.txt"
+grep -Fq "targetSdkVersion:'36'" "$verification/APK-BADGING.txt"
 grep -Fq "versionName='${ANDROID_VERSION_NAME}'" "$verification/APK-BADGING.txt"
 
 # Android app certificates are normally self-signed. Verify cryptographic
@@ -107,6 +107,7 @@ test -s "$verification/universal-from-aab.apk"
 "$aapt" dump badging "$verification/universal-from-aab.apk" \
   | tee "$verification/AAB-UNIVERSAL-APK-BADGING.txt"
 grep -Fq "package: name='com.hocker.one'" "$verification/AAB-UNIVERSAL-APK-BADGING.txt"
+grep -Fq "targetSdkVersion:'36'" "$verification/AAB-UNIVERSAL-APK-BADGING.txt"
 grep -Fq "versionName='${ANDROID_VERSION_NAME}'" "$verification/AAB-UNIVERSAL-APK-BADGING.txt"
 
 sha256sum \
