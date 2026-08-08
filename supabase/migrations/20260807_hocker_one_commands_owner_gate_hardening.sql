@@ -6,7 +6,11 @@ begin;
 -- may create or mutate legacy commands. Service workers retain their dedicated
 -- service_role policy.
 
-create or replace function private.is_project_owner_or_admin(p_project_id uuid)
+drop policy if exists "commands_admin_write" on public.commands;
+drop policy if exists "commands_owner_admin_write" on public.commands;
+drop function if exists private.is_project_owner_or_admin(uuid);
+
+create or replace function private.is_project_owner_or_admin(p_project_id text)
 returns boolean
 language sql
 stable
@@ -16,18 +20,15 @@ as $$
   select exists (
     select 1
     from public.project_members pm
-    where pm.project_id = p_project_id
-      and pm.user_id = auth.uid()
+    where pm.project_id::text = p_project_id
+      and pm.user_id::text = (select auth.uid())::text
       and lower(pm.role) in ('owner', 'admin')
   );
 $$;
 
-revoke all on function private.is_project_owner_or_admin(uuid) from public;
-grant execute on function private.is_project_owner_or_admin(uuid) to authenticated;
-grant execute on function private.is_project_owner_or_admin(uuid) to service_role;
-
-drop policy if exists "commands_admin_write" on public.commands;
-drop policy if exists "commands_owner_admin_write" on public.commands;
+revoke all on function private.is_project_owner_or_admin(text) from public;
+grant execute on function private.is_project_owner_or_admin(text) to authenticated;
+grant execute on function private.is_project_owner_or_admin(text) to service_role;
 
 create policy "commands_owner_admin_write"
 on public.commands
