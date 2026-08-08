@@ -12,19 +12,22 @@ on:
         required: false
         default: "/,/one,/ecosistema,/soluciones,/seguridad"
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   diagnostics:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: read
-      actions: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
 
       - name: Setup Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: "22"
           cache: "npm"
@@ -40,7 +43,7 @@ jobs:
         run: node scripts/diagnostics/hocker-diagnostics-provider-router.mjs
 
       - name: Upload diagnostics artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: hocker-lighthouse-diagnostics
           path: |
