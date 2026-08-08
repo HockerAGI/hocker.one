@@ -9,6 +9,7 @@ set -euo pipefail
 : "${ANDROID_VERSION_NAME:?Missing ANDROID_VERSION_NAME}"
 : "${RELEASE_KEY_KIND:?Missing RELEASE_KEY_KIND}"
 : "${BUNDLETOOL_VERSION:=1.18.3}"
+: "${BUNDLETOOL_SHA256:=a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29}"
 
 test -s "$ANDROID_KEYSTORE_PATH"
 chmod 600 "$ANDROID_KEYSTORE_PATH"
@@ -80,6 +81,8 @@ curl --fail --location --retry 3 --silent --show-error \
   "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" \
   --output "$bundletool"
 test -s "$bundletool"
+sha256sum "$bundletool" | tee "$verification/BUNDLETOOL-SHA256.txt"
+printf '%s  %s\n' "$BUNDLETOOL_SHA256" "$bundletool" | sha256sum --check --strict
 
 ks_pass_file="$RUNNER_TEMP/android-keystore.pass"
 key_pass_file="$RUNNER_TEMP/android-key.pass"
