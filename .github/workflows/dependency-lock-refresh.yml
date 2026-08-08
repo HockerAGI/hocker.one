@@ -7,6 +7,12 @@ on:
     paths:
       - package.json
       - .github/workflows/dependency-lock-refresh.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - package.json
+      - .github/workflows/dependency-lock-refresh.yml
 
 permissions:
   contents: read
