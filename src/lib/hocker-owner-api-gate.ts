@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
-export const HOCKER_OWNER_API_GATE_VERSION = "hocker-owner-api-gate-v0.2.2";
+export const HOCKER_OWNER_API_GATE_VERSION = "hocker-owner-api-gate-v0.3.0";
 
 type Actor = "owner" | "internal" | "unknown";
 type HeaderName = "x-hocker-owner-key" | "x-hocker-internal-key" | "authorization";
@@ -37,9 +37,7 @@ function tokens(): { owner: string; internal: string[] } {
   const owner = clean(process.env.HOCKER_OWNER_ACTION_KEY);
   const internal = [
     process.env.HOCKER_ONE_INTERNAL_TOKEN,
-    process.env.HOCKER_COMMAND_HMAC_SECRET,
     process.env.NOVA_ORCHESTRATOR_KEY,
-    process.env.COMMAND_HMAC_SECRET,
   ].map(clean).filter(Boolean);
 
   return { owner, internal: Array.from(new Set(internal)) };

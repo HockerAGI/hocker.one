@@ -2,13 +2,13 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/app/nova",
     name: "Hocker ONE",
     short_name: "Hocker ONE",
     description: "Sistema operativo conversacional del ecosistema HOCKER para coordinar NOVA, AGIs, acciones y evidencia.",
     start_url: "/app/nova",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
     background_color: "#020617",
     theme_color: "#020617",
     categories: ["productivity", "business", "utilities"],

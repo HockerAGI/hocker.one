@@ -30,3 +30,14 @@ test("Android minSdk supports Capacitor service worker APIs", async () => {
   assert.ok(match, "minSdkVersion must remain explicit");
   assert.ok(Number(match[1]) >= 24, "Capacitor service worker support requires API 24+");
 });
+
+test("Android 2026 release baseline targets API 36", async () => {
+  const variables = await read("android/variables.gradle");
+  const compile = variables.match(/compileSdkVersion\s*=\s*(\d+)/);
+  const target = variables.match(/targetSdkVersion\s*=\s*(\d+)/);
+
+  assert.ok(compile, "compileSdkVersion must remain explicit");
+  assert.ok(target, "targetSdkVersion must remain explicit");
+  assert.ok(Number(compile[1]) >= 36, "2026 Play launch baseline requires compileSdk API 36+");
+  assert.ok(Number(target[1]) >= 36, "2026 Play launch baseline requires targetSdk API 36+");
+});

@@ -46,6 +46,7 @@ export default function PwaRegister() {
       try {
         const reg = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
+          updateViaCache: "none",
         });
 
         window.dispatchEvent(

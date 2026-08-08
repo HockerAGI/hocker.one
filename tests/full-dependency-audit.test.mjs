@@ -6,6 +6,23 @@ const readJson = async (path) => JSON.parse(
   await readFile(new URL(`../${path}`, import.meta.url), "utf8"),
 );
 
+const parseVersion = (version) => String(version ?? "")
+  .replace(/^v/, "")
+  .split(".")
+  .map((part) => Number.parseInt(part, 10));
+
+const atLeast = (version, minimum) => {
+  const current = parseVersion(version);
+  const required = parseVersion(minimum);
+  for (let i = 0; i < Math.max(current.length, required.length); i += 1) {
+    const a = current[i] ?? 0;
+    const b = required[i] ?? 0;
+    if (a > b) return true;
+    if (a < b) return false;
+  }
+  return true;
+};
+
 test("brace-expansion vulnerable 1.1.x release is overridden", async () => {
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
@@ -28,6 +45,32 @@ test("postcss vulnerable releases are overridden", async () => {
   assert.equal(manifest.devDependencies?.postcss, "8.5.23");
   assert.equal(manifest.overrides?.postcss, "8.5.23");
   assert.equal(lockfile.packages?.["node_modules/postcss"]?.version, "8.5.23");
+});
+
+test("js-yaml legacy line is pinned to the CVE-2026-59870 patched release", async () => {
+  const manifest = await readJson("package.json");
+  const lockfile = await readJson("package-lock.json");
+
+  assert.equal(manifest.overrides?.["js-yaml"], "4.3.1");
+
+  for (const [path, metadata] of Object.entries(lockfile.packages ?? {})) {
+    if (!path.endsWith("node_modules/js-yaml")) continue;
+    const version = metadata?.version;
+    assert.ok(atLeast(version, "4.3.1"), `${path} must use js-yaml >= 4.3.1; found ${version}`);
+  }
+});
+
+test("nanoid legacy line is pinned to the CVE-2026-67213 patched release", async () => {
+  const manifest = await readJson("package.json");
+  const lockfile = await readJson("package-lock.json");
+
+  assert.equal(manifest.overrides?.nanoid, "3.3.17");
+
+  for (const [path, metadata] of Object.entries(lockfile.packages ?? {})) {
+    if (!path.endsWith("node_modules/nanoid")) continue;
+    const version = metadata?.version;
+    assert.ok(atLeast(version, "3.3.17"), `${path} must use nanoid >= 3.3.17; found ${version}`);
+  }
 });
 
 test("CI audits production and development dependencies", async () => {

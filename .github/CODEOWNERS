@@ -1,0 +1,12 @@
+# HOCKER ONE code ownership. Keep this file itself owner-protected.
+* @HockerAGI
+
+/.github/ @HockerAGI
+/.github/CODEOWNERS @HockerAGI
+/src/app/api/ @HockerAGI
+/src/lib/ @HockerAGI
+/supabase/ @HockerAGI
+/android/ @HockerAGI
+/tests/ @HockerAGI
+/package.json @HockerAGI
+/package-lock.json @HockerAGI
