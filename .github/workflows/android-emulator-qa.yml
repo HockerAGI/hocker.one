@@ -1,0 +1,149 @@
+name: Android Emulator QA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "android/**"
+      - "out/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "tests/android-emulator-qa.test.mjs"
+      - ".github/workflows/android-emulator-qa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  emulator-smoke:
+    name: API 36 install and launch smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+
+      - name: Setup Java 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Setup Node 22
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify emulator QA contract
+        run: node --test tests/android-emulator-qa.test.mjs
+
+      - name: Sync and build debug APK
+        shell: bash
+        run: |
+          npm run android:sync
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Install Android 36 emulator image
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "emulator" \
+            "platforms;android-36" \
+            "system-images;android-36;google_apis;x86_64"
+          echo no | "$AVDMANAGER" create avd \
+            --force \
+            --name hocker_api36 \
+            --package "system-images;android-36;google_apis;x86_64"
+
+      - name: Boot Android 36 emulator
+        shell: bash
+        run: |
+          sudo chmod 666 /dev/kvm || true
+          mkdir -p artifacts
+          nohup "$ANDROID_HOME/emulator/emulator" \
+            -avd hocker_api36 \
+            -no-window \
+            -noaudio \
+            -no-boot-anim \
+            -no-snapshot \
+            -gpu swiftshader_indirect \
+            > artifacts/emulator.log 2>&1 &
+
+          adb wait-for-device
+          for i in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+          adb shell input keyevent 82 || true
+
+      - name: Install and launch Hocker ONE
+        shell: bash
+        run: |
+          APK="$(find android/app/build/outputs/apk/debug -name '*.apk' -type f | head -n 1)"
+          test -n "$APK"
+          adb install -r "$APK"
+
+          PACKAGE="com.hocker.one"
+          ACTIVITY="$(adb shell cmd package resolve-activity --brief "$PACKAGE" | tr -d '\r' | tail -n 1)"
+          test -n "$ACTIVITY"
+          test "$ACTIVITY" != "No activity found"
+          adb shell am start -W -n "$ACTIVITY"
+          sleep 12
+
+          PID="$(adb shell pidof -s "$PACKAGE" | tr -d '\r')"
+          test -n "$PID"
+          adb shell dumpsys activity activities | grep -F "$PACKAGE" >/dev/null
+
+      - name: Capture emulator evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          adb exec-out screencap -p > artifacts/hocker-one-api36.png || true
+          adb shell uiautomator dump /sdcard/hocker-one-ui.xml >/dev/null 2>&1 || true
+          adb pull /sdcard/hocker-one-ui.xml artifacts/hocker-one-ui.xml >/dev/null 2>&1 || true
+          adb logcat -d > artifacts/logcat.txt || true
+          adb logcat -b crash -d > artifacts/crash.txt || true
+          adb shell dumpsys activity activities > artifacts/activity.txt || true
+
+      - name: Assert no Hocker ONE crash
+        shell: bash
+        run: |
+          PACKAGE="com.hocker.one"
+          test -n "$(adb shell pidof -s "$PACKAGE" | tr -d '\r')"
+          if grep -F "$PACKAGE" artifacts/crash.txt | grep -Eqi 'FATAL EXCEPTION|Process:|AndroidRuntime'; then
+            echo "Hocker ONE crash evidence detected"
+            cat artifacts/crash.txt
+            exit 1
+          fi
+
+      - name: Upload emulator QA evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hocker-one-android-emulator-api36
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
