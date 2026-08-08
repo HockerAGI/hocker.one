@@ -141,6 +141,7 @@ export async function createContextBridgeCheckpoint(input: ContextBridgeCheckpoi
 
   return {
     ...(data as Record<string, unknown>),
+    content_hash,
     context_bridge_version: CONTEXT_BRIDGE_VERSION,
     raw_content_stored: false,
     owner_gate_required_for_external_writes: true,
