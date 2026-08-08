@@ -10,6 +10,8 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tests/android-emulator-qa.test.mjs"
+      - "tests/android-emulator-runner.test.mjs"
+      - "scripts/ci/android-emulator-qa.sh"
       - ".github/workflows/android-emulator-qa.yml"
 
 permissions:
@@ -48,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Verify emulator QA contract
-        run: node --test tests/android-emulator-qa.test.mjs
+        run: node --test tests/android-emulator-qa.test.mjs tests/android-emulator-runner.test.mjs
 
       - name: Sync and build debug APK
         shell: bash
@@ -79,25 +81,7 @@ jobs:
         shell: bash
         run: |
           sudo chmod 666 /dev/kvm || true
-          mkdir -p artifacts
-          nohup "$ANDROID_HOME/emulator/emulator" \
-            -avd hocker_api36 \
-            -no-window \
-            -noaudio \
-            -no-boot-anim \
-            -no-snapshot \
-            -gpu swiftshader_indirect \
-            > artifacts/emulator.log 2>&1 &
-
-          adb wait-for-device
-          for i in $(seq 1 120); do
-            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
-              break
-            fi
-            sleep 2
-          done
-          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
-          adb shell input keyevent 82 || true
+          bash scripts/ci/android-emulator-qa.sh boot artifacts
 
       - name: Install and launch Hocker ONE
         shell: bash
@@ -121,13 +105,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          mkdir -p artifacts
-          adb exec-out screencap -p > artifacts/hocker-one-api36.png || true
-          adb shell uiautomator dump /sdcard/hocker-one-ui.xml >/dev/null 2>&1 || true
-          adb pull /sdcard/hocker-one-ui.xml artifacts/hocker-one-ui.xml >/dev/null 2>&1 || true
-          adb logcat -d > artifacts/logcat.txt || true
-          adb logcat -b crash -d > artifacts/crash.txt || true
-          adb shell dumpsys activity activities > artifacts/activity.txt || true
+          bash scripts/ci/android-emulator-qa.sh capture artifacts
 
       - name: Assert no Hocker ONE crash
         shell: bash
