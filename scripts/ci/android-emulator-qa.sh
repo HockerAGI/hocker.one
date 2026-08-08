@@ -16,6 +16,7 @@ adb_bin="$ANDROID_HOME/platform-tools/adb"
 emulator_bin="$ANDROID_HOME/emulator/emulator"
 emulator_log="$artifacts_dir/emulator.log"
 emulator_pid_file="$artifacts_dir/emulator.pid"
+emulator_exit_file="$artifacts_dir/emulator.exit"
 
 mkdir -p "$artifacts_dir"
 
@@ -62,24 +63,27 @@ boot_emulator() {
   require_executable "$adb_bin"
   require_executable "$emulator_bin"
 
-  "$emulator_bin" \
-    -avd "$avd_name" \
-    -no-window \
-    -noaudio \
-    -no-boot-anim \
-    -no-snapshot \
-    -gpu "${ANDROID_EMULATOR_GPU_MODE:-software}" \
-    >"$emulator_log" 2>&1 &
+  (
+    set +e
+    "$emulator_bin" \
+      -avd "$avd_name" \
+      -no-window \
+      -noaudio \
+      -no-boot-anim \
+      -no-snapshot \
+      -gpu "${ANDROID_EMULATOR_GPU_MODE:-software}"
+    local_status=$?
+    printf '%s\n' "$local_status" >"$emulator_exit_file"
+    exit "$local_status"
+  ) >"$emulator_log" 2>&1 &
   local emulator_pid=$!
   printf '%s\n' "$emulator_pid" >"$emulator_pid_file"
 
   local deadline=$((SECONDS + boot_timeout_seconds))
   while (( SECONDS < deadline )); do
-    local emulator_state=""
-    emulator_state="$(ps -o stat= -p "$emulator_pid" 2>/dev/null | tr -d '[:space:]' || true)"
-    if [[ -z "$emulator_state" || "$emulator_state" == Z* ]]; then
+    if [[ -f "$emulator_exit_file" ]]; then
       wait "$emulator_pid" 2>/dev/null || true
-      echo "emulator exited before registering with ADB" >&2
+      echo "emulator exited before registering with ADB (status $(tr -d '[:space:]' <"$emulator_exit_file"))" >&2
       print_emulator_diagnostics
       return 1
     fi
@@ -99,6 +103,13 @@ boot_emulator() {
     fi
     sleep "$poll_seconds"
   done
+
+  if [[ -f "$emulator_exit_file" ]]; then
+    wait "$emulator_pid" 2>/dev/null || true
+    echo "emulator exited before registering with ADB (status $(tr -d '[:space:]' <"$emulator_exit_file"))" >&2
+    print_emulator_diagnostics
+    return 1
+  fi
 
   echo "emulator did not finish booting within ${boot_timeout_seconds}s" >&2
   print_emulator_diagnostics
