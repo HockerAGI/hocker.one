@@ -324,21 +324,27 @@ export async function processCloudQueue(
     return;
   }
 
-  const { error: lockErr } = await sb
+  const { data: claimedCommand, error: lockErr } = await sb
     .from("commands")
     .update({ status: "running", started_at: nowIso() })
     .eq("id", row.id)
-    .eq("status", "queued");
+    .eq("status", "queued")
+    .eq("needs_approval", false)
+    .select("*")
+    .maybeSingle();
 
   if (lockErr) return;
+  if (!claimedCommand) return;
+
+  const claimed = claimedCommand as CloudCommandRow;
 
   await sb.from("events").insert({
-    project_id: row.project_id,
-    node_id: row.node_id,
+    project_id: claimed.project_id,
+    node_id: claimed.node_id,
     level: "info",
     type: "command.running",
-    message: `Cloud executor tomó ${row.command}`,
-    data: { command_id: row.id, command: row.command },
+    message: `Cloud executor tomó ${claimed.command}`,
+    data: { command_id: claimed.id, command: claimed.command },
   });
 
   const secret = String(
@@ -355,15 +361,15 @@ export async function processCloudQueue(
         error: "HOCKER_COMMAND_HMAC_SECRET / COMMAND_HMAC_SECRET no configurado en Cloud Executor.",
         finished_at: nowIso(),
       })
-      .eq("id", row.id);
+      .eq("id", claimed.id);
 
     await sb.from("events").insert({
-      project_id: row.project_id,
-      node_id: row.node_id,
+      project_id: claimed.project_id,
+      node_id: claimed.node_id,
       level: "error",
       type: "command.missing_hmac_secret",
-      message: `Cloud executor rechazó ${row.command}: falta secreto HMAC`,
-      data: { command_id: row.id },
+      message: `Cloud executor rechazó ${claimed.command}: falta secreto HMAC`,
+      data: { command_id: claimed.id },
     });
 
     return;
@@ -372,13 +378,13 @@ export async function processCloudQueue(
   {
     const isValid = verifyCommandSignature(
       secret,
-      row.signature,
-      row.id,
-      row.project_id,
-      row.node_id,
-      row.command,
-      row.payload,
-      row.created_at,
+      claimed.signature,
+      claimed.id,
+      claimed.project_id,
+      claimed.node_id,
+      claimed.command,
+      claimed.payload,
+      claimed.created_at,
     );
 
     if (!isValid) {
@@ -389,28 +395,28 @@ export async function processCloudQueue(
           error: "Firma inválida o expirada en el entorno Cloud.",
           finished_at: nowIso(),
         })
-        .eq("id", row.id);
+        .eq("id", claimed.id);
 
       await sb.from("events").insert({
-        project_id: row.project_id,
-        node_id: row.node_id,
+        project_id: claimed.project_id,
+        node_id: claimed.node_id,
         level: "error",
         type: "command.invalid_signature",
-        message: `Firma inválida en command ${row.id}`,
-        data: { command_id: row.id },
+        message: `Firma inválida en command ${claimed.id}`,
+        data: { command_id: claimed.id },
       });
 
       await auditTrailEvent({
-        project_id: row.project_id,
+        project_id: claimed.project_id,
         event_type: "command.invalid_signature",
         entity_type: "command",
-        entity_id: row.id,
+        entity_id: claimed.id,
         actor_type: "system",
         actor_id: null,
         role: "orchestrator",
         action: "cloud_reject_invalid_signature",
         severity: "error",
-        payload: { command: row.command, node_id: row.node_id },
+        payload: { command: claimed.command, node_id: claimed.node_id },
       });
 
       return;
@@ -422,11 +428,11 @@ export async function processCloudQueue(
   let errorMsg = "";
 
   try {
-    result = await executeLocalCloud(row.command, row.payload ?? {});
+    result = await executeLocalCloud(claimed.command, claimed.payload ?? {});
   } catch (err: unknown) {
     hasError = true;
     errorMsg = getErrorMessage(err);
-    result = { command: row.command, ok: false, note: errorMsg };
+    result = { command: claimed.command, ok: false, note: errorMsg };
   }
 
   await sb
@@ -438,36 +444,36 @@ export async function processCloudQueue(
       executed_at: nowIso(),
       finished_at: nowIso(),
     })
-    .eq("id", row.id);
+    .eq("id", claimed.id);
 
   await sb.from("events").insert({
-    project_id: row.project_id,
-    node_id: row.node_id,
+    project_id: claimed.project_id,
+    node_id: claimed.node_id,
     level: hasError ? "error" : "info",
     type: hasError ? "command.error" : "command.done",
     message: hasError
-      ? `Cloud executor falló ${row.command}`
-      : `Cloud executor completó ${row.command}`,
+      ? `Cloud executor falló ${claimed.command}`
+      : `Cloud executor completó ${claimed.command}`,
     data: {
-      command_id: row.id,
-      command: row.command,
+      command_id: claimed.id,
+      command: claimed.command,
       ok: !hasError,
     },
   });
 
   await auditTrailEvent({
-    project_id: row.project_id,
+    project_id: claimed.project_id,
     event_type: hasError ? "command.error" : "command.done",
     entity_type: "command",
-    entity_id: row.id,
+    entity_id: claimed.id,
     actor_type: "system",
     actor_id: null,
     role: "orchestrator",
     action: hasError ? "cloud_command_failed" : "cloud_command_done",
     severity: hasError ? "error" : "info",
     payload: {
-      command: row.command,
-      node_id: row.node_id,
+      command: claimed.command,
+      node_id: claimed.node_id,
       result,
       error: hasError ? errorMsg : null,
     },
