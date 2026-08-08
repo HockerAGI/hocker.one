@@ -5,6 +5,7 @@ import { defaultNodeId, normalizeNodeId } from "@/lib/project";
 import { signCommand } from "@/lib/security";
 import type { JsonObject, CommandRow } from "@/lib/types";
 import { commandSchema } from "@/lib/validators";
+import { getLegacyCommandPolicy } from "@/lib/legacy-command-policy";
 import {
   ApiError,
   ensureNode,
@@ -19,17 +20,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const langfuse = getLangfuse();
-
-function asBool(value: unknown, fallback = false): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const s = value.trim().toLowerCase();
-    if (["1", "true", "yes", "on"].includes(s)) return true;
-    if (["0", "false", "no", "off"].includes(s)) return false;
-  }
-  return fallback;
-}
 
 function asJsonObject(value: unknown): JsonObject {
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -155,7 +145,9 @@ export async function POST(req: Request): Promise<Response> {
     const node_id = normalizeNodeId(parsed.node_id || defaultNodeId);
     const payload = asJsonObject(parsed.payload);
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
+    // Legacy execution is restricted to administrative roles. Operators use the
+    // canonical Owner Gate/action queue instead of writing this compatibility queue.
+    const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     const controls = await getControls(ctx.sb, ctx.project_id);
 
     if (controls.kill_switch) {
@@ -166,7 +158,8 @@ export async function POST(req: Request): Promise<Response> {
       throw new ApiError(403, { error: "MODO SEGURO: solo lectura." });
     }
 
-    const needsApproval = asBool(body.needs_approval ?? body.needsApproval, false);
+    const commandPolicy = getLegacyCommandPolicy(command, ctx.role);
+    const needsApproval = commandPolicy.requires_approval;
 
     const secret = String(
       process.env.HOCKER_COMMAND_HMAC_SECRET ??
@@ -229,6 +222,7 @@ export async function POST(req: Request): Promise<Response> {
         command_id: id,
         command,
         needs_approval: needsApproval,
+        risk_level: commandPolicy.risk_level,
         node_id,
       },
     });
@@ -247,6 +241,7 @@ export async function POST(req: Request): Promise<Response> {
         node_id,
         command,
         needs_approval: needsApproval,
+        risk_level: commandPolicy.risk_level,
       },
     });
 
@@ -273,7 +268,7 @@ export async function POST(req: Request): Promise<Response> {
 
     trace.event({
       name: "ORDEN_INGRESADA",
-      input: { commandId: id, node_id, needsApproval },
+      input: { commandId: id, node_id, needsApproval, riskLevel: commandPolicy.risk_level },
     });
 
     return json({ ok: true, item: data }, 201);
