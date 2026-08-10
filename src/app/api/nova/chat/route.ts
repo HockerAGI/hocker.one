@@ -267,6 +267,7 @@ export async function POST(req: Request): Promise<Response> {
       user_id: chatCtx.user.id,
       user_email: chatCtx.user.email ?? null,
       context_data: guardedPayload.context_data,
+      oidc_token: req.headers.get("x-vercel-oidc-token"),
     });
 
     const safe = sanitizeNovaPayload(

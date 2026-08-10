@@ -106,8 +106,8 @@ type GatewayCredential = {
   token: string;
 };
 
-function gatewayCredentials(): GatewayCredential[] {
-  const oidcToken = env("VERCEL_OIDC_TOKEN");
+function gatewayCredentials(runtimeOidcToken?: string | null): GatewayCredential[] {
+  const oidcToken = String(runtimeOidcToken ?? "").trim() || env("VERCEL_OIDC_TOKEN");
   const apiKey = env("AI_GATEWAY_API_KEY");
   const credentials: GatewayCredential[] = [];
 
@@ -149,16 +149,17 @@ function profilePrompt(profile: AgiProfile): string {
   return buildCanonicalProfilePrompt(profile.canon);
 }
 
-export function serverlessGatewayConfigured(): boolean {
-  return gatewayCredentials().length > 0;
+export function serverlessGatewayConfigured(oidcToken?: string | null): boolean {
+  return gatewayCredentials(oidcToken).length > 0;
 }
 
 export async function callServerlessAgiModel(args: {
   profile: AgiProfile;
   prompt: string;
   timeout_ms?: number;
+  oidc_token?: string | null;
 }): Promise<ModelCompletion> {
-  const credentials = gatewayCredentials();
+  const credentials = gatewayCredentials(args.oidc_token);
   if (!credentials.length) throw new Error("AI_GATEWAY_AUTH_NOT_CONFIGURED");
 
   const model = gatewayModel();
@@ -315,6 +316,7 @@ export async function runServerlessAgiWorkerOnce(params: {
   project_id: string;
   assigned_agi?: string | null;
   requested_by?: string | null;
+  oidc_token?: string | null;
 }): Promise<JsonRecord> {
   const workerId = `hocker-one-serverless:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
@@ -366,6 +368,7 @@ export async function runServerlessAgiWorkerOnce(params: {
       profile,
       prompt: taskPrompt(task),
       timeout_ms: 42_000,
+      oidc_token: params.oidc_token,
     });
     const completedAt = new Date().toISOString();
     const output: JsonRecord = {
@@ -577,6 +580,7 @@ export async function recoverStaleServerlessAgiTasks(
 
 export async function getServerlessAgiWorkerStatus(
   projectId: string,
+  oidcToken?: string | null,
 ): Promise<JsonRecord> {
   const client = db();
   const [queuedResult, workingResult, recentRunsResult, registryResult] =
@@ -614,7 +618,7 @@ export async function getServerlessAgiWorkerStatus(
         Array.isArray(run.evidence) &&
         run.evidence.length > 0,
     ) ?? null;
-  const configured = serverlessGatewayConfigured();
+  const configured = serverlessGatewayConfigured(oidcToken);
   const schemaReady =
     !queuedResult.error &&
     !workingResult.error &&
@@ -658,6 +662,7 @@ export async function runServerlessNovaChat(params: {
   user_id: string;
   user_email?: string | null;
   context_data?: JsonRecord;
+  oidc_token?: string | null;
 }): Promise<JsonRecord> {
   if (!params.user_id) throw new Error("NOVA_CHAT_AUTH_REQUIRED");
 
@@ -721,6 +726,7 @@ export async function runServerlessNovaChat(params: {
       .filter(Boolean)
       .join("\n\n"),
     timeout_ms: 40_000,
+    oidc_token: params.oidc_token,
   });
 
   const userMeta: JsonRecord = {
