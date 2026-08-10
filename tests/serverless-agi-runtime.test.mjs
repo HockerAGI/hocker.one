@@ -53,6 +53,18 @@ test("public worker trigger stores only hashes and consumes query credentials on
   assert.doesNotMatch(route, /PREVIEW_NONCE|3933fe5dad93578/);
 });
 
+test("preview chat smoke is one-time, purpose-bound and returns evidence without model text", async () => {
+  const route = await read("src/app/api/agi/serverless-worker-trigger/route.ts");
+
+  assert.match(route, /token\.one_time/);
+  assert.match(route, /token\.purpose !== "codex-pr16-chat-smoke"/);
+  assert.match(route, /runServerlessNovaChat/);
+  assert.match(route, /mode === "chat_smoke"/);
+  assert.match(route, /persistence:/);
+  assert.match(route, /usage:/);
+  assert.doesNotMatch(route, /reply: result\.reply/);
+});
+
 test("serverless inference uses Vercel AI Gateway and never calls Gemini directly", async () => {
   const runtime = await read("src/lib/serverless-agi-runtime.ts");
   assert.match(runtime, /https:\/\/ai-gateway\.vercel\.sh\/v1\/chat\/completions/);

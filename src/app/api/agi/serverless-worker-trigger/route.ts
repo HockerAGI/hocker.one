@@ -1,13 +1,17 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { runServerlessAgiWorkerOnce } from "@/lib/serverless-agi-runtime";
+import {
+  runServerlessAgiWorkerOnce,
+  runServerlessNovaChat,
+} from "@/lib/serverless-agi-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 type AdminSupabase = ReturnType<typeof createAdminSupabase>;
+type JsonRecord = Record<string, unknown>;
 
 type RuntimeToken = {
   id: string;
@@ -92,6 +96,60 @@ async function execute(req: Request): Promise<Response> {
   }
 
   const url = new URL(req.url);
+  const mode = String(url.searchParams.get("mode") ?? "").trim();
+  if (mode === "chat_smoke") {
+    if (!token.one_time || token.purpose !== "codex-pr16-chat-smoke") {
+      return NextResponse.json(
+        { ok: false, error: "UNAUTHORIZED" },
+        { status: 401, headers: { "Cache-Control": "no-store, max-age=0" } },
+      );
+    }
+
+    const { data: owner, error: ownerError } = await db()
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", token.project_id)
+      .eq("role", "owner")
+      .limit(1)
+      .maybeSingle<{ user_id: string }>();
+    if (ownerError || !owner?.user_id) {
+      return NextResponse.json(
+        { ok: false, error: "OWNER_IDENTITY_NOT_AVAILABLE" },
+        { status: 503, headers: { "Cache-Control": "no-store, max-age=0" } },
+      );
+    }
+
+    const result = await runServerlessNovaChat({
+      project_id: token.project_id,
+      message:
+        "Realiza una verificación operativa breve. No propongas ni ejecutes acciones externas.",
+      user_id: owner.user_id,
+      context_data: { source: "codex-pr16-one-time-chat-smoke", allow_actions: false },
+      oidc_token: req.headers.get("x-vercel-oidc-token"),
+    });
+    const meta =
+      result.meta && typeof result.meta === "object" && !Array.isArray(result.meta)
+        ? (result.meta as JsonRecord)
+        : {};
+
+    return NextResponse.json(
+      {
+        ok: result.ok,
+        project_id: result.project_id,
+        thread_id: result.thread_id,
+        trace_id: result.trace_id,
+        provider: result.provider,
+        model: result.model,
+        agi_id: result.agi_id,
+        actions_count: Array.isArray(result.actions) ? result.actions.length : 0,
+        usage: meta.usage ?? null,
+        persistence: meta.persistence ?? null,
+        controls: meta.controls ?? null,
+      },
+      { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
+
   const assignedAgi = String(url.searchParams.get("agi") ?? "").trim() || null;
   const result = await runServerlessAgiWorkerOnce({
     project_id: token.project_id,
