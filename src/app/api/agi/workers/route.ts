@@ -80,7 +80,7 @@ export async function GET(req: Request): Promise<Response> {
     const [taskState, runs, status] = await Promise.all([
       loadTasks(projectId),
       loadRuns(projectId),
-      getServerlessAgiWorkerStatus(projectId),
+      getServerlessAgiWorkerStatus(projectId, req.headers.get("x-vercel-oidc-token")),
     ]);
 
     return json({
@@ -126,6 +126,7 @@ export async function POST(req: Request): Promise<Response> {
         project_id: ctx.project_id,
         assigned_agi: action.assigned_agi ?? null,
         requested_by: ctx.user.id,
+        oidc_token: req.headers.get("x-vercel-oidc-token"),
       });
       return json(result, result.ok === false ? 502 : 200);
     }

@@ -97,6 +97,7 @@ async function execute(req: Request): Promise<Response> {
     project_id: token.project_id,
     assigned_agi: assignedAgi,
     requested_by: `runtime-token:${token.purpose}`,
+    oidc_token: req.headers.get("x-vercel-oidc-token"),
   });
 
   return NextResponse.json(result, {

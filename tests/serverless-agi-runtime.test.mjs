@@ -65,15 +65,29 @@ test("serverless inference uses Vercel AI Gateway and never calls Gemini directl
 
 test("serverless gateway prefers Vercel OIDC and falls back only on authentication rejection", async () => {
   const runtime = await read("src/lib/serverless-agi-runtime.ts");
-  const oidcPosition = runtime.indexOf('const oidcToken = env("VERCEL_OIDC_TOKEN")');
+  const oidcPosition = runtime.indexOf('String(runtimeOidcToken ?? "").trim() || env("VERCEL_OIDC_TOKEN")');
   const apiKeyPosition = runtime.indexOf('const apiKey = env("AI_GATEWAY_API_KEY")');
 
   assert.ok(oidcPosition >= 0);
   assert.ok(apiKeyPosition > oidcPosition);
-  assert.ok(runtime.includes("return gatewayCredentials().length > 0;"));
+  assert.ok(runtime.includes("return gatewayCredentials(oidcToken).length > 0;"));
   assert.ok(runtime.includes("response.status === 401 || response.status === 403"));
   assert.ok(runtime.includes("authenticationRejected && hasFallback"));
   assert.ok(runtime.includes("continue;"));
+});
+
+test("Vercel Functions propagate their runtime OIDC header to AI Gateway calls", async () => {
+  const runtime = await read("src/lib/serverless-agi-runtime.ts");
+  const chatRoute = await read("src/app/api/nova/chat/route.ts");
+  const workersRoute = await read("src/app/api/agi/workers/route.ts");
+  const triggerRoute = await read("src/app/api/agi/serverless-worker-trigger/route.ts");
+
+  assert.match(runtime, /oidc_token\?: string \| null/);
+  assert.match(runtime, /gatewayCredentials\(args\.oidc_token\)/);
+  for (const route of [chatRoute, workersRoute, triggerRoute]) {
+    assert.match(route, /req\.headers\.get\("x-vercel-oidc-token"\)/);
+    assert.match(route, /oidc_token:/);
+  }
 });
 
 test("chat fallback authenticates membership and reserves execution budget", async () => {
