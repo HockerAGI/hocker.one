@@ -73,10 +73,41 @@ test("Context Bridge API accepts normalized checkpoints but never raw conversati
   assert.doesNotMatch(route, /executeTool|registry\.execute|mcpRegistry/);
 });
 
-test("Context Bridge builds coverage manifests and only an owner can activate them", async () => {
-  const [contract, manifestsRoute, activeRoute, sql] = await Promise.all([
+test("Context Bridge key-based manifest API is draft-only", async () => {
+  const route = await read("src/app/api/context-bridge/manifests/route.ts");
+
+  assert.match(route, /validateHockerOwnerApiGate/);
+  assert.match(route, /createContextBridgeManifest/);
+  assert.match(route, /parsed\.data\.activate/);
+  assert.match(route, /requiere una sesión Owner con MFA AAL2/i);
+  assert.doesNotMatch(route, /record_owner_gate_approval/);
+  assert.doesNotMatch(route, /activate_context_bridge_manifest_v2/);
+});
+
+test("Context Bridge activation requires a human Owner AAL2 session and one-time evidence", async () => {
+  const [activationRoute, page, evidenceMigration, aal2Migration] = await Promise.all([
+    read("src/app/api/context-bridge/manifests/activate/route.ts"),
+    read("src/app/owner/context-bridge/page.tsx"),
+    read("supabase/migrations/20260810123000_owner_gate_approval_evidence_v1.sql"),
+    read("supabase/migrations/20260811213000_context_bridge_owner_aal2_evidence.sql"),
+  ]);
+
+  assert.match(activationRoute, /requireOwnerAal2Api\(\)/);
+  assert.match(activationRoute, /ownerSession\.userId/);
+  assert.match(activationRoute, /supabase-session-aal2/);
+  assert.match(activationRoute, /record_owner_gate_approval/);
+  assert.match(activationRoute, /activate_context_bridge_manifest_v2/);
+  assert.match(activationRoute, /current_aal: ownerSession\.currentLevel/);
+  assert.match(page, /requireOwnerAal2Page\("\/owner\/context-bridge"\)/);
+  assert.match(evidenceMigration, /OWNER_APPROVAL_ALREADY_CONSUMED/);
+  assert.match(evidenceMigration, /interval '15 minutes'/i);
+  assert.match(aal2Migration, /supabase-session-aal2/);
+  assert.match(aal2Migration, /owner_gate_approvals_accepted_header_check/);
+});
+
+test("Context Bridge builds coverage manifests and keeps active reads evidence-backed", async () => {
+  const [contract, activeRoute, sql] = await Promise.all([
     read("src/lib/context-bridge.ts"),
-    read("src/app/api/context-bridge/manifests/route.ts"),
     read("src/app/api/context-bridge/manifests/active/route.ts"),
     read("supabase/migrations/20260808194500_context_bridge_v1.sql"),
   ]);
@@ -88,8 +119,6 @@ test("Context Bridge builds coverage manifests and only an owner can activate th
     assert.match(contract, new RegExp(`"${coverageState}"`));
   }
   assert.match(contract, /create_context_bridge_manifest/);
-  assert.match(manifestsRoute, /ownerGate\.actor !== "owner"/);
-  assert.match(manifestsRoute, /activate_context_bridge_manifest/);
   assert.match(activeRoute, /getActiveContextBridgeManifest/);
   assert.match(sql, /create or replace function public\.create_context_bridge_manifest\(p_payload jsonb\)/i);
   assert.match(sql, /pg_advisory_xact_lock/i);
