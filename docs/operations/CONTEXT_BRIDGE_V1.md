@@ -101,7 +101,7 @@ La primera capa ya fue aplicada a Supabase y desplegada en Hocker ONE. El estado
 - migración versionada con sources, checkpoints, manifests, coverage y capabilities;
 - RLS habilitado y grants restringidos frente a clientes públicos, `anon` y `authenticated` en las superficies internas correspondientes;
 - Owner Gate v2 audit-strengthened con evidencia estructurada, scope exacto, candidate SHA, environment, request hash, trace/nonce, expiración y consumo de un solo uso;
-- migraciones de hardening `20260810191500_owner_gate_approval_evidence_v1.sql` y `20260810192000_owner_gate_legacy_activation_retirement.sql` aplicadas;
+- migraciones de hardening `20260810123000_owner_gate_approval_evidence_v1.sql` y `20260810123500_owner_gate_approval_legacy_path_retirement.sql` aplicadas;
 - `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` restringidos a ejecución interna/service-role;
 - ruta legacy de activación libre retirada;
 - pruebas de arquitectura y seguridad y validación de producción asociadas al release de Owner Gate.
