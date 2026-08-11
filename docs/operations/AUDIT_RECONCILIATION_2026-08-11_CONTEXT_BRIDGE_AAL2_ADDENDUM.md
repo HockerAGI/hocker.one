@@ -84,4 +84,4 @@ Esto no equivale a afirmar que una persona Owner concreta ya completó el enroll
 
 Es válido afirmar que la activación web de Context Bridge **requiere y despliega Owner+AAL2**, que el path key-based quedó draft-only y que la evidencia de aprobación se liga al usuario Owner autenticado.
 
-No es válido afirmarar que el enrollment TOTP humano ya fue observado, que todo Owner Gate del ecosistema usa MFA, que el warning de leaked-password está cerrado, que todos los WARN de GraphQL/SECURITY DEFINER están resueltos o que la auditoría global está terminada.
+No es válido afirmar que el enrollment TOTP humano ya fue observado, que todo Owner Gate del ecosistema usa MFA, que el warning de leaked-password está cerrado, que todos los WARN de GraphQL/SECURITY DEFINER están resueltos o que la auditoría global está terminada.
