@@ -34,7 +34,7 @@ El hallazgo de exposición de `v_agi_canon_completeness` fue corregido con privi
 
 Evidencia verificada:
 
-- Migración: `20260810190500_agi_canon_validation_privilege_hardening.sql`.
+- Migración: `20260810122000_agi_canon_validation_privilege_hardening.sql`.
 - El view usa `security_invoker=true`.
 - Acceso público, `anon` y `authenticated` fue revocado; `service_role` conserva el acceso requerido.
 - El validator asociado quedó igualmente restringido a `service_role`.
@@ -48,14 +48,14 @@ Owner Gate fue reforzado para enlazar una aprobación a evidencia estructurada, 
 
 Evidencia verificada:
 
-- Migraciones: `20260810191500_owner_gate_approval_evidence_v1.sql` y `20260810192000_owner_gate_legacy_activation_retirement.sql`.
-- `owner_gate_approvals` permanece service-only.
+- Migraciones: `20260810123000_owner_gate_approval_evidence_v1.sql` y `20260810123500_owner_gate_approval_legacy_path_retirement.sql`.
+- `owner_gate_approvals` permanece restringida frente a clientes públicos, `anon` y `authenticated`; `service_role` conserva los privilegios internos requeridos.
 - `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` permanecen restringidos a ejecución interna/service-role.
 - La función legacy de activación libre fue revocada y retirada.
 - Merge productivo: `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 - Vercel production: `dpl_78AHRSS3YepFbMKkzV1Af4MDWQop`, `READY` y commit verificado.
 
-La evidencia es tamper-evident/evidence-bound respecto del flujo implementado, pero la identidad owner continúa siendo key-based en esta etapa. No debe describirse como prueba nominal de una persona, sesión MFA o identidad humana fuerte hasta incorporar ese binding explícito.
+El flujo es audit-strengthened, evidence-bound y tamper-evident respecto de la cadena de evidencia implementada: acción, recurso, candidato, ambiente, hash, expiración y consumo quedan vinculados y verificables. Este término no implica inmutabilidad frente a una identidad privilegiada de base de datos; `service_role` conserva capacidad administrativa y no existe todavía una prueba criptográfica externa independiente. La identidad owner continúa siendo key-based y no debe describirse como prueba nominal de una persona, sesión MFA o identidad humana fuerte hasta incorporar ese binding explícito.
 
 ## Dependencias Hocker ONE — secuencia validada
 
@@ -76,7 +76,7 @@ PR #131 (TypeScript 7) y PR #139 (Gradle 9.7) permanecen en HOLD por tratarse de
 
 Estado después de los hardenings revisados:
 
-- No permanecen lints de severidad `ERROR` asociados a los hallazgos corregidos en esta secuencia.
+- No permanecen lints de severidad `ERROR` en el corte actual revisado.
 - Persisten `WARN`/`INFO` que deben analizarse individualmente.
 - Entre los residuales conocidos existen avisos por RLS habilitado sin policy en tablas internas service-only, exposición GraphQL para algunos objetos, funciones `SECURITY DEFINER` ejecutables por roles amplios y protección de contraseñas filtradas deshabilitada.
 - Por lo anterior, el estado correcto es **sin ERROR; con WARN/INFO residuales**, no “globalmente limpio”.
@@ -97,6 +97,7 @@ El flujo vigente conserva separación entre checkpoint normalizado, manifest dra
 4. Ejecutar cualquier rotación de credenciales únicamente dentro de una etapa separada y controlada de seguridad.
 5. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
 6. Mantener `CONTEXT_BRIDGE_V1.md` sincronizado con el estado desplegado y no reintroducir la ruta legacy de activación.
+7. Si se requiere garantía de inmutabilidad frente a identidades privilegiadas, añadir un mecanismo independiente de integridad/attestation antes de elevar ese claim.
 
 ## Regla de gobierno
 
