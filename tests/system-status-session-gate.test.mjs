@@ -39,3 +39,11 @@ test("private status gate does not accept the shared Owner key as a service iden
   assert.match(gate, /legacyGate\.actor === "internal"/);
   assert.doesNotMatch(gate, /legacyGate\.actor === "owner"/);
 });
+
+test("default browser CORS does not allow shared secret gate headers", async () => {
+  const cors = await read("src/lib/cors.ts");
+
+  assert.match(cors, /const DEFAULT_HEADERS = \["Content-Type", "Authorization", "apikey"\]/);
+  assert.doesNotMatch(cors, /DEFAULT_HEADERS[^\n]*Hocker-Owner-Key/i);
+  assert.doesNotMatch(cors, /DEFAULT_HEADERS[^\n]*Hocker-Internal-Key/i);
+});
