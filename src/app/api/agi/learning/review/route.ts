@@ -1,9 +1,12 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { validateHockerOwnerApiGate } from "@/lib/hocker-owner-api-gate";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { decideSyntiaMemoryReview } from "@/lib/syntia-memory-review-gate";
 
 export const dynamic = "force-dynamic";
+
+type EffectiveReviewActor = "owner" | "internal" | "session_owner" | "unknown";
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
@@ -28,7 +31,18 @@ export async function POST(req: NextRequest) {
   }
 
   const input = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const result = await decideSyntiaMemoryReview(input, gate.actor, traceId);
+  const publishToMemory = input.publish_to_memory === true
+    || String(input.publish_to_memory ?? "").trim().toLowerCase() === "true";
+  const projectId = String(input.project_id || "hocker-one");
+  let effectiveActor: EffectiveReviewActor = gate.actor;
+
+  if (publishToMemory) {
+    const ownerGate = await requireOwnerAal2Api(projectId);
+    if (!ownerGate.ok) return ownerGate.response;
+    effectiveActor = "session_owner";
+  }
+
+  const result = await decideSyntiaMemoryReview(input, effectiveActor, traceId);
 
   return NextResponse.json(result, { status: Number(result.http_status || 200) });
 }
