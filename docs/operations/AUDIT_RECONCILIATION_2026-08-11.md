@@ -6,10 +6,10 @@ Este checkpoint reconcilia evidencia operativa verificada después de los harden
 
 ## Estado consolidado
 
-- Hocker ONE `main` al cierre de esta reconciliación: `f4cb9c403254d71feebf84a27200b6b55741d193`.
-- Producción Hocker ONE asociada: `dpl_HF8jTJARGBNJ5y9nwgUqSy6PyJvF`, estado `READY`, target `production`, commit GitHub verificado.
+- Hocker ONE `main` al cierre de esta reconciliación: `2476e7e10c6d3e76f97bf7a8075e9a028c564bec`.
+- Producción Hocker ONE asociada: `dpl_2HZsbNiS5Mk117bTNmUPiQvzXgJQ`, estado `READY`, target `production`, commit GitHub verificado.
 - Smoke de producción: HTTP 200, superficie `/login`, `noindex, nofollow, nocache` y HSTS presentes.
-- No se observaron logs `error`/`fatal` en la ventana de validación del deployment citado.
+- No se observaron logs `error`/`fatal` en la ventana de validación post-merge del deployment citado; los estados observados fueron 200/307.
 - No se modificaron ni rotaron credenciales o secretos durante estas remediaciones.
 
 ## Chido — prelaunch fail-closed
@@ -67,10 +67,11 @@ Se aplicó la secuencia de merges con revalidación de `main` después de cada c
 4. PR #130 — Google Services plugin 4.5.0 → `main` `6cb08bae0abd92ee3da9b6d1798de3b9f415072a`.
 5. PR #136 — `eslint-config-next` 16.3.0 → `main` `c5cac2c62dcaeba2354b1d9cfac45ae384d041b9`.
 6. PR #134 — set coordinado React: `react` 19.2.8, `react-dom` 19.2.8 y `@types/react-dom` 19.2.4 → `main` `f4cb9c403254d71feebf84a27200b6b55741d193`.
+7. PR #139 — Gradle wrapper 8.11.1 → 9.7.0 → `main` `2476e7e10c6d3e76f97bf7a8075e9a028c564bec`.
 
 PR #135 fue cerrado sin merge al quedar redundante después de #136. Las revisiones de bloqueo originales de #134 fueron descartadas después de que el PR se corrigió en el mismo branch; el head final coordinado pasó CI, Android Debug, Signed Release y Emulator QA, fue reproducido en un commit de validación GitHub-verificado y posteriormente fue fusionado. El PR de remediación paralelo #147 fue cerrado sin merge por quedar supersedido por #134.
 
-PR #131 (TypeScript 7) y PR #139 (Gradle 9.7) permanecen en HOLD por tratarse de migraciones mayores que requieren validación dedicada.
+PR #139 dejó de estar en HOLD después de una validación Android dedicada sobre el head exacto `ddd851e5c30fc63bc1edb66705e3a56a211765ed`: CI, Debug APK, Signed Release y Emulator QA API 36 pasaron, el Preview fue `READY`, el smoke devolvió HTTP 200 y no se observaron logs `error`/`fatal`. Persiste un riesgo residual documentado: AGP 8.10.1 + Gradle 9.7.0 no estaba explícitamente listado como combinación probada en la matriz del proveedor al momento de la promoción, por lo que debe vigilarse en futuras actualizaciones Android. PR #131 (TypeScript 7) permanece en HOLD por tratarse de una migración mayor independiente.
 
 ## Supabase Security Advisor
 
@@ -92,7 +93,7 @@ El flujo vigente conserva separación entre checkpoint normalizado, manifest dra
 ## Pendientes controlados
 
 1. Priorizar los advisories `WARN`/`INFO` de Supabase por exposición real y consumidor.
-2. Tratar TypeScript 7 y Gradle 9.7 como migraciones mayores independientes, con sus propios gates.
+2. Tratar TypeScript 7 como migración mayor independiente y mantener observación de compatibilidad AGP 8.10.1 + Gradle 9.7.0 en futuras actualizaciones Android.
 3. Mantener evidencia exacta de SHA, CI, Preview/Production y smoke en cada promoción.
 4. Ejecutar cualquier rotación de credenciales únicamente dentro de una etapa separada y controlada de seguridad.
 5. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
