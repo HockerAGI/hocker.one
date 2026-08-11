@@ -4,17 +4,21 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Context Bridge activation binds Owner Gate approval to action and resource", async () => {
-  const [route, migration, retirement] = await Promise.all([
-    read("src/app/api/context-bridge/manifests/route.ts"),
+test("Context Bridge activation binds human Owner AAL2 approval to action and resource", async () => {
+  const [route, migration, aal2Migration, retirement] = await Promise.all([
+    read("src/app/api/context-bridge/manifests/activate/route.ts"),
     read("supabase/migrations/20260810123000_owner_gate_approval_evidence_v1.sql"),
+    read("supabase/migrations/20260811213000_context_bridge_owner_aal2_evidence.sql"),
     read("supabase/migrations/20260810123500_owner_gate_approval_legacy_path_retirement.sql"),
   ]);
 
+  assert.match(route, /requireOwnerAal2Api\(\)/);
   assert.match(route, /record_owner_gate_approval/);
   assert.match(route, /activate_context_bridge_manifest_v2/);
   assert.match(route, /context_bridge\.activate_manifest/);
   assert.match(route, /context_bridge_manifest/);
+  assert.match(route, /ownerSession\.userId/);
+  assert.match(route, /supabase-session-aal2/);
   assert.match(route, /VERCEL_GIT_COMMIT_SHA/);
   assert.match(route, /createHash\("sha256"\)/);
   assert.match(route, /trace_id/);
@@ -35,5 +39,7 @@ test("Context Bridge activation binds Owner Gate approval to action and resource
   assert.match(migration, /OWNER_APPROVAL_EXPIRED/i);
   assert.match(migration, /grant all on table public\.owner_gate_approvals to service_role/i);
 
+  assert.match(aal2Migration, /supabase-session-aal2/);
+  assert.match(aal2Migration, /owner_gate_approvals_accepted_header_check/);
   assert.match(retirement, /drop function public\.activate_context_bridge_manifest\(uuid, text\)/i);
 });

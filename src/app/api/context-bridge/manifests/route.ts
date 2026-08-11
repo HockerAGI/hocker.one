@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
   ContextBridgeManifestSchema,
@@ -6,24 +5,8 @@ import {
 } from "@/lib/context-bridge";
 import { validateHockerOwnerApiGate } from "@/lib/hocker-owner-api-gate";
 import { sanitizePublicError } from "@/lib/sanitize-error";
-import { createAdminSupabase } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
-
-function deploymentIdentity() {
-  return {
-    candidateSha: String(
-      process.env.VERCEL_GIT_COMMIT_SHA
-        ?? process.env.GITHUB_SHA
-        ?? "local-unversioned",
-    ).trim(),
-    environment: String(
-      process.env.VERCEL_ENV
-        ?? process.env.NODE_ENV
-        ?? "unknown",
-    ).trim(),
-  };
-}
 
 export async function POST(req: NextRequest) {
   const traceId = crypto.randomUUID();
@@ -53,7 +36,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    if (parsed.data.activate && ownerGate.actor !== "owner") {
+    if (parsed.data.activate) {
       return NextResponse.json({
         ok: false,
         trace_id: traceId,
@@ -61,92 +44,25 @@ export async function POST(req: NextRequest) {
         owner_gate_actor: ownerGate.actor,
         created: false,
         activated: false,
-        error: "Una identidad interna puede crear borradores, pero solo Owner puede activar contexto.",
-      }, { status: 403 });
+        mfa_required: true,
+        error: "La activación de Context Bridge requiere una sesión Owner con MFA AAL2.",
+      }, { status: 409 });
     }
 
     const result = await createContextBridgeManifest(
       parsed.data,
       `context-bridge:${ownerGate.actor}`,
     );
-    let activatedManifest: unknown = null;
-    let approvalId: string | null = null;
-
-    if (parsed.data.activate) {
-      const manifestRecord = result.manifest as Record<string, unknown> | null;
-      const manifestId = String(manifestRecord?.id ?? "");
-      const projectId = String(manifestRecord?.project_id ?? parsed.data.project_id ?? "hocker-one");
-      if (!manifestId) throw new Error("El borrador no devolvió un identificador activable.");
-
-      const { candidateSha, environment } = deploymentIdentity();
-      const nonce = crypto.randomUUID();
-      const action = "context_bridge.activate_manifest";
-      const resourceType = "context_bridge_manifest";
-      const acceptedHeader = ownerGate.accepted_header ?? "x-hocker-owner-key";
-      const requestHash = createHash("sha256").update(JSON.stringify({
-        project_id: projectId,
-        actor_type: ownerGate.actor,
-        gate_version: ownerGate.version,
-        accepted_header: acceptedHeader,
-        action,
-        resource_type: resourceType,
-        resource_id: manifestId,
-        candidate_sha: candidateSha,
-        environment,
-        trace_id: traceId,
-        nonce,
-      })).digest("hex");
-
-      const supabase = createAdminSupabase();
-      const { data: approval, error: approvalError } = await supabase
-        .rpc("record_owner_gate_approval", {
-          p_payload: {
-            project_id: projectId,
-            actor_type: ownerGate.actor,
-            gate_version: ownerGate.version,
-            accepted_header: acceptedHeader,
-            action,
-            resource_type: resourceType,
-            resource_id: manifestId,
-            candidate_sha: candidateSha,
-            environment,
-            trace_id: traceId,
-            nonce,
-            request_hash: requestHash,
-            evidence: {
-              owner_gate_reason: ownerGate.reason,
-              request_path: req.nextUrl.pathname,
-            },
-          },
-        })
-        .single();
-      if (approvalError) throw approvalError;
-
-      const approvalRecord = approval as Record<string, unknown> | null;
-      approvalId = String(approvalRecord?.id ?? "");
-      if (!approvalId) throw new Error("Owner Gate no devolvió evidencia de aprobación.");
-
-      const { data, error } = await supabase
-        .rpc("activate_context_bridge_manifest_v2", {
-          p_manifest_id: manifestId,
-          p_approval_id: approvalId,
-        })
-        .single();
-      if (error) throw error;
-      activatedManifest = data;
-    }
 
     return NextResponse.json({
       ok: true,
       trace_id: traceId,
       owner_gate: ownerGate.owner_gate,
       owner_gate_actor: ownerGate.actor,
-      owner_gate_approval_id: approvalId,
+      owner_gate_approval_id: null,
       created: true,
-      activated: parsed.data.activate,
-      result: parsed.data.activate
-        ? { ...result, manifest: activatedManifest }
-        : result,
+      activated: false,
+      result,
     }, { status: 201 });
   } catch (error) {
     return NextResponse.json({
