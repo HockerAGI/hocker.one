@@ -59,25 +59,26 @@ La ruta inicial es `POST /api/context-bridge/checkpoints`. Requiere el Owner/Int
 
 Un manifiesto reúne checkpoints concretos para un alcance (`global`, `repository`, `project`, `conversation` o `release`). Incluye snapshots de capacidades y cobertura. Empieza como `draft`.
 
-Solo el flujo Owner Gate puede activar un manifiesto. Al activar uno:
+Solo el flujo Owner Gate puede activar un manifiesto. La implementación v2 añade una aprobación estructurada de vida corta y consumo único vinculada a acción, recurso y proyecto. Al activar uno:
 
-1. se rechaza si contiene secretos o fue invalidado;
-2. el manifiesto activo anterior pasa a `superseded`;
-3. se registra quién aprobó y cuándo;
-4. las AGIs pueden recibir el manifiesto activo como contexto operativo filtrado.
+1. se rechaza si la aprobación no existe, expiró, ya fue consumida o no coincide con acción/recurso/proyecto;
+2. se rechaza si el manifiesto contiene secretos, fue invalidado o su cobertura no está completa;
+3. el manifiesto activo anterior pasa a `superseded`;
+4. se registra la referencia de aprobación y se consume esa aprobación una sola vez;
+5. las AGIs pueden recibir el manifiesto activo como contexto operativo filtrado.
 
 La cobertura usa estados `complete`, `partial`, `missing`, `stale` o `blocked`. “Leído” no significa “completo” si falta una fuente, una revisión o evidencia.
 
 ## Automatización segura
 
-El flujo objetivo es:
+El flujo vigente es:
 
 ```text
 ChatGPT/Codex/adaptador de plataforma
   -> resumen normalizado + revisión + evidencia
   -> Context Bridge checkpoint
   -> manifest draft + coverage
-  -> Owner Gate para activación o cualquier escritura externa
+  -> Owner Gate v2 para activación o cualquier escritura externa
   -> NOVA/Syntia filtran conocimiento reusable
   -> Memory Mirror
   -> feed especializado por AGI
@@ -98,12 +99,12 @@ La primera capa ya fue aplicada a Supabase y desplegada en Hocker ONE. El estado
 - contrato TypeScript y detección de secretos;
 - endpoint interno de checkpoints normalizados;
 - migración versionada con sources, checkpoints, manifests, coverage y capabilities;
-- RLS habilitado, cero políticas públicas y grants restringidos a `service_role` en las superficies internas correspondientes;
-- Owner Gate v2 audit-strengthened con evidencia estructurada, scope exacto, request hash, candidate SHA, environment, trace/nonce, expiración y consumo de un solo uso;
+- RLS habilitado y grants restringidos frente a clientes públicos, `anon` y `authenticated` en las superficies internas correspondientes;
+- Owner Gate v2 audit-strengthened con evidencia estructurada, scope exacto, candidate SHA, environment, trace/nonce, expiración y consumo de un solo uso;
 - `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` restringidos a ejecución interna/service-role;
 - ruta legacy de activación libre retirada;
 - pruebas de arquitectura y seguridad y validación de producción asociadas al release de Owner Gate.
 
-La activación vigente es evidence-bound y tamper-evident respecto del flujo implementado. La identidad owner continúa siendo key-based en esta etapa y no equivale a una prueba nominal de persona, sesión MFA o identidad humana fuerte.
+La activación vigente es evidence-bound por acción, recurso, proyecto, expiración y consumo único. No debe describirse como inmutable o tamper-evident: `service_role` conserva permisos de escritura sobre `owner_gate_approvals`, y la implementación actual no aporta una verificación criptográfica independiente ni un mecanismo de inmutabilidad que detecte modificación privilegiada. La identidad owner continúa siendo key-based en esta etapa y no equivale a una prueba nominal de persona, sesión MFA o identidad humana fuerte.
 
-La siguiente evolución funcional es ampliar generación/lectura de manifest y coverage y conectar adaptadores concretos que publiquen checkpoints normalizados sin importar conversaciones completas. Cualquier escritura externa continúa sujeta a Owner Gate, trazabilidad y evidencia.
+La siguiente evolución funcional es ampliar generación/lectura de manifest y coverage y conectar adaptadores concretos que publiquen checkpoints normalizados sin importar conversaciones completas. Cualquier escritura externa continúa sujeta a Owner Gate, trazabilidad y evidencia. Si se requiere una garantía tamper-evident futura, deberá implementarse y probarse un mecanismo de inmutabilidad o integridad independiente antes de usar ese claim.
