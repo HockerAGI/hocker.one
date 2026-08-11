@@ -37,6 +37,14 @@ test("Chido admin API uses the authenticated Owner AAL2 session rather than shar
   assert.match(route, /hocker-owner:\$\{ownerGate\.userId\}/);
 });
 
+test("Chido admin client relies on the authenticated session and does not send a shared Owner key", async () => {
+  const panel = await read("src/app/chido/admin/AdminPanel.tsx");
+
+  assert.match(panel, /fetch\("\/api\/chido\/admin"/);
+  assert.doesNotMatch(panel, /__HOCKER_OWNER_KEY/);
+  assert.doesNotMatch(panel, /x-hocker-owner-key/i);
+});
+
 test("Owner MFA flow supports verified TOTP challenge and first-time TOTP enrollment", async () => {
   const component = await read("src/components/OwnerMfaStepUp.tsx");
 

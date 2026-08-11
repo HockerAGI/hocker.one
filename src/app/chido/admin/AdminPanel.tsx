@@ -62,16 +62,10 @@ export default function AdminPanel({
       setResult(null);
 
       try {
-        const ownerKey =
-          typeof window !== "undefined"
-            ? (window as unknown as Record<string, string>).__HOCKER_OWNER_KEY ?? ""
-            : "";
-
         const res = await fetch("/api/chido/admin", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(ownerKey ? { "x-hocker-owner-key": ownerKey } : {}),
           },
           body: JSON.stringify({ action, target_id: targetId, reason, ...extra }),
         });
