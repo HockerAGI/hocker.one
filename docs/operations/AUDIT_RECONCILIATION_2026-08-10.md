@@ -34,7 +34,7 @@ El hallazgo de exposición de `v_agi_canon_completeness` fue corregido con privi
 
 Evidencia verificada:
 
-- Migración: `20260810122000_agi_canon_validation_privilege_hardening.sql`.
+- Migración: `20260810190500_agi_canon_validation_privilege_hardening.sql`.
 - El view usa `security_invoker=true`.
 - Acceso público, `anon` y `authenticated` fue revocado; `service_role` conserva el acceso requerido.
 - El validator asociado quedó igualmente restringido a `service_role`.
@@ -44,18 +44,18 @@ Evidencia verificada:
 
 ## Owner Gate — evidencia audit-strengthened
 
-Owner Gate fue reforzado para enlazar una aprobación a evidencia estructurada, alcance exacto, hash de request, candidato, ambiente, nonce y expiración/consumo de un solo uso.
+Owner Gate fue reforzado para enlazar una aprobación a evidencia estructurada, alcance exacto, hash de request, candidate SHA, environment, trace/nonce y expiración/consumo de un solo uso.
 
 Evidencia verificada:
 
-- Migraciones: `20260810123000_owner_gate_approval_evidence_v1.sql` y `20260810123500_owner_gate_approval_legacy_path_retirement.sql`.
-- `owner_gate_approvals` permanece restringida frente a clientes públicos, `anon` y `authenticated`; `service_role` conserva privilegios internos requeridos.
+- Migraciones: `20260810191500_owner_gate_approval_evidence_v1.sql` y `20260810192000_owner_gate_legacy_activation_retirement.sql`.
+- `owner_gate_approvals` permanece restringida frente a clientes públicos, `anon` y `authenticated`; `service_role` conserva los privilegios internos requeridos.
 - `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` permanecen restringidos a ejecución interna/service-role.
 - La función legacy de activación libre fue revocada y retirada.
 - Merge productivo: `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 - Vercel production: `dpl_78AHRSS3YepFbMKkzV1Af4MDWQop`, `READY` y commit verificado.
 
-El flujo es evidence-bound respecto de acción, recurso, proyecto, expiración y consumo de un solo uso. No debe describirse como inmutable o tamper-evident: `service_role` conserva capacidad privilegiada de escritura y los hashes actuales no constituyen una prueba criptográfica independiente contra modificación privilegiada. La identidad owner continúa siendo key-based en esta etapa y tampoco equivale a prueba nominal de una persona, sesión MFA o identidad humana fuerte.
+El flujo vigente es **evidence-bound** y **tamper-evident en la capa de binding de evidencia de aplicación**: una aprobación queda asociada a acción, recurso, proyecto, candidate SHA, environment, request hash, trace/nonce, expiración y consumo único, de modo que el runtime puede detectar una reutilización o una evidencia que no corresponde al request aprobado. Esto no equivale a una base inmutable ni a protección criptográfica independiente frente a un actor privilegiado con capacidad de modificar la base; `service_role` conserva privilegios internos. La identidad owner continúa siendo key-based en esta etapa y tampoco equivale a prueba nominal de una persona, sesión MFA o identidad humana fuerte.
 
 ## Dependencias Hocker ONE — secuencia validada
 
@@ -92,9 +92,9 @@ El flujo vigente conserva separación entre checkpoint normalizado, manifest dra
 1. Priorizar los advisories `WARN`/`INFO` de Supabase por exposición real y consumidor.
 2. Tratar TypeScript 7 y Gradle 9.7 como migraciones mayores independientes, no como actualizaciones rutinarias.
 3. Mantener evidencia exacta de SHA, CI, Preview/Production y smoke en cada promoción.
-4. Ejecutar rotación de credenciales únicamente en su etapa separada de seguridad; este checkpoint no cambia secretos.
+4. Ejecutar cualquier rotación de credenciales únicamente en su etapa separada de seguridad; este checkpoint no cambia secretos.
 5. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
-6. Si se requiere garantía tamper-evident futura, añadir un mecanismo de inmutabilidad o verificación criptográfica independiente y evaluarlo antes de usar ese claim.
+6. Si se requiere resistencia criptográfica independiente frente a modificación privilegiada, añadir un mecanismo append-only, anclaje externo o verificación de integridad independiente y validarlo antes de declarar esa propiedad.
 
 ## Regla de gobierno
 
