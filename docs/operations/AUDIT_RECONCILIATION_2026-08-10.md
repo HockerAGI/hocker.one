@@ -6,11 +6,11 @@ Este checkpoint reconcilia evidencia operativa verificada después de los harden
 
 ## Estado consolidado
 
-- Hocker ONE `main` al cierre de esta reconciliación: `c5cac2c62dcaeba2354b1d9cfac45ae384d041b9`.
-- Producción Hocker ONE asociada: `dpl_DBBBM16D6rheEYC1hrCxrmuAzyTb`, estado `READY`, target `production`, commit GitHub verificado.
+- Hocker ONE `main` al cierre de esta reconciliación: `f4cb9c403254d71feebf84a27200b6b55741d193`.
+- Producción Hocker ONE asociada: `dpl_HF8jTJARGBNJ5y9nwgUqSy6PyJvF`, estado `READY`, target `production`, commit GitHub verificado.
 - Smoke de producción: HTTP 200, superficie `/login`, `noindex, nofollow, nocache` y HSTS presentes.
 - No se observaron logs `error`/`fatal` en la ventana de validación del deployment citado.
-- No se modificaron, rotaron ni documentaron credenciales o secretos durante estas remediaciones.
+- No se modificaron ni rotaron credenciales o secretos durante estas remediaciones; este documento tampoco registra sus valores.
 
 ## Chido — prelaunch fail-closed
 
@@ -49,13 +49,13 @@ Owner Gate fue reforzado para enlazar una aprobación a evidencia estructurada, 
 Evidencia verificada:
 
 - Migraciones: `20260810123000_owner_gate_approval_evidence_v1.sql` y `20260810123500_owner_gate_approval_legacy_path_retirement.sql`.
-- `owner_gate_approvals` permanece service-only frente a clientes públicos, `anon` y `authenticated`; `service_role` conserva privilegios de mantenimiento/escritura.
+- `owner_gate_approvals` permanece restringida frente a clientes públicos, `anon` y `authenticated`; `service_role` conserva privilegios internos requeridos.
 - `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` permanecen restringidos a ejecución interna/service-role.
 - La función legacy de activación libre fue revocada y retirada.
 - Merge productivo: `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 - Vercel production: `dpl_78AHRSS3YepFbMKkzV1Af4MDWQop`, `READY` y commit verificado.
 
-El flujo es evidence-bound respecto de acción, recurso, proyecto, expiración y consumo de un solo uso. No debe describirse como inmutable o tamper-evident: `service_role` conserva capacidad de escritura sobre la tabla de aprobaciones y los hashes actuales no constituyen una prueba criptográfica independiente contra modificación privilegiada. La identidad owner continúa siendo key-based en esta etapa y tampoco equivale a prueba nominal de una persona, sesión MFA o identidad humana fuerte.
+El flujo es evidence-bound respecto de acción, recurso, proyecto, expiración y consumo de un solo uso. No debe describirse como inmutable o tamper-evident: `service_role` conserva capacidad privilegiada de escritura y los hashes actuales no constituyen una prueba criptográfica independiente contra modificación privilegiada. La identidad owner continúa siendo key-based en esta etapa y tampoco equivale a prueba nominal de una persona, sesión MFA o identidad humana fuerte.
 
 ## Dependencias Hocker ONE — secuencia validada
 
@@ -66,16 +66,17 @@ Se aplicó la secuencia de merges con revalidación de `main` después de cada c
 3. PR #133 — `lucide-react` 1.30.0 → `main` `661e2f3f6557df6a0e2ec7b95221803647488aab`.
 4. PR #130 — Google Services plugin 4.5.0 → `main` `6cb08bae0abd92ee3da9b6d1798de3b9f415072a`.
 5. PR #136 — `eslint-config-next` 16.3.0 → `main` `c5cac2c62dcaeba2354b1d9cfac45ae384d041b9`.
+6. PR #134 — set coordinado `react` 19.2.8 + `react-dom` 19.2.8 + `@types/react-dom` 19.2.4 → `main` `f4cb9c403254d71feebf84a27200b6b55741d193`.
 
-PR #135 fue cerrado sin merge al quedar redundante después de #136. PR #134 continúa bloqueado por incompatibilidad de React/React DOM; PR #131 (TypeScript 7) y PR #139 (Gradle 9.7) permanecen en HOLD por tratarse de migraciones mayores que requieren validación dedicada.
+PR #135 fue cerrado sin merge al quedar redundante después de #136. La incompatibilidad original de PR #134 fue corregida mediante actualización coordinada, sin `--force` ni `legacy-peer-deps`; recibió aprobación sobre el head exacto, CI/Android verdes y evidencia de Preview exact-tree antes del merge. El draft de remediación PR #147 quedó redundante y fue cerrado sin merge después de la promoción de #134. PR #131 (TypeScript 7) y PR #139 (Gradle 9.7) permanecen en HOLD por tratarse de migraciones mayores que requieren validación dedicada.
 
 ## Supabase Security Advisor
 
 Estado después de los hardenings revisados:
 
-- No permanecen lints de severidad `ERROR` asociados a los hallazgos corregidos en esta secuencia.
+- No permanecen lints de severidad `ERROR` en el corte actual del Security Advisor.
 - Persisten `WARN`/`INFO` que deben analizarse individualmente.
-- Entre los residuales conocidos existen avisos por RLS habilitado sin policy en tablas internas service-only, exposición GraphQL para algunos objetos, funciones `SECURITY DEFINER` ejecutables por roles amplios y protección de contraseñas filtradas deshabilitada.
+- Entre los residuales conocidos existen avisos por RLS habilitado sin policy en tablas internas, exposición GraphQL para algunos objetos, funciones `SECURITY DEFINER` ejecutables por roles amplios y protección de contraseñas filtradas deshabilitada.
 - Por lo anterior, el estado correcto es **sin ERROR; con WARN/INFO residuales**, no “globalmente limpio”.
 
 No se deben aplicar cambios masivos de grants, RLS o funciones únicamente para eliminar warnings sin verificar consumidores, contratos y efectos operativos.
@@ -89,12 +90,11 @@ El flujo vigente conserva separación entre checkpoint normalizado, manifest dra
 ## Pendientes controlados
 
 1. Priorizar los advisories `WARN`/`INFO` de Supabase por exposición real y consumidor.
-2. Resolver PR #134 mediante una actualización coordinada de React/React DOM, sin `--force` ni `legacy-peer-deps`.
-3. Tratar TypeScript 7 y Gradle 9.7 como migraciones mayores independientes.
-4. Mantener evidencia exacta de SHA, CI, Preview/Production y smoke en cada promoción.
-5. Ejecutar rotación de credenciales únicamente en su etapa separada de seguridad; este checkpoint no cambia secretos.
-6. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
-7. Si se requiere garantía tamper-evident futura, añadir un mecanismo de inmutabilidad o verificación criptográfica independiente y evaluarlo antes de usar ese claim.
+2. Tratar TypeScript 7 y Gradle 9.7 como migraciones mayores independientes, no como actualizaciones rutinarias.
+3. Mantener evidencia exacta de SHA, CI, Preview/Production y smoke en cada promoción.
+4. Ejecutar rotación de credenciales únicamente en su etapa separada de seguridad; este checkpoint no cambia secretos.
+5. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
+6. Si se requiere garantía tamper-evident futura, añadir un mecanismo de inmutabilidad o verificación criptográfica independiente y evaluarlo antes de usar ese claim.
 
 ## Regla de gobierno
 
