@@ -53,32 +53,38 @@ Cada cliente publica únicamente información normalizada:
 
 El servidor calcula el `content_hash`. No se aceptan conversaciones crudas, historiales de mensajes, cookies, tokens, claves, contraseñas ni variables secretas. Los secretos siguen en el secret manager/llavero correspondiente y jamás se copian a Context Bridge, Memory Mirror, RAG o memoria AGI.
 
-La ruta inicial es `POST /api/context-bridge/checkpoints`. Requiere el Owner/Internal Gate ya existente. Escribe solo estado interno; no ejecuta herramientas MCP ni modifica plataformas externas.
+La ruta `POST /api/context-bridge/checkpoints` requiere el Owner/Internal Gate. Escribe solo estado interno; no ejecuta herramientas MCP ni modifica plataformas externas.
 
 ## Manifiestos y cobertura
 
 Un manifiesto reúne checkpoints concretos para un alcance (`global`, `repository`, `project`, `conversation` o `release`). Incluye snapshots de capacidades y cobertura. Empieza como `draft`.
 
-Solo el flujo Owner Gate puede activar un manifiesto. Al activar uno:
+La activación productiva usa Owner Gate v2. Antes de activar un manifiesto:
 
-1. se rechaza si contiene secretos o fue invalidado;
-2. el manifiesto activo anterior pasa a `superseded`;
-3. se registra quién aprobó y cuándo;
-4. las AGIs pueden recibir el manifiesto activo como contexto operativo filtrado.
+1. se rechaza si la aprobación no existe, expiró, ya fue consumida o no corresponde al actor owner esperado;
+2. la aprobación registrada conserva acción, recurso, candidato, ambiente, trace/nonce y hash del request como evidencia estructurada;
+3. `activate_context_bridge_manifest_v2(manifest_id, approval_id)` valida acción, recurso, proyecto, expiración y consumo de un solo uso;
+4. se rechaza si el manifiesto contiene secretos, fue invalidado o su cobertura no está completa;
+5. el manifiesto activo anterior pasa a `superseded`;
+6. se registra la referencia de aprobación y esta se consume una sola vez;
+7. las AGIs pueden recibir el manifiesto activo como contexto operativo filtrado.
+
+La activación no recomputa ni valida de forma criptográfica independiente el hash, candidato o ambiente registrados. La ruta legacy basada en aprobación libre fue retirada y no debe reintroducirse como fallback.
 
 La cobertura usa estados `complete`, `partial`, `missing`, `stale` o `blocked`. “Leído” no significa “completo” si falta una fuente, una revisión o evidencia.
 
 ## Automatización segura
 
-El flujo objetivo es:
+El flujo vigente es:
 
 ```text
 ChatGPT/Codex/adaptador de plataforma
   -> resumen normalizado + revisión + evidencia
   -> Context Bridge checkpoint
   -> manifest draft + coverage
-  -> Owner Gate para activación o cualquier escritura externa
-  -> NOVA/Syntia filtran conocimiento reusable
+  -> aprobación estructurada Owner Gate v2
+  -> activación evidence-bound de un solo uso
+  -> NOVA/Syntia filtran conocimiento reutilizable
   -> Memory Mirror
   -> feed especializado por AGI
 ```
@@ -91,15 +97,28 @@ El endpoint oficial aprobado es `https://mcp.vercel.com`, con OAuth, consentimie
 
 `mcp_tunnel_client_proxy.py` es un helper de pruebas para iniciar un binario externo `tunnel-client`, leer una URL temporal y vigilar salud local. No contiene el binario, un protocolo de identidad HOCKER, autorización Owner Gate, allowlist de herramientas, auditoría ni pin criptográfico de distribución. Por esas razones no se integra al runtime productivo. Podrá reutilizarse únicamente en pruebas aisladas cuando el binario y el control plane estén identificados, fijados, autenticados y cubiertos por threat model.
 
-## Estado de esta primera capa
+## Estado desplegado
 
-Incluido en el Release Candidate, pero todavía sin aplicar a Supabase ni desplegar:
+La primera capa de Context Bridge está aplicada y desplegada. El estado verificado incluye:
 
 - contrato TypeScript y detección de secretos;
 - endpoint interno de checkpoints normalizados;
-- migración versionada con sources, checkpoints, manifests, coverage y capabilities;
-- RLS habilitado, cero políticas públicas y grants exclusivos de `service_role`;
-- activación de manifiesto restringida a función service-only que debe invocarse detrás de Owner Gate;
-- pruebas de arquitectura y seguridad.
+- migraciones versionadas con sources, checkpoints, manifests, coverage y capabilities;
+- RLS habilitado y acceso de tablas internas restringido según su función service-only;
+- `owner_gate_approvals` para evidencia estructurada de aprobación;
+- `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid, uuid)` restringidos a ejecución interna/service-role;
+- retiro de la función legacy de activación libre;
+- pruebas de arquitectura y seguridad;
+- promoción productiva de Owner Gate audit-strengthened en commit `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 
-Siguiente capa: generador de manifest/coverage, endpoint de lectura del manifiesto activo y adaptadores concretos que publiquen checkpoints sin importar conversaciones completas.
+Este estado es **audit-strengthened** y **evidence-bound** por actor, acción, recurso, proyecto, expiración y consumo único. `owner_gate_approvals` conserva candidato, ambiente, trace/nonce, `request_hash` y `approval_hash`, proporcionando una traza **tamper-evident para auditoría y comparación de evidencia**. No debe interpretarse como almacenamiento inmutable ni como resistencia criptográfica independiente frente a una identidad privilegiada: `service_role` conserva capacidad administrativa, la activación no revalida todos los campos de evidencia y no existe todavía una attestation criptográfica externa independiente. La identidad owner continúa siendo key-based hasta que exista binding explícito de sesión, usuario y MFA.
+
+## Siguiente capa
+
+Las siguientes extensiones deben conservar deny-by-default y trazabilidad:
+
+- generador de manifest/coverage y lectura del manifiesto activo;
+- adaptadores concretos que publiquen checkpoints sin importar conversaciones completas;
+- binding nominal de Owner Gate a sesión/usuario/MFA cuando se implemente;
+- clasificación continua de cobertura, staleness y evidencia sin trasladar secretos al contexto;
+- mecanismo independiente de integridad/attestation si se requiere elevar la garantía frente a identidades privilegiadas.
