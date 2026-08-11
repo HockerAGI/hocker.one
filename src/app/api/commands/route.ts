@@ -101,7 +101,7 @@ export async function GET(req: Request): Promise<Response> {
       throw new ApiError(400, { error: "project_id es obligatorio." });
     }
 
-    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator", "viewer"]);
+    const ctx = await requireProjectRole(project_id, ["owner", "admin", "operator"]);
 
     const { data, error } = await ctx.sb
       .from("commands")
