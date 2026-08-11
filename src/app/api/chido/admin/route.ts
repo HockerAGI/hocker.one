@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { JsonObject } from "@/lib/types";
 
@@ -85,8 +85,8 @@ function rpcFailure(error: string, traceId: string, status = 500) {
 
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
-  const gate = requireOwnerOrInternal(req, traceId);
-  if (gate) return gate;
+  const ownerGate = await requireOwnerAal2Api();
+  if (!ownerGate.ok) return ownerGate.response;
 
   const raw = await req.json().catch(() => ({}));
   const action = asText(raw?.action) as AdminAction;
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sb = createAdminSupabase();
-  const actor = "hocker-owner";
+  const actor = `hocker-owner:${ownerGate.userId}`;
 
   try {
     if (action === "kyc_approve" || action === "kyc_reject") {
