@@ -91,15 +91,19 @@ El endpoint oficial aprobado es `https://mcp.vercel.com`, con OAuth, consentimie
 
 `mcp_tunnel_client_proxy.py` es un helper de pruebas para iniciar un binario externo `tunnel-client`, leer una URL temporal y vigilar salud local. No contiene el binario, un protocolo de identidad HOCKER, autorización Owner Gate, allowlist de herramientas, auditoría ni pin criptográfico de distribución. Por esas razones no se integra al runtime productivo. Podrá reutilizarse únicamente en pruebas aisladas cuando el binario y el control plane estén identificados, fijados, autenticados y cubiertos por threat model.
 
-## Estado de esta primera capa
+## Estado desplegado de esta capa
 
-Incluido en el Release Candidate, pero todavía sin aplicar a Supabase ni desplegar:
+La primera capa ya fue aplicada a Supabase y desplegada en Hocker ONE. El estado operativo verificado incluye:
 
 - contrato TypeScript y detección de secretos;
 - endpoint interno de checkpoints normalizados;
 - migración versionada con sources, checkpoints, manifests, coverage y capabilities;
-- RLS habilitado, cero políticas públicas y grants exclusivos de `service_role`;
-- activación de manifiesto restringida a función service-only que debe invocarse detrás de Owner Gate;
-- pruebas de arquitectura y seguridad.
+- RLS habilitado, cero políticas públicas y grants restringidos a `service_role` en las superficies internas correspondientes;
+- Owner Gate v2 audit-strengthened con evidencia estructurada, scope exacto, request hash, candidate SHA, environment, trace/nonce, expiración y consumo de un solo uso;
+- `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` restringidos a ejecución interna/service-role;
+- ruta legacy de activación libre retirada;
+- pruebas de arquitectura y seguridad y validación de producción asociadas al release de Owner Gate.
 
-Siguiente capa: generador de manifest/coverage, endpoint de lectura del manifiesto activo y adaptadores concretos que publiquen checkpoints sin importar conversaciones completas.
+La activación vigente es evidence-bound y tamper-evident respecto del flujo implementado. La identidad owner continúa siendo key-based en esta etapa y no equivale a una prueba nominal de persona, sesión MFA o identidad humana fuerte.
+
+La siguiente evolución funcional es ampliar generación/lectura de manifest y coverage y conectar adaptadores concretos que publiquen checkpoints normalizados sin importar conversaciones completas. Cualquier escritura externa continúa sujeta a Owner Gate, trazabilidad y evidencia.
