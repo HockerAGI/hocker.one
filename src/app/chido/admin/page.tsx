@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Hint from "@/components/Hint";
 import PageShell from "@/components/PageShell";
+import { requireOwnerAal2Page } from "@/lib/owner-session-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { JsonObject } from "@/lib/types";
 import AdminPanel from "./AdminPanel";
@@ -40,6 +41,7 @@ function asRecord(value: unknown): JsonObject {
 }
 
 async function loadAdminData() {
+  await requireOwnerAal2Page("/chido/admin");
   const sb = createAdminSupabase();
 
   const [kycRes, depositRes, withdrawRes, ctrlRes, settingsRes] = await Promise.all([
@@ -73,7 +75,6 @@ async function loadAdminData() {
       .maybeSingle(),
   ]);
 
-  // Enrich KYC with profile data (username, email)
   const kycPending: PendingItem[] = ((kycRes.data ?? []) as JsonObject[]).map((row) => ({
     id: asText(row.id),
     user_id: asText(row.user_id),
@@ -82,7 +83,6 @@ async function loadAdminData() {
     created_at: asText(row.created_at),
   }));
 
-  // Best-effort: load profile info for KYC items
   if (kycPending.length > 0) {
     const userIds = kycPending.map((k) => k.user_id).filter(Boolean);
     if (userIds.length > 0) {
@@ -168,10 +168,9 @@ export default async function ChidoAdminPage() {
     >
       <div className="flex flex-col gap-6">
         <Hint title="Controles administrativos reales">
-          Esta página ejecuta operaciones reales sobre la base de datos compartida de Chido
-          Casino usando la service role key de Supabase. Todas las acciones quedan registradas
-          en la bitácora de eventos con trace ID, razón y actor. Requiere la llave del owner
-          (HOCKER_OWNER_ACTION_KEY) o un token interno válido.
+          Esta página usa la service role de Supabase únicamente en el servidor para consultar y ejecutar
+          operaciones administrativas de Chido. Requiere una sesión autenticada con rol Owner y segundo
+          factor AAL2 antes de leer KYC, depósitos o retiros. Las acciones conservan trace ID, razón y actor.
         </Hint>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
