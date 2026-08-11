@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getLangfuse } from "@/lib/langfuse-safe";
 import { auditTrailEvent } from "@/lib/audit-chain";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { getCommandHmacSecret, signCommand } from "@/lib/security";
 import {
   ApiError,
@@ -121,6 +122,9 @@ export async function POST(req: Request): Promise<Response> {
       trace.event({ name: "ORDEN_RECHAZADA", input: { commandId: id } });
       return json({ ok: true, item: data });
     }
+
+    const ownerGate = await requireOwnerAal2Api(project_id);
+    if (!ownerGate.ok) return ownerGate.response;
 
     const approvedAt = new Date().toISOString();
     const commandSecret = getCommandHmacSecret();

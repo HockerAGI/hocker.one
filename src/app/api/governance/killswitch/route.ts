@@ -1,4 +1,5 @@
 import { getLangfuse } from "@/lib/langfuse-safe";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ControlRow, JsonObject } from "@/lib/types";
 import {
@@ -102,11 +103,20 @@ export async function POST(req: Request): Promise<Response> {
     const ctx = await requireProjectRole(project_id, ["owner", "admin"]);
     trace.update({ userId: ctx.user.id, tags: [project_id, "governance_write"] });
 
+    const nextKillSwitch = toBool(body.kill_switch, false);
+    const nextAllowWrite = toBool(body.allow_write, false);
+    const relaxesSafety = !nextKillSwitch || nextAllowWrite;
+
+    if (relaxesSafety) {
+      const ownerGate = await requireOwnerAal2Api(project_id);
+      if (!ownerGate.ok) return ownerGate.response;
+    }
+
     const next: ControlRow = {
       id: CONTROL_ROW_ID,
       project_id: ctx.project_id,
-      kill_switch: toBool(body.kill_switch, false),
-      allow_write: toBool(body.allow_write, false),
+      kill_switch: nextKillSwitch,
+      allow_write: nextAllowWrite,
       meta: asMeta(body.meta),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
