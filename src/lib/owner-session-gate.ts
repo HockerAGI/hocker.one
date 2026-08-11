@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
-export const HOCKER_OWNER_SESSION_GATE_VERSION = "hocker-owner-session-gate-v0.1.0";
+export const HOCKER_OWNER_SESSION_GATE_VERSION = "hocker-owner-session-gate-v0.1.1";
 
 type AuthenticatorAssuranceLevel = "aal1" | "aal2" | null;
 
@@ -41,6 +41,19 @@ function normalizeAal(value: unknown): AuthenticatorAssuranceLevel {
   return value === "aal1" || value === "aal2" ? value : null;
 }
 
+function missingAuthEnvironment(): OwnerSessionState {
+  return {
+    ok: false,
+    status: 503,
+    reason: "owner_auth_not_configured",
+    userId: null,
+    email: null,
+    role: null,
+    currentLevel: null,
+    nextLevel: null,
+  };
+}
+
 export function sanitizeOwnerReturnTo(value: unknown): string {
   const candidate = String(value ?? "").trim();
   if (!candidate.startsWith("/") || candidate.startsWith("//")) {
@@ -50,6 +63,12 @@ export function sanitizeOwnerReturnTo(value: unknown): string {
 }
 
 async function inspectOwnerSession(projectId = "hocker-one"): Promise<OwnerSessionState> {
+  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const anonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+  if (!url || !anonKey) {
+    return missingAuthEnvironment();
+  }
+
   const supabase = await createServerSupabase();
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
@@ -160,7 +179,9 @@ export async function requireOwnerAal2Api(
           owner_gate_actor: state.role ?? "unknown",
           owner_gate_reason: state.reason,
           owner_gate_version: HOCKER_OWNER_SESSION_GATE_VERSION,
-          message: "Authenticated Owner session is required.",
+          message: state.status === 503
+            ? "Owner authentication is temporarily unavailable."
+            : "Authenticated Owner session is required.",
         },
         { status: state.status },
       ),
