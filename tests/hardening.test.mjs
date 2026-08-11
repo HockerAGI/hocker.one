@@ -20,6 +20,17 @@ test("shared casino kill switch uses the canonical composite key", async () => {
   assert.match(route, /fail_closed: true/);
 });
 
+test("Chido admin is owner-only even when internal service credentials are valid", async () => {
+  const gate = await read("src/lib/hocker-owner-api-gate.ts");
+  const route = await read("src/app/api/chido/admin/route.ts");
+
+  assert.match(route, /requireOwnerOrInternal\(req, traceId\)/);
+  assert.match(gate, /OWNER_ONLY_PATHS[\s\S]*\/api\/chido\/admin/);
+  assert.match(gate, /result\.actor === "owner"/);
+  assert.match(gate, /owner_gate_owner_required/);
+  assert.match(gate, /status = result\.ok && ownerOnly \? 403 : result\.status/);
+});
+
 test("runtime dependencies are patched", async () => {
   const pkg = JSON.parse(await read("package.json"));
   assert.equal(pkg.dependencies.next, "16.2.12");
