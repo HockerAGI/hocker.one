@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { json, parseBody, parseQuery, requireProjectRole, toApiError } from "@/app/api/_lib";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import {
   decideSyntiaMemoryReview,
   getSyntiaMemoryReviewGatePublicContext,
@@ -32,12 +33,13 @@ export async function POST(req: Request) {
   try {
     const input = await parseBody(req);
     const projectId = String(input.project_id || "hocker-one");
-    const ctx = await requireProjectRole(projectId, ["owner"]);
+    const ownerGate = await requireOwnerAal2Api(projectId);
+    if (!ownerGate.ok) return ownerGate.response;
 
     const action = String(input.action || "decision").trim().toLowerCase();
 
     if (action === "list") {
-      return json(await listSyntiaMemoryReviewQueue(ctx.project_id));
+      return json(await listSyntiaMemoryReviewQueue(projectId));
     }
 
     if (action !== "decision") {
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     const result = await decideSyntiaMemoryReview(
-      { ...input, project_id: ctx.project_id },
+      { ...input, project_id: projectId },
       "session_owner",
       traceId,
     );
