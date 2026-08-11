@@ -7,6 +7,9 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 test("Owner session gate requires authenticated owner membership and AAL2 for critical access", async () => {
   const gate = await read("src/lib/owner-session-gate.ts");
 
+  assert.match(gate, /NEXT_PUBLIC_SUPABASE_URL/);
+  assert.match(gate, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  assert.match(gate, /owner_auth_not_configured/);
   assert.match(gate, /auth\.getUser\(\)/);
   assert.match(gate, /from\("project_members"\)/);
   assert.match(gate, /role !== "owner"/);
