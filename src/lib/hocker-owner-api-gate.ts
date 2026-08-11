@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
-export const HOCKER_OWNER_API_GATE_VERSION = "hocker-owner-api-gate-v0.3.0";
+export const HOCKER_OWNER_API_GATE_VERSION = "hocker-owner-api-gate-v0.3.1";
 
 type Actor = "owner" | "internal" | "unknown";
 type HeaderName = "x-hocker-owner-key" | "x-hocker-internal-key" | "authorization";
@@ -15,6 +15,10 @@ export type HockerOwnerGateResult = {
   version: string;
   accepted_header?: HeaderName;
 };
+
+const OWNER_ONLY_PATHS = new Set([
+  "/api/chido/admin",
+]);
 
 function clean(value: unknown): string {
   return String(value ?? "").trim();
@@ -109,7 +113,12 @@ export function requireOwnerOrInternal(
   traceId?: string,
 ): NextResponse | null {
   const result = validateHockerOwnerApiGate(req);
-  if (result.ok) return null;
+  const ownerOnly = OWNER_ONLY_PATHS.has(req.nextUrl.pathname);
+
+  if (result.ok && (!ownerOnly || result.actor === "owner")) return null;
+
+  const status = result.ok && ownerOnly ? 403 : result.status;
+  const reason = result.ok && ownerOnly ? "owner_gate_owner_required" : result.reason;
 
   return NextResponse.json(
     {
@@ -118,12 +127,14 @@ export function requireOwnerOrInternal(
       executed: false,
       real_execution_enabled: false,
       execution_lock: true,
-      owner_gate: result.owner_gate,
+      owner_gate: "blocked",
       owner_gate_actor: result.actor,
-      owner_gate_reason: result.reason,
+      owner_gate_reason: reason,
       owner_gate_version: result.version,
-      message: "Owner/internal gate rejected the request.",
+      message: ownerOnly
+        ? "Owner gate rejected a non-owner request for an owner-only route."
+        : "Owner/internal gate rejected the request.",
     },
-    { status: result.status },
+    { status },
   );
 }
