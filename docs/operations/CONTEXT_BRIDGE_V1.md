@@ -61,14 +61,15 @@ Un manifiesto reúne checkpoints concretos para un alcance (`global`, `repositor
 
 La activación productiva usa Owner Gate v2. Antes de activar un manifiesto:
 
-1. se rechaza si contiene secretos, fue invalidado o no cumple el alcance esperado;
-2. se registra una aprobación estructurada y de vida corta en `owner_gate_approvals`;
-3. la aprobación queda vinculada a acción, recurso, candidato, ambiente, trace/nonce y hash del request;
-4. `activate_context_bridge_manifest_v2(approval_id, manifest_id)` valida el binding y consume la aprobación una sola vez;
+1. se rechaza si la aprobación no existe, expiró, ya fue consumida o no corresponde al actor owner esperado;
+2. la aprobación registrada conserva acción, recurso, candidato, ambiente, trace/nonce y hash del request como evidencia estructurada;
+3. `activate_context_bridge_manifest_v2(manifest_id, approval_id)` valida acción, recurso, proyecto, expiración y consumo de un solo uso;
+4. se rechaza si el manifiesto contiene secretos, fue invalidado o su cobertura no está completa;
 5. el manifiesto activo anterior pasa a `superseded`;
-6. las AGIs pueden recibir el manifiesto activo como contexto operativo filtrado.
+6. se registra la referencia de aprobación y esta se consume una sola vez;
+7. las AGIs pueden recibir el manifiesto activo como contexto operativo filtrado.
 
-La ruta legacy basada en aprobación libre fue retirada. No debe reintroducirse como fallback.
+La activación no recomputa ni valida de forma criptográfica independiente el hash, candidato o ambiente registrados. La ruta legacy basada en aprobación libre fue retirada y no debe reintroducirse como fallback.
 
 La cobertura usa estados `complete`, `partial`, `missing`, `stale` o `blocked`. “Leído” no significa “completo” si falta una fuente, una revisión o evidencia.
 
@@ -110,7 +111,7 @@ La primera capa de Context Bridge está aplicada y desplegada. El estado verific
 - pruebas de arquitectura y seguridad;
 - promoción productiva de Owner Gate audit-strengthened en commit `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 
-Este estado es audit-strengthened, evidence-bound y tamper-evident respecto de la cadena de evidencia implementada y sus bindings verificables. El término no implica inmutabilidad frente a una identidad privilegiada de base de datos: `service_role` conserva capacidad administrativa y no existe todavía una attestation criptográfica externa independiente. La identidad owner continúa siendo key-based hasta que exista binding explícito de sesión, usuario y MFA.
+Este estado es audit-strengthened y evidence-bound por actor, acción, recurso, proyecto, expiración y consumo único. No debe describirse como inmutable o tamper-evident: `service_role` conserva capacidad administrativa sobre `owner_gate_approvals`, la activación no revalida todos los campos de evidencia y no existe todavía una attestation criptográfica externa independiente. La identidad owner continúa siendo key-based hasta que exista binding explícito de sesión, usuario y MFA.
 
 ## Siguiente capa
 
