@@ -34,7 +34,7 @@ El hallazgo de exposición de `v_agi_canon_completeness` fue corregido con privi
 
 Evidencia verificada:
 
-- Migración: `20260810190500_agi_canon_validation_privilege_hardening.sql`.
+- Migración: `20260810122000_agi_canon_validation_privilege_hardening.sql`.
 - El view usa `security_invoker=true`.
 - Acceso público, `anon` y `authenticated` fue revocado; `service_role` conserva el acceso requerido.
 - El validator asociado quedó igualmente restringido a `service_role`.
@@ -48,14 +48,14 @@ Owner Gate fue reforzado para enlazar una aprobación a evidencia estructurada, 
 
 Evidencia verificada:
 
-- Migraciones: `20260810191500_owner_gate_approval_evidence_v1.sql` y `20260810192000_owner_gate_legacy_activation_retirement.sql`.
-- `owner_gate_approvals` permanece service-only.
+- Migraciones: `20260810123000_owner_gate_approval_evidence_v1.sql` y `20260810123500_owner_gate_approval_legacy_path_retirement.sql`.
+- `owner_gate_approvals` permanece service-only frente a clientes públicos, `anon` y `authenticated`; `service_role` conserva privilegios de mantenimiento/escritura.
 - `record_owner_gate_approval(jsonb)` y `activate_context_bridge_manifest_v2(uuid,uuid)` permanecen restringidos a ejecución interna/service-role.
 - La función legacy de activación libre fue revocada y retirada.
 - Merge productivo: `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 - Vercel production: `dpl_78AHRSS3YepFbMKkzV1Af4MDWQop`, `READY` y commit verificado.
 
-La evidencia es tamper-evident/evidence-bound respecto del flujo implementado, pero la identidad owner continúa siendo key-based en esta etapa. No debe describirse como prueba nominal de una persona, sesión MFA o identidad humana fuerte hasta incorporar ese binding explícito.
+El flujo es evidence-bound respecto de acción, recurso, proyecto, expiración y consumo de un solo uso. No debe describirse como inmutable o tamper-evident: `service_role` conserva capacidad de escritura sobre la tabla de aprobaciones y los hashes actuales no constituyen una prueba criptográfica independiente contra modificación privilegiada. La identidad owner continúa siendo key-based en esta etapa y tampoco equivale a prueba nominal de una persona, sesión MFA o identidad humana fuerte.
 
 ## Dependencias Hocker ONE — secuencia validada
 
@@ -89,11 +89,12 @@ El flujo vigente conserva separación entre checkpoint normalizado, manifest dra
 ## Pendientes controlados
 
 1. Priorizar los advisories `WARN`/`INFO` de Supabase por exposición real y consumidor.
-2. Resolver PR #134 como actualización coordinada de React/React DOM, sin `--force` ni `legacy-peer-deps`.
+2. Resolver PR #134 mediante una actualización coordinada de React/React DOM, sin `--force` ni `legacy-peer-deps`.
 3. Tratar TypeScript 7 y Gradle 9.7 como migraciones mayores independientes.
 4. Mantener evidencia exacta de SHA, CI, Preview/Production y smoke en cada promoción.
 5. Ejecutar rotación de credenciales únicamente en su etapa separada de seguridad; este checkpoint no cambia secretos.
 6. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
+7. Si se requiere garantía tamper-evident futura, añadir un mecanismo de inmutabilidad o verificación criptográfica independiente y evaluarlo antes de usar ese claim.
 
 ## Regla de gobierno
 
