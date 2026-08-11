@@ -44,7 +44,7 @@ Evidencia verificada:
 
 ## Owner Gate — evidencia audit-strengthened
 
-Owner Gate fue reforzado para enlazar una aprobación a evidencia estructurada, alcance exacto, hash de request, candidato, ambiente, nonce y expiración/consumo de un solo uso.
+Owner Gate fue reforzado para registrar una aprobación con evidencia estructurada, alcance exacto, hash de request, candidato, ambiente, nonce y expiración/consumo de un solo uso.
 
 Evidencia verificada:
 
@@ -55,7 +55,7 @@ Evidencia verificada:
 - Merge productivo: `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 - Vercel production: `dpl_78AHRSS3YepFbMKkzV1Af4MDWQop`, `READY` y commit verificado.
 
-El flujo es audit-strengthened, evidence-bound y tamper-evident respecto de la cadena de evidencia implementada: acción, recurso, candidato, ambiente, hash, expiración y consumo quedan vinculados y verificables. Este término no implica inmutabilidad frente a una identidad privilegiada de base de datos; `service_role` conserva capacidad administrativa y no existe todavía una prueba criptográfica externa independiente. La identidad owner continúa siendo key-based y no debe describirse como prueba nominal de una persona, sesión MFA o identidad humana fuerte hasta incorporar ese binding explícito.
+El flujo es audit-strengthened y evidence-bound por las comprobaciones que la activación implementa: actor owner, acción, recurso, proyecto, expiración y consumo de un solo uso. El registro también conserva candidato, ambiente, trace/nonce y hashes como evidencia, pero la activación actual no los recomputa ni los valida de forma criptográfica independiente. No debe describirse como inmutable o tamper-evident: `service_role` conserva capacidad administrativa sobre la tabla y no existe una attestation externa independiente. La identidad owner continúa siendo key-based y no debe describirse como prueba nominal de una persona, sesión MFA o identidad humana fuerte hasta incorporar ese binding explícito.
 
 ## Dependencias Hocker ONE — secuencia validada
 
@@ -97,7 +97,7 @@ El flujo vigente conserva separación entre checkpoint normalizado, manifest dra
 4. Ejecutar cualquier rotación de credenciales únicamente dentro de una etapa separada y controlada de seguridad.
 5. Evolucionar Owner Gate desde identidad key-based hacia binding nominal de sesión/MFA/usuario cuando se implemente esa capa.
 6. Mantener `CONTEXT_BRIDGE_V1.md` sincronizado con el estado desplegado y no reintroducir la ruta legacy de activación.
-7. Si se requiere garantía de inmutabilidad frente a identidades privilegiadas, añadir un mecanismo independiente de integridad/attestation antes de elevar ese claim.
+7. Si se requiere garantía de inmutabilidad o resistencia a modificación privilegiada, añadir un mecanismo independiente de integridad/attestation antes de elevar ese claim.
 
 ## Regla de gobierno
 
