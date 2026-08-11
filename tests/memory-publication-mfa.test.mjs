@@ -26,5 +26,6 @@ test("legacy non-publication reviews retain the existing service gate", async ()
   const route = await read("src/app/api/agi/learning/review/route.ts");
 
   assert.match(route, /validateHockerOwnerApiGate\(req\)/);
-  assert.match(route, /let effectiveActor = gate\.actor/);
+  assert.match(route, /effectiveActor[\s\S]*= gate\.actor/);
+  assert.match(route, /type EffectiveReviewActor = "owner" \| "internal" \| "session_owner" \| "unknown"/);
 });
