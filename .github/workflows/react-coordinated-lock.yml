@@ -11,7 +11,7 @@ on:
       - "tests/hardening.test.mjs"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate-and-verify:
@@ -20,9 +20,10 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Checkout repository
+      - name: Checkout exact PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - name: Setup Node 22
@@ -88,3 +89,17 @@ jobs:
             tests/hardening.test.mjs
           if-no-files-found: error
           retention-days: 1
+
+      - name: Commit exact verified package set to remediation branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REMEDIATION_BRANCH: remediation/react-19-2-8-20260810
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json tests/hardening.test.mjs
+          git diff --cached --quiet && { echo "No generated package changes to commit"; exit 1; }
+          git commit -m "fix(deps): coordinate React 19.2.8 dependency set"
+          gh auth setup-git
+          git push origin "HEAD:${REMEDIATION_BRANCH}"
