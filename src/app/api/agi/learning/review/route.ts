@@ -6,6 +6,8 @@ import { decideSyntiaMemoryReview } from "@/lib/syntia-memory-review-gate";
 
 export const dynamic = "force-dynamic";
 
+type EffectiveReviewActor = "owner" | "internal" | "session_owner" | "unknown";
+
 export async function POST(req: NextRequest) {
   const traceId = randomUUID();
   const gate = validateHockerOwnerApiGate(req);
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
   const publishToMemory = input.publish_to_memory === true
     || String(input.publish_to_memory ?? "").trim().toLowerCase() === "true";
   const projectId = String(input.project_id || "hocker-one");
-  let effectiveActor = gate.actor;
+  let effectiveActor: EffectiveReviewActor = gate.actor;
 
   if (publishToMemory) {
     const ownerGate = await requireOwnerAal2Api(projectId);
