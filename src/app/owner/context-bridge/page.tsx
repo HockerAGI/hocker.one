@@ -58,8 +58,8 @@ export default async function OwnerContextBridgePage() {
 
           {coverage.length > 0 ? (
             <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {coverage.map((item) => (
-                <div key={String(item.domain_key ?? crypto.randomUUID())} className="rounded-xl border border-white/8 bg-black/20 p-3">
+              {coverage.map((item, index) => (
+                <div key={String(item.domain_key ?? `coverage-${index}`)} className="rounded-xl border border-white/8 bg-black/20 p-3">
                   <p className="text-[10px] font-bold text-white">{String(item.domain_key ?? "provider")}</p>
                   <p className={`mt-1 text-xs font-black uppercase tracking-widest ${
                     item.status === "complete" ? "text-emerald-300" : "text-amber-300"
