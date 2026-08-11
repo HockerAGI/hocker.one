@@ -110,7 +110,7 @@ La primera capa de Context Bridge está aplicada y desplegada. El estado verific
 - pruebas de arquitectura y seguridad;
 - promoción productiva de Owner Gate audit-strengthened en commit `e3d6d15e334efd62316d6e5671fd03a2c2ddf5c3`.
 
-Este estado es evidence-bound y tamper-evident respecto de la evidencia implementada, pero no debe confundirse con identidad humana nominal. La identidad owner continúa siendo key-based hasta que exista binding explícito de sesión, usuario y MFA.
+Este estado es audit-strengthened, evidence-bound y tamper-evident respecto de la cadena de evidencia implementada y sus bindings verificables. El término no implica inmutabilidad frente a una identidad privilegiada de base de datos: `service_role` conserva capacidad administrativa y no existe todavía una attestation criptográfica externa independiente. La identidad owner continúa siendo key-based hasta que exista binding explícito de sesión, usuario y MFA.
 
 ## Siguiente capa
 
@@ -119,4 +119,5 @@ Las siguientes extensiones deben conservar deny-by-default y trazabilidad:
 - generador de manifest/coverage y lectura del manifiesto activo;
 - adaptadores concretos que publiquen checkpoints sin importar conversaciones completas;
 - binding nominal de Owner Gate a sesión/usuario/MFA cuando se implemente;
-- clasificación continua de cobertura, staleness y evidencia sin trasladar secretos al contexto.
+- clasificación continua de cobertura, staleness y evidencia sin trasladar secretos al contexto;
+- mecanismo independiente de integridad/attestation si se requiere elevar la garantía frente a identidades privilegiadas.
