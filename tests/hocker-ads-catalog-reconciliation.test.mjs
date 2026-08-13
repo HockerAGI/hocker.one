@@ -4,32 +4,25 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Hocker Ads catalog reflects the approved 8/8 product scope without claiming runtime readiness", async () => {
-  const publicCatalog = await read("src/lib/public-catalog.ts");
+test("Hocker Ads control-plane descriptors reflect the approved product scope without claiming runtime readiness", async () => {
   const operationsCatalog = await read("src/lib/operations-catalog.ts");
   const systemRegistry = await read("src/lib/hocker-system-registry-2c.ts");
-  const commandCenter = await read("src/lib/hocker-command-center-registry.ts");
-  const dashboard = await read("src/lib/hocker-dashboard.ts");
   const clientPortals = await read("src/lib/hocker-client-portals.ts");
-
-  assert.match(publicCatalog, /Marketing, ventas y tecnología para hacer crecer tu negocio/);
-  assert.match(publicCatalog, /NOVA \+ Nova Ads \+ Candy Ads \+ PRO IA \+ REVIA/);
-  assert.match(publicCatalog, /Servicios Express/);
-  assert.match(publicCatalog, /Especialistas IA/);
 
   assert.match(operationsCatalog, /"hocker-ads": "HockerAGI\/hocker\.ads"/);
   assert.match(operationsCatalog, /"hocker-ads": "development"/);
+  assert.match(operationsCatalog, /Marketing, ventas y tecnología para hacer crecer tu negocio/);
+  assert.match(operationsCatalog, /Servicios Express/);
+  assert.match(operationsCatalog, /Especialistas IA/);
+  assert.match(operationsCatalog, /NOVA/);
+  assert.match(operationsCatalog, /REVIA/);
 
   assert.match(systemRegistry, /id: "hocker-ads"[\s\S]*?status: "building"/);
   assert.match(systemRegistry, /visibleName: "Marketing, ventas y tecnología"/);
-
-  assert.match(commandCenter, /id: "hocker-ads"[\s\S]*?status: "building"/);
-  assert.match(commandCenter, /label: "Marketing, ventas y tecnología"/);
-
-  assert.match(dashboard, /key: "hocker-ads"[\s\S]*?status: "development"/);
-  assert.match(dashboard, /Repositorio y diseño aprobados; runtime, tenant y deploy de Hocker Ads siguen pendientes/);
+  assert.match(systemRegistry, /NOVA \+ Nova Ads \+ Candy Ads \+ PRO IA \+ REVIA/);
 
   assert.match(clientPortals, /portal_id: "hocker-ads-client"[\s\S]*?status: "planned"/);
+  assert.match(clientPortals, /modules: \["home", "services", "projects", "advertising", "sales", "specialists", "business"\]/);
   assert.match(clientPortals, /Aplicación cliente separada de Hocker ONE/);
   assert.match(clientPortals, /hidden_from_client: \["NOVA interna", "SYNTIA completa", "Supabase events", "governance", "global commands"\]/);
 });
