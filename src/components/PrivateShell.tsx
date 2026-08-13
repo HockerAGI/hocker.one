@@ -6,7 +6,6 @@ import Topbar from "@/components/Topbar";
 import BottomDock from "@/components/BottomDock";
 import WorkspaceBar from "@/components/WorkspaceBar";
 import CommandPalette from "@/components/CommandPalette";
-import ContextNav from "@/components/ContextNav";
 import HockerLiveBackground from "@/components/ui-hocker/HockerLiveBackground";
 
 // Decorative canvas: deferred so private content paints first.
@@ -29,10 +28,6 @@ export default function PrivateShell({ children }: { children: React.ReactNode }
           className="hko-shell-main relative mx-auto flex w-full flex-1 flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+8.5rem)] pt-[76px] sm:px-5 lg:pb-8 lg:pt-[72px]"
           id="main-content"
         >
-          <div className="mx-auto mb-4 w-full max-w-[1800px]">
-            <ContextNav />
-          </div>
-
           <div className="mx-auto mb-4 hidden w-full max-w-[1800px] lg:block">
             <WorkspaceBar />
           </div>
