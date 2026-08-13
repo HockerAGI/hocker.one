@@ -6,11 +6,13 @@
 - Add `HockerAGI/hocker.ads` to both existing GitHub repository allowlists.
 - Extend the two regression tests that encode the current repository set.
 - Update `docs/operations/GITHUB_OWNER_GATE.md`.
-- Add only the repository mapping for existing `hocker-ads` in `operations-catalog.ts`.
+
+## Deferred deliberately
+The `operations-catalog.ts` repository mapping and broader Hocker Ads catalog/portal descriptor reconciliation are deferred to a **second PR**. They are not required for the Owner Gate to authorize governed GitHub drafts/execution and keeping them separate reduces the blast radius of this security-sensitive change.
 
 ## Non-goals
 - No status change from development/building/planned.
-- No catalog copy rewrite.
+- No catalog copy or repository-mapping change.
 - No Vercel/Supabase/Ads/payment connection.
 - No tenant/project or client session.
 - No new mutation tool/path permission.
