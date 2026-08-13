@@ -80,7 +80,7 @@ function mockedGithubResult(operation: string, payload: JsonRecord, extra: JsonR
     repository:
       stringValue(payload.repository) ||
       (stringValue(payload.owner) && stringValue(payload.repo)
-        ? `${stringValue(payload.owner).trim()}/${stringValue(payload.repo).trim()}`
+        ? `${stringValue(payload.owner)}/${stringValue(payload.repo)}`
         : envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one"),
     ...extra,
   };
