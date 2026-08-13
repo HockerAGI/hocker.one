@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
+import { requirePrivateReadApi } from "@/lib/private-session-api-gate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -246,8 +246,8 @@ function fileExists(...parts: string[]): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  const authGate = requireOwnerOrInternal(request);
-  if (authGate) return authGate;
+  const privateAccess = await requirePrivateReadApi(request);
+  if (!privateAccess.ok) return privateAccess.response;
 
   const vercelActive = Boolean(env("VERCEL", "VERCEL_ENV", "VERCEL_URL"));
 
@@ -267,6 +267,11 @@ export async function GET(request: NextRequest) {
       ok: true,
       service: "hocker.one",
       timestamp: new Date().toISOString(),
+      access: {
+        actor: privateAccess.actor,
+        authentication: privateAccess.authentication,
+        gate_version: privateAccess.version,
+      },
       runtime: {
         node: process.version,
         environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown",
