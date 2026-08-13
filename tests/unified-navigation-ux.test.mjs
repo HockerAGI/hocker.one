@@ -27,11 +27,16 @@ test("mobile dock uses the five domains and remains visible below desktop", asyn
   assert.doesNotMatch(source, /Alertas|Buscar \(⌘K\)/);
 });
 
-test("private shell includes contextual navigation before page content", async () => {
+test("private shell keeps one persistent navigation layer per breakpoint", async () => {
   const source = await read("src/components/PrivateShell.tsx");
 
-  assert.match(source, /import ContextNav/);
-  assert.match(source, /<ContextNav \/>/);
+  assert.match(source, /<Sidebar \/>/);
+  assert.match(source, /<Topbar \/>/);
+  assert.match(source, /<BottomDock \/>/);
+  assert.match(source, /<CommandPalette \/>/);
+  assert.match(source, /<WorkspaceBar \/>/);
+  assert.doesNotMatch(source, /import ContextNav/);
+  assert.doesNotMatch(source, /<ContextNav \/>/);
   assert.match(source, /pt-\[76px\]/);
 });
 
