@@ -19,6 +19,7 @@ export default function PrivateShell({ children }: { children: React.ReactNode }
       <HockerLiveBackground />
       <HockerVfxLayer />
 
+      {/* Sidebar owns desktop navigation; BottomDock owns mobile navigation. */}
       <Sidebar />
 
       <div className="relative flex min-h-[100dvh] w-full flex-col lg:pl-[288px]">
