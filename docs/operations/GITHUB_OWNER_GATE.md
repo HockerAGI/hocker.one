@@ -11,16 +11,21 @@ La allowlist predeterminada cubre:
 - `HockerAGI/hocker-node-agent`
 - `HockerAGI/chido.casino`
 - `HockerAGI/hocker.agi`
+- `HockerAGI/hocker.ads`
 
 ## Variable de producción
 
 La variable siguiente es opcional y solo debe usarse para reducir o sustituir explícitamente el alcance:
 
 ```bash
-HOCKER_GITHUB_ALLOWED_REPOS=HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi
+HOCKER_GITHUB_ALLOWED_REPOS=HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi,HockerAGI/hocker.ads
 ```
 
-Si Vercel conserva una lista antigua de tres repositorios, debe actualizarse para no bloquear Chido Casino ni el sitio corporativo.
+Si el entorno productivo conserva una allowlist explícita anterior, debe reconciliarse para no bloquear ningún repositorio autorizado. La actualización del entorno es una operación separada de este cambio de código y no debe exponer secretos.
+
+## Repositorios privados
+
+El token/app GitHub de producción debe tener acceso explícito a los repositorios privados incluidos en la allowlist. Actualmente esto aplica al menos a `HockerAGI/hocker.ads`; si el token no tiene acceso, GitHub puede responder como repositorio no encontrado aunque la allowlist de Hocker ONE sea correcta.
 
 ## Límites obligatorios
 
@@ -28,4 +33,4 @@ Si Vercel conserva una lista antigua de tres repositorios, debe actualizarse par
 - No se permiten archivos `.env`, claves, certificados, keystores ni secretos.
 - No se permite `merge_pull_request` ni `delete_file` desde NOVA.
 - Cada cambio debe usar una rama no principal, quedar en cola y pasar por aprobación del Owner.
-- El token GitHub de producción debe tener acceso al repositorio privado `HockerAGI/hocker.agi`; sin ese permiso, GitHub responderá como repositorio no encontrado aunque la allowlist sea correcta.
+- Agregar un repositorio a la allowlist no habilita deployment, migraciones, pagos, Ads, sesiones cliente ni acciones externas por sí mismo.

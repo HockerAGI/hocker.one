@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("GitHub MCP Owner Gate covers all five operational HOCKER repositories", async () => {
+test("GitHub MCP Owner Gate covers all six operational HOCKER repositories", async () => {
   const policy = await read("src/lib/mcp/mcp-policy.ts");
 
   assert.match(policy, /HockerAGI\/hocker\.one/);
@@ -12,6 +12,7 @@ test("GitHub MCP Owner Gate covers all five operational HOCKER repositories", as
   assert.match(policy, /HockerAGI\/hocker-node-agent/);
   assert.match(policy, /HockerAGI\/chido\.casino/);
   assert.match(policy, /HockerAGI\/hocker\.agi/);
+  assert.match(policy, /HockerAGI\/hocker\.ads/);
   assert.match(policy, /HOCKER_GITHUB_ALLOWED_REPOS/);
   assert.match(policy, /Repositorio GitHub fuera de allowlist/);
 });

@@ -16,6 +16,7 @@ const DEFAULT_GITHUB_REPOSITORIES = [
   "HockerAGI/hocker-node-agent",
   "HockerAGI/chido.casino",
   "HockerAGI/hocker.agi",
+  "HockerAGI/hocker.ads",
 ] as const;
 
 const GITHUB_MUTATION_TOOLS = new Set([
