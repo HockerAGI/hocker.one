@@ -24,6 +24,19 @@ test("service worker updates bypass HTTP cache and never caches private API data
   assert.doesNotMatch(worker, /caches\.match\(request/);
 });
 
+test("PWA exposes update availability without forcing a reload during private work", async () => {
+  const register = await read("src/components/PwaRegister.tsx");
+
+  assert.match(register, /hocker:pwa-update-available/);
+  assert.match(register, /reg\.waiting/);
+  assert.match(register, /updatefound/);
+  assert.match(register, /statechange/);
+  assert.match(register, /navigator\.serviceWorker\.controller/);
+  assert.match(register, /controllerchange/);
+  assert.doesNotMatch(register, /window\.location\.reload\s*\(/);
+  assert.doesNotMatch(register, /skipWaiting\s*\(/);
+});
+
 test("offline fallback is static and contains no authentication form or private data placeholders", async () => {
   const offline = await read("public/offline.html");
 
