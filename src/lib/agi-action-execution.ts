@@ -80,7 +80,7 @@ function mockedGithubResult(operation: string, payload: JsonRecord, extra: JsonR
     repository:
       stringValue(payload.repository) ||
       (stringValue(payload.owner) && stringValue(payload.repo)
-        ? `${stringValue(payload.owner)}/${stringValue(payload.repo)}`
+        ? `${stringValue(payload.owner).trim()}/${stringValue(payload.repo).trim()}`
         : envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one"),
     ...extra,
   };
@@ -107,7 +107,7 @@ function allowedRepositories(): Set<string> {
   const raw =
     envValue("HOCKER_GITHUB_ALLOWED_REPOS") ||
     envValue("GITHUB_ALLOWED_REPOS") ||
-    "HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi";
+    "HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi,HockerAGI/hocker.ads";
 
   return new Set(raw.split(",").map((item) => item.trim()).filter(Boolean));
 }
