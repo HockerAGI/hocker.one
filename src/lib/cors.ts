@@ -14,7 +14,7 @@ export type CorsConfig = {
 };
 
 const DEFAULT_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
-const DEFAULT_HEADERS = ["Content-Type", "Authorization", "apikey", "X-Hocker-Owner-Key", "X-Hocker-Internal-Key"];
+const DEFAULT_HEADERS = ["Content-Type", "Authorization", "apikey"];
 const DEFAULT_MAX_AGE = 86400;
 
 function getOrigins(): string[] {
