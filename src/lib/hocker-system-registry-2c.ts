@@ -49,9 +49,9 @@ export const HOCKER_SYSTEM_REGISTRY_2C: HockerSystemRegistryItem[] = [
     name: "Hocker Ads",
     kind: "app",
     status: "building",
-    visibleName: "Publicidad IA",
-    purpose: "Campañas, creatividad, automatización y reportes.",
-    owner: "Nova Ads + Candy Ads + PRO IA + Revia",
+    visibleName: "Marketing, ventas y tecnología",
+    purpose: "Servicios digitales, especialistas IA, operación de marketing y ventas, y construcción tecnológica bajo control de Hocker ONE.",
+    owner: "NOVA + Nova Ads + Candy Ads + PRO IA + REVIA",
     protected: false,
   },
   {

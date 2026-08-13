@@ -161,27 +161,45 @@ const APP_STATUS: Record<string, OperationsCatalogStatus> = {
 const APP_REPOSITORY: Record<string, string> = {
   "hocker-one": "HockerAGI/hocker.one",
   "chido-casino": "HockerAGI/chido.casino",
+  "hocker-ads": "HockerAGI/hocker.ads",
+};
+
+const APP_OPERATIONS_OVERRIDES: Record<
+  string,
+  Pick<OperationsCatalogItem, "summary" | "ownerAgis" | "capabilities" | "internalTruth">
+> = {
+  "hocker-ads": {
+    summary: "Marketing, ventas y tecnología para hacer crecer tu negocio, con servicios y especialistas IA bajo control de Hocker ONE.",
+    ownerAgis: ["NOVA", "Nova Ads", "Candy Ads", "PRO IA", "REVIA"],
+    capabilities: ["Servicios Express", "Especialistas IA", "Equipo Completo", "Publicidad y Marketing", "Ventas y Atención", "Sitios, Apps y Tecnología", "Proyectos a Medida", "Empresas"],
+    internalTruth: "Producto definido y repositorio privado creado; runtime, tenant, deploy, pagos y conectores productivos todavía no están verificados.",
+  },
 };
 
 const PRODUCT_ITEMS: OperationsCatalogItem[] = PUBLIC_APPS
   .filter((app) => !["hocker-one", "chido-casino"].includes(app.slug))
-  .map((app) => ({
-    id: `product-${app.slug}`,
-    label: app.title,
-    kind: "app" as const,
-    status: APP_STATUS[app.slug] ?? "planned",
-    summary: app.summary,
-    href: `/apps/${app.slug}`,
-    keywords: [app.slug, app.title, app.tagline, app.audience, ...app.benefits],
-    ownerAgis: app.integration.split("+").map((item) => item.trim()),
-    capabilities: app.benefits,
-    ...(APP_REPOSITORY[app.slug] ? { repository: APP_REPOSITORY[app.slug] } : {}),
-    approval: "manual" as const,
-    internalTruth:
-      (APP_STATUS[app.slug] ?? "planned") === "planned"
-        ? "Concepto documentado sin aplicación operativa verificada en este repositorio."
-        : "Módulo parcial o producto todavía en integración.",
-  }));
+  .map((app) => {
+    const override = APP_OPERATIONS_OVERRIDES[app.slug];
+
+    return {
+      id: `product-${app.slug}`,
+      label: app.title,
+      kind: "app" as const,
+      status: APP_STATUS[app.slug] ?? "planned",
+      summary: override?.summary ?? app.summary,
+      href: `/apps/${app.slug}`,
+      keywords: [app.slug, app.title, app.tagline, app.audience, ...app.benefits, ...(override?.capabilities ?? [])],
+      ownerAgis: override?.ownerAgis ?? app.integration.split("+").map((item) => item.trim()),
+      capabilities: override?.capabilities ?? app.benefits,
+      ...(APP_REPOSITORY[app.slug] ? { repository: APP_REPOSITORY[app.slug] } : {}),
+      approval: "manual" as const,
+      internalTruth:
+        override?.internalTruth ??
+        ((APP_STATUS[app.slug] ?? "planned") === "planned"
+          ? "Concepto documentado sin aplicación operativa verificada en este repositorio."
+          : "Módulo parcial o producto todavía en integración."),
+    };
+  });
 
 const AGENT_STATUS: Record<string, OperationsCatalogStatus> = {
   nova: "operational",
