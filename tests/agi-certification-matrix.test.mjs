@@ -11,17 +11,20 @@ const CANONICAL_IDS = [
 
 test("AGI certification matrix is evidence-based and covers all 16 canonical identities", async () => {
   const source = await read("src/lib/agi-certification.ts");
+  const suites = await read("src/lib/agi-eval-suites.ts");
 
   assert.match(source, /AGI_CERTIFICATION_VERSION/);
+  assert.match(source, /eval_contract_suite/);
   assert.match(source, /individual_eval_suite/);
   assert.match(source, /allow_actions_guarded/);
   assert.match(source, /memory_ready/);
   assert.match(source, /tools_ready/);
   assert.match(source, /runtime_evidence/);
   assert.match(source, /missing:/);
+  assert.match(source, /getAgiEvalSuite/);
 
   for (const id of CANONICAL_IDS) {
-    assert.match(source, new RegExp(`\\b${id}\\b`), `${id} must be represented by the certification matrix`);
+    assert.match(suites, new RegExp(`\\b${id}\\b`), `${id} must be represented by the eval suite catalog`);
   }
 });
 
@@ -36,11 +39,33 @@ test("certification uses the production operational view contract and Memory Mir
   assert.doesNotMatch(source, /agi_update_feed/);
 });
 
+test("runtime eval certification requires current suite version and verifiable run references", async () => {
+  const source = await read("src/lib/agi-certification.ts");
+
+  assert.match(source, /feedback_type", "agi_eval_result"/);
+  assert.match(source, /payload\.suite_version !== AGI_EVAL_SUITE_VERSION/);
+  assert.match(source, /payload\.passed !== true/);
+  assert.match(source, /payload\.cases_passed/);
+  assert.match(source, /evidence_run_ids/);
+  assert.match(source, /from\("agi_runs"\)/);
+  assert.match(source, /select\("id,project_id,agi_id,status,input,finished_at,result_hash"\)/);
+  assert.match(source, /run\.status !== "completed"/);
+  assert.match(source, /run\.project_id !== projectId/);
+  assert.match(source, /canonicalId\(String\(run\.agi_id \?\? ""\)\) !== agiId/);
+  assert.match(source, /run\.finished_at/);
+  assert.match(source, /run\.result_hash/);
+  assert.match(source, /eval_suite_version/);
+  assert.match(source, /eval_case_id/);
+  assert.match(source, /new Set\(evidenceRunIds\)/);
+});
+
 test("AGIs page surfaces certification without creating duplicate navigation", async () => {
   const page = await read("src/app/agis/page.tsx");
   assert.match(page, /getAgiCertificationSnapshot/);
   assert.match(page, /Certificaci[oó]n/);
   assert.match(page, /Pendiente/);
+  assert.match(page, /eval contractual/);
+  assert.match(page, /eval runtime/);
   assert.doesNotMatch(page, /href=\"\/agi-certification\"/);
 });
 

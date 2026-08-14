@@ -58,7 +58,8 @@ function missingLabel(check: AgiCertificationCheck): string {
     case "memory_ready": return "memoria";
     case "runtime_evidence": return "ejecución";
     case "allow_actions_guarded": return "gobierno";
-    case "individual_eval_suite": return "eval individual";
+    case "eval_contract_suite": return "eval contractual";
+    case "individual_eval_suite": return "eval runtime";
     default: return check;
   }
 }
@@ -91,8 +92,9 @@ export default async function AgisPage() {
           <div>
             <p className="hko-kicker">Criterio de Certificación</p>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              El porcentaje mide cobertura de evidencia: perfil, herramientas autorizadas, memoria, ejecuciones, gobierno de acciones y una eval individual. No mide “inteligencia” ni concede autonomía.
+              El porcentaje mide cobertura de evidencia: perfil, herramientas autorizadas, memoria, ejecuciones, gobierno, suite contractual versionada y una eval runtime aprobada con runs verificables. No mide “inteligencia” ni concede autonomía.
             </p>
+            <p className="mt-2 text-[11px] text-slate-500">Suite contractual: {certification.eval_suite_version}</p>
           </div>
           <Link href="/agis" className="hko-action-secondary inline-flex items-center gap-2">
             <RefreshCw className="h-4 w-4" /> Actualizar
