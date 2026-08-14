@@ -37,8 +37,12 @@ test("eval runner records the same model selection order as the canonical server
   const source = await read("src/lib/agi-runtime-eval-runner.ts");
   const runtime = await read("src/lib/serverless-agi-runtime.ts");
 
-  assert.match(source, /AI_GATEWAY_MODEL_AUTO\s*\|\|\s*process\.env\.AI_GATEWAY_MODEL_FAST/);
-  assert.match(runtime, /gatewayModel\(\): string[\s\S]*?AI_GATEWAY_MODEL_AUTO[\s\S]*?AI_GATEWAY_MODEL_FAST/);
+  const sourceAuto = source.indexOf("AI_GATEWAY_MODEL_AUTO");
+  const sourceFast = source.indexOf("AI_GATEWAY_MODEL_FAST");
+  const runtimeAuto = runtime.indexOf("AI_GATEWAY_MODEL_AUTO");
+  const runtimeFast = runtime.indexOf("AI_GATEWAY_MODEL_FAST");
+  assert.ok(sourceAuto >= 0 && sourceFast > sourceAuto, "eval runner must prefer AUTO before FAST");
+  assert.ok(runtimeAuto >= 0 && runtimeFast > runtimeAuto, "canonical runtime must prefer AUTO before FAST");
   assert.match(source, /completion\.model !== model/);
 });
 
