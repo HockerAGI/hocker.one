@@ -9,6 +9,9 @@ on:
       - "capacitor.config.ts"
       - "package.json"
       - "package-lock.json"
+      - "src/components/PwaRegister.tsx"
+      - "public/sw.js"
+      - "tests/pwa-production-readiness.test.mjs"
       - "tests/android-bootstrap-security.test.mjs"
       - ".github/workflows/android-debug.yml"
   push:
@@ -20,6 +23,9 @@ on:
       - "capacitor.config.ts"
       - "package.json"
       - "package-lock.json"
+      - "src/components/PwaRegister.tsx"
+      - "public/sw.js"
+      - "tests/pwa-production-readiness.test.mjs"
       - "tests/android-bootstrap-security.test.mjs"
       - ".github/workflows/android-debug.yml"
 
