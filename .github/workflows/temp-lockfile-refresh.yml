@@ -6,17 +6,18 @@ on:
       - stabilize/nanoid-3-3-18-20260813
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          persist-credentials: false
+          ref: stabilize/nanoid-3-3-18-20260813
+          persist-credentials: true
 
       - name: Setup Node 22
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -29,6 +30,19 @@ jobs:
 
       - name: Audit regenerated dependency graph
         run: npm audit --audit-level=high
+
+      - name: Commit lockfile if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "security(deps): regenerate lockfile for nanoid 3.3.18"
+          git push origin HEAD:stabilize/nanoid-3-3-18-20260813
 
       - name: Upload regenerated lockfile
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
