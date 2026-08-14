@@ -43,8 +43,8 @@ test("runtime eval certification requires current suite version and verifiable r
   const source = await read("src/lib/agi-certification.ts");
 
   assert.match(source, /feedback_type", "agi_eval_result"/);
-  assert.match(source, /payload\.suite_version === AGI_EVAL_SUITE_VERSION/);
-  assert.match(source, /payload\.passed === true/);
+  assert.match(source, /payload\.suite_version !== AGI_EVAL_SUITE_VERSION/);
+  assert.match(source, /payload\.passed !== true/);
   assert.match(source, /payload\.cases_passed/);
   assert.match(source, /evidence_run_ids/);
   assert.match(source, /from\("agi_runs"\)/);
