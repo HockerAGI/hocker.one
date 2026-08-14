@@ -76,7 +76,7 @@ export default async function AgisPage() {
       <HockerPageHeader
         eyebrow="Runtime verificable"
         title="AGIs: estado y certificación"
-        text="La actividad reciente y la preparación para producción son cosas distintas. Esta vista muestra ambas con evidencia, sin convertir permisos bloqueados en una falsa señal de incompletitud."
+        text="Un perfil documentado no equivale a un worker activo. La actividad reciente y la preparación para producción son cosas distintas; esta vista muestra ambas con evidencia, sin convertir permisos bloqueados en una falsa señal de incompletitud."
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
