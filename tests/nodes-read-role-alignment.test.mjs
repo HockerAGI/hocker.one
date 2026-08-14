@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const migrationPath = "../supabase/migrations/20260814103957_nodes_read_role_alignment_20260814.sql";
-const legacyCleanupPath = "../supabase/migrations/20260814104500_nodes_schema_legacy_read_policy_cleanup.sql";
+const legacyCleanupPath = "../supabase/migrations/20260814104734_nodes_schema_legacy_read_policy_cleanup_20260814.sql";
 const rolesPath = "../src/lib/hocker-roles.ts";
 const panelPath = "../src/components/NodesPanel.tsx";
 
