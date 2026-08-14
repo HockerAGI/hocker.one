@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const migrationPath = "../supabase/migrations/20260814095500_nodes_read_role_alignment.sql";
+const migrationPath = "../supabase/migrations/20260814103957_nodes_read_role_alignment_20260814.sql";
 const rolesPath = "../src/lib/hocker-roles.ts";
 const panelPath = "../src/components/NodesPanel.tsx";
 
