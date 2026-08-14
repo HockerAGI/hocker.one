@@ -55,7 +55,8 @@ function certificationId(value: string): string {
 function missingLabel(check: AgiCertificationCheck): string {
   switch (check) {
     case "canonical_profile": return "perfil";
-    case "tools_ready": return "herramientas";
+    case "tools_ready": return "herramientas habilitadas";
+    case "tool_runtime_evidence": return "herramientas probadas";
     case "memory_ready": return "memoria";
     case "runtime_evidence": return "ejecución";
     case "allow_actions_guarded": return "gobierno";
@@ -93,9 +94,11 @@ export default async function AgisPage() {
           <div>
             <p className="hko-kicker">Criterio de Certificación</p>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              El porcentaje mide cobertura de evidencia: perfil, herramientas autorizadas, memoria, ejecuciones, gobierno, suite contractual versionada y una eval runtime aprobada con runs verificables. No mide “inteligencia” ni concede autonomía.
+              El porcentaje mide cobertura de evidencia: perfil, herramientas habilitadas y su evidencia runtime, memoria, ejecuciones, gobierno, suite contractual versionada y una eval runtime aprobada con runs verificables. Una herramienta futura o deshabilitada no cuenta como capacidad activa. No mide “inteligencia” ni concede autonomía.
             </p>
-            <p className="mt-2 text-[11px] text-slate-500">Suite contractual: {certification.eval_suite_version}</p>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Suite AGI: {certification.eval_suite_version} · Evidencia de tools: {certification.tool_eval_version}
+            </p>
           </div>
           <Link href="/agis" className="hko-action-secondary inline-flex items-center gap-2">
             <RefreshCw className="h-4 w-4" /> Actualizar
