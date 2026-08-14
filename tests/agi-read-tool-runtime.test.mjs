@@ -16,7 +16,7 @@ test("tool eval route accepts only one AGI and one supported tool under Owner AA
   assert.match(route, /runAgiReadOnlyToolProbe/);
 });
 
-test("tool runtime validates the effective assignment and executor-ready policy before probing", async () => {
+test("tool runtime validates the effective assignment, readable permission and executor-ready policy before probing", async () => {
   const source = await read("src/lib/agi-read-tool-runtime.ts");
 
   assert.match(source, /from\("agi_agent_tools"\)/);
@@ -24,6 +24,9 @@ test("tool runtime validates the effective assignment and executor-ready policy 
   assert.match(source, /\.eq\("agi_id", agiId\)/);
   assert.match(source, /\.eq\("tool_key", toolKey\)/);
   assert.match(source, /\.eq\("enabled", true\)/);
+  assert.match(source, /READABLE_PERMISSION_LEVELS/);
+  assert.match(source, /permission_level/);
+  assert.match(source, /AGI_TOOL_ASSIGNMENT_NOT_READABLE/);
   assert.match(source, /normalized_status/);
   assert.match(source, /implementation_status/);
   assert.match(source, /execution_enabled/);
