@@ -9,7 +9,9 @@ const panelPath = "../src/components/NodesPanel.tsx";
 test("nodes read policy permits authenticated project members without widening writes", async () => {
   const sql = await readFile(new URL(migrationPath, import.meta.url), "utf8");
 
-  assert.match(sql, /create\s+policy\s+"?nodes_select_project_member"?/i);
+  assert.match(sql, /drop\s+policy\s+if\s+exists\s+"?nodes_select_member"?/i);
+  assert.match(sql, /drop\s+policy\s+if\s+exists\s+"?nodes_select_project_member"?/i);
+  assert.match(sql, /create\s+policy\s+"?nodes_select_member"?/i);
   assert.match(sql, /for\s+select\s+to\s+authenticated/i);
   assert.match(sql, /using\s*\(\s*public\.is_project_member\(project_id\)\s*\)/i);
   assert.doesNotMatch(sql, /for\s+(insert|update|delete)/i);
