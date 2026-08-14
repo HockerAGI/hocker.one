@@ -2,12 +2,12 @@ const CACHE_NAME = "hocker-one-offline-v1";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.add(OFFLINE_URL))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL)));
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "HOCKER_ACTIVATE_UPDATE") return;
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
