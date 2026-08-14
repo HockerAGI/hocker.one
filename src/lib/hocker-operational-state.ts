@@ -81,7 +81,6 @@ const AGI_RUNTIME_FRESH_MS = 30 * 60 * 1000;
 const NODE_FRESH_MS = 5 * 60 * 1000;
 const WEBSITE_HEALTH_TTL_MS = 60 * 1000;
 const NOT_CREATED_APPS: Array<[string, string, string]> = [
-  ["hocker-ads", "Hocker Ads", "Aplicación de publicidad aún no creada."],
   ["hocker-hub", "Hocker Hub", "CRM aún no creado."],
   ["hocker-wallet", "Hocker Wallet", "Aplicación financiera aún no creada."],
   ["hocker-drive-cloud", "Hocker Drive Cloud", "Aplicación de nube aún no creada."],
@@ -349,6 +348,18 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
       evidence: "Hay rutas y esquema de datos, pero no un runtime autónomo comprobado.",
       href: "/supply",
       repository: null,
+      last_activity_at: null,
+      checked_at: checkedAt,
+    },
+    {
+      key: "hocker-ads",
+      title: "Hocker Ads",
+      kind: "application",
+      status: "configured",
+      summary: "Producto privado con base ejecutable en desarrollo; todavía sin deployment productivo verificado.",
+      evidence: "Existe el repositorio privado HockerAGI/hocker.ads con foundation ejecutable y trabajo local de Supabase/RLS. Configurado no equivale a desplegado.",
+      href: null,
+      repository: "HockerAGI/hocker.ads",
       last_activity_at: null,
       checked_at: checkedAt,
     },
