@@ -17,6 +17,8 @@ test("eval runner route is Owner AAL2 only, single-AGI and fail closed", async (
   assert.match(route, /agi_id/);
   assert.doesNotMatch(route, /agi_ids|run_all|Promise\.all/);
   assert.match(route, /status:\s*400/);
+  assert.doesNotMatch(route, /\bmessage,\s*\n/);
+  assert.match(route, /Runtime evaluation failed\. Review evidence and logs\./);
 });
 
 test("runtime eval runner uses the existing AI Gateway model client and exact owned tasks", async () => {
