@@ -55,15 +55,14 @@ export async function POST(req: Request): Promise<Response> {
       status: result.passed ? 200 : 422,
       headers: { "Cache-Control": "no-store" },
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "AGI_EVAL_RUNTIME_FAILED";
+  } catch {
     return NextResponse.json(
       {
         ok: false,
         executed: false,
         evaluation_only: true,
         error: "agi_eval_runtime_failed",
-        message,
+        message: "Runtime evaluation failed. Review evidence and logs.",
       },
       {
         status: 502,
