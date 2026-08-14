@@ -159,10 +159,14 @@ export class McpClient {
       headers["MCP-Protocol-Version"] = MODERN_PROTOCOL_VERSION;
       headers["Mcp-Method"] = method;
 
-      if (method === "tools/call") {
-        const toolName = String(params?.name ?? "").trim();
-        if (toolName) headers["Mcp-Name"] = toolName;
+      let routeName = "";
+      if (method === "tools/call" || method === "prompts/get") {
+        routeName = String(params?.name ?? "").trim();
+      } else if (method === "resources/read") {
+        routeName = String(params?.uri ?? "").trim();
       }
+
+      if (routeName) headers["Mcp-Name"] = routeName;
     }
 
     return headers;
