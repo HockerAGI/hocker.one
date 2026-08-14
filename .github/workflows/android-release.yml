@@ -16,6 +16,9 @@ on:
       - "package.json"
       - "package-lock.json"
       - "out/**"
+      - "src/components/PwaRegister.tsx"
+      - "public/sw.js"
+      - "tests/pwa-production-readiness.test.mjs"
 
 permissions:
   contents: read
