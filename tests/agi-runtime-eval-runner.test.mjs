@@ -30,14 +30,24 @@ test("runtime eval runner uses the existing AI Gateway model client and exact ow
   assert.doesNotMatch(source, /claim_next_agi_task/);
   assert.match(source, /start_serverless_agi_execution/);
   assert.match(source, /complete_serverless_agi_execution/);
+  assert.match(source, /fail_agi_task/);
+});
+
+test("eval runner records the same model selection order as the canonical serverless runtime", async () => {
+  const source = await read("src/lib/agi-runtime-eval-runner.ts");
+  const runtime = await read("src/lib/serverless-agi-runtime.ts");
+
+  assert.match(source, /AI_GATEWAY_MODEL_AUTO\s*\|\|\s*process\.env\.AI_GATEWAY_MODEL_FAST/);
+  assert.match(runtime, /gatewayModel\(\): string[\s\S]*?AI_GATEWAY_MODEL_AUTO[\s\S]*?AI_GATEWAY_MODEL_FAST/);
+  assert.match(source, /completion\.model !== model/);
 });
 
 test("every eval run carries top-level suite and case provenance", async () => {
   const source = await read("src/lib/agi-runtime-eval-runner.ts");
 
   assert.match(source, /eval_suite_version:\s*AGI_EVAL_SUITE_VERSION/);
-  assert.match(source, /eval_case_id:\s*evalCase\.id/);
-  assert.match(source, /eval_kind:\s*evalCase\.kind/);
+  assert.match(source, /eval_case_id:\s*args\.evalCase\.id/);
+  assert.match(source, /eval_kind:\s*args\.evalCase\.kind/);
   assert.match(source, /external_writes_executed:\s*false/);
   assert.match(source, /result_hash/);
 });
@@ -58,7 +68,9 @@ test("Shadows may be evaluated without becoming an operational worker", async ()
   const runtime = await read("src/lib/serverless-agi-runtime.ts");
 
   assert.match(source, /evaluation_only/);
-  assert.match(source, /shadows/);
+  assert.match(source, /Shadows/i);
+  assert.match(source, /requireCanonicalAgi/);
+  assert.doesNotMatch(source, /isOperationalAgi/);
   assert.match(runtime, /AGI_PROFILE_NOT_OPERATIONAL/);
   assert.doesNotMatch(runtime, /evaluation_only/);
 });
