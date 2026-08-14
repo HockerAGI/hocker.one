@@ -1,7 +1,7 @@
 import { HOCKER_AGI_CANON } from "@/lib/hocker-agi-canon";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
-export const AGI_CERTIFICATION_VERSION = "2026.08.14-1";
+export const AGI_CERTIFICATION_VERSION = "2026.08.14-2";
 
 type AgentRow = {
   agi_id: string;
@@ -12,8 +12,7 @@ type AgentRow = {
 };
 type ToolRow = { agi_id: string; enabled: boolean | null };
 type MemoryRow = { agi_id: string | null; target_agi_ids: string[] | null; active: boolean | null };
-type FeedRow = { agi_id: string; status: string | null };
-type OperationalRow = { agi_id: string; task_count: number | null; run_count: number | null };
+type OperationalRow = { agi_id: string; tasks: number | null; runs: number | null };
 
 export type AgiCertificationCheck =
   | "canonical_profile"
@@ -85,19 +84,17 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
 
   try {
     const sb = createAdminSupabase();
-    const [agentsRes, toolsRes, memoryRes, feedRes, operationsRes] = await Promise.all([
+    const [agentsRes, toolsRes, memoryRes, operationsRes] = await Promise.all([
       sb.from("agi_agents").select("agi_id,name,status,autonomy_level,allow_actions").eq("project_id", projectId),
       sb.from("agi_agent_tools").select("agi_id,enabled").eq("project_id", projectId),
       sb.from("agi_memory_mirror").select("agi_id,target_agi_ids,active").eq("project_id", projectId).eq("active", true),
-      sb.from("agi_update_feed").select("agi_id,status").eq("project_id", projectId),
-      sb.from("v_agi_operational_state").select("agi_id,task_count,run_count"),
+      sb.from("v_agi_operational_state").select("agi_id,tasks,runs"),
     ]);
 
-    const queryFailed = [agentsRes, toolsRes, memoryRes, feedRes, operationsRes].some((result) => result.error);
+    const queryFailed = [agentsRes, toolsRes, memoryRes, operationsRes].some((result) => result.error);
     const agents = (agentsRes.data ?? []) as AgentRow[];
     const toolCounts = countByAgi((toolsRes.data ?? []) as ToolRow[]);
     const memories = (memoryRes.data ?? []) as MemoryRow[];
-    const feeds = (feedRes.data ?? []) as FeedRow[];
     const operations = new Map(
       ((operationsRes.data ?? []) as OperationalRow[]).map((row) => [canonicalId(row.agi_id), row]),
     );
@@ -111,14 +108,14 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         const direct = row.agi_id ? canonicalId(row.agi_id) === id : false;
         const targeted = (row.target_agi_ids ?? []).some((target) => canonicalId(target) === id);
         return Boolean(row.active && (direct || targeted));
-      }) || feeds.some((row) => canonicalId(row.agi_id) === id && row.status === "active");
+      });
       const isShadows = id === "shadows";
 
       const checks: Record<AgiCertificationCheck, boolean> = {
         canonical_profile: Boolean(agent),
         tools_ready: isShadows ? toolCounts.get(id) === undefined : (toolCounts.get(id) ?? 0) > 0,
         memory_ready: memoryReady,
-        runtime_evidence: (Number(operational?.task_count ?? 0) > 0) && (Number(operational?.run_count ?? 0) > 0),
+        runtime_evidence: (Number(operational?.tasks ?? 0) > 0) && (Number(operational?.runs ?? 0) > 0),
         allow_actions_guarded: agent?.allow_actions === false,
         individual_eval_suite: INDIVIDUAL_EVAL_SUITES[id] === true,
       };
@@ -137,7 +134,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         evidence_percent: Math.round((passed / total) * 100),
         passed,
         total,
-        certified_for_current_scope: missing.length === 0,
+        certified_for_current_scope: !queryFailed && missing.length === 0,
         checks,
         missing,
       };
