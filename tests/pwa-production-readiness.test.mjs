@@ -24,6 +24,29 @@ test("service worker updates bypass HTTP cache and never caches private API data
   assert.doesNotMatch(worker, /caches\.match\(request/);
 });
 
+test("PWA exposes a visible update lifecycle without interrupting Owner work", async () => {
+  const register = await read("src/components/PwaRegister.tsx");
+  const worker = await read("public/sw.js");
+
+  assert.match(register, /hocker:pwa-update-available/);
+  assert.match(register, /reg\.waiting/);
+  assert.match(register, /updatefound/);
+  assert.match(register, /statechange/);
+  assert.match(register, /controllerchange/);
+  assert.match(register, /Nueva versión disponible/);
+  assert.match(register, /HOCKER_ACTIVATE_UPDATE/);
+  assert.match(register, /label:\s*["']Activar["']/);
+  assert.match(register, /label:\s*["']Recargar["']/);
+  assert.doesNotMatch(register, /window\.location\.reload\s*\(/);
+
+  const installBlock = worker.match(/self\.addEventListener\(["']install["'][\s\S]*?\n\}\);/)?.[0] ?? "";
+  assert.ok(installBlock, "service worker must keep an install handler");
+  assert.doesNotMatch(installBlock, /skipWaiting\s*\(/, "install must never force-activate a new worker");
+  assert.match(worker, /self\.addEventListener\(["']message["']/);
+  assert.match(worker, /HOCKER_ACTIVATE_UPDATE/);
+  assert.match(worker, /self\.skipWaiting\s*\(\)/);
+});
+
 test("offline fallback is static and contains no authentication form or private data placeholders", async () => {
   const offline = await read("public/offline.html");
 
