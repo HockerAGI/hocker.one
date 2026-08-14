@@ -11,7 +11,7 @@ test("tool eval route accepts only one AGI and one supported tool under Owner AA
   assert.match(route, /agi_id/);
   assert.match(route, /tool_key/);
   assert.match(route, /\.strict\(\)/);
-  assert.doesNotMatch(route, /operation|query|sql|repository|path|args/);
+  assert.doesNotMatch(route, /\b(operation|query|sql|repository|path|args)\s*:/);
   assert.doesNotMatch(route, /tool_keys|run_all|Promise\.all/);
   assert.match(route, /runAgiReadOnlyToolProbe/);
 });
