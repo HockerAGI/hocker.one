@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const migrationPath = "../supabase/migrations/20260814103957_nodes_read_role_alignment_20260814.sql";
+const legacyCleanupPath = "../supabase/migrations/20260814104500_nodes_schema_legacy_read_policy_cleanup.sql";
 const rolesPath = "../src/lib/hocker-roles.ts";
 const panelPath = "../src/components/NodesPanel.tsx";
 
@@ -17,6 +18,14 @@ test("nodes read policy permits authenticated project members without widening w
   assert.doesNotMatch(sql, /for\s+(insert|update|delete)/i);
   assert.doesNotMatch(sql, /drop\s+policy\s+"?nodes_admin_write"?/i);
   assert.doesNotMatch(sql, /drop\s+policy\s+"?nodes_service_all"?/i);
+});
+
+test("schema-era duplicate member read policy is removed separately without touching writes", async () => {
+  const sql = await readFile(new URL(legacyCleanupPath, import.meta.url), "utf8");
+
+  assert.match(sql, /drop\s+policy\s+if\s+exists\s+"?nodes_select_if_member"?/i);
+  assert.doesNotMatch(sql, /create\s+policy/i);
+  assert.doesNotMatch(sql, /nodes_admin_write|nodes_service_all|for\s+(insert|update|delete)/i);
 });
 
 test("Hocker role contract and browser consumer both require member-visible nodes", async () => {
