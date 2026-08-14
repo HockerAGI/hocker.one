@@ -2,7 +2,8 @@ import { AGI_EVAL_SUITE_VERSION, getAgiEvalSuite } from "@/lib/agi-eval-suites";
 import { HOCKER_AGI_CANON } from "@/lib/hocker-agi-canon";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
-export const AGI_CERTIFICATION_VERSION = "2026.08.14-4";
+export const AGI_CERTIFICATION_VERSION = "2026.08.14-5";
+export const AGI_TOOL_EVAL_VERSION = "2026.08.14-1";
 
 type AgentRow = {
   agi_id: string;
@@ -11,7 +12,13 @@ type AgentRow = {
   autonomy_level: string | null;
   allow_actions: boolean | null;
 };
-type ToolRow = { agi_id: string; enabled: boolean | null };
+type ToolRow = {
+  agi_id: string;
+  tool_key: string;
+  enabled: boolean | null;
+  permission_level: string | null;
+  policy: unknown;
+};
 type MemoryRow = { agi_id: string | null; target_agi_ids: string[] | null; active: boolean | null };
 type OperationalRow = { agi_id: string; tasks: number | null; runs: number | null };
 type EvalFeedbackRow = {
@@ -33,6 +40,7 @@ type EvalRunRow = {
 export type AgiCertificationCheck =
   | "canonical_profile"
   | "tools_ready"
+  | "tool_runtime_evidence"
   | "memory_ready"
   | "runtime_evidence"
   | "allow_actions_guarded"
@@ -57,6 +65,7 @@ export type AgiCertificationSnapshot = {
   checked_at: string;
   source: "supabase+code" | "partial";
   eval_suite_version: string;
+  tool_eval_version: string;
   certified: number;
   pending: number;
   entries: AgiCertificationEntry[];
@@ -66,20 +75,35 @@ function canonicalId(value: string): string {
   return value.trim().toLowerCase().replaceAll("-", "_");
 }
 
-function countByAgi(rows: ToolRow[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.enabled) continue;
-    const id = canonicalId(row.agi_id);
-    counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return counts;
-}
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function enabledAssignmentsByAgi(rows: ToolRow[]): Map<string, ToolRow[]> {
+  const assignments = new Map<string, ToolRow[]>();
+  for (const assignment of rows) {
+    if (assignment.enabled === true) {
+      const id = canonicalId(assignment.agi_id);
+      const current = assignments.get(id) ?? [];
+      current.push(assignment);
+      assignments.set(id, current);
+    }
+  }
+  return assignments;
+}
+
+function isAssignmentExecutorReady(assignment: ToolRow): boolean {
+  const policy = asRecord(assignment.policy);
+  if (!policy) return false;
+  const normalized_status = String(policy.normalized_status ?? "");
+  const implementation_status = String(policy.implementation_status ?? "");
+  const execution_enabled = policy.execution_enabled === true;
+  return assignment.enabled === true
+    && normalized_status === "connected"
+    && implementation_status === "executor_ready"
+    && execution_enabled;
 }
 
 function hasVerifiedRuntimeEval(
@@ -130,14 +154,45 @@ function hasVerifiedRuntimeEval(
   });
 }
 
+function hasVerifiedToolRuntimeEvidence(
+  assignments: ToolRow[],
+  feedbackRows: EvalFeedbackRow[],
+  agiId: string,
+  individualEvalReady: boolean,
+): boolean {
+  if (assignments.length === 0) return agiId === "shadows";
+
+  return assignments.every((assignment) => {
+    if (assignment.tool_key === "ai_gateway") return individualEvalReady;
+
+    const latest = feedbackRows.find((row) => {
+      if (canonicalId(String(row.agi_id ?? "")) !== agiId) return false;
+      const payload = asRecord(row.payload);
+      return row.feedback_type === "agi_tool_eval_result"
+        && payload?.tool_key === assignment.tool_key;
+    });
+    const payload = asRecord(latest?.payload);
+    if (!payload) return false;
+
+    return latest?.feedback_type === "agi_tool_eval_result"
+      && payload.tool_eval_version === AGI_TOOL_EVAL_VERSION
+      && payload.tool_key === assignment.tool_key
+      && payload.passed === true
+      && payload.mode === "read_only"
+      && payload.external_writes_executed === false
+      && typeof payload.evidence_ref === "string"
+      && payload.evidence_ref.trim().length > 0;
+  });
+}
+
 export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Promise<AgiCertificationSnapshot> {
   const checkedAt = new Date().toISOString();
 
   try {
     const sb = createAdminSupabase();
-    const [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes, evalRunsRes] = await Promise.all([
+    const [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes, toolFeedbackRes, evalRunsRes] = await Promise.all([
       sb.from("agi_agents").select("agi_id,name,status,autonomy_level,allow_actions").eq("project_id", projectId),
-      sb.from("agi_agent_tools").select("agi_id,enabled").eq("project_id", projectId),
+      sb.from("agi_agent_tools").select("agi_id,tool_key,enabled,permission_level,policy").eq("project_id", projectId),
       sb.from("agi_memory_mirror").select("agi_id,target_agi_ids,active").eq("project_id", projectId).eq("active", true),
       sb.from("v_agi_operational_state").select("agi_id,tasks,runs"),
       sb.from("agi_feedback")
@@ -146,6 +201,12 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         .eq("feedback_type", "agi_eval_result")
         .order("created_at", { ascending: false })
         .limit(500),
+      sb.from("agi_feedback")
+        .select("agi_id,feedback_type,payload,created_at")
+        .eq("project_id", projectId)
+        .eq("feedback_type", "agi_tool_eval_result")
+        .order("created_at", { ascending: false })
+        .limit(1000),
       sb.from("agi_runs")
         .select("id,project_id,agi_id,status,input,finished_at,result_hash")
         .eq("project_id", projectId)
@@ -154,12 +215,13 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         .limit(500),
     ]);
 
-    const queryFailed = [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes, evalRunsRes]
+    const queryFailed = [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes, toolFeedbackRes, evalRunsRes]
       .some((result) => result.error);
     const agents = (agentsRes.data ?? []) as AgentRow[];
-    const toolCounts = countByAgi((toolsRes.data ?? []) as ToolRow[]);
+    const assignmentsByAgi = enabledAssignmentsByAgi((toolsRes.data ?? []) as ToolRow[]);
     const memories = (memoryRes.data ?? []) as MemoryRow[];
     const evalFeedback = (evalFeedbackRes.data ?? []) as EvalFeedbackRow[];
+    const toolFeedback = (toolFeedbackRes.data ?? []) as EvalFeedbackRow[];
     const evalRuns = (evalRunsRes.data ?? []) as EvalRunRow[];
     const operations = new Map(
       ((operationsRes.data ?? []) as OperationalRow[]).map((row) => [canonicalId(row.agi_id), row]),
@@ -170,6 +232,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       const id = canonicalId(profile.id);
       const agent = agentsById.get(id);
       const operational = operations.get(id);
+      const assignments = assignmentsByAgi.get(id) ?? [];
       const memoryReady = memories.some((row) => {
         const direct = row.agi_id ? canonicalId(row.agi_id) === id : false;
         const targeted = (row.target_agi_ids ?? []).some((target) => canonicalId(target) === id);
@@ -177,15 +240,20 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       });
       const isShadows = id === "shadows";
       const evalSuite = getAgiEvalSuite(id);
+      const individualEvalReady = hasVerifiedRuntimeEval(evalFeedback, evalRuns, id, projectId);
+      const toolsReady = isShadows
+        ? assignments.length === 0
+        : assignments.length > 0 && assignments.every(isAssignmentExecutorReady);
 
       const checks: Record<AgiCertificationCheck, boolean> = {
         canonical_profile: Boolean(agent),
-        tools_ready: isShadows ? toolCounts.get(id) === undefined : (toolCounts.get(id) ?? 0) > 0,
+        tools_ready: toolsReady,
+        tool_runtime_evidence: hasVerifiedToolRuntimeEvidence(assignments, toolFeedback, id, individualEvalReady),
         memory_ready: memoryReady,
         runtime_evidence: (Number(operational?.tasks ?? 0) > 0) && (Number(operational?.runs ?? 0) > 0),
         allow_actions_guarded: agent?.allow_actions === false,
         eval_contract_suite: Boolean(evalSuite && evalSuite.version === AGI_EVAL_SUITE_VERSION && evalSuite.cases.length >= 3),
-        individual_eval_suite: hasVerifiedRuntimeEval(evalFeedback, evalRuns, id, projectId),
+        individual_eval_suite: individualEvalReady,
       };
 
       const missing = (Object.entries(checks) as Array<[AgiCertificationCheck, boolean]>)
@@ -213,6 +281,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       checked_at: checkedAt,
       source: queryFailed ? "partial" : "supabase+code",
       eval_suite_version: AGI_EVAL_SUITE_VERSION,
+      tool_eval_version: AGI_TOOL_EVAL_VERSION,
       certified: entries.filter((entry) => entry.certified_for_current_scope).length,
       pending: entries.filter((entry) => !entry.certified_for_current_scope).length,
       entries,
@@ -225,11 +294,12 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       autonomy: "unknown",
       evidence_percent: 0,
       passed: 0,
-      total: 7,
+      total: 8,
       certified_for_current_scope: false,
       checks: {
         canonical_profile: false,
         tools_ready: false,
+        tool_runtime_evidence: false,
         memory_ready: false,
         runtime_evidence: false,
         allow_actions_guarded: false,
@@ -239,6 +309,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       missing: [
         "canonical_profile",
         "tools_ready",
+        "tool_runtime_evidence",
         "memory_ready",
         "runtime_evidence",
         "allow_actions_guarded",
@@ -252,6 +323,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       checked_at: checkedAt,
       source: "partial",
       eval_suite_version: AGI_EVAL_SUITE_VERSION,
+      tool_eval_version: AGI_TOOL_EVAL_VERSION,
       certified: 0,
       pending: entries.length,
       entries,
