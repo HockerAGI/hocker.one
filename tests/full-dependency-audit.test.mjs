@@ -60,16 +60,16 @@ test("js-yaml legacy line is pinned to the CVE-2026-59870 patched release", asyn
   }
 });
 
-test("nanoid legacy line is pinned to the CVE-2026-67213 patched release", async () => {
+test("nanoid legacy line is pinned beyond GHSA-2v37-7h3g-55p8", async () => {
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
 
-  assert.equal(manifest.overrides?.nanoid, "3.3.17");
+  assert.equal(manifest.overrides?.nanoid, "3.3.18");
 
   for (const [path, metadata] of Object.entries(lockfile.packages ?? {})) {
     if (!path.endsWith("node_modules/nanoid")) continue;
     const version = metadata?.version;
-    assert.ok(atLeast(version, "3.3.17"), `${path} must use nanoid >= 3.3.17; found ${version}`);
+    assert.ok(atLeast(version, "3.3.18"), `${path} must use nanoid >= 3.3.18; found ${version}`);
   }
 });
 
