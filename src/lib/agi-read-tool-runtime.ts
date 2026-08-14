@@ -10,6 +10,7 @@ type JsonRecord = Record<string, unknown>;
 
 export const SUPPORTED_READ_TOOL_KEYS = ["supabase", "github"] as const;
 export type SupportedReadToolKey = (typeof SUPPORTED_READ_TOOL_KEYS)[number];
+const READABLE_PERMISSION_LEVELS = new Set(["read_guarded", "admin_guarded"]);
 
 export type AgiReadToolProbeResult = {
   ok: true;
@@ -68,6 +69,9 @@ async function loadEffectiveAssignment(projectId: string, agiId: string, toolKey
 
   if (error) throw new Error("AGI_TOOL_ASSIGNMENT_LOOKUP_FAILED");
   if (!data) throw new Error("AGI_TOOL_NOT_ASSIGNED");
+  if (!READABLE_PERMISSION_LEVELS.has(String(data.permission_level ?? ""))) {
+    throw new Error("AGI_TOOL_ASSIGNMENT_NOT_READABLE");
+  }
   assertExecutorReady(data.policy);
   return data;
 }
