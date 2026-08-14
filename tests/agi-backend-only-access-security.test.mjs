@@ -17,7 +17,7 @@ const TABLES = [
   "owner_gate_approvals",
 ];
 
-test("internal AGI, Context Bridge and Owner Gate tables remain backend-only", async () => {
+test("internal AGI, Context Bridge and Owner Gate tables keep an explicit backend-only grants contract", async () => {
   const migration = await read(
     "supabase/migrations/20260814090000_agi_internal_backend_only_contract.sql",
   );
@@ -33,13 +33,11 @@ test("internal AGI, Context Bridge and Owner Gate tables remain backend-only", a
       new RegExp(`grant\\s+all\\s+privileges\\s+on\\s+table\\s+public\\.${table}\\s+to\\s+service_role`, "i"),
       `${table} must remain available to service_role`,
     );
-    assert.match(
-      migration,
-      new RegExp(`create\\s+policy\\s+backend_only_deny_api_roles\\s+on\\s+public\\.${table}[\\s\\S]*?to\\s+anon,\\s*authenticated[\\s\\S]*?using\\s*\\(false\\)[\\s\\S]*?with\\s+check\\s*\\(false\\)`, "i"),
-      `${table} must explicitly deny API roles through RLS`,
-    );
   }
 
+  // RLS-without-policy is intentionally retained for these backend-only tables.
+  // Do not add no-op deny policies merely to silence Supabase Advisor INFO findings.
+  assert.doesNotMatch(migration, /create\s+policy/i);
   assert.doesNotMatch(migration, /\b(drop\s+table|truncate\s+table|delete\s+from)\b/i);
   assert.doesNotMatch(migration, /\b(game_history|wager_progress_ledger|bets|balances|transactions)\b/i);
 });
