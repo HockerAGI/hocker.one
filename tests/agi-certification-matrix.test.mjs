@@ -47,7 +47,16 @@ test("runtime eval certification requires current suite version and verifiable r
   assert.match(source, /payload\.passed === true/);
   assert.match(source, /payload\.cases_passed/);
   assert.match(source, /evidence_run_ids/);
-  assert.match(source, /evidenceRunIds\.length >= suite\.cases\.length/);
+  assert.match(source, /from\("agi_runs"\)/);
+  assert.match(source, /select\("id,project_id,agi_id,status,input,finished_at,result_hash"\)/);
+  assert.match(source, /run\.status !== "completed"/);
+  assert.match(source, /run\.project_id !== projectId/);
+  assert.match(source, /canonicalId\(String\(run\.agi_id \?\? ""\)\) !== agiId/);
+  assert.match(source, /run\.finished_at/);
+  assert.match(source, /run\.result_hash/);
+  assert.match(source, /eval_suite_version/);
+  assert.match(source, /eval_case_id/);
+  assert.match(source, /new Set\(evidenceRunIds\)/);
 });
 
 test("AGIs page surfaces certification without creating duplicate navigation", async () => {
