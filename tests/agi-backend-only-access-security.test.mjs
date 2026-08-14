@@ -19,7 +19,7 @@ const TABLES = [
 
 test("internal AGI, Context Bridge and Owner Gate tables keep an explicit backend-only grants contract", async () => {
   const migration = await read(
-    "supabase/migrations/20260814090000_agi_internal_backend_only_contract.sql",
+    "supabase/migrations/20260814102158_agi_internal_backend_only_contract_20260814.sql",
   );
 
   for (const table of TABLES) {
