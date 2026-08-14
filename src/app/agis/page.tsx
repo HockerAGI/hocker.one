@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Bot, Clock3, RefreshCw } from "lucide-react";
 
+import AgiEvalControl from "@/components/agi/AgiEvalControl";
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { getAgiCertificationSnapshot, type AgiCertificationCheck } from "@/lib/agi-certification";
 import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hocker-operational-state";
@@ -135,6 +136,11 @@ export default async function AgisPage() {
                     : `Pendiente: ${pending.join(", ")}.`}
                 </p>
               </div>
+
+              <AgiEvalControl
+                agiId={cert?.agi_id ?? certificationId(agi.key)}
+                alreadyCertified={Boolean(cert?.certified_for_current_scope)}
+              />
 
               <div className="mt-4 space-y-2 rounded-2xl border border-white/8 bg-slate-950/45 p-4 text-xs text-slate-400">
                 <p className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Última actividad: {formatDate(agi.last_activity_at)}</p>
