@@ -14,7 +14,7 @@ const TABLES = [
 
 test("Hocker Ads client-context tables remain service-only until tenant portal access is designed", async () => {
   const migration = await read(
-    "supabase/migrations/20260814012000_hocker_ads_client_context_fail_closed.sql",
+    "supabase/migrations/20260814024830_hocker_ads_client_context_fail_closed.sql",
   );
 
   for (const table of TABLES) {
