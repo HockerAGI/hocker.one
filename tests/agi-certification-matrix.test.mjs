@@ -14,8 +14,10 @@ test("AGI certification matrix is evidence-based and covers all 16 canonical ide
   const suites = await read("src/lib/agi-eval-suites.ts");
 
   assert.match(source, /AGI_CERTIFICATION_VERSION/);
+  assert.match(source, /AGI_TOOL_EVAL_VERSION/);
   assert.match(source, /eval_contract_suite/);
   assert.match(source, /individual_eval_suite/);
+  assert.match(source, /tool_runtime_evidence/);
   assert.match(source, /allow_actions_guarded/);
   assert.match(source, /memory_ready/);
   assert.match(source, /tools_ready/);
@@ -26,6 +28,31 @@ test("AGI certification matrix is evidence-based and covers all 16 canonical ide
   for (const id of CANONICAL_IDS) {
     assert.match(suites, new RegExp(`\\b${id}\\b`), `${id} must be represented by the eval suite catalog`);
   }
+});
+
+test("certification uses effective enabled assignments instead of future tool catalog entries", async () => {
+  const source = await read("src/lib/agi-certification.ts");
+
+  assert.match(source, /select\("agi_id,tool_key,enabled,permission_level,policy"\)/);
+  assert.match(source, /assignment\.enabled === true/);
+  assert.match(source, /normalized_status/);
+  assert.match(source, /implementation_status/);
+  assert.match(source, /execution_enabled/);
+  assert.doesNotMatch(source, /agiToolKeys\(/);
+});
+
+test("tool runtime evidence is read-only, versioned and per assigned tool", async () => {
+  const source = await read("src/lib/agi-certification.ts");
+
+  assert.match(source, /feedback_type", "agi_tool_eval_result"/);
+  assert.match(source, /payload\.tool_eval_version === AGI_TOOL_EVAL_VERSION/);
+  assert.match(source, /payload\.tool_key === assignment\.tool_key/);
+  assert.match(source, /payload\.passed === true/);
+  assert.match(source, /payload\.mode === "read_only"/);
+  assert.match(source, /payload\.external_writes_executed === false/);
+  assert.match(source, /evidence_ref/);
+  assert.match(source, /assignment\.tool_key === "ai_gateway"/);
+  assert.match(source, /individualEvalReady/);
 });
 
 test("certification uses the production operational view contract and Memory Mirror for memory evidence", async () => {
@@ -66,6 +93,7 @@ test("AGIs page surfaces certification without creating duplicate navigation", a
   assert.match(page, /Pendiente/);
   assert.match(page, /eval contractual/);
   assert.match(page, /eval runtime/);
+  assert.match(page, /herramientas probadas/);
   assert.doesNotMatch(page, /href=\"\/agi-certification\"/);
 });
 
