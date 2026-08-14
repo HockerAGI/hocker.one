@@ -63,6 +63,12 @@ function includesAny(text: string, terms: readonly string[]): boolean {
   return terms.some((term) => normalized.includes(normalize(term)));
 }
 
+function evalGatewayModel(): string {
+  const auto = String(process.env.AI_GATEWAY_MODEL_AUTO ?? "").trim();
+  const fast = String(process.env.AI_GATEWAY_MODEL_FAST ?? "").trim();
+  return auto || fast || "google/gemini-2.5-flash";
+}
+
 function scoreEvalCase(evalCase: AgiEvalCase, text: string): { passed: boolean; reasons: string[] } {
   const reasons: string[] = [];
   const expectation = evalCase.expectation;
@@ -255,19 +261,16 @@ async function failOwnedEval(args: {
   message: string;
 }): Promise<void> {
   const now = new Date().toISOString();
-  await db()
-    .from("agi_tasks")
-    .update({
-      status: "failed",
-      error: args.message.slice(0, 1000),
-      locked_at: null,
-      lock_owner: null,
-      completed_at: now,
-      updated_at: now,
-    })
-    .eq("id", args.taskId)
-    .eq("status", "working")
-    .eq("lock_owner", args.workerId);
+  await db().rpc("fail_agi_task", {
+    p_task_id: args.taskId,
+    p_worker_id: args.workerId,
+    p_error: args.message.slice(0, 1000),
+    p_evidence: [{
+      kind: "agi_runtime_eval_failure",
+      evaluation_only: true,
+      failed_at: now,
+    }],
+  });
 
   if (args.runId) {
     await db()
@@ -305,7 +308,7 @@ async function runOneEvalCase(args: {
 
   let runId: string | null = null;
   try {
-    const model = String(process.env.AI_GATEWAY_MODEL_FAST || process.env.AI_GATEWAY_MODEL_AUTO || "google/gemini-2.5-flash");
+    const model = evalGatewayModel();
     runId = await startVerifiedEvalRun({
       taskId,
       projectId: args.projectId,
@@ -326,6 +329,9 @@ async function runOneEvalCase(args: {
       timeout_ms: 30_000,
       oidc_token: args.oidcToken,
     });
+    if (completion.model !== model) {
+      throw new Error("AGI_EVAL_MODEL_PROVENANCE_MISMATCH");
+    }
 
     const scored = scoreEvalCase(args.evalCase, completion.text);
     const completedAt = new Date().toISOString();
