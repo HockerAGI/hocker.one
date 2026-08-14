@@ -2,7 +2,7 @@ import { AGI_EVAL_SUITE_VERSION, getAgiEvalSuite } from "@/lib/agi-eval-suites";
 import { HOCKER_AGI_CANON } from "@/lib/hocker-agi-canon";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
-export const AGI_CERTIFICATION_VERSION = "2026.08.14-3";
+export const AGI_CERTIFICATION_VERSION = "2026.08.14-4";
 
 type AgentRow = {
   agi_id: string;
@@ -19,6 +19,15 @@ type EvalFeedbackRow = {
   feedback_type: string;
   payload: unknown;
   created_at: string;
+};
+type EvalRunRow = {
+  id: string;
+  project_id: string;
+  agi_id: string | null;
+  status: string;
+  input: unknown;
+  finished_at: string | null;
+  result_hash: string | null;
 };
 
 export type AgiCertificationCheck =
@@ -73,24 +82,52 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function hasVerifiedRuntimeEval(rows: EvalFeedbackRow[], agiId: string): boolean {
+function hasVerifiedRuntimeEval(
+  feedbackRows: EvalFeedbackRow[],
+  runRows: EvalRunRow[],
+  agiId: string,
+  projectId: string,
+): boolean {
   const suite = getAgiEvalSuite(agiId);
   if (!suite) return false;
 
-  const latest = rows.find((row) => canonicalId(String(row.agi_id ?? "")) === agiId);
+  const latest = feedbackRows.find((row) => canonicalId(String(row.agi_id ?? "")) === agiId);
   const payload = asRecord(latest?.payload);
   if (!payload) return false;
 
   const evidenceRunIds = Array.isArray(payload.evidence_run_ids)
     ? payload.evidence_run_ids.filter((value): value is string => typeof value === "string" && value.length > 0)
     : [];
+  const evidenceRunIdSet = new Set(evidenceRunIds);
 
-  return latest?.feedback_type === "agi_eval_result"
-    && payload.suite_version === AGI_EVAL_SUITE_VERSION
-    && payload.passed === true
-    && Number(payload.cases_total) === suite.cases.length
-    && Number(payload.cases_passed) === suite.cases.length
-    && evidenceRunIds.length >= suite.cases.length;
+  if (
+    latest?.feedback_type !== "agi_eval_result"
+    || payload.suite_version !== AGI_EVAL_SUITE_VERSION
+    || payload.passed !== true
+    || Number(payload.cases_total) !== suite.cases.length
+    || Number(payload.cases_passed) !== suite.cases.length
+    || evidenceRunIds.length !== suite.cases.length
+    || evidenceRunIdSet.size !== suite.cases.length
+  ) {
+    return false;
+  }
+
+  return suite.cases.every((evalCase) => {
+    const run = runRows.find((candidate) => {
+      if (!evidenceRunIdSet.has(candidate.id)) return false;
+      const input = asRecord(candidate.input);
+      return input?.eval_case_id === evalCase.id;
+    });
+    if (!run) return false;
+    if (run.status !== "completed") return false;
+    if (run.project_id !== projectId) return false;
+    if (canonicalId(String(run.agi_id ?? "")) !== agiId) return false;
+    if (!run.finished_at || !run.result_hash) return false;
+
+    const input = asRecord(run.input);
+    return input?.eval_suite_version === AGI_EVAL_SUITE_VERSION
+      && input?.eval_case_id === evalCase.id;
+  });
 }
 
 export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Promise<AgiCertificationSnapshot> {
@@ -98,7 +135,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
 
   try {
     const sb = createAdminSupabase();
-    const [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes] = await Promise.all([
+    const [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes, evalRunsRes] = await Promise.all([
       sb.from("agi_agents").select("agi_id,name,status,autonomy_level,allow_actions").eq("project_id", projectId),
       sb.from("agi_agent_tools").select("agi_id,enabled").eq("project_id", projectId),
       sb.from("agi_memory_mirror").select("agi_id,target_agi_ids,active").eq("project_id", projectId).eq("active", true),
@@ -109,14 +146,21 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         .eq("feedback_type", "agi_eval_result")
         .order("created_at", { ascending: false })
         .limit(500),
+      sb.from("agi_runs")
+        .select("id,project_id,agi_id,status,input,finished_at,result_hash")
+        .eq("project_id", projectId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(500),
     ]);
 
-    const queryFailed = [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes]
+    const queryFailed = [agentsRes, toolsRes, memoryRes, operationsRes, evalFeedbackRes, evalRunsRes]
       .some((result) => result.error);
     const agents = (agentsRes.data ?? []) as AgentRow[];
     const toolCounts = countByAgi((toolsRes.data ?? []) as ToolRow[]);
     const memories = (memoryRes.data ?? []) as MemoryRow[];
     const evalFeedback = (evalFeedbackRes.data ?? []) as EvalFeedbackRow[];
+    const evalRuns = (evalRunsRes.data ?? []) as EvalRunRow[];
     const operations = new Map(
       ((operationsRes.data ?? []) as OperationalRow[]).map((row) => [canonicalId(row.agi_id), row]),
     );
@@ -141,7 +185,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         runtime_evidence: (Number(operational?.tasks ?? 0) > 0) && (Number(operational?.runs ?? 0) > 0),
         allow_actions_guarded: agent?.allow_actions === false,
         eval_contract_suite: Boolean(evalSuite && evalSuite.version === AGI_EVAL_SUITE_VERSION && evalSuite.cases.length >= 3),
-        individual_eval_suite: hasVerifiedRuntimeEval(evalFeedback, id),
+        individual_eval_suite: hasVerifiedRuntimeEval(evalFeedback, evalRuns, id, projectId),
       };
 
       const missing = (Object.entries(checks) as Array<[AgiCertificationCheck, boolean]>)
