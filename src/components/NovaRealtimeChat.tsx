@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { Bot, CircleAlert, Loader2, Plus, RefreshCw, Send, ShieldCheck, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { DraftCard } from "@/components/DraftCard";
+import VoiceInput from "@/components/VoiceInput";
 import type { ChatActionDraft, Msg, QueueLock, RuntimeAction, RuntimeSummary } from "@/components/nova-chat-types";
 import { BLOCKING_STATUSES } from "@/components/nova-chat-types";
 import { extractActions, extractQueueLock, generateId, pickContent, shouldAllowActionDraft } from "@/components/nova-chat-helpers";
@@ -75,14 +76,14 @@ function readableError(value: unknown): string {
 function serviceLabel(status: string): string {
   if (status === "online") return "Conectada";
   if (status === "offline") return "Sin señal";
-  if (status === "configured") return "Configurada, no verificada";
+  if (status === "configured") return "Preparada";
   return "Verificando";
 }
 
 function serviceTone(status: string): string {
-  if (status === "online") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
-  if (status === "offline") return "border-rose-300/25 bg-rose-300/10 text-rose-100";
-  return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+  if (status === "online") return "border-emerald-300/18 bg-emerald-300/[0.065] text-emerald-200";
+  if (status === "offline") return "border-rose-300/18 bg-rose-300/[0.065] text-rose-200";
+  return "border-amber-300/18 bg-amber-300/[0.065] text-amber-200";
 }
 
 export default function NovaRealtimeChat() {
@@ -303,70 +304,80 @@ export default function NovaRealtimeChat() {
     }
   };
 
+  const addTranscript = useCallback((text: string) => {
+    const transcript = text.trim();
+    if (!transcript) return;
+    setInput((current) => [current.trim(), transcript].filter(Boolean).join(" "));
+  }, []);
+
   return (
-    <div className="flex min-h-[560px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/45">
-      <header className="border-b border-white/10 p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="relative grid h-12 w-12 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
-              <Sparkles className="h-5 w-5" />
-              <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaStatus === "online" ? "bg-emerald-400" : novaStatus === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
+    <section className="flex min-h-[calc(100dvh-112px)] flex-col overflow-hidden rounded-[22px] border border-white/[0.065] bg-[#050b16]/78 shadow-[0_24px_80px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+      <header className="border-b border-white/[0.055] px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-[13px] border border-sky-300/12 bg-sky-300/[0.055] text-sky-200">
+              <Sparkles className="h-4 w-4" />
+              <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#050b16] ${novaStatus === "online" ? "bg-emerald-400" : novaStatus === "offline" ? "bg-rose-400" : "bg-amber-300"}`} />
             </span>
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-black text-white">NOVA</h2>
-                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.15em] ${serviceTone(novaStatus)}`}>
-                  {serviceLabel(novaStatus)}
-                </span>
+                <h2 className="text-[17px] font-black tracking-[-0.025em] text-white">NOVA</h2>
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black ${serviceTone(novaStatus)}`}>{serviceLabel(novaStatus)}</span>
               </div>
-              <p className="mt-1 text-sm text-slate-400">{summary?.service_status?.nova?.detail ?? "Comprobando el runtime..."}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-600">{summary?.service_status?.nova?.detail ?? "Comprobando conexión…"}</p>
             </div>
           </div>
-          <button type="button" onClick={() => void loadRuntime()} disabled={refreshing} className="hko-action-secondary inline-flex items-center gap-2">
-            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Actualizar
-          </button>
-        </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-300">
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
-            {verifiedConnections} verificadas · {configuredConnections} configuradas
-          </span>
-          <span className={`rounded-full border px-3 py-2 ${queueLock.error ? "border-rose-300/20 bg-rose-300/10 text-rose-100" : "border-white/10 bg-white/[0.04]"}`}>
-            {queueLock.error ? "Owner Gate sin verificar" : `${queueLock.blocking_count} pendientes`}
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-emerald-100">
-            <ShieldCheck className="h-3.5 w-3.5" /> Owner Gate
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 sm:inline-flex">
+              <ShieldCheck className="h-3 w-3 text-emerald-300/70" />
+              Aprobaciones {queueLock.error ? "sin verificar" : queueLock.blocking_count}
+            </span>
+            <span className="hidden rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 md:inline-flex">
+              {verifiedConnections}/{configuredConnections || 0} conexiones
+            </span>
+            <button
+              type="button"
+              onClick={() => void loadRuntime()}
+              disabled={refreshing}
+              className="grid h-10 w-10 place-items-center rounded-[12px] border border-white/[0.065] bg-white/[0.02] text-slate-500 transition hover:bg-white/[0.045] hover:text-slate-300 disabled:opacity-50"
+              aria-label="Actualizar estado"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+      <div className="flex-1 space-y-5 overflow-y-auto px-3 py-5 sm:px-5 sm:py-6">
         {messages.length === 0 ? (
-          <div className="grid min-h-[260px] place-items-center text-center">
-            <div>
-              <Bot className="mx-auto h-9 w-9 text-cyan-200" />
-              <h3 className="mt-3 text-lg font-black text-white">Canal privado con NOVA</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-                El estado mostrado arriba proviene de un health check. Las acciones sensibles permanecen bajo aprobación.
+          <div className="grid min-h-[300px] place-items-center px-4 text-center">
+            <div className="max-w-lg">
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-[16px] border border-sky-300/12 bg-sky-300/[0.05] text-sky-200">
+                <Bot className="h-5 w-5" />
+              </span>
+              <h3 className="mt-4 text-xl font-black tracking-[-0.03em] text-white">¿Qué quieres hacer?</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                Pídele a NOVA que analice, cree, prepare cambios o coordine especialistas. Las acciones sensibles aparecerán aquí para tu decisión.
               </p>
             </div>
           </div>
         ) : null}
 
         {messages.map((message) => (
-          <div key={message.id} className={message.role === "user" ? "ml-auto max-w-[86%]" : "mr-auto max-w-[92%]"}>
+          <div key={message.id} className={message.role === "user" ? "ml-auto max-w-[88%] sm:max-w-[78%]" : "mr-auto max-w-[94%] sm:max-w-[88%]"}>
             <div className={[
-              "rounded-[1.7rem] border px-4 py-3 text-sm leading-7",
+              "px-4 py-3 text-sm leading-7",
               message.role === "user"
-                ? "border-cyan-300/20 bg-cyan-300/10 text-white"
+                ? "rounded-[18px] border border-sky-300/14 bg-sky-300/[0.07] text-white"
                 : message.role === "system"
-                  ? "border-rose-300/20 bg-rose-300/10 text-rose-100"
-                  : "border-white/10 bg-white/[0.055] text-slate-100",
+                  ? "rounded-[18px] border border-rose-300/16 bg-rose-300/[0.06] text-rose-100"
+                  : "border-l border-sky-300/20 pl-4 text-slate-200",
             ].join(" ")}>
-              <p className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
+              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600">
                 {message.role === "user" ? "Tú" : message.role === "nova" ? "NOVA" : "Sistema"}
               </p>
-              {message.streaming && !message.content ? <Loader2 className="h-4 w-4 animate-spin text-cyan-200" /> : null}
+              {message.streaming && !message.content ? <Loader2 className="h-4 w-4 animate-spin text-sky-200" /> : null}
               {message.content ? <p className="whitespace-pre-wrap">{message.content}</p> : null}
             </div>
             {message.actions?.map((draft, index) => (
@@ -383,30 +394,31 @@ export default function NovaRealtimeChat() {
       </div>
 
       {error ? (
-        <div className="mx-4 mb-3 flex items-start gap-2 rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-rose-100 sm:mx-5">
+        <div className="mx-3 mb-3 flex items-start gap-2 rounded-[14px] border border-rose-300/16 bg-rose-300/[0.06] px-4 py-3 text-xs leading-5 text-rose-100 sm:mx-5">
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       ) : null}
 
-      <footer className="border-t border-white/10 p-4 sm:p-5">
-        <div className="flex items-end gap-3 rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-3 focus-within:border-cyan-300/30">
-          <button type="button" disabled title="Adjuntos aún no habilitados" className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/10 text-slate-500">
-            <Plus className="h-5 w-5" />
+      <footer className="border-t border-white/[0.055] bg-[#050b16]/88 p-3 sm:p-4">
+        <div className="relative flex items-end gap-2 rounded-[18px] border border-white/[0.075] bg-white/[0.025] p-2.5 transition focus-within:border-sky-300/22 focus-within:bg-white/[0.035]">
+          <button type="button" disabled title="Adjuntos aún no habilitados" className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] border border-white/[0.065] text-slate-700" aria-label="Adjuntos aún no habilitados">
+            <Plus className="h-4 w-4" />
           </button>
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={onKeyDown}
             rows={1}
-            placeholder={novaStatus === "offline" ? "NOVA está sin señal; puedes reintentar después de actualizar." : "Pídele algo a NOVA..."}
-            className="min-h-11 flex-1 resize-none bg-transparent px-1 py-2.5 text-base text-white outline-none placeholder:text-slate-600"
+            placeholder={novaStatus === "offline" ? "NOVA está sin señal; actualiza el estado para reintentar." : "Pídele algo a NOVA…"}
+            className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-700"
           />
-          <button type="button" onClick={() => void send()} disabled={!canSend} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-300 text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">
+          <VoiceInput disabled={sending || !ready} onTranscript={addTranscript} />
+          <button type="button" onClick={() => void send()} disabled={!canSend} className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] bg-sky-300 text-[#031018] transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Enviar a NOVA">
             {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </button>
         </div>
       </footer>
-    </div>
+    </section>
   );
 }
