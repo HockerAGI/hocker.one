@@ -329,12 +329,15 @@ export default function NovaRealtimeChat() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 sm:inline-flex">
+            <span
+              className="hidden items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 sm:inline-flex"
+              title={queueLock.error ? "Owner Gate sin verificar" : `${queueLock.blocking_count} aprobaciones pendientes`}
+            >
               <ShieldCheck className="h-3 w-3 text-emerald-300/70" />
               Aprobaciones {queueLock.error ? "sin verificar" : queueLock.blocking_count}
             </span>
             <span className="hidden rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 md:inline-flex">
-              {verifiedConnections}/{configuredConnections || 0} conexiones
+              {verifiedConnections} verificadas · {configuredConnections || 0} configuradas
             </span>
             <button
               type="button"
