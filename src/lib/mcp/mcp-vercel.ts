@@ -10,7 +10,7 @@ import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
 
 export type VercelMcpConfig = {
-  /** Vercel API token */
+  /** Vercel access token presented to the remote MCP server */
   vercelToken: string;
   /** Vercel team ID (optional) */
   teamId?: string;
@@ -20,7 +20,7 @@ export type VercelMcpConfig = {
   mcpServerUrl?: string;
 };
 
-const VERCEL_API_BASE = "https://api.vercel.com";
+const VERCEL_MCP_DEFAULT_URL = "https://mcp.vercel.com";
 
 export class McpVercelConnector {
   private client: McpClient;
@@ -30,7 +30,7 @@ export class McpVercelConnector {
   constructor(config: VercelMcpConfig) {
     this.config = config;
 
-    const mcpUrl = config.mcpServerUrl ?? `${VERCEL_API_BASE}/v1/mcp`;
+    const mcpUrl = config.mcpServerUrl ?? VERCEL_MCP_DEFAULT_URL;
 
     const providerConfig: McpProviderConfig = {
       id: "vercel",
@@ -43,7 +43,7 @@ export class McpVercelConnector {
       },
       transport: "http",
       timeoutMs: 30_000,
-      enabled: Boolean(config.vercelToken),
+      enabled: Boolean(config.vercelToken && mcpUrl),
     };
 
     this.client = new McpClient(providerConfig);
