@@ -11,6 +11,7 @@ import {
 } from "@/lib/hocker-integrations";
 import { getMcpRegistry, type McpRegistryStatus } from "@/lib/mcp/mcp-registry";
 import { isReadOnlyMcpTool, MCP_PROVIDER_IDS, type McpProviderId } from "@/lib/mcp/mcp-policy";
+import { percentComplete, providerReadiness } from "@/lib/hocker-signal-state.mjs";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,16 +50,11 @@ function safeDate(value: unknown): string {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("es-MX");
 }
 
-function liveStatusClass(connected: boolean, configured: boolean): string {
-  if (connected) return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
-  if (configured) return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+function providerStatusClass(key: string): string {
+  if (key === "connected") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+  if (key === "degraded") return "border-rose-300/25 bg-rose-300/10 text-rose-100";
+  if (key === "configured") return "border-amber-300/25 bg-amber-300/10 text-amber-100";
   return "border-slate-300/15 bg-slate-300/[0.07] text-slate-300";
-}
-
-function liveStatusLabel(connected: boolean, configured: boolean): string {
-  if (connected) return "Conectado";
-  if (configured) return "Requiere revisión";
-  return "Sin configurar";
 }
 
 function moduleStatusClass(status: string): string {
@@ -163,6 +159,8 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
   });
 
   const totalTools = Object.values(mcpStatus.tools).reduce((total, tools) => total + tools.length, 0);
+  const connectedPercent = percentComplete(mcpStatus.connectedProviders, mcpStatus.totalProviders);
+  const configuredPercent = percentComplete(mcpStatus.configuredProviders, mcpStatus.totalProviders);
 
   return (
     <PageShell
@@ -184,11 +182,13 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
           </div>
           <div className="hocker-panel-pro p-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Conectados</p>
-            <p className="mt-2 text-3xl font-black text-emerald-200">{mcpStatus.connectedProviders}</p>
+            <p className="mt-2 text-3xl font-black text-emerald-200">{mcpStatus.connectedProviders}/{mcpStatus.totalProviders}</p>
+            <p className="mt-1 text-xs font-bold text-emerald-100">{connectedPercent}% verificado</p>
           </div>
           <div className="hocker-panel-pro p-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Configurados</p>
-            <p className="mt-2 text-3xl font-black text-amber-200">{mcpStatus.configuredProviders}</p>
+            <p className="mt-2 text-3xl font-black text-amber-200">{mcpStatus.configuredProviders}/{mcpStatus.totalProviders}</p>
+            <p className="mt-1 text-xs font-bold text-amber-100">{configuredPercent}% con configuración</p>
           </div>
           <div className="hocker-panel-pro p-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Herramientas</p>
@@ -199,6 +199,10 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
             <p className="mt-2 break-all text-xs font-black text-white">{mcpStatus.version}</p>
           </div>
         </section>
+
+        <p className="px-1 text-[11px] leading-5 text-slate-400">
+          Avance verificado de proveedor = dos gates observables: configuración presente y conexión actual comprobada. No representa una estimación subjetiva de desarrollo.
+        </p>
 
         <form className="hocker-panel-pro flex flex-col gap-3 p-4 sm:flex-row" action="/integrations" method="get">
           <input
@@ -221,6 +225,12 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
           <div className="grid gap-4 xl:grid-cols-2">
             {filteredProviders.map((provider) => {
               const tools = mcpStatus.tools[provider.id] ?? [];
+              const readiness = providerReadiness({
+                configured: provider.configured,
+                connected: provider.connected,
+                lastError: provider.lastError,
+              });
+
               return (
                 <article key={provider.id} className="hocker-panel-pro overflow-hidden">
                   <div className="border-b border-white/[0.07] p-5">
@@ -230,12 +240,23 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
                         <h3 className="mt-1 text-xl font-black text-white">{provider.name}</h3>
                         <p className="mt-2 text-xs text-slate-500">{provider.toolCount} herramientas · último pulso {safeDate(provider.lastPingAt)}</p>
                       </div>
-                      <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${liveStatusClass(provider.connected, provider.configured)}`}>
-                        {liveStatusLabel(provider.connected, provider.configured)}
+                      <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${providerStatusClass(readiness.key)}`}>
+                        {readiness.label}
                       </span>
                     </div>
+
+                    <div className="mt-4 rounded-2xl border border-sky-300/10 bg-sky-300/[0.045] p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[9px] font-black uppercase tracking-[0.16em] text-sky-100">Avance verificado</span>
+                        <strong className="text-sm text-white">{readiness.percent}%</strong>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full rounded-full bg-sky-300" style={{ width: `${readiness.percent}%` }} />
+                      </div>
+                    </div>
+
                     {provider.lastError ? (
-                      <p className="mt-3 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-100">{provider.lastError}</p>
+                      <p className="mt-3 rounded-2xl border border-rose-300/15 bg-rose-300/[0.06] p-3 text-xs leading-5 text-rose-100">{provider.lastError}</p>
                     ) : null}
                   </div>
 
