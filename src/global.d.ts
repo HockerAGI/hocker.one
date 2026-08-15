@@ -40,6 +40,7 @@ declare namespace NodeJS {
     VERCEL_PROJECT_ID?: string;
     VERCEL_TEAM_ID?: string;
     VERCEL_MCP_URL?: string;
+    VERCEL_MCP_AUTH_TOKEN?: string;
 
     /* GitHub */
     HOCKER_GITHUB_TOKEN?: string;
