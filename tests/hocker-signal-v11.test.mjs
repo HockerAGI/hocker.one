@@ -61,7 +61,7 @@ test("Signal v1.1 UI consumes real state, progress and mobile reserve contracts"
     read("src/lib/hocker-navigation.ts"),
     read("src/components/NovaRealtimeChat.tsx"),
     read("src/components/GuidedGitHubChainCard.tsx"),
-    read("src/app/globals.css"),
+    read("src/styles/hocker-signal-v11.css"),
   ]);
 
   assert.match(resources, /providerReadiness/);
