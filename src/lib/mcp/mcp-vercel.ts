@@ -1,20 +1,21 @@
 /**
  * Hocker ONE — Vercel MCP Connector
  *
- * Connects NOVA and AGIs to the Vercel MCP server for direct
- * deployment, project, domain, and environment variable management
- * without needing external platforms like the Vercel Dashboard.
+ * Connects NOVA and AGIs to the official Vercel remote MCP endpoint.
+ * MCP authentication is deliberately separate from the ordinary Vercel REST
+ * token: only a credential explicitly provisioned for the MCP client/session
+ * may be presented to mcp.vercel.com.
  */
 
 import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
 
 export type VercelMcpConfig = {
-  /** Vercel access token presented to the remote MCP server */
-  vercelToken: string;
-  /** Vercel team ID (optional) */
+  /** Access token explicitly scoped/provisioned for the Vercel MCP connection. */
+  mcpAuthToken: string;
+  /** Vercel team ID (optional context for tools that support it). */
   teamId?: string;
-  /** Vercel project ID (optional) */
+  /** Vercel project ID (optional context for tools that support it). */
   projectId?: string;
   /** Custom MCP server URL */
   mcpServerUrl?: string;
@@ -38,12 +39,12 @@ export class McpVercelConnector {
       type: "vercel",
       url: mcpUrl,
       authHeaders: {
-        Authorization: `Bearer ${config.vercelToken}`,
+        Authorization: `Bearer ${config.mcpAuthToken}`,
         ...(config.teamId ? { "X-Vercel-Team-Id": config.teamId } : {}),
       },
       transport: "http",
       timeoutMs: 30_000,
-      enabled: Boolean(config.vercelToken && mcpUrl),
+      enabled: Boolean(config.mcpAuthToken && mcpUrl),
     };
 
     this.client = new McpClient(providerConfig);
@@ -86,18 +87,12 @@ export class McpVercelConnector {
     }
   }
 
-  /**
-   * Get deployment status.
-   */
   async getDeploymentStatus(deploymentId?: string): Promise<unknown> {
     return this.client.callTool("get_deployment", {
       id: deploymentId ?? this.config.projectId,
     });
   }
 
-  /**
-   * List deployments for the project.
-   */
   async listDeployments(limit?: number): Promise<unknown> {
     return this.client.callTool("list_deployments", {
       projectId: this.config.projectId,
@@ -105,9 +100,6 @@ export class McpVercelConnector {
     });
   }
 
-  /**
-   * Trigger a new deployment.
-   */
   async deploy(branch?: string): Promise<unknown> {
     return this.client.callTool("create_deployment", {
       projectId: this.config.projectId,
@@ -115,27 +107,18 @@ export class McpVercelConnector {
     });
   }
 
-  /**
-   * Get project information.
-   */
   async getProject(): Promise<unknown> {
     return this.client.callTool("get_project", {
       id: this.config.projectId,
     });
   }
 
-  /**
-   * List environment variables.
-   */
   async listEnvVars(): Promise<unknown> {
     return this.client.callTool("list_env_vars", {
       projectId: this.config.projectId,
     });
   }
 
-  /**
-   * Set an environment variable.
-   */
   async setEnvVar(key: string, value: string, targets?: string[]): Promise<unknown> {
     return this.client.callTool("set_env_var", {
       projectId: this.config.projectId,
@@ -145,9 +128,6 @@ export class McpVercelConnector {
     });
   }
 
-  /**
-   * Remove an environment variable.
-   */
   async removeEnvVar(key: string): Promise<unknown> {
     return this.client.callTool("remove_env_var", {
       projectId: this.config.projectId,
@@ -155,18 +135,12 @@ export class McpVercelConnector {
     });
   }
 
-  /**
-   * List domains.
-   */
   async listDomains(): Promise<unknown> {
     return this.client.callTool("list_domains", {
       projectId: this.config.projectId,
     });
   }
 
-  /**
-   * Add a domain.
-   */
   async addDomain(domain: string): Promise<unknown> {
     return this.client.callTool("add_domain", {
       projectId: this.config.projectId,
@@ -174,30 +148,18 @@ export class McpVercelConnector {
     });
   }
 
-  /**
-   * Get deployment logs.
-   */
   async getDeploymentLogs(deploymentId: string): Promise<unknown> {
     return this.client.callTool("get_deployment_logs", { id: deploymentId });
   }
 
-  /**
-   * Ping the Vercel MCP server.
-   */
   async ping(): Promise<boolean> {
     return this.client.ping();
   }
 
-  /**
-   * Get the underlying MCP client (for registry tool execution).
-   */
   getClient(): McpClient {
     return this.client;
   }
 
-  /**
-   * Disconnect from the Vercel MCP server.
-   */
   disconnect(): void {
     this.client.disconnect();
     this.initialized = false;
@@ -205,11 +167,12 @@ export class McpVercelConnector {
 }
 
 /**
- * Create a Vercel MCP connector from environment variables.
+ * Create a Vercel MCP connector from explicitly scoped environment variables.
+ * VERCEL_TOKEN remains reserved for Vercel REST/API operations elsewhere.
  */
 export function createVercelMcpConnector(): McpVercelConnector {
   return new McpVercelConnector({
-    vercelToken: process.env.VERCEL_TOKEN ?? "",
+    mcpAuthToken: process.env.VERCEL_MCP_AUTH_TOKEN ?? "",
     teamId: process.env.VERCEL_TEAM_ID,
     projectId: process.env.VERCEL_PROJECT_ID,
     mcpServerUrl: process.env.VERCEL_MCP_URL,
@@ -217,5 +180,5 @@ export function createVercelMcpConnector(): McpVercelConnector {
 }
 
 export function isVercelMcpConfigured(): boolean {
-  return Boolean(process.env.VERCEL_TOKEN);
+  return Boolean(process.env.VERCEL_MCP_AUTH_TOKEN);
 }
