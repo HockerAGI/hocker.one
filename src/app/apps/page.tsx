@@ -4,6 +4,7 @@ import { ExternalLink, RefreshCw, ServerCog } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hocker-operational-state";
+import { averageCompletion, operationalAppProgress } from "@/lib/hocker-signal-state.mjs";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,8 +50,18 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
+function completionForApp(app: Awaited<ReturnType<typeof getHockerOperationalSnapshot>>["apps"][number]) {
+  return operationalAppProgress({
+    exists: !["not_created", "planned"].includes(app.status),
+    hasProductBoundary: Boolean(app.repository || app.href),
+    hasRuntimeEvidence: Boolean(app.last_activity_at),
+    verifiedNow: app.status === "online",
+  });
+}
+
 export default async function AppsPage() {
   const snapshot = await getHockerOperationalSnapshot();
+  const ecosystemCompletion = averageCompletion(snapshot.apps.map(completionForApp));
 
   return (
     <div className="hko-page-flow space-y-5">
@@ -65,49 +76,64 @@ export default async function AppsPage() {
           <div>
             <p className="hko-kicker">Última lectura</p>
             <p className="mt-2 text-sm text-slate-300">{formatDate(snapshot.checked_at)}</p>
-            <p className="mt-1 text-xs text-slate-500">Fuente: {snapshot.source === "supabase+health" ? "Supabase + health checks" : "Lectura parcial"}</p>
+            <p className="mt-1 text-xs text-slate-400">Fuente: {snapshot.source === "supabase+health" ? "Supabase + health checks" : "Lectura parcial"}</p>
           </div>
-          <Link href="/apps" className="hko-action-secondary inline-flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" /> Actualizar
-          </Link>
+          <div className="flex items-center gap-3">
+            <div className="min-w-32 rounded-2xl border border-sky-300/15 bg-sky-300/[0.055] px-4 py-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-sky-200">Avance verificable</p>
+              <p className="mt-1 text-xl font-black text-white">{ecosystemCompletion}%</p>
+            </div>
+            <Link href="/apps" className="hko-action-secondary inline-flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" /> Actualizar
+            </Link>
+          </div>
         </div>
+        <p className="mt-3 text-[11px] leading-5 text-slate-400">El porcentaje usa cuatro gates observables por app: existencia, límite de producto/código, evidencia runtime y verificación actual. No estima trabajo de desarrollo no observado.</p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {snapshot.apps.map((app) => (
-          <article key={app.key} className="hko-module-card hko-card-tight">
-            <div className="flex items-start justify-between gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-cyan-100">
-                <ServerCog className="h-5 w-5" />
-              </span>
-              <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] ${statusTone(app.status)}`}>
-                {statusLabel(app.status)}
-              </span>
-            </div>
+        {snapshot.apps.map((app) => {
+          const completion = completionForApp(app);
+          return (
+            <article key={app.key} className="hko-module-card hko-card-tight">
+              <div className="flex items-start justify-between gap-3">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-cyan-100">
+                  <ServerCog className="h-5 w-5" />
+                </span>
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] ${statusTone(app.status)}`}>
+                  {statusLabel(app.status)}
+                </span>
+              </div>
 
-            <h2 className="mt-4 text-xl font-black text-white">{app.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{app.summary}</p>
+              <h2 className="mt-4 text-xl font-black text-white">{app.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{app.summary}</p>
 
-            <div className="mt-4 rounded-2xl border border-white/8 bg-slate-950/45 p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Evidencia</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">{app.evidence}</p>
-              <p className="mt-3 text-xs text-slate-500">Última actividad: {formatDate(app.last_activity_at)}</p>
-              {app.repository ? <p className="mt-1 text-xs text-slate-500">Repositorio: {app.repository}</p> : null}
-            </div>
+              <div className="mt-4 rounded-2xl border border-sky-300/12 bg-sky-300/[0.045] p-4">
+                <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-black uppercase tracking-[0.15em] text-sky-100">Avance verificable</span><strong className="text-sm text-white">{completion}%</strong></div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-sky-300" style={{ width: `${completion}%` }} /></div>
+              </div>
 
-            {app.href ? (
-              app.href.startsWith("http") ? (
-                <a href={app.href} target="_blank" rel="noreferrer" className="hko-action-secondary mt-4 inline-flex items-center gap-2">
-                  Abrir servicio <ExternalLink className="h-4 w-4" />
-                </a>
+              <div className="mt-4 rounded-2xl border border-white/8 bg-slate-950/45 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Evidencia</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{app.evidence}</p>
+                <p className="mt-3 text-xs text-slate-400">Última actividad: {formatDate(app.last_activity_at)}</p>
+                {app.repository ? <p className="mt-1 text-xs text-slate-400">Repositorio: {app.repository}</p> : null}
+              </div>
+
+              {app.href ? (
+                app.href.startsWith("http") ? (
+                  <a href={app.href} target="_blank" rel="noreferrer" className="hko-action-secondary mt-4 inline-flex items-center gap-2">
+                    Abrir servicio <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <Link href={app.href} className="hko-action-primary mt-4">Abrir módulo</Link>
+                )
               ) : (
-                <Link href={app.href} className="hko-action-primary mt-4">Abrir módulo</Link>
-              )
-            ) : (
-              <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Sin ruta operativa</p>
-            )}
-          </article>
-        ))}
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Sin ruta operativa</p>
+              )}
+            </article>
+          );
+        })}
       </section>
     </div>
   );
