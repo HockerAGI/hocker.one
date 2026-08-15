@@ -190,6 +190,10 @@ export function getHockerRouteTitle(pathname: string): string {
   const item = getActiveHockerItem(pathname);
   if (item) return item.label;
 
+  const section = getActiveHockerSection(pathname);
+  const belongsToSection = section.matchPrefixes?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  if (belongsToSection) return section.label;
+
   const segment = pathname.split("/").filter(Boolean).at(-1);
   if (!segment) return "Hocker ONE";
 
