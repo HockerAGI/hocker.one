@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Bell,
-  Bot,
   CheckCircle,
   Loader2,
   Search,
@@ -27,7 +26,7 @@ type PendingAction = {
 };
 
 export default function Topbar() {
-  const pathname = usePathname() || "/owner";
+  const pathname = usePathname() || "/app/nova";
   const title = getHockerRouteTitle(pathname);
   const [showApprovals, setShowApprovals] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
@@ -41,7 +40,7 @@ export default function Topbar() {
         setPendingActions(Array.isArray(data.actions) ? data.actions : []);
       }
     } catch {
-      // The header remains usable if the approval counter is offline.
+      // Header stays usable if approvals are temporarily unavailable.
     }
   }, []);
 
@@ -86,25 +85,25 @@ export default function Topbar() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-[90] border-b border-white/[0.06] bg-[#030711]/92 backdrop-blur-2xl lg:left-[290px]">
-        <div className="mx-auto flex h-16 w-full max-w-[1800px] items-center gap-2 px-3 sm:gap-3 sm:px-4 lg:h-[60px]">
+      <header className="fixed inset-x-0 top-0 z-[90] border-b border-white/[0.055] bg-[#030711]/90 backdrop-blur-xl lg:left-[264px]">
+        <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-3 px-3 sm:px-5 lg:h-[60px]">
           <Link
-            href="/owner"
-            className="flex h-10 w-[96px] shrink-0 items-center justify-center rounded-[14px] border border-white/[0.07] bg-white/[0.03] transition-colors hover:bg-white/[0.05] sm:w-[110px]"
-            aria-label="Ir al inicio"
+            href="/app/nova"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] border border-white/[0.065] bg-white/[0.025] transition-colors hover:bg-white/[0.05] lg:hidden"
+            aria-label="Abrir NOVA"
           >
             <Image
-              src="/brand/hocker-one-logo.png"
-              alt="Hocker ONE"
-              className="max-h-7 w-[78px] object-contain sm:w-[88px]"
-              width={88}
-              height={28}
+              src="/brand/hocker-one-isotype.png"
+              alt="Hocker One"
+              className="h-7 w-7 object-contain"
+              width={40}
+              height={40}
               priority
             />
           </Link>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 sm:text-[11px] sm:tracking-[0.22em]">
+            <p className="truncate text-[13px] font-bold tracking-[-0.01em] text-slate-200 sm:text-[14px]">
               {title}
             </p>
             <div className="mt-0.5 hidden sm:block lg:hidden">
@@ -112,7 +111,7 @@ export default function Topbar() {
             </div>
           </div>
 
-          <div className="hidden flex-1 items-center gap-2 overflow-hidden lg:flex">
+          <div className="hidden flex-1 items-center overflow-hidden lg:flex">
             <HealthIndicator />
           </div>
 
@@ -120,27 +119,13 @@ export default function Topbar() {
             <button
               type="button"
               onClick={triggerPalette}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-100"
-              aria-label="Buscar en Hocker ONE"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.065] bg-white/[0.025] px-3 text-slate-400 transition-colors hover:bg-white/[0.05] hover:text-slate-100"
+              aria-label="Buscar en Hocker One"
             >
               <Search className="h-4 w-4" />
-              <span className="hidden text-[10px] font-bold tracking-[0.12em] xl:inline">Buscar</span>
-              <kbd className="hidden rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[8px] font-black text-slate-500 2xl:inline">⌘K</kbd>
+              <span className="hidden text-[11px] font-semibold xl:inline">Buscar</span>
+              <kbd className="hidden rounded border border-white/[0.07] bg-white/[0.025] px-1.5 py-0.5 text-[8px] font-bold text-slate-600 2xl:inline">⌘K</kbd>
             </button>
-
-            <Link
-              href="/chat"
-              className={[
-                "inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 transition-colors",
-                pathname === "/chat"
-                  ? "border-sky-400/30 bg-sky-400/14 text-sky-200"
-                  : "border-sky-400/18 bg-sky-400/8 text-sky-300 hover:bg-sky-400/12",
-              ].join(" ")}
-              aria-label="Abrir NOVA"
-            >
-              <Bot className="h-4 w-4" />
-              <span className="hidden text-[10px] font-bold tracking-[0.12em] sm:inline">NOVA</span>
-            </Link>
 
             <button
               type="button"
@@ -148,15 +133,15 @@ export default function Topbar() {
               className={[
                 "relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors",
                 count > 0
-                  ? "border-amber-400/25 bg-amber-400/10 text-amber-300 hover:bg-amber-400/15"
-                  : "border-white/[0.07] bg-white/[0.03] text-slate-500 hover:bg-white/[0.06] hover:text-slate-300",
+                  ? "border-amber-300/20 bg-amber-300/[0.08] text-amber-300 hover:bg-amber-300/12"
+                  : "border-white/[0.065] bg-white/[0.025] text-slate-500 hover:bg-white/[0.05] hover:text-slate-300",
               ].join(" ")}
               aria-label={`${count} aprobaciones pendientes`}
               aria-expanded={showApprovals}
             >
               <Bell className="h-4 w-4" />
               {count > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[8px] font-black text-black">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-300 px-1 text-[8px] font-black text-[#241600]">
                   {count}
                 </span>
               ) : null}
@@ -166,12 +151,10 @@ export default function Topbar() {
       </header>
 
       {showApprovals ? (
-        <div className="fixed inset-x-3 top-[72px] z-[110] overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#050d1a]/98 shadow-[0_24px_64px_rgba(0,0,0,0.6)] backdrop-blur-2xl lg:left-auto lg:right-4 lg:top-[68px] lg:w-[400px]">
+        <div className="fixed inset-x-3 top-[72px] z-[110] overflow-hidden rounded-[20px] border border-white/[0.08] bg-[#07101f]/98 shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-2xl lg:left-auto lg:right-4 lg:top-[68px] lg:w-[400px]">
           <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
-                Aprobaciones pendientes
-              </p>
+              <p className="text-[12px] font-bold text-slate-100">Aprobaciones</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
                 {count === 0 ? "No hay decisiones esperando." : `${count} acción${count !== 1 ? "es" : ""} requiere${count === 1 ? "" : "n"} tu decisión.`}
               </p>
@@ -179,7 +162,7 @@ export default function Topbar() {
             <button
               type="button"
               onClick={() => setShowApprovals(false)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-300"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-slate-500 transition-colors hover:bg-white/[0.05] hover:text-slate-300"
               aria-label="Cerrar aprobaciones"
             >
               <X className="h-4 w-4" />
@@ -211,7 +194,7 @@ export default function Topbar() {
                         type="button"
                         disabled={processing === action.id}
                         onClick={() => { void handleDecision(action.id, "approve"); }}
-                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-300 transition-colors hover:bg-emerald-400/15 disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-3 text-[10px] font-bold text-emerald-300 transition-colors hover:bg-emerald-400/12 disabled:opacity-50"
                       >
                         {processing === action.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
                         Aprobar
@@ -220,7 +203,7 @@ export default function Topbar() {
                         type="button"
                         disabled={processing === action.id}
                         onClick={() => { void handleDecision(action.id, "reject"); }}
-                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-red-400/20 bg-red-400/8 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-red-400 transition-colors hover:bg-red-400/12 disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-red-400/18 bg-red-400/[0.07] px-3 text-[10px] font-bold text-red-300 transition-colors hover:bg-red-400/10 disabled:opacity-50"
                       >
                         <XCircle className="h-3 w-3" />
                         Rechazar
@@ -236,9 +219,9 @@ export default function Topbar() {
             <Link
               href="/owner/actions"
               onClick={() => setShowApprovals(false)}
-              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/8 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-sky-300 transition-colors hover:bg-sky-400/12"
+              className="flex min-h-11 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-300/[0.06] px-4 text-[11px] font-bold text-sky-200 transition-colors hover:bg-sky-300/10"
             >
-              Ver contexto y evidencia
+              Ver contexto
             </Link>
           </div>
         </div>
