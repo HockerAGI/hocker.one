@@ -197,7 +197,7 @@ export default function CommandPalette() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Buscar en Hocker One…"
+              placeholder="Buscar vista, app, AGI, herramienta o función…"
               className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-white placeholder:text-slate-500 focus:outline-none"
               aria-label="Buscar en Hocker ONE"
               autoComplete="off"
