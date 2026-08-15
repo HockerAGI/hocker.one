@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MoreHorizontal } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -9,7 +10,7 @@ import {
 } from "@/lib/hocker-navigation";
 
 export default function BottomDock() {
-  const pathname = usePathname() || "/owner";
+  const pathname = usePathname() || "/app/nova";
   const activeSection = getActiveHockerSection(pathname);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -31,13 +32,24 @@ export default function BottomDock() {
     return () => clearInterval(id);
   }, []);
 
+  function triggerPalette() {
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        metaKey: true,
+        ctrlKey: !navigator.platform.includes("Mac"),
+        bubbles: true,
+      }),
+    );
+  }
+
   return (
     <div className="hko-bottom-dock-wrap lg:hidden">
-      <nav className="hko-bottom-dock" aria-label="Navegación principal móvil">
+      <nav className="hko-bottom-dock grid-cols-4" aria-label="Navegación principal móvil">
         {HOCKER_NAVIGATION.map((section) => {
           const Icon = section.icon;
           const active = section.id === activeSection.id;
-          const showPending = section.id === "control" && pendingCount > 0;
+          const showPending = section.id === "pulso" && pendingCount > 0;
 
           return (
             <Link
@@ -52,7 +64,7 @@ export default function BottomDock() {
             >
               <Icon className="h-5 w-5" />
               {showPending ? (
-                <span className="absolute right-[18%] top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[7px] font-black text-black">
+                <span className="absolute right-[18%] top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-300 px-1 text-[7px] font-black text-[#241600]">
                   {pendingCount}
                 </span>
               ) : null}
@@ -60,6 +72,11 @@ export default function BottomDock() {
             </Link>
           );
         })}
+
+        <button type="button" onClick={triggerPalette} aria-label="Abrir más opciones">
+          <MoreHorizontal className="h-5 w-5" />
+          <span>Más</span>
+        </button>
       </nav>
     </div>
   );
