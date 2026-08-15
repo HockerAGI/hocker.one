@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Bot, CircleAlert, Loader2, Plus, RefreshCw, Send, ShieldCheck, Sparkles } from "lucide-react";
+import { CircleAlert, Loader2, Plus, RefreshCw, Send, ShieldCheck, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { DraftCard } from "@/components/DraftCard";
 import VoiceInput from "@/components/VoiceInput";
@@ -76,7 +76,7 @@ function readableError(value: unknown): string {
 function serviceLabel(status: string): string {
   if (status === "online") return "Conectada";
   if (status === "offline") return "Sin señal";
-  if (status === "configured") return "Preparada";
+  if (status === "configured") return "Configurada";
   return "Verificando";
 }
 
@@ -84,6 +84,13 @@ function serviceTone(status: string): string {
   if (status === "online") return "border-emerald-300/18 bg-emerald-300/[0.065] text-emerald-200";
   if (status === "offline") return "border-rose-300/18 bg-rose-300/[0.065] text-rose-200";
   return "border-amber-300/18 bg-amber-300/[0.065] text-amber-200";
+}
+
+function signalTime(value: string | null | undefined): string {
+  if (!value) return "sin señal verificada reciente";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "sin señal verificada reciente";
+  return date.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
 }
 
 export default function NovaRealtimeChat() {
@@ -100,6 +107,7 @@ export default function NovaRealtimeChat() {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const novaStatus = summary?.service_status?.nova?.status ?? "unknown";
+  const lastNovaSignal = summary?.service_status?.nova?.last_verified_at ?? null;
   const integrations = summary?.integrations ?? [];
   const verifiedConnections = integrations.filter((item) => item.status === "connected" && item.verified !== false).length;
   const configuredConnections = integrations.filter((item) => ["connected", "configured"].includes(item.status)).length;
@@ -324,26 +332,26 @@ export default function NovaRealtimeChat() {
                 <h2 className="text-[17px] font-black tracking-[-0.025em] text-white">NOVA</h2>
                 <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black ${serviceTone(novaStatus)}`}>{serviceLabel(novaStatus)}</span>
               </div>
-              <p className="mt-0.5 truncate text-[11px] text-slate-600">{summary?.service_status?.nova?.detail ?? "Comprobando conexión…"}</p>
+              <p className="mt-0.5 truncate text-[11px] text-[color:var(--hko-text-secondary)]">{summary?.service_status?.nova?.detail ?? "Comprobando conexión…"}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <span
-              className="hidden items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 sm:inline-flex"
+              className="hidden items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.025] px-2.5 py-1.5 text-[9px] font-semibold text-slate-300 sm:inline-flex"
               title={queueLock.error ? "Owner Gate sin verificar" : `${queueLock.blocking_count} aprobaciones pendientes`}
             >
-              <ShieldCheck className="h-3 w-3 text-emerald-300/70" />
+              <ShieldCheck className="h-3 w-3 text-emerald-300/80" />
               Aprobaciones {queueLock.error ? "sin verificar" : queueLock.blocking_count}
             </span>
-            <span className="hidden rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[9px] font-semibold text-slate-500 md:inline-flex">
+            <span className="hidden rounded-full border border-white/[0.07] bg-white/[0.025] px-2.5 py-1.5 text-[9px] font-semibold text-slate-300 md:inline-flex">
               {verifiedConnections} verificadas · {configuredConnections || 0} configuradas
             </span>
             <button
               type="button"
               onClick={() => void loadRuntime()}
               disabled={refreshing}
-              className="grid h-10 w-10 place-items-center rounded-[12px] border border-white/[0.065] bg-white/[0.02] text-slate-500 transition hover:bg-white/[0.045] hover:text-slate-300 disabled:opacity-50"
+              className="grid h-10 w-10 place-items-center rounded-[12px] border border-white/[0.07] bg-white/[0.025] text-slate-300 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
               aria-label="Actualizar estado"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -353,14 +361,31 @@ export default function NovaRealtimeChat() {
       </header>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-3 py-5 sm:px-5 sm:py-6">
-        {messages.length === 0 ? (
-          <div className="grid min-h-[300px] place-items-center px-4 text-center">
+        {messages.length === 0 && novaStatus === "offline" ? (
+          <div className="grid min-h-[220px] place-items-center px-4 py-5 text-center">
+            <div className="max-w-lg rounded-[20px] border border-rose-300/12 bg-rose-300/[0.035] px-5 py-5">
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-[16px] border border-rose-300/16 bg-rose-300/[0.055] text-rose-200">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <h3 className="mt-4 text-xl font-black tracking-[-0.03em] text-white">NOVA sin conexión</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[color:var(--hko-text-secondary)]">
+                El runtime principal no respondió al último health check. La conversación conserva su historial; las funciones que dependan de ese runtime pueden no estar disponibles hasta recuperar la señal.
+              </p>
+              <p className="mt-3 text-[10px] font-semibold text-slate-300">Última señal · {signalTime(lastNovaSignal)}</p>
+              <button type="button" onClick={() => void loadRuntime()} disabled={refreshing} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-[13px] border border-white/[0.09] bg-white/[0.04] px-4 text-xs font-bold text-white transition hover:bg-white/[0.07] disabled:opacity-50">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                Reintentar
+              </button>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="grid min-h-[220px] place-items-center px-4 text-center">
             <div className="max-w-lg">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-[16px] border border-sky-300/12 bg-sky-300/[0.05] text-sky-200">
-                <Bot className="h-5 w-5" />
+                <Sparkles className="h-5 w-5" />
               </span>
               <h3 className="mt-4 text-xl font-black tracking-[-0.03em] text-white">¿Qué quieres hacer?</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[color:var(--hko-text-secondary)]">
                 Pídele a NOVA que analice, cree, prepare cambios o coordine especialistas. Las acciones sensibles aparecerán aquí para tu decisión.
               </p>
             </div>
@@ -377,7 +402,7 @@ export default function NovaRealtimeChat() {
                   ? "rounded-[18px] border border-rose-300/16 bg-rose-300/[0.06] text-rose-100"
                   : "border-l border-sky-300/20 pl-4 text-slate-200",
             ].join(" ")}>
-              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-600">
+              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
                 {message.role === "user" ? "Tú" : message.role === "nova" ? "NOVA" : "Sistema"}
               </p>
               {message.streaming && !message.content ? <Loader2 className="h-4 w-4 animate-spin text-sky-200" /> : null}
@@ -405,7 +430,7 @@ export default function NovaRealtimeChat() {
 
       <footer className="border-t border-white/[0.055] bg-[#050b16]/88 p-3 sm:p-4">
         <div className="relative flex items-end gap-2 rounded-[18px] border border-white/[0.075] bg-white/[0.025] p-2.5 transition focus-within:border-sky-300/22 focus-within:bg-white/[0.035]">
-          <button type="button" disabled title="Adjuntos aún no habilitados" className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] border border-white/[0.065] text-slate-700" aria-label="Adjuntos aún no habilitados">
+          <button type="button" disabled title="Adjuntos aún no habilitados" className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] border border-white/[0.065] text-slate-500" aria-label="Adjuntos aún no habilitados">
             <Plus className="h-4 w-4" />
           </button>
           <textarea
@@ -413,8 +438,8 @@ export default function NovaRealtimeChat() {
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={onKeyDown}
             rows={1}
-            placeholder={novaStatus === "offline" ? "NOVA está sin señal; actualiza el estado para reintentar." : "Pídele algo a NOVA…"}
-            className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-700"
+            placeholder={novaStatus === "offline" ? "Runtime principal sin señal; reintenta el estado antes de enviar." : "Pídele algo a NOVA…"}
+            className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500"
           />
           <VoiceInput disabled={sending || !ready} onTranscript={addTranscript} />
           <button type="button" onClick={() => void send()} disabled={!canSend} className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] bg-sky-300 text-[#031018] transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Enviar a NOVA">
