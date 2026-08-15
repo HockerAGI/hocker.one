@@ -20,7 +20,7 @@ export type GitHubMcpConfig = {
   mcpServerUrl?: string;
 };
 
-const GITHUB_MCP_DEFAULT_URL = "https://api.github.com/mcp";
+const GITHUB_MCP_DEFAULT_URL = "https://api.githubcopilot.com/mcp/";
 
 export class McpGitHubConnector {
   private client: McpClient;
@@ -39,11 +39,10 @@ export class McpGitHubConnector {
       url: mcpUrl,
       authHeaders: {
         Authorization: `Bearer ${config.githubToken}`,
-        Accept: "application/vnd.github.v3+json",
       },
       transport: "http",
       timeoutMs: 30_000,
-      enabled: Boolean(config.githubToken),
+      enabled: Boolean(config.githubToken && mcpUrl),
     };
 
     this.client = new McpClient(providerConfig);
