@@ -131,7 +131,7 @@ export const HOCKER_SECONDARY_NAVIGATION: HockerSecondaryNavigationItem[] = [
   { id: "owner", workspaceId: "pulso", group: "Pulso", href: "/owner", label: "Resumen", icon: Home, keywords: "inicio owner resumen atención" },
   { id: "live", workspaceId: "pulso", group: "Pulso", href: "/live", label: "Señales", icon: Activity, keywords: "health heartbeat señal actividad monitoreo" },
   { id: "commands", workspaceId: "pulso", group: "Pulso", href: "/commands", label: "Tareas", icon: CheckSquare, keywords: "tareas commands cola aprobaciones owner gate" },
-  { id: "workers", workspaceId: "pulso", group: "Pulso", href: "/workers", label: "Ejecuciones", icon: Workflow, keywords: "workers trabajadores agi ejecuciones evidencia runtime" },
+  { id: "workers", workspaceId: "pulso", group: "Pulso", href: "/workers", label: "Workers AGI", icon: Workflow, keywords: "workers trabajadores agi ejecuciones evidencia runtime" },
   { id: "nodes", workspaceId: "pulso", group: "Pulso", href: "/nodes", label: "Dispositivos", icon: Network, keywords: "nodes nodos heartbeat agentes sandbox local dispositivos" },
   { id: "status", workspaceId: "pulso", group: "Pulso", href: "/status", label: "Estado", icon: CircleDot, keywords: "status estado health disponibilidad evidencia" },
   { id: "dashboard", workspaceId: "pulso", group: "Pulso", href: "/dashboard", label: "Métricas", icon: LayoutDashboard, keywords: "dashboard señales métricas" },
