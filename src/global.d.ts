@@ -42,7 +42,9 @@ declare namespace NodeJS {
     VERCEL_MCP_URL?: string;
 
     /* GitHub */
+    HOCKER_GITHUB_TOKEN?: string;
     GITHUB_TOKEN?: string;
+    GH_TOKEN?: string;
     GITHUB_OWNER?: string;
     GITHUB_REPO?: string;
     GITHUB_MCP_URL?: string;
@@ -51,6 +53,7 @@ declare namespace NodeJS {
     OPENAI_API_KEY?: string;
     OPENAI_ORG_ID?: string;
     OPENAI_MCP_URL?: string;
+    OPENAI_MCP_AUTH_TOKEN?: string;
     OPENAI_DEFAULT_MODEL?: string;
 
     /* Supabase MCP */
