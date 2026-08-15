@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@/styles/hocker-signal-v11.css";
 import { Toaster } from "sonner";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 import ShellFrame from "@/components/ShellFrame";
