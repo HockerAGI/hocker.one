@@ -17,6 +17,19 @@ test("remote MCP providers use their current official endpoints", async () => {
   assert.doesNotMatch(github, /https:\/\/api\.github\.com\/mcp/);
 });
 
+test("Vercel REST tokens are not silently treated as MCP OAuth credentials", async () => {
+  const [vercel, env] = await Promise.all([
+    read("src/lib/mcp/mcp-vercel.ts"),
+    read("env.example"),
+  ]);
+
+  assert.match(vercel, /VERCEL_MCP_AUTH_TOKEN/);
+  assert.doesNotMatch(vercel, /vercelToken:\s*process\.env\.VERCEL_TOKEN/);
+  assert.match(vercel, /isVercelMcpConfigured[\s\S]*VERCEL_MCP_AUTH_TOKEN/);
+  assert.match(env, /VERCEL_TOKEN=.*REST/i);
+  assert.match(env, /VERCEL_MCP_AUTH_TOKEN=/);
+});
+
 test("OpenAI API credentials are never repurposed as arbitrary MCP server credentials", async () => {
   const [openai, env] = await Promise.all([
     read("src/lib/mcp/mcp-openai.ts"),
@@ -42,4 +55,14 @@ test("modern MCP 404 negotiates down to the latest initialize-era protocol", asy
   assert.match(client, /MCP-Session-Id/);
   assert.match(client, /notifications\/initialized/);
   assert.match(client, /MCP-Protocol-Version/);
+});
+
+test("Streamable HTTP request responses support both JSON and SSE", async () => {
+  const client = await read("src/lib/mcp/mcp-client.ts");
+
+  assert.match(client, /text\/event-stream/);
+  assert.match(client, /content-type/i);
+  assert.match(client, /parseSse/);
+  assert.match(client, /data:/);
+  assert.match(client, /mcpRequest\.id/);
 });
