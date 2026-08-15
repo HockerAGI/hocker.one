@@ -6,7 +6,7 @@
  * GitHub, OpenAI) without requiring external platforms.
  *
  * Prefers the stateless MCP 2026-07-28 protocol over HTTP while retaining
- * an explicit legacy initialize-era fallback for existing MCP servers.
+ * an explicit initialize-era fallback for current stateful MCP servers.
  */
 
 export type McpTransport = "http" | "sse";
@@ -20,6 +20,12 @@ export type McpConnectionStatus =
 export type McpRequest = {
   jsonrpc: "2.0";
   id: string;
+  method: string;
+  params?: Record<string, unknown>;
+};
+
+export type McpNotification = {
+  jsonrpc: "2.0";
   method: string;
   params?: Record<string, unknown>;
 };
@@ -67,7 +73,7 @@ type McpProtocolEra = "modern" | "legacy";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MODERN_PROTOCOL_VERSION = "2026-07-28";
-const LEGACY_PROTOCOL_VERSION = "2024-11-05";
+const LEGACY_PROTOCOL_VERSION = "2025-11-25";
 const CLIENT_INFO = {
   name: "hocker-one-nova",
   version: "1.0.0",
@@ -85,6 +91,8 @@ export class McpClient {
   private state: McpProviderState;
   private requestIdCounter = 0;
   private protocolEra: McpProtocolEra | null = null;
+  private negotiatedProtocolVersion: string | null = null;
+  private sessionId: string | null = null;
 
   constructor(config: McpProviderConfig) {
     this.config = config;
@@ -167,6 +175,9 @@ export class McpClient {
       }
 
       if (routeName) headers["Mcp-Name"] = routeName;
+    } else if (method !== "initialize") {
+      headers["MCP-Protocol-Version"] = this.negotiatedProtocolVersion ?? LEGACY_PROTOCOL_VERSION;
+      if (this.sessionId) headers["MCP-Session-Id"] = this.sessionId;
     }
 
     return headers;
@@ -212,13 +223,17 @@ export class McpClient {
         this.state.status = "error";
         this.state.lastError = `HTTP ${response.status}: ${errorText.slice(0, 200)}`;
 
-        if (allowModernFallback && response.status === 400) {
+        if (allowModernFallback && (response.status === 400 || response.status === 404)) {
           throw new McpModernNegotiationFallbackError(
             `MCP ${this.config.id} does not accept the modern protocol probe`,
           );
         }
 
         throw new Error(`MCP ${this.config.id} returned HTTP ${response.status}`);
+      }
+
+      if (era === "legacy" && method === "initialize") {
+        this.sessionId = response.headers.get("MCP-Session-Id");
       }
 
       const mcpResponse = (await response.json()) as McpResponse;
@@ -256,6 +271,54 @@ export class McpClient {
     }
   }
 
+  private async notifyWithEra(
+    method: string,
+    params: Record<string, unknown> | undefined,
+    era: McpProtocolEra,
+  ): Promise<void> {
+    if (!this.isEnabled) {
+      throw new Error(`MCP provider ${this.config.id} is disabled.`);
+    }
+
+    const notification: McpNotification = {
+      jsonrpc: "2.0",
+      method,
+      ...(params ? { params } : {}),
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(this.config.url, {
+        method: "POST",
+        headers: this.buildHeaders(era, method, params),
+        body: JSON.stringify(notification),
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        this.state.status = "error";
+        this.state.lastError = `HTTP ${response.status}: ${errorText.slice(0, 200)}`;
+        throw new Error(`MCP ${this.config.id} notification returned HTTP ${response.status}`);
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        this.state.status = "error";
+        this.state.lastError = "Request timed out";
+        throw new Error(`MCP ${this.config.id} notification timed out`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   /**
    * Send a JSON-RPC 2.0 request using the negotiated MCP era.
    * Before initialization, legacy behavior is preserved for compatibility.
@@ -284,6 +347,9 @@ export class McpClient {
     );
 
     this.protocolEra = era;
+    this.negotiatedProtocolVersion = String(
+      result?.protocolVersion ?? (era === "modern" ? MODERN_PROTOCOL_VERSION : LEGACY_PROTOCOL_VERSION),
+    );
     this.state.capabilities = capabilities;
     this.state.version = version;
     this.state.status = "connected";
@@ -294,9 +360,9 @@ export class McpClient {
   }
 
   /**
-   * Prefer the stateless MCP 2026-07-28 discovery flow. If the server
-   * explicitly signals that the modern revision/discovery method is not
-   * supported, fall back to the legacy initialize-era handshake.
+   * Prefer the stateless MCP 2026-07-28 discovery flow. A compliant modern
+   * server can signal unsupported discovery with HTTP 404 / method-not-found;
+   * in that case negotiate the current initialize-era protocol instead.
    */
   async initialize(): Promise<{
     capabilities: string[];
@@ -330,7 +396,12 @@ export class McpClient {
         "legacy",
       )) as Record<string, unknown> | null;
 
-      return this.finalizeConnection(legacyResult, "legacy");
+      const connection = this.finalizeConnection(legacyResult, "legacy");
+      await this.notifyWithEra("notifications/initialized", undefined, "legacy");
+      this.state.status = "connected";
+      this.state.lastPingAt = new Date().toISOString();
+      this.state.lastError = null;
+      return connection;
     } catch (err: unknown) {
       this.state.status = "error";
       this.state.lastError = err instanceof Error ? err.message : "Legacy MCP initialization failed";
@@ -391,6 +462,8 @@ export class McpClient {
    */
   disconnect(): void {
     this.protocolEra = null;
+    this.negotiatedProtocolVersion = null;
+    this.sessionId = null;
     this.state.status = "disconnected";
     this.state.lastError = null;
   }
