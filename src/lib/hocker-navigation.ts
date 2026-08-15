@@ -71,9 +71,11 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     id: "pulso",
     label: "Pulso",
     shortLabel: "Pulso",
-    href: "/owner",
+    href: "/app/pulso",
     icon: Activity,
     matchPrefixes: [
+      "/app/pulso",
+      "/owner",
       "/owner/actions",
       "/owner/evidence",
       "/live",
@@ -88,7 +90,7 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     items: [
       {
         id: "pulso",
-        href: "/owner",
+        href: "/app/pulso",
         label: "Pulso",
         shortLabel: "Pulso",
         icon: Activity,
@@ -100,9 +102,10 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     id: "recursos",
     label: "Recursos",
     shortLabel: "Recursos",
-    href: "/integrations",
+    href: "/app/recursos",
     icon: Grid2X2,
     matchPrefixes: [
+      "/app/recursos",
       "/catalog",
       "/map",
       "/apps",
@@ -116,7 +119,7 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
     items: [
       {
         id: "recursos",
-        href: "/integrations",
+        href: "/app/recursos",
         label: "Recursos",
         shortLabel: "Recursos",
         icon: Grid2X2,
