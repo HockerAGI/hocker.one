@@ -59,3 +59,13 @@ test("server Supabase auth accepts publishable and anon aliases without secret-k
   assert.doesNotMatch(keyChain, /HockerSupabase_SUPABASE_SECRET_KEY/);
   assert.doesNotMatch(keyChain, /HockerSupabase_SUPABASE_SERVICE_ROLE_KEY/);
 });
+
+test("private session guard reuses the server Supabase environment contract", async () => {
+  const serverClient = await read("src/lib/supabase-server.ts");
+  const privateGuard = await read("src/lib/require-private-session.ts");
+
+  assert.match(serverClient, /export function hasServerSupabaseConfig\(/);
+  assert.match(privateGuard, /hasServerSupabaseConfig/);
+  assert.doesNotMatch(privateGuard, /process\.env\.NEXT_PUBLIC_SUPABASE_URL/);
+  assert.doesNotMatch(privateGuard, /process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+});
