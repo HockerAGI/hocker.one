@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const envRef = (name) => `process.env.${name}`;
 
 test("server Supabase auth accepts canonical server-scoped preview environment fallbacks", async () => {
   const serverClient = await read("src/lib/supabase-server.ts");
@@ -16,16 +17,19 @@ test("server Supabase auth accepts canonical server-scoped preview environment f
 test("server Supabase auth accepts Vercel HockerSupabase URL aliases after canonical names", async () => {
   const serverClient = await read("src/lib/supabase-server.ts");
   const urlChain = serverClient.match(/const supabaseUrl =[\s\S]*?;\n/)?.[0] ?? "";
+  const expectedInOrder = [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_URL",
+    "NEXT_PUBLIC_HockerSupabase_SUPABASE_URL",
+    "HockerSupabase_SUPABASE_URL",
+  ];
 
-  const canonicalPublic = urlChain.indexOf("NEXT_PUBLIC_SUPABASE_URL");
-  const canonicalServer = urlChain.indexOf("SUPABASE_URL");
-  const aliasPublic = urlChain.indexOf("NEXT_PUBLIC_HockerSupabase_SUPABASE_URL");
-  const aliasServer = urlChain.indexOf("HockerSupabase_SUPABASE_URL");
-
-  assert.ok(canonicalPublic >= 0, "missing NEXT_PUBLIC_SUPABASE_URL");
-  assert.ok(canonicalServer > canonicalPublic, "SUPABASE_URL must follow public canonical URL");
-  assert.ok(aliasPublic > canonicalServer, "public HockerSupabase URL alias must follow canonical names");
-  assert.ok(aliasServer > aliasPublic, "server HockerSupabase URL alias must follow public alias");
+  let previous = -1;
+  for (const name of expectedInOrder) {
+    const index = urlChain.indexOf(envRef(name));
+    assert.ok(index > previous, `${name} must be present in canonical-to-alias precedence order`);
+    previous = index;
+  }
 });
 
 test("server Supabase auth accepts publishable and anon aliases without secret-key fallback", async () => {
@@ -45,7 +49,7 @@ test("server Supabase auth accepts publishable and anon aliases without secret-k
 
   let previous = -1;
   for (const name of expectedInOrder) {
-    const index = keyChain.indexOf(name);
+    const index = keyChain.indexOf(envRef(name));
     assert.ok(index > previous, `${name} must be present in canonical-to-alias precedence order`);
     previous = index;
   }
