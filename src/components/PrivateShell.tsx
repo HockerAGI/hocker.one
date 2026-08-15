@@ -16,7 +16,7 @@ export default function PrivateShell({ children }: { children: React.ReactNode }
         <Topbar />
 
         <main
-          className="relative mx-auto flex w-full flex-1 flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] pt-[76px] sm:px-5 lg:pb-8 lg:pt-[72px]"
+          className="relative mx-auto flex w-full flex-1 flex-col px-3 pb-[var(--hko-mobile-dock-reserve)] pt-[76px] sm:px-5 md:pb-8 lg:pt-[72px]"
           id="main-content"
         >
           <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col">
