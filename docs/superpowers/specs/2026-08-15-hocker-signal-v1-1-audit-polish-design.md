@@ -1,682 +1,509 @@
-# HOCKER Signal v1.1 — Audit & Polish Design
+# HOCKER Signal v1.1 — Current-Head Audit & Polish Design
 
-**Status:** review gate — no implementation is authorized by this document alone  
+**Status:** OWNER REVIEW GATE — implementation is frozen until Owner approves this reconciled spec  
 **PR:** #213 · `feat/hocker-signal-nova-workspace-20260814`  
-**Audited head:** `25712a2589c08ca753ac7fdc28d4069003ccbb3d`  
+**Audited code head:** `48fe1edfc974a7179c43a04e8cbc03513e80dbca`  
 **Base:** `a5f4b1838674d6f0c5d648064f8505c280303d34` (`main`)  
-**Scope:** private Hocker One Signal shell, NOVA, Pulso, Recursos, auth/session, runtime/readiness semantics, mobile/PWA/Capacitor and adjacent code required to validate those surfaces.
+**Audit date:** 2026-08-15  
+**Scope:** private Hocker One Signal shell, NOVA, Pulso, Recursos, auth/session, Owner Gate, MCP/readiness, responsive/PWA/Capacitor, accessibility, performance, assets and security boundaries.
+
+> This document supersedes the earlier audit snapshot that was written against `25712a2589c08ca753ac7fdc28d4069003ccbb3d`. The branch advanced after that review-gate document. This reconciliation audits the actual current code candidate and freezes further product implementation until Owner review.
 
 ---
 
 ## 1. Executive decision
 
-Signal v1.1 keeps the already approved information architecture:
+Keep the approved persistent information architecture exactly as:
 
 - **NOVA** — primary conversational/operational workspace.
 - **Pulso** — verified attention and operating state.
 - **Recursos** — capabilities, providers and governed resources.
-- **Más** — launcher for secondary/technical destinations; it is not a fourth backend domain.
+- **Más** — launcher for secondary/technical destinations.
 
-The recommended implementation strategy is **semantic-first narrow polish**:
+Keep the approved NOVA identity policy:
 
-1. Correct state semantics and fail-closed behavior first.
-2. Correct mobile layout/safe-area ownership second.
-3. Normalize hierarchy, contrast and density third.
-4. Add NOVA identity only from the existing official asset set, using optimized derivatives where needed.
-5. Remove only duplicate/dead UI rules that are proven unused or superseded.
+- Corporate/isotype identity may appear selectively where an element specifically represents NOVA.
+- Motion identity is reserved for active digital moments where it adds clarity.
+- The humanoid avatar is **not** justified for the dense workspace/dock pass and remains omitted.
+- Heritage treatment remains premium/splash-only.
+- Existing official transparent repo assets are preferred; no redesign/generative reinterpretation.
 
-This PR must **not** become a broad design-system rewrite, MCP platform rewrite, Supabase security migration or infrastructure cleanup project.
+Recommended strategy remains **semantic-first narrow polish**, not a broad redesign:
 
----
-
-## 2. Evidence model and audit provenance
-
-### 2.1 Current-source evidence
-
-The audit inspected every file changed by PR #213 and the current adjacent files that determine behavior for navigation, runtime state, MCP readiness, PWA/mobile layout and NOVA assets.
-
-The audited current head is `25712a2589c08ca753ac7fdc28d4069003ccbb3d`.
-
-### 2.2 Runtime evidence
-
-There are two distinct evidence classes and they must not be conflated:
-
-- **Current-head deployment evidence:** the current head has a Vercel preview deployment in `READY` state. It is a documentation-only successor to the last authenticated code candidate.
-- **Historical authenticated preview evidence:** on deployment `dpl_BWGz5e8SP135GRCt7qLnKMuvcjNR`, valid Owner authentication was proven after the Supabase preview-alias/session fixes. Opening `/app/recursos` on that authenticated preview produced initialization failures for the Vercel MCP, OpenAI MCP and GitHub MCP, reported as HTTP 404 failures. Those failures were emitted both at connector and registry levels and triggered provider-down alerts.
-
-Current Vercel log retention no longer exposes the old detailed records, so the MCP 404 finding is retained as a **proven prior preview finding**, not restated as a fresh current-head reproduction.
-
-### 2.3 Evidence precedence
-
-When evidence conflicts, use this order:
-
-1. Live authenticated runtime evidence from the exact candidate deployment.
-2. Current code and current connected-platform configuration.
-3. Automated tests that assert behavior rather than strings alone.
-4. Current committed design/spec documentation.
-5. Historical narrative or screenshots.
-
-No UI label may upgrade runtime state beyond evidence available at that moment.
+1. Truthful state semantics and fail-closed behavior.
+2. Mobile safe-area/dock geometry.
+3. Hierarchy, contrast, density and accessibility.
+4. NOVA identity from official optimized assets only.
+5. Narrow cleanup only after behavior is proven.
 
 ---
 
-## 3. Guardrails preserved
+## 2. Audit provenance and current branch state
 
-Signal v1.1 must preserve all existing security boundaries:
+At audit time PR #213 is open, mergeable, still Draft, targets `main`, and is not merged. The current code head is `48fe1edfc974a7179c43a04e8cbc03513e80dbca`.
+
+The prior spec audited `25712a2589c08ca753ac7fdc28d4069003ccbb3d`. The branch is now 31 commits ahead of that code snapshot. Therefore several items that were previously design requirements have already been partially or fully implemented. This audit does **not** silently approve those changes; it evaluates them against the approved direction and identifies what remains unresolved.
+
+Current automated evidence at the audited code head:
+
+- GitHub Actions CI run #694: `success`.
+- Exact-head Vercel preview: `dpl_d3cY6TJrTZpF7PwM1jfEZirLxMHh`, `READY`.
+- Vercel deployment URL: `hocker-ftmlcz3gy-hockeragi.vercel.app`.
+- No merge to `main` is authorized by this audit.
+
+### Runtime evidence precedence
+
+Use this order when evidence conflicts:
+
+1. Authenticated runtime evidence from the exact candidate deployment.
+2. Current source plus current connected-platform configuration.
+3. Automated behavior tests.
+4. This design specification.
+5. Historical screenshots/narrative.
+
+A UI label may never upgrade state beyond the strongest current evidence.
+
+---
+
+## 3. Proven runtime finding — MCP 404s and duplicate reporting
+
+The MCP failure is not hypothetical. Vercel runtime observability still records the authenticated `/app/recursos` failure pattern from an earlier candidate deployment:
+
+- Vercel MCP initialization → HTTP 404.
+- OpenAI-related remote MCP initialization → HTTP 404.
+- GitHub MCP initialization → HTTP 404.
+- Each Vercel/OpenAI/GitHub failure was reported once by its connector and again by the registry.
+- The registry also owns `alertMcpProviderDown`, so one failed attempt can create duplicated error noise before the alert boundary.
+
+The retained error groups currently point to an older deployment, not the new exact head. Therefore:
+
+- **Proven:** the duplicate provider+registry reporting architecture exists and has occurred at runtime.
+- **Not yet proven on `48fe1edf…`:** those three providers still return 404 after the later MCP endpoint/protocol changes.
+- **Required final gate:** authenticated `/app/recursos` must be re-opened on the exact final deployment and its status/log evidence rechecked.
+
+---
+
+## 4. Security and governance invariants
+
+Signal v1.1 must preserve all of the following:
 
 - Owner Gate and human approval for protected mutations.
 - MFA/AAL2 escalation where required.
-- RLS and least-privilege database behavior.
-- `allow_actions` policy and existing fail-closed mutation paths.
-- No direct writes to `main`.
-- No credential rotation or production data mutation as part of UI polish.
-- No service-role/secret key exposure to browser/client bundles.
-- Private PWA navigation must never cache authenticated pages or API responses.
-- Secondary/technical routes remain reachable as deep links/search destinations.
-- No fake “connected”, “ready”, “online”, “completed”, “installed” or “verified” state.
+- RLS and least privilege.
+- Existing `allow_actions` policy and fail-closed mutation behavior.
+- No direct write to `main` in this workflow.
+- No credential rotation or production-data mutation as part of UI polish.
+- No service-role/secret key exposure to browser bundles.
+- Private pages/API responses remain excluded from service-worker caching.
+- Secondary technical routes remain reachable by deep link/search.
+- No fake `connected`, `online`, `ready`, `completed`, `installed` or `verified` state.
+
+### New current-head security note
+
+`src/lib/mcp/mcp-github.ts` exposes low-level write helpers whose default arguments can target `main` (for example default branch/ref behavior). Higher-level Owner Gate/policy boundaries must remain the only route by which those helpers are invoked for writes. The connector must not become a bypass path. No change is authorized here until a separate TDD-backed policy test proves the protected-branch contract.
 
 ---
 
-## 4. Audit inventory — all PR-changed files
+## 5. Exhaustive changed-file audit — 41 files
 
-| File | Audit result | Required v1.1 action |
-|---|---|---|
-| `docs/plans/2026-08-14-hocker-signal-nova-workspace.md` | Contains the original Signal plan plus a v1.1 reconciliation addendum. Several findings are valid, but its asset note incorrectly says no NOVA asset exists in the repo. | Keep as historical plan; this spec becomes the implementation design authority for v1.1 polish. |
-| `src/app/api/auth/password-login/route.ts` | Successful login redirects to `/app/nova`. Existing backend auth/session contract was already repaired for Preview aliases. | Preserve. No visual task may change authentication semantics. |
-| `src/app/app/page.tsx` | Private default re-exports NOVA. | Preserve. |
-| `src/app/app/pulso/page.tsx` | Good separation from chat; attention states include degraded/stale/offline/unknown. Weak secondary contrast remains; top “Señal verificada/parcial” needs to remain tied to verified evidence only. | Polish hierarchy/contrast; do not upgrade stale/configured evidence. |
-| `src/app/app/recursos/page.tsx` | Server render may call `registry.initializeAll()`. Provider state ignores `lastError`; `configured && !connected` becomes `Preparado`. H1 duplicates mobile Topbar title. Cards are oversized for 0-tool/0-capability states. | Correct readiness state model, compact cards, reduce duplicate title hierarchy, avoid healthy labels after init failure. |
-| `src/app/chat/page.tsx` | Correctly reuses `NovaWorkspace`, but legacy `/chat` title resolves to raw `Chat` in Topbar. | Route-title normalization only. |
-| `src/components/AuthBox.tsx` | Simplified login UI; uses accessible input labels and the private redirect. Error rendering is visible but not explicitly announced. | Preserve auth behavior; optional `aria-live` only if touched. |
-| `src/components/BottomDock.tsx` | Correct 3 workspaces + Más. Fixed dock reserve is not owned by this component; active/status badge logic is fine. More button styling diverges from legacy anchor CSS. | Define one shell-owned mobile reserve contract and normalize dock item rules. |
-| `src/components/CommandPalette.tsx` | Keeps secondary destinations searchable and uses dialog semantics. | Preserve keyboard/focus behavior; no navigation expansion. |
-| `src/components/NovaRealtimeChat.tsx` | Correct fail-closed queue fallback; duplicate NOVA identity inside a route already titled NOVA; offline state still shows a large generic empty area; `configured` is labeled `Preparada`; low-contrast metadata/placeholder; no dedicated degraded state. | Introduce explicit runtime presentation states, compact recovery UI, improve hierarchy/contrast and status announcements. |
-| `src/components/PrivateShell.tsx` | Mobile main reserve is a hard-coded `7.5rem + safe-area`; dock CSS independently owns safe-area and multiple legacy overrides. | Replace magic spacing with a single authoritative reserve token. |
-| `src/components/Sidebar.tsx` | Correct 3-space desktop navigation. Polls approvals independently. | Preserve IA; consider shared status polling only if safely isolated. |
-| `src/components/Topbar.tsx` | Correct compact shell, but duplicates page H1s on mobile. Polls approvals separately. Approval mutation UI does not inspect detailed failure/MFA response, though backend remains fail-closed. | Normalize heading ownership; if approval behavior is touched, preserve/reflect backend failure and MFA response. |
-| `src/components/hocker-2c/auth/HockerOwnerLoginSurface.tsx` | Uses Hocker One logo and simplified login. | Preserve; no NOVA avatar on auth unless separately justified. |
-| `src/components/nova/NovaWorkspace.tsx` | Supplemental action chain polls every 20s. Mutation path correctly routes MFA requirement to `/auth/mfa`. Load failure is silently ignored. | Preserve mutation contract; improve action-chain outcome semantics in helpers/card, not by weakening this component. |
-| `src/components/signal/SignalBackdrop.tsx` | Appropriate lightweight replacement for old animated private background layers. | Preserve; avoid reintroducing VFX layers. |
-| `src/lib/hocker-navigation.ts` | Canonical 3-workspace IA is correct. `/chat` is a NOVA match prefix but not a concrete item, so `getHockerRouteTitle('/chat')` falls back to `Chat`. | Make legacy/deep-link NOVA routes title as NOVA. |
-| `src/lib/require-private-session.ts` | Reuses centralized server Supabase config readiness; avoids the old post-login redirect loop. | Preserve exactly. |
-| `src/lib/supabase-server.ts` | Correct canonical + server-scoped + HockerSupabase alias fallback; explicitly avoids secret/service-role keys as publishable auth fallback. | Preserve; no client exposure. |
-| `tests/hocker-signal-workspaces.test.mjs` | Protects Pulso/Recursos workspace existence but largely source-string based. | Extend with semantic readiness contracts after RED tests. |
-| `tests/nova-signal-composer.test.mjs` | Protects real voice input and disabled attachment affordance. | Extend with offline/degraded presentation contract. |
-| `tests/supabase-server-env.test.mjs` | Strong regression contract for Preview alias/session fix. | Must remain green; no changes unless needed by real contract change. |
-| `tests/unified-navigation-ux.test.mjs` | Protects 3-workspace + Más architecture and primary/secondary navigation. | Extend route-title and dock-reserve semantics; avoid brittle visual literals where possible. |
-
----
-
-## 5. Adjacent-file audit required by the changed surfaces
-
-### 5.1 Action-chain semantics
-
-`src/components/GuidedGitHubChainCard.tsx` derives the overall card headline from `nextAction`:
-
-- no `nextAction` → `Todo listo`;
-- no `nextAction` → `Estado: Completado`;
-- no `nextAction` → `Cadena completada`.
-
-`src/components/nova-chat-helpers.ts` simultaneously:
-
-- treats `rejected`, `cancelled`, `canceled`, `executed`, `completed` as terminal;
-- counts only `executed` and `completed` as completed.
-
-Therefore an all-rejected three-step chain can legitimately produce:
-
-- `Todo listo`;
-- `Completado`;
-- `0 de 3 completados`;
-- each step `Cancelado`.
-
-This is a **P0 semantic defect**, not just copy polish.
-
-### 5.2 Runtime types
-
-`RuntimeServiceStatus` currently permits only:
-
-- `online`;
-- `configured`;
-- `offline`;
-- `unknown`.
-
-There is no first-class `degraded` NOVA service state in this contract even though other operational models support degradation. v1.1 should not invent a backend state; presentation may derive a human `problem`/`degraded` display state from current error + health evidence while retaining raw source status.
-
-### 5.3 MCP registry and connectors
-
-`src/lib/mcp/mcp-registry.ts`:
-
-- initializes configured providers concurrently;
-- catches connector failures;
-- logs a registry-level error;
-- calls `alertMcpProviderDown`;
-- exposes `lastError`, `lastPingAt`, discovered capabilities and tool counts.
-
-Connectors such as `src/lib/mcp/mcp-vercel.ts` also catch and log their own initialization failure before rethrowing. That produces duplicate provider + registry error logging for the same failed attempt. The registry should be the single alert owner; connector logs may remain diagnostic only if deduplicated/correlated.
-
-`isVercelMcpConfigured()` currently means only “a Vercel token exists”. It does **not** mean the configured MCP endpoint answered or that tools were discovered. The same semantic distinction applies to GitHub/OpenAI.
-
-### 5.4 Pulso operational evidence
-
-`src/lib/hocker-operational-state.ts` correctly distinguishes:
-
-- `online` from fresh successful evidence;
-- `stale` from historical but old evidence;
-- `configured` from a registered profile without recent worker proof;
-- `offline/degraded/unknown` where applicable.
-
-The UI must retain those distinctions. A configured item must not be rendered as live. Historical run evidence must not upgrade current service health.
-
-### 5.5 PWA / Capacitor
-
-Current contracts are security-positive:
-
-- `src/app/manifest.ts` starts at `/app/nova`, uses standalone display and Hocker One PWA icons.
-- `public/sw.js` caches only the static offline document and explicitly does not cache APIs, authenticated successful navigation responses or private page content.
-- `capacitor.config.ts` points the Android wrapper at the HTTPS production URL, disables cleartext/mixed content and WebView debugging.
-- root viewport uses `viewportFit: "cover"`, so safe-area ownership is part of the app layout contract.
-
-Signal v1.1 must change only layout spacing, not private caching/security policy.
-
-### 5.6 CSS and dead/duplicate generations
-
-`src/app/globals.css` is a large master stylesheet and contains multiple generations of bottom-dock rules:
-
-- base fixed dock/safe-area padding;
-- mobile overrides;
-- later z-index/glass overrides;
-- later minimum-height overrides;
-- another final glass/active override;
-- legacy `.hko-bottom-dock-search-btn` rules although Signal `Más` now uses direct Tailwind classes.
-
-Meanwhile `PrivateShell` separately reserves `calc(env(safe-area-inset-bottom) + 7.5rem)`.
-
-The observed overlap is consistent with **two independent sources of truth plus duplicate legacy dock CSS**. v1.1 should consolidate dock geometry into one token/contract, then remove only the duplicate dock rules proven superseded.
-
-Old VFX components removed from `PrivateShell` are cleanup candidates, not automatic deletion targets. A repo-wide reference check is required before deleting any component/CSS generation.
-
-### 5.7 Polling/performance
-
-The private shell currently has overlapping periodic reads:
-
-- `Topbar`: pending actions every 20s;
-- `NovaWorkspace`: actions every 20s;
-- `NovaRealtimeChat`: runtime summary + actions every 30s;
-- `BottomDock`: pending actions every 30s;
-- `Sidebar`: pending actions on its own interval.
-
-This is not a security defect, but it is avoidable duplicate network work and can amplify runtime/log noise. v1.1 should not introduce another polling layer. Consolidation is optional only if it can be done without destabilizing current state ownership; otherwise retain behavior and record it for a later isolated performance PR.
+| # | File | Current audit result | Action before merge |
+|---|---|---|---|
+| 1 | `docs/plans/2026-08-14-hocker-signal-nova-workspace.md` | Historical plan; contains superseded assumptions from earlier audit stages. | Keep historical; this spec is v1.1 authority. |
+| 2 | `docs/superpowers/specs/2026-08-15-hocker-signal-v1-1-audit-polish-design.md` | Previous snapshot became stale as branch advanced. | Reconciled by this document; freeze implementation for Owner review. |
+| 3 | `env.example` | Separates Vercel REST vs MCP credentials and OpenAI API vs explicit remote-MCP credentials; documents legacy fallbacks. | Preserve separation; no secret values in repo. |
+| 4 | `src/app/api/auth/password-login/route.ts` | Existing Preview Supabase alias/session repair is security-critical. | Preserve login/session semantics exactly. |
+| 5 | `src/app/app/page.tsx` | Private app default resolves to NOVA. | Preserve. |
+| 6 | `src/app/app/pulso/page.tsx` | Uses evidence-based progress and operational status distinctions; still visibly repeats `Pulso` under mobile Topbar. | Keep semantics; remove visual title duplication on mobile without removing semantic H1. |
+| 7 | `src/app/app/recursos/page.tsx` | Readiness now derives from `connected/configured/lastError`; cards are more compact and zero counts are hidden. Still visibly repeats `Recursos`; server render can initialize registry. | Preserve truthful mapper; solve title hierarchy; ensure page render does not become alert spam. |
+| 8 | `src/app/apps/page.tsx` | Adds evidence-based completion rather than subjective progress. | Preserve truthful gate definition; no cosmetic 100% claims. |
+| 9 | `src/app/chat/page.tsx` | Legacy route reuses NOVA workspace. | Preserve compatibility; chrome title must remain NOVA. |
+| 10 | `src/app/integrations/page.tsx` | Uses readiness/progress, but section copy still says `MCP conectado`/`herramientas disponibles` even when providers can be degraded/configured. Renders raw `lastError` directly. | Neutralize presuppositional copy; sanitize/compact diagnostics before rendering. |
+| 11 | `src/app/layout.tsx` | Loads Signal v1.1 CSS after legacy CSS; preserves viewport-fit cover and PWA registration. | Preserve order and PWA/security settings. |
+| 12 | `src/components/AuthBox.tsx` | Auth behavior is separate from polish. | Preserve; add live-region only if touched. |
+| 13 | `src/components/BottomDock.tsx` | Approved NOVA · Pulso · Recursos · Más IA remains. | Preserve IA and >=44px targets; verify collision matrix. |
+| 14 | `src/components/CommandPalette.tsx` | Secondary destinations remain searchable with dialog semantics. | Preserve keyboard/focus behavior. |
+| 15 | `src/components/GuidedGitHubChainCard.tsx` | Contradictory `Todo listo/Completado/0 de 3/Cancelado` defect is now addressed by a derived outcome helper. | Keep; verify RED→GREEN tests cover rejected, failed, success and pending chains. |
+| 16 | `src/components/NovaRealtimeChat.tsx` | Fail-closed Owner Gate retained; offline recovery panel now exists. Still repeats `NOVA` inside a route titled NOVA and still uses generic Sparkles instead of official NOVA isotype. | Normalize mobile identity hierarchy; preserve raw status/fail-closed behavior. |
+| 17 | `src/components/PrivateShell.tsx` | Uses `--hko-mobile-dock-reserve` instead of old hard-coded 7.5rem. | Keep; manual Android/PWA/Capacitor proof still required. |
+| 18 | `src/components/Sidebar.tsx` | Correct three-space desktop IA; independent approval polling remains. | Preserve IA; no new polling layer. |
+| 19 | `src/components/Topbar.tsx` | Correct compact shell; contributes to duplicated mobile page titles. | Define Topbar as mobile visual title owner; preserve action/MFA failure behavior. |
+| 20 | `src/components/hocker-2c/auth/HockerOwnerLoginSurface.tsx` | Uses Hocker One product identity. | Preserve; no NOVA avatar here. |
+| 21 | `src/components/nova/NovaWorkspace.tsx` | Supplemental action-chain polling/mutations preserve MFA routing. | Preserve mutation boundary; do not weaken Owner Gate. |
+| 22 | `src/components/signal/SignalBackdrop.tsx` | Lightweight shell background. | Preserve; no VFX/canvas reintroduction. |
+| 23 | `src/global.d.ts` | Declares scoped MCP/env variables, including server credentials. | Ensure declarations never imply browser exposure; only `NEXT_PUBLIC_*` is public. |
+| 24 | `src/lib/hocker-navigation.ts` | Three workspaces are canonical; legacy `/chat` title mapping was part of polish. | Preserve NOVA title normalization. |
+| 25 | `src/lib/hocker-signal-state.d.mts` | Type contract for shared Signal state helper. | Keep synchronized with implementation. |
+| 26 | `src/lib/hocker-signal-state.d.ts` | Duplicate declaration surface for module resolution compatibility. | Keep synchronized; remove only with proven toolchain simplification later. |
+| 27 | `src/lib/hocker-signal-state.mjs` | Pure helpers now implement provider readiness, action-chain outcome and evidence-based progress. | Preserve semantic purity; these helpers are authoritative presentation policy. |
+| 28 | `src/lib/mcp/mcp-client.ts` | Added JSON/SSE parsing and modern/legacy negotiation. Transport logic is materially larger than UI polish and carries protocol compatibility risk. | Do not extend further in this review cycle; reverify against actual provider behavior on exact final preview. |
+| 29 | `src/lib/mcp/mcp-github.ts` | Uses GitHub remote MCP endpoint; connector still logs initialization failure before registry logs it; low-level write helpers exist. | Registry should own incident alert/error; retain connector diagnostic without duplicate error incident. Protect write invocation through policy/Owner Gate. |
+| 30 | `src/lib/mcp/mcp-openai.ts` | Correctly treats OpenAI API and explicit remote MCP as different credentials/endpoints; still connector-level error log duplicates registry. | Preserve credential separation; dedupe incident ownership. |
+| 31 | `src/lib/mcp/mcp-vercel.ts` | Uses explicit Vercel MCP credential, not ordinary REST token; connector-level error log duplicates registry. | Preserve credential separation; prove auth flow by runtime, not env presence; dedupe incident ownership. |
+| 32 | `src/lib/require-private-session.ts` | Centralized Supabase server-config readiness prevents prior post-login redirect loop. | Preserve exactly. |
+| 33 | `src/lib/supabase-server.ts` | Supports canonical/server-scoped/HockerSupabase aliases while refusing secret/service-role as public auth fallback. | Preserve; no client leakage. |
+| 34 | `src/styles/hocker-signal-v11.css` | Introduces readable contrast tokens and shell reserve. Reserve includes safe area, while dock wrapper still contains its own safe-area padding term. | Treat as partially reconciled until viewport tests prove no overlap/double gap; then simplify to one geometry owner. |
+| 35 | `tests/hocker-signal-v11.test.mjs` | New v1.1 semantic/source contracts. | Keep; ensure behavior assertions dominate brittle literals. |
+| 36 | `tests/hocker-signal-workspaces.test.mjs` | Protects workspace boundaries. | Keep green. |
+| 37 | `tests/mcp-protocol-2026.test.mjs` | Exercises expanded transport negotiation. | Keep, but runtime provider proof remains mandatory. |
+| 38 | `tests/mcp-provider-endpoints-2026.test.mjs` | Locks endpoint/auth separation expectations. | Keep; do not treat endpoint string test as successful connectivity. |
+| 39 | `tests/nova-signal-composer.test.mjs` | Protects composer/voice/offline contracts. | Extend only after Owner approval if a missing fail-closed state is found. |
+| 40 | `tests/supabase-server-env.test.mjs` | Critical regression test for Preview auth aliases/session. | Must remain green. |
+| 41 | `tests/unified-navigation-ux.test.mjs` | Protects NOVA/Pulso/Recursos/Más and route-title UX. | Keep green; add only targeted mobile-title/reserve behavior if approved. |
 
 ---
 
-## 6. Asset audit — corrected current finding
+## 6. Current implementation versus approved findings
 
-The repo **does contain official NOVA assets** at the current head:
+### P0 — Action-chain contradiction: materially fixed, verify behavior
 
-- `public/ecosystem/agis/nova/icon.png` — ~567 KB;
-- `public/ecosystem/agis/nova/logo.png` — ~1.12 MB.
+Current code derives a chain outcome independent of `nextAction`:
 
-`public/ecosystem/asset-map.json` identifies them as deterministic copies of the official transparent NOVA masters:
+- success terminal states → `completed`;
+- cancellation/rejection terminal states → `cancelled`;
+- failure/error states → `failed`;
+- otherwise → `in_progress`.
 
-- `nova-logo-transparent-master.png`;
-- `nova-isotype-transparent-master.png`.
+The card now uses that outcome for headline/status and reports `x de y ejecutados`. This is aligned with the approved semantic direction.
 
-This supersedes the earlier plan note that no NOVA asset existed in the repository.
+Remaining gate: targeted tests must demonstrate all-rejected → cancelled, all-executed → completed, terminal error → requires review, and pending → in progress.
 
-### Asset policy for v1.1
+### P0 — Recursos readiness: materially fixed in compact view, secondary page still needs copy hardening
 
-- Prefer the existing official transparent **NOVA isotype/icon** for compact identity.
-- Do not redraw or reinterpret it.
-- Do not introduce the humanoid NOVA avatar in the dense mobile workspace; the current task has no UX justification for a portrait.
-- Heritage/3D treatment is reserved for premium/splash moments, not dock/header controls.
-- If the existing official PNG is larger than required for repeated 20–48px UI use, create a deterministic optimized delivery derivative from the official file during implementation (for example 128/256px WebP/PNG as appropriate), preserving transparency and design exactly.
-- Do not add 1536px black-background source images to small controls.
-- Hocker One chrome continues using Hocker One product assets; NOVA identity is used only where the element specifically represents NOVA.
+The primary Recursos page now distinguishes:
 
----
+- `Conectado` — current connection proof.
+- `Configurado` — configuration exists without current success/error proof.
+- `Con problemas` — configuration exists plus current `lastError`.
+- `Pendiente` — missing configuration.
 
-## 7. Priority findings and required design
+This fixes the former `Preparado` false-positive semantics.
 
-## P0.1 — GitHub action-chain outcome must be coherent
+Remaining issues:
 
-Introduce a derived presentation outcome independent of `nextAction`:
+- `/integrations` still labels the section `MCP conectado` even though it may contain configured/problem providers.
+- `/integrations` renders raw provider error strings; sanitize/compact them before user-facing output.
+- Rendering Recursos/Integrations can still initialize providers and emit alerts; incident ownership must be one-per-attempt.
 
-```ts
-type GuidedChainOutcome =
-  | "in_progress"
-  | "completed"
-  | "cancelled"
-  | "failed";
-```
+### P0 — Dock safe area: partially fixed, physical proof missing
 
-Rules:
+Current `PrivateShell` consumes `--hko-mobile-dock-reserve` and no longer carries the old 7.5rem literal. The focused CSS defines readable tokens and a reserve based on visual height + safe-area + breathing room.
 
-- `completed`: every required step has execution-success state (`executed`/`completed`).
-- `cancelled`: no open step remains and at least one required terminal step is rejected/cancelled, with no failure taking precedence.
-- `failed`: no valid continuation or a required step has failure/error evidence that requires recovery.
-- `in_progress`: at least one non-terminal required step remains.
+However `.hko-bottom-dock-wrap` still separately includes `env(safe-area-inset-bottom) + 10px`. This may be geometrically correct, but there are still two expressions describing dock/safe-area geometry. Do not declare the overlap issue closed until Android browser, short-height viewport, installed PWA and Capacitor prove:
 
-Copy must follow outcome, not infer completion from absence of `nextAction`.
+- last actionable content fully clears the dock;
+- no double safe-area gap;
+- keyboard open/closed state remains usable;
+- no horizontal clipping.
 
-Examples:
+### P1 — NOVA offline/recovery: improved, identity hierarchy remains
 
-- all rejected → **Ejecución cancelada · 0 de 3 ejecutados**;
-- all executed → **Cadena completada · 3 de 3 ejecutados**;
-- one executed + one awaiting approval → **En progreso · 1 de 3 ejecutados**;
-- terminal failure → **Requiere revisión**, with evidence/recovery action.
+Current offline view now contains:
 
-No stored action status is rewritten.
+- `NOVA sin conexión`;
+- a human explanation;
+- last verified signal;
+- `Reintentar`;
+- preserved fail-closed runtime/Owner Gate behavior.
 
-## P0.2 — Mobile dock must own one reserve contract
+Remaining:
 
-Define one authoritative shell variable/token representing:
+- chat header still displays full `NOVA` while mobile Topbar already owns route title;
+- generic `Sparkles` remains in the presence/offline identity slot;
+- official NOVA isotype has not yet been selectively integrated in this audited head.
 
-`dock visual box + exterior breathing room + safe-area inset`.
+### P1 — Heading duplication: still open
 
-Principles:
+Visible page H1s remain in both Pulso and Recursos while mobile Topbar also supplies route identity. The correct design is:
 
-- `PrivateShell` consumes that token for mobile bottom padding.
-- Dock wrapper consumes the same geometry without adding the safe-area inset a second time.
-- Touch targets remain at least 44 CSS px; target ~48–54 px in the compact dock.
-- Last focusable/interactive content must remain completely tappable above the dock at short Android viewport heights, standalone PWA and Capacitor wrapper sizes.
-- No horizontal clipping.
-- Desktop receives no dock reserve.
+- keep one semantic H1 for document accessibility;
+- on mobile, Topbar is the visual route-title owner;
+- reduce/hide duplicate visual H1 treatment without hiding essential context from assistive technology;
+- preserve richer desktop hierarchy.
 
-Do not solve this by adding a larger arbitrary `rem` value.
+### P1 — Contrast: improved
 
-## P0.3 — Recursos status must report current truth
+Focused tokens now define:
 
-Define a human provider readiness model derived from existing registry evidence:
+- `--hko-text-secondary: #aebfd1`;
+- `--hko-text-tertiary: #7f93aa`.
 
-```ts
-type ProviderReadiness =
-  | "connected"
-  | "configured"
-  | "problem"
-  | "pending";
-```
+Current Pulso/Recursos use the secondary token for important explanatory text. Continue removing essential information from legacy slate-600/700 usage only where touched; do not conduct a global stylesheet rewrite in #213.
 
-Mapping:
+### P1 — Provider-card density: improved
 
-- `connected`: connector state is connected and the latest initialization/health evidence is successful.
-- `problem`: configuration exists **and** current connector/registry state contains `lastError` or failed initialization evidence.
-- `configured`: configuration exists but there is no current successful connection proof and no current error proof.
-- `pending`: required configuration is absent.
+Primary Recursos provider cards are significantly more compact and omit zero tool/capability counters when meaningless. Keep the compact summary/detail pattern.
 
-Human labels:
+### P1 — Floating right-edge control
 
-- connected → `Conectado`;
-- problem → `Con problemas`;
-- configured → `Configurado`;
-- pending → `Pendiente`.
-
-`Protegido` remains a separate governance boundary label for canonical integrations/modules, not an MCP health state.
-
-Rules:
-
-- `0 herramientas / 0 capacidades` after an init error never appears beside a healthy/prepared state.
-- `lastError` is available in an expandable/detail diagnostic, not dumped as the main card headline.
-- `configured` is not green.
-- “Proveedores · Conectados” becomes neutral wording such as `Proveedores` / `Estado de proveedores` so the section does not presuppose success.
+No changed/current Signal component maps to the black floating screenshot control. Prior evidence identifies the Vercel Preview Toolbar. Product CSS must not be distorted to accommodate an injected preview control. During final visual QA, classify the overlay again before treating it as application-owned accessibility UI.
 
 ---
 
-## P1.1 — NOVA runtime presentation and recovery
+## 7. MCP architecture audit
 
-Do not alter raw backend status values. Derive a presentation state from raw service status + current request error:
+### 7.1 Truthfulness boundary
 
-- `online` — verified runtime answered.
-- `checking` — no verdict yet.
-- `offline` — explicit offline health state.
-- `problem` — configured/unknown plus a current runtime error or failed health request.
+Environment/config presence is not runtime readiness. `is*Configured()` must never be rendered as equivalent to connected.
 
-UI behavior:
+### 7.2 Duplicate incident ownership
 
-- Online: compact status, conversation and composer normally available.
-- Checking: compact non-alarming verification state.
-- Offline/problem: preserve existing conversation history; replace the large generic empty void with a compact recovery panel:
-  - `NOVA sin conexión` or `NOVA requiere revisión`;
-  - one-sentence cause in human language;
-  - `Reintentar` control;
-  - last verified time when present.
-- Requests that require unavailable NOVA runtime remain fail-closed. The composer must explain why it cannot submit; no fake queued/success response.
-- Owner Gate unreadable state remains locked (`can_start_new_task=false`).
+Current connectors (`mcp-vercel`, `mcp-openai`, `mcp-github`) log their initialization error, then the registry catches the same thrown error and logs it again before issuing `alertMcpProviderDown`.
 
-The UI must not add a synthetic heartbeat.
+Required boundary after Owner approval:
 
-## P1.2 — Heading and identity normalization
+- connector returns/throws diagnostic state; optional debug trace only;
+- registry owns the provider initialization error incident and alert;
+- UI reads registry state only;
+- diagnostic evidence is retained, not suppressed.
 
-### Mobile
+### 7.3 Render-triggered initialization
 
-- Topbar owns the route title.
-- Pulso/Recursos page headers should not visually repeat the same large title directly underneath. Keep one semantic `h1` in the document, but presentation can use a smaller contextual header or visually suppress duplicate chrome on mobile.
-- `/chat`, `/owner/nova` and `/app/nova` must display **NOVA**, never `Chat`.
+`/app/recursos` and `/integrations` can initialize the registry as part of dynamic server rendering. In serverless execution, cold instances can repeat initialization and alerts. Final design should avoid turning page viewing into an uncontrolled incident generator. This can be solved narrowly (registry-level dedupe/cooldown or explicit health refresh boundary) without introducing a global client store.
 
-### NOVA workspace
+### 7.4 Transport/protocol risk
 
-- Remove the redundant full `NOVA` workspace heading from inside the chat header when Topbar already states NOVA.
-- Keep a compact presence/status row using the official NOVA isotype plus status label/detail.
-- The official avatar is not used in v1.1.
+`mcp-client.ts` now contains both a modern negotiation probe and initialize-era fallback plus SSE/JSON parsing. This change is materially larger than a visual polish task. No additional protocol invention is authorized in this pass. Exact-provider runtime evidence is required before calling the MCP layer healthy.
 
-## P1.3 — Contrast and typography
+### 7.5 Credentials
 
-Current readable copy frequently uses `text-slate-600` and `text-slate-700` on `#030711/#050b16/#07101f`, which is too weak for normal explanatory content.
+Preserve these separations:
 
-Introduce/standardize three semantic roles:
-
-- **Primary:** near-white for headings and critical values.
-- **Secondary readable:** blue-gray equivalent to roughly slate-300/400 for descriptions, statuses and normal metadata users must understand.
-- **Tertiary:** muted slate for optional timestamps/technical IDs only.
-
-Disabled control text remains visually distinct from tertiary informational text.
-
-Target WCAG AA for normal body/control copy. Decorative microcopy may be less prominent but cannot carry essential state alone.
-
-## P1.4 — Recursos density
-
-Default provider card:
-
-- provider icon;
-- provider name;
-- readiness pill;
-- one-line purpose;
-- meaningful counts only if non-zero or if count absence itself matters.
-
-Diagnostic detail:
-
-- tools/capabilities;
-- last check;
-- last error summary;
-- scopes/permissions when safe;
-- authorized AGI relationships if already available from trusted data.
-
-Do not create fake “install” or “import” controls.
-
-## P1.5 — Floating control overlap
-
-Previous screenshot review attributed the black right-edge floating control to **Vercel Preview Toolbar**, not Hocker One application chrome. The current audit found no Signal component corresponding to that visual control.
-
-Therefore:
-
-- do not move or redesign app UI to accommodate an assumed internal accessibility widget without evidence;
-- during preview QA, record whether the overlay is Vercel-injected or application-owned;
-- if it is Vercel Toolbar and it obstructs a visual capture, use supported Preview configuration for the QA branch rather than product CSS hacks;
-- if fresh authenticated inspection proves an app-owned accessibility control exists, add it to the same safe-area collision test matrix before implementation.
-
-## P1.6 — MCP logging/alert ownership
-
-A single failed provider initialization should produce one correlated operational incident, not duplicate independent alerts.
-
-Recommended boundary:
-
-- connector: may return/throw structured diagnostic state and optionally one debug-level trace;
-- registry: owns provider initialization failure error log and `alertMcpProviderDown` notification;
-- UI: reads registry evidence; it does not trigger its own alert for the same attempt.
-
-Do not suppress the underlying error. Deduplicate reporting, not evidence.
+- `VERCEL_TOKEN` = ordinary Vercel REST/API credential; not implicitly MCP auth.
+- `VERCEL_MCP_AUTH_TOKEN` = explicitly scoped MCP credential.
+- `OPENAI_API_KEY` = OpenAI API credential; never forwarded to arbitrary remote MCP hosts.
+- `OPENAI_MCP_URL` + `OPENAI_MCP_AUTH_TOKEN` = explicit remote MCP only.
+- GitHub MCP token remains server-side and governed.
 
 ---
 
-## 8. Accessibility requirements
+## 8. Owner Gate, auth/session and client/server audit
 
-Implementation must preserve or add:
+### Supabase/Auth
 
-- visible `:focus-visible` styling;
-- minimum 44px interactive targets, with mobile primary targets aiming at 48px+;
+The previous Preview regression was caused by inconsistent server-side env-name expectations. Current server client/session guard centralizes alias readiness and has dedicated tests. Do not refactor it during UI polish.
+
+### Owner Gate
+
+NOVA runtime reads remain fail-closed when actions/queue state cannot be read. Protected mutations remain subject to approval and MFA/AAL2. UI status changes must not bypass the server contract.
+
+### Client/server boundary
+
+Keep:
+
+- auth/session/Supabase config server-side;
+- secret/service-role credentials server-only;
+- sanitized provider diagnostics before rendering;
+- interactive mutation controls client-side only where needed;
+- no new global client provider solely for visual polish.
+
+---
+
+## 9. Accessibility, responsive, PWA and Capacitor requirements
+
+Must preserve/verify:
+
+- visible `:focus-visible` treatment;
+- >=44 CSS px touch targets, aiming 48–54px for primary mobile dock controls;
 - `aria-current="page"` on active persistent navigation;
-- `aria-expanded`/labels on expandable controls;
-- keyboard operation and focus management in Command Palette;
-- explicit accessible label for icon-only refresh/send/voice controls;
-- status/error announcements with a polite live region when state changes after user action;
-- no state communicated by color alone;
-- reduced-motion preference remains honored;
-- no duplicate landmark/navigation labels that make the mobile shell ambiguous.
+- `aria-expanded` and explicit labels on expandable/icon-only controls;
+- Command Palette keyboard/focus behavior;
+- polite live-region announcement for user-triggered status/error changes where applicable;
+- no essential state conveyed by color only;
+- reduced-motion behavior;
+- readable secondary contrast;
+- no duplicate navigation landmarks/route-title confusion.
 
-The contrast pass is part of accessibility, not cosmetic polish.
+PWA/Capacitor guardrails:
 
----
-
-## 9. Client/server boundary requirements
-
-Keep these boundaries:
-
-- auth/session and Supabase server config stay server-side;
-- secret/service-role keys never become public fallbacks;
-- provider diagnostics with sensitive details remain server-side and are sanitized before rendering;
-- `Recursos` may render registry status server-side, but page rendering should not become an uncontrolled repeated health-check/alert generator;
-- mutation components remain clients only where interaction requires it;
-- no new global client provider merely to solve local visual state.
-
-For v1.1, prefer a minimal registry/readiness adapter over a large MCP architecture rewrite.
+- `viewportFit: "cover"` remains.
+- service worker must not cache authenticated pages or API responses.
+- Capacitor stays HTTPS/no cleartext/no mixed-content/debugging regression.
+- same dock/safe-area contract must work in browser, standalone PWA and Capacitor WebView.
 
 ---
 
-## 10. Performance requirements
+## 10. Performance and image audit
 
-- No 1536px/source-master image should be shipped directly into a 20–48px repeated control when a deterministic optimized derivative can be used.
-- Use explicit image dimensions and avoid layout shift.
-- Do not mark every brand image `priority`; only above-the-fold critical product chrome should preload.
-- Do not add a new polling interval.
-- If polling consolidation is implemented, prove no loss of freshness or Owner Gate state before replacing existing readers.
-- Recursos should not serially block on provider timeouts; current registry initializes concurrently, which must be preserved if initialization remains in render flow.
-- Keep `SignalBackdrop` lightweight; do not restore removed canvas/VFX layers.
+### NOVA assets
 
----
+Official repo assets already exist:
 
-## 11. Recommended implementation approaches considered
+- `public/ecosystem/agis/nova/icon.png` (~567 KB).
+- `public/ecosystem/agis/nova/logo.png` (~1.12 MB).
+- `public/ecosystem/asset-map.json` maps them to official transparent NOVA masters.
 
-### Approach A — Semantic-first narrow polish **(recommended)**
+Policy:
 
-- Add outcome/readiness presentation helpers.
-- Fix dock reserve contract.
-- Normalize headings/contrast/density.
-- Integrate existing official NOVA isotype via optimized delivery asset if needed.
-- Deduplicate MCP error ownership only where the current initialization path proves duplication.
-- Leave larger polling/state architecture for later unless a very small shared primitive is demonstrably safer.
+- use the existing official transparent isotype for compact NOVA identity;
+- no avatar in v1.1 dense workspace;
+- no Heritage mark in dock/header;
+- if repeated 20–48px use is approved, create a deterministic 128/256px transparent derivative without changing design;
+- never ship a 1536px black-background source into a tiny control;
+- set explicit dimensions and avoid unnecessary `priority` preloads.
 
-**Why:** lowest regression risk, directly addresses every observed defect and preserves auth/security/runtime boundaries.
+### Polling
 
-### Approach B — Shared client store + broad shell refactor
-
-Centralize navigation status, approvals, NOVA runtime, providers and polling into a new shared client store; rebuild shell around that.
-
-**Rejected for #213:** too large, changes server/client boundaries, increases security/session regression surface and makes visual QA harder to isolate.
-
-### Approach C — Visual-only CSS polish
-
-Fix spacing, contrast and cards without changing readiness/outcome helpers.
-
-**Rejected:** would leave false “Todo listo/Completado” and “Preparado” semantics in place. Cosmetic correctness is insufficient.
+Current private surfaces still independently poll approvals/actions/runtime. Do not add another interval. Polling consolidation is a later isolated performance task unless a tiny, low-risk primitive is proven safer with tests.
 
 ---
 
-## 12. TDD implementation order — only after Owner approval of this spec
+## 11. Remaining implementation plan — ONLY after Owner approval
 
-### RED 1 — Action-chain outcome
+### RED 1 — residual semantic/copy safety
 
-Add failing tests for:
+Add/confirm tests for:
 
-- all rejected/cancelled → `cancelled`, 0 executed;
-- all executed/completed → `completed`;
-- failure terminal → `failed`;
-- pending/approval → `in_progress`.
+- terminal cancelled chain never renders completed;
+- provider with `lastError` is `Con problemas`;
+- `/integrations` does not presuppose all MCP providers are connected;
+- rendered diagnostic is compact/sanitized.
 
-Then implement the smallest pure helper and update `GuidedGitHubChainCard` to consume it.
+Then make the smallest code changes.
 
-### RED 2 — Provider readiness
+### RED 2 — MCP incident dedupe
 
-Add failing tests proving:
+Create a failing test showing one provider initialization failure results in one registry-owned incident/alert while preserving `lastError` evidence. Then remove connector-level duplicate error incident logging or lower it to non-incident diagnostic trace.
 
-- configured + connected + no current error → connected;
-- configured + `lastError` → problem;
-- configured + no success/no error → configured;
-- not configured → pending;
-- failed configured provider cannot render `Preparado`/green.
+### RED 3 — mobile heading hierarchy
 
-Then implement a pure readiness mapper and compact Recursos UI.
+Test that mobile chrome owns the route title while Pulso/Recursos retain a semantic H1 without a second large visual heading. Keep desktop hierarchy.
 
-### RED 3 — Mobile dock reserve
+### RED 4 — dock physical contract
 
-Add source/layout contract tests proving:
+Keep source contract tests, then validate real viewport behavior. If overlap/double-gap remains, change only the focused Signal geometry token/wrapper rules; do not add another arbitrary `rem` patch.
 
-- one authoritative reserve token exists;
-- `PrivateShell` consumes it;
-- dock safe area is not separately double-counted;
-- duplicate obsolete dock geometry rules are removed only after the new contract is in place.
+### RED 5 — NOVA compact identity
 
-Then verify manually on short/tall Android viewport, standalone PWA and Capacitor WebView.
+If approved, introduce only an optimized derivative of the official NOVA isotype and test that the asset is transparent, explicitly sized and not a source-size payload. Replace generic identity icon only where it improves recognition; no avatar.
 
-### RED 4 — NOVA route title/offline presentation
+### RED 6 — exact-preview runtime gate
 
-Add tests proving:
+On one final head SHA:
 
-- `/chat` resolves to NOVA title;
-- offline/problem display exposes recovery action;
-- offline/problem composer does not present a normal-send affordance;
-- raw status is not upgraded.
-
-### RED 5 — Contrast/hierarchy contracts
-
-Prefer semantic class/token assertions over screenshot-literal tests:
-
-- essential descriptions use secondary-readable token/class;
-- tertiary token is limited to optional metadata;
-- mobile header does not present duplicate large route title.
-
-### RED 6 — MCP incident dedupe
-
-If connector+registry duplicate reporting remains reproduced, add a test around one failed initialization resulting in one alert ownership path. Preserve diagnostic error state.
+- deploy Preview and require `READY`;
+- valid Owner login reaches `/app/nova`;
+- wrong password fails safely without 500;
+- MFA/AAL2 remains intact;
+- inspect `/app/recursos` authenticated;
+- providers show states matching current evidence;
+- inspect Vercel runtime errors for the exact deployment;
+- verify no duplicate provider+registry incident for a single failure;
+- if MCP remains unavailable, UI must show `Con problemas`, not fake connected/prepared.
 
 ---
 
-## 13. Verification matrix after implementation
+## 12. Final verification matrix
 
 ### Automated
 
-- targeted RED→GREEN tests for each changed semantic helper;
-- complete existing test suite;
-- TypeScript typecheck;
+- targeted RED→GREEN tests;
+- full test suite;
+- typecheck;
 - lint;
 - production build;
-- dependency/security audit used by existing CI;
-- GitHub CI on exact final head SHA.
+- dependency/security audit;
+- GitHub CI on the exact final SHA.
 
-### Preview/runtime
+### Runtime
 
-- exact final-head Vercel preview is `READY`;
-- authenticated Owner login succeeds;
-- wrong password fails safely and does not 500;
-- Owner session reaches `/app/nova`;
-- MFA/AAL2 escalation remains correct for protected action;
-- NOVA online/checking/offline/problem states match evidence;
+- exact final Vercel deployment `READY`;
+- authenticated Owner E2E;
+- wrong-credential fail-safe;
+- Owner Gate/MFA/AAL2 path;
+- NOVA online/checking/problem/offline labels match evidence;
+- `/app/recursos` truthful readiness;
 - no new runtime error cluster;
-- `/app/recursos` reports Vercel/OpenAI/GitHub MCP failures as `Con problemas` when they still fail, never connected/prepared;
-- if MCP endpoints are fixed separately and initialize successfully, UI may then show `Conectado` based on fresh evidence;
-- one provider failure generates one incident/alert ownership path.
+- one provider failure = one incident owner.
 
 ### Mobile/PWA/Capacitor
 
-Test at minimum:
+Minimum matrix:
 
-- narrow Android browser viewport;
-- short-height Android browser viewport;
-- installed standalone PWA;
-- Capacitor Android WebView using the current remote server configuration;
-- keyboard open/closed composer state;
+- narrow Android browser;
+- short-height Android browser;
+- keyboard open/closed;
+- standalone installed PWA;
+- Capacitor Android WebView;
 - safe-area inset 0 and non-zero simulations where available.
 
 Acceptance:
 
-- final interactive content never sits behind the dock;
+- last actionable content is never behind dock;
 - no double safe-area gap;
 - no horizontal clipping;
-- Más and all three workspace tabs remain tappable;
-- preview toolbar/other injected overlays are identified separately from product layout.
+- NOVA/Pulso/Recursos/Más remain tappable;
+- injected Preview Toolbar is not mistaken for product chrome.
 
 ---
 
-## 14. Security regression checklist
+## 13. Cleanup allowed only after functional gates
 
-Before declaring #213 merge-ready:
+Allowed:
 
-- [ ] PR remains on the feature branch; no direct `main` write.
-- [ ] Owner Gate mutation contracts unchanged or stricter.
-- [ ] MFA/AAL2 tests pass.
-- [ ] RLS/least-privilege tests pass.
-- [ ] Supabase server alias/session regression tests pass.
-- [ ] No secret/service-role key is imported into client code.
-- [ ] No private response/page is added to service-worker cache.
-- [ ] No new external provider is marked connected without runtime evidence.
-- [ ] No raw provider secret/error payload exposing credentials is rendered.
-- [ ] Action failure/cancel states cannot be displayed as completed.
-- [ ] Dependency audit remains green.
+- consolidate proven duplicate bottom-dock geometry rules;
+- remove unused Signal-specific class generation after repo-wide reference proof;
+- remove obsolete imports made unreachable by this PR.
 
----
+Not allowed in #213 without separate review:
 
-## 15. Cleanup scope allowed in this PR
-
-Allowed only after functional/semantic tests are green:
-
-- consolidate duplicate bottom-dock CSS generations into the new single geometry contract;
-- remove `.hko-bottom-dock-search-btn` if repo-wide reference check confirms it is unused;
-- remove duplicate Signal-only styling that is proven superseded;
-- remove obsolete import/reference code made unreachable by this PR.
-
-Not allowed without separate evidence/review:
-
-- deleting broad VFX/style modules merely because `PrivateShell` no longer imports them;
-- splitting/rearchitecting the entire 4k+ line master stylesheet;
-- replacing all polling with a new state framework;
-- replacing MCP transport architecture;
-- changing global brand assets.
+- entire `globals.css` rewrite/split;
+- broad polling/store architecture replacement;
+- MCP platform rewrite;
+- production Supabase DDL/grant/RLS changes;
+- credential rotation;
+- repository allowlist expansion;
+- NOVA avatar redesign/generation;
+- Heritage identity in compact chrome;
+- fake install/import/attachment features.
 
 ---
 
-## 16. Explicit non-goals
+## 14. Acceptance definition
 
-- No merge to `main` in this implementation workflow.
-- No production Supabase DDL/grant/RLS migration.
-- No credential rotation.
-- No `allow_actions` expansion.
-- No repository allowlist expansion.
-- No NOVA avatar redesign/generation.
-- No Heritage logo in compact chrome.
-- No fake attachment/import/install feature.
-- No redesign of Hocker One logo.
-- No new application shell framework.
+Signal v1.1 is human-merge-ready only when the **same final SHA** satisfies all of these:
 
----
-
-## 17. Final acceptance definition
-
-Signal v1.1 is ready for human merge only when all of the following are simultaneously true on the same final head SHA:
-
-1. NOVA · Pulso · Recursos · Más remains the persistent mobile IA.
-2. The action chain never calls a cancelled/failed workflow completed.
-3. Recursos labels reflect current MCP evidence; a configured provider with a current init error is `Con problemas`.
-4. NOVA offline/problem state is compact, recoverable and fail-closed.
-5. The mobile dock never overlaps the last actionable content in browser, PWA or Capacitor.
-6. Secondary readable text meets the agreed contrast standard.
-7. Route/page title hierarchy is not duplicated on mobile; legacy `/chat` presents as NOVA.
-8. Only official NOVA assets are used, with no avatar and no unnecessary source-size payload in compact controls.
-9. Owner Gate, Supabase session, MFA/AAL2, RLS, PWA private-cache policy and deep links remain intact.
-10. Targeted tests, full tests, typecheck, lint, build, CI and dependency audit are green.
-11. Exact final preview is READY and authenticated Owner E2E passes.
-12. `/app/recursos` runtime health/status semantics are explicitly reverified after the final deployment.
-13. PR #213 remains draft until this evidence is reviewed by the Owner.
+1. NOVA · Pulso · Recursos · Más remains persistent mobile IA.
+2. Cancelled/failed workflows never display as completed.
+3. Recursos/Integrations provider labels match current runtime evidence.
+4. One MCP initialization failure produces one incident owner while retaining diagnostic evidence.
+5. NOVA problem/offline state is compact, recoverable and fail-closed.
+6. Mobile route-title hierarchy is not visually duplicated.
+7. Dock does not overlap content or double-count safe area in browser/PWA/Capacitor.
+8. Essential secondary text is readable and state is not color-only.
+9. Only official NOVA assets are used; no avatar; no source-size payload in tiny controls.
+10. Owner Gate, Supabase session, MFA/AAL2, RLS and private-cache policy remain intact.
+11. Targeted tests + full tests + typecheck + lint + build + CI + dependency audit are green.
+12. Exact final Preview is READY and authenticated Owner E2E passes.
+13. `/app/recursos` runtime health is explicitly reverified on that exact deployment.
+14. PR #213 remains Draft until Owner reviews the evidence.
 
 ---
 
-## 18. Self-review notes
+## 15. Self-review
 
-This design intentionally resolves the main ambiguities before implementation:
+### Spec coverage
 
-- **NOVA assets:** current repo inspection supersedes the older “missing assets” note; official transparent NOVA logo/isotype files already exist under `public/ecosystem/agis/nova` and are mapped to official masters.
-- **Floating control:** there is not enough current source evidence to classify the screenshot overlay as an app accessibility control; prior evidence identifies Vercel Preview Toolbar. The implementation must verify ownership before changing product layout.
-- **MCP 404s:** treated as proven prior authenticated-preview evidence but not falsely reported as freshly reproduced after log retention expired.
-- **Configured vs connected:** explicitly separated.
-- **Cancelled vs completed:** explicitly separated.
-- **Safe area:** one geometry owner; no larger magic padding workaround.
-- **Scope:** semantic correctness and targeted polish only; no broad architecture rewrite.
+Checked against the requested audit dimensions: UI/UX, mobile safe areas, accessibility, responsive/PWA/Capacitor, typography/contrast, duplicate headings, navigation, dock overlap, semantic status correctness, Owner Gate, Supabase auth/session, NOVA states, Recursos readiness, MCP health, duplicate logging, performance, image sizing, dead/duplicate CSS scope, client/server boundaries, security regressions and runtime errors are all represented.
 
-No implementation work should begin until the Owner reviews and approves this committed spec.
+### Current-head reconciliation
+
+The earlier document is no longer treated as a current audit because code advanced after it. This version explicitly distinguishes:
+
+- requirements already implemented and needing verification;
+- unresolved product/UI debt;
+- runtime findings proven on older candidates;
+- final-head evidence still missing.
+
+### Safety review
+
+No secret values are included. No production mutation is proposed. No `main` write is authorized. No runtime failure is cosmetically upgraded to healthy. No avatar redesign is authorized.
+
+### Placeholder scan
+
+No TBD/TODO/future-placeholder requirement is used as an acceptance criterion. Each remaining change has a concrete RED test target and verification gate.
+
+---
+
+## REVIEW GATE
+
+**Stop here.** This reconciled spec is the handoff for Owner review. Do not continue implementation merely because current CI/Vercel are green. The current head contains partial v1.1 implementation, but merge readiness is not established until the remaining semantic, MCP incident, mobile visual and authenticated exact-preview gates above are reviewed and completed after Owner approval.
