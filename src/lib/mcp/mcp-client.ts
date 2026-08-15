@@ -86,6 +86,58 @@ class McpModernNegotiationFallbackError extends Error {
   }
 }
 
+function isMcpResponse(value: unknown): value is McpResponse {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<McpResponse>;
+  return candidate.jsonrpc === "2.0" && typeof candidate.id === "string";
+}
+
+function parseSseJsonRpcResponse(text: string, requestId: string): McpResponse {
+  const events = text.split(/\r?\n\r?\n/);
+
+  for (const event of events) {
+    const data = event
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n")
+      .trim();
+
+    if (!data || data === "[DONE]") continue;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      continue;
+    }
+
+    if (isMcpResponse(parsed) && parsed.id === requestId) {
+      return parsed;
+    }
+  }
+
+  throw new Error(`MCP SSE stream ended without a JSON-RPC response for ${requestId}`);
+}
+
+async function parseMcpResponse(response: Response, requestId: string): Promise<McpResponse> {
+  const contentType = String(response.headers.get("content-type") ?? "").toLowerCase();
+
+  if (contentType.includes("text/event-stream")) {
+    return parseSseJsonRpcResponse(await response.text(), requestId);
+  }
+
+  if (contentType.includes("application/json") || contentType.includes("+json")) {
+    const parsed = await response.json() as unknown;
+    if (!isMcpResponse(parsed) || parsed.id !== requestId) {
+      throw new Error(`MCP JSON response did not match request ${requestId}`);
+    }
+    return parsed;
+  }
+
+  throw new Error(`MCP response used unsupported content-type: ${contentType || "missing"}`);
+}
+
 export class McpClient {
   private config: McpProviderConfig;
   private state: McpProviderState;
@@ -236,7 +288,7 @@ export class McpClient {
         this.sessionId = response.headers.get("MCP-Session-Id");
       }
 
-      const mcpResponse = (await response.json()) as McpResponse;
+      const mcpResponse = await parseMcpResponse(response, mcpRequest.id);
 
       if (mcpResponse.error) {
         this.state.status = "error";
