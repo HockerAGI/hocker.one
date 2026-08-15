@@ -45,7 +45,7 @@ export default function BottomDock() {
 
   return (
     <div className="hko-bottom-dock-wrap lg:hidden">
-      <nav className="hko-bottom-dock grid-cols-4" aria-label="Navegación principal móvil">
+      <nav className="hko-bottom-dock" aria-label="Navegación principal móvil">
         {HOCKER_NAVIGATION.map((section) => {
           const Icon = section.icon;
           const active = section.id === activeSection.id;
@@ -73,9 +73,14 @@ export default function BottomDock() {
           );
         })}
 
-        <button type="button" onClick={triggerPalette} aria-label="Abrir más opciones">
+        <button
+          type="button"
+          onClick={triggerPalette}
+          aria-label="Abrir más opciones"
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[18px] px-1.5 py-[11px] text-center text-slate-500 transition-colors hover:bg-white/[0.035] hover:text-slate-300"
+        >
           <MoreHorizontal className="h-5 w-5" />
-          <span>Más</span>
+          <span className="text-[10px] font-bold">Más</span>
         </button>
       </nav>
     </div>
