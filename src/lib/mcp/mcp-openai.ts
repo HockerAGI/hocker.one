@@ -1,26 +1,23 @@
 /**
- * Hocker ONE — OpenAI MCP Connector
+ * Hocker ONE — Explicit OpenAI-related Remote MCP Connector
  *
- * Connects NOVA and AGIs to the OpenAI MCP server for direct
- * model listing, assistant management, and completion operations
- * without needing external platforms.
+ * OpenAI's API can consume remote MCP servers, but the OpenAI REST API is
+ * not itself treated as an MCP server here. This connector is enabled only
+ * when HOCKER is given an explicit remote MCP URL and a credential scoped to
+ * that server. OPENAI_API_KEY is intentionally never forwarded to MCP hosts.
  */
 
 import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
 
 export type OpenAIMcpConfig = {
-  /** OpenAI API key */
-  apiKey: string;
-  /** OpenAI organization ID (optional) */
-  organizationId?: string;
-  /** Custom MCP server URL (defaults to OpenAI API) */
-  mcpServerUrl?: string;
-  /** Default model for completions */
+  /** Explicit remote MCP server URL; no OpenAI API URL fallback is assumed. */
+  mcpServerUrl: string;
+  /** Credential scoped to the explicit MCP server, separate from OPENAI_API_KEY. */
+  authToken: string;
+  /** Default OpenAI model name for MCP servers that expose model tools. */
   defaultModel?: string;
 };
-
-const OPENAI_MCP_DEFAULT_URL = "https://api.openai.com/v1/mcp";
 
 export class McpOpenAIConnector {
   private client: McpClient;
@@ -30,24 +27,20 @@ export class McpOpenAIConnector {
   constructor(config: OpenAIMcpConfig) {
     this.config = config;
 
-    const mcpUrl = config.mcpServerUrl ?? OPENAI_MCP_DEFAULT_URL;
-
-    const authHeaders: Record<string, string> = {
-      Authorization: `Bearer ${config.apiKey}`,
-    };
-    if (config.organizationId) {
-      authHeaders["OpenAI-Organization"] = config.organizationId;
+    const authHeaders: Record<string, string> = {};
+    if (config.authToken) {
+      authHeaders.Authorization = `Bearer ${config.authToken}`;
     }
 
     const providerConfig: McpProviderConfig = {
       id: "openai",
       name: "OpenAI MCP",
       type: "openai",
-      url: mcpUrl,
+      url: config.mcpServerUrl,
       authHeaders,
       transport: "http",
       timeoutMs: 60_000,
-      enabled: Boolean(config.apiKey),
+      enabled: Boolean(config.mcpServerUrl && config.authToken),
     };
 
     this.client = new McpClient(providerConfig);
@@ -62,7 +55,7 @@ export class McpOpenAIConnector {
   }
 
   /**
-   * Initialize the OpenAI MCP connection.
+   * Initialize the explicitly configured remote MCP connection.
    */
   async initialize(): Promise<{
     capabilities: string[];
@@ -91,14 +84,14 @@ export class McpOpenAIConnector {
   }
 
   /**
-   * List available models.
+   * List available models when the explicit MCP server exposes this tool.
    */
   async listModels(): Promise<unknown> {
     return this.client.callTool("list_models");
   }
 
   /**
-   * Create a chat completion.
+   * Create a chat completion when the explicit MCP server exposes this tool.
    */
   async chatCompletion(
     messages: Array<{ role: string; content: string }>,
@@ -118,9 +111,6 @@ export class McpOpenAIConnector {
     });
   }
 
-  /**
-   * Create an assistant.
-   */
   async createAssistant(
     name: string,
     instructions: string,
@@ -135,23 +125,14 @@ export class McpOpenAIConnector {
     });
   }
 
-  /**
-   * List assistants.
-   */
   async listAssistants(): Promise<unknown> {
     return this.client.callTool("list_assistants");
   }
 
-  /**
-   * Create a thread.
-   */
   async createThread(messages?: Array<{ role: string; content: string }>): Promise<unknown> {
     return this.client.callTool("create_thread", { messages });
   }
 
-  /**
-   * Create an embedding.
-   */
   async createEmbedding(input: string | string[], model?: string): Promise<unknown> {
     return this.client.callTool("create_embedding", {
       input,
@@ -159,9 +140,6 @@ export class McpOpenAIConnector {
     });
   }
 
-  /**
-   * Generate an image with DALL-E.
-   */
   async generateImage(
     prompt: string,
     options?: { model?: string; size?: string; quality?: string },
@@ -174,23 +152,14 @@ export class McpOpenAIConnector {
     });
   }
 
-  /**
-   * Ping the OpenAI MCP server.
-   */
   async ping(): Promise<boolean> {
     return this.client.ping();
   }
 
-  /**
-   * Get the underlying MCP client (for registry tool execution).
-   */
   getClient(): McpClient {
     return this.client;
   }
 
-  /**
-   * Disconnect from the OpenAI MCP server.
-   */
   disconnect(): void {
     this.client.disconnect();
     this.initialized = false;
@@ -198,17 +167,17 @@ export class McpOpenAIConnector {
 }
 
 /**
- * Create an OpenAI MCP connector from environment variables.
+ * Create an explicit remote MCP connector from environment variables.
+ * OPENAI_API_KEY remains reserved for the OpenAI API/provider router.
  */
 export function createOpenAIMcpConnector(): McpOpenAIConnector {
   return new McpOpenAIConnector({
-    apiKey: process.env.OPENAI_API_KEY ?? "",
-    organizationId: process.env.OPENAI_ORG_ID,
-    mcpServerUrl: process.env.OPENAI_MCP_URL,
+    mcpServerUrl: process.env.OPENAI_MCP_URL ?? "",
+    authToken: process.env.OPENAI_MCP_AUTH_TOKEN ?? "",
     defaultModel: process.env.OPENAI_DEFAULT_MODEL,
   });
 }
 
 export function isOpenAIMcpConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY);
+  return Boolean(process.env.OPENAI_MCP_URL && process.env.OPENAI_MCP_AUTH_TOKEN);
 }
