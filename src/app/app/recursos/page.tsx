@@ -103,6 +103,9 @@ export default async function RecursosPage() {
           <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Proveedores</p><h2 className="mt-1 text-lg font-bold text-white">Estado real</h2></div>
           <p className="text-[10px] text-[color:var(--hko-text-secondary)]">Avance verificado = gates observables, no estimación manual.</p>
         </div>
+        <p className="mt-2 text-[10px] leading-5 text-[color:var(--hko-text-secondary)]">
+          <strong className="text-slate-200">Conectado</strong> = funciona ahora · <strong className="text-slate-200">Configurado</strong> = existe configuración sin conexión verificada · <strong className="text-slate-200">Con problemas</strong> = el último intento verificable falló · <strong className="text-slate-200">Pendiente</strong> = falta configuración.
+        </p>
         <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
           {mcp.providers.map((provider) => {
             const status = providerReadiness({ configured: provider.configured, connected: provider.connected, lastError: provider.lastError });
