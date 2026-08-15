@@ -14,7 +14,7 @@ import {
   ServerCog,
   ShieldCheck,
 } from "lucide-react";
-import { HOCKER_NAVIGATION } from "@/lib/hocker-navigation";
+import { HOCKER_NAVIGATION, HOCKER_SECONDARY_NAVIGATION } from "@/lib/hocker-navigation";
 import { OPERATIONS_CATALOG, type OperationsCatalogKind } from "@/lib/operations-catalog";
 
 type PaletteItem = {
@@ -37,18 +37,27 @@ const NAVIGATION_ITEMS: PaletteItem[] = HOCKER_NAVIGATION.flatMap((section) =>
   })),
 );
 
+const SECONDARY_ITEMS: PaletteItem[] = HOCKER_SECONDARY_NAVIGATION.map((item) => ({
+  id: `secondary-${item.id}`,
+  label: item.label,
+  href: item.href,
+  icon: item.icon,
+  group: item.group,
+  keywords: item.keywords,
+}));
+
 const SPECIAL_ITEMS: PaletteItem[] = [
-  { id: "security-rls", label: "Políticas RLS", href: "/security/rls", icon: ShieldCheck, group: "Control", keywords: "seguridad supabase rls policies tablas" },
-  { id: "security-grants", label: "Permisos y grants", href: "/security/grants", icon: ShieldCheck, group: "Control", keywords: "seguridad permisos grants roles" },
-  { id: "security-hardening", label: "Hardening", href: "/security/hardening", icon: ShieldCheck, group: "Control", keywords: "seguridad hardening vulnerabilidades" },
-  { id: "memory-review", label: "Revisión de memoria", href: "/memory/review", icon: FileCheck2, group: "Ecosistema", keywords: "memoria revisión evidencia aprendizaje" },
+  { id: "security-rls", label: "Políticas RLS", href: "/security/rls", icon: ShieldCheck, group: "Seguridad", keywords: "seguridad supabase rls policies tablas" },
+  { id: "security-grants", label: "Permisos", href: "/security/grants", icon: ShieldCheck, group: "Seguridad", keywords: "seguridad permisos grants roles" },
+  { id: "security-hardening", label: "Hardening", href: "/security/hardening", icon: ShieldCheck, group: "Seguridad", keywords: "seguridad hardening vulnerabilidades" },
+  { id: "memory-review", label: "Revisión de memoria", href: "/memory/review", icon: FileCheck2, group: "Recursos", keywords: "memoria revisión evidencia aprendizaje syntia" },
   { id: "chido-dashboard", label: "Chido Dashboard", href: "/chido/dashboard", icon: Activity, group: "Chido", keywords: "casino dashboard monitoreo" },
   { id: "chido-admin", label: "Chido Admin", href: "/chido/admin", icon: ShieldCheck, group: "Chido", keywords: "casino admin kyc depósitos retiros pausa" },
   { id: "chido-ops", label: "Chido Ops", href: "/chido/ops", icon: Database, group: "Chido", keywords: "casino operaciones monitoring" },
-  { id: "jurix", label: "Jurix Compliance", href: "/admin/jurix", icon: FileCheck2, group: "Control", keywords: "jurix legal compliance auditoria exportar" },
+  { id: "jurix", label: "Jurix", href: "/admin/jurix", icon: FileCheck2, group: "Seguridad", keywords: "jurix legal compliance auditoria exportar" },
 ];
 
-const BASE_ITEMS = [...NAVIGATION_ITEMS, ...SPECIAL_ITEMS];
+const BASE_ITEMS = [...NAVIGATION_ITEMS, ...SECONDARY_ITEMS, ...SPECIAL_ITEMS];
 
 function catalogIcon(kind: OperationsCatalogKind): LucideIcon {
   if (kind === "app") return AppWindow;
@@ -58,8 +67,8 @@ function catalogIcon(kind: OperationsCatalogKind): LucideIcon {
 }
 
 function catalogGroup(kind: OperationsCatalogKind): string {
-  if (kind === "app") return "Productos";
-  if (kind === "service") return "Servicios internos";
+  if (kind === "app") return "Apps";
+  if (kind === "service") return "Servicios";
   if (kind === "agent") return "AGIs";
   return "Áreas";
 }
@@ -168,7 +177,7 @@ export default function CommandPalette() {
     <>
       <button
         type="button"
-        className="fixed inset-0 z-[200] cursor-default bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[200] cursor-default bg-black/65 backdrop-blur-sm"
         onClick={() => setOpen(false)}
         aria-label="Cerrar búsqueda"
       />
@@ -178,9 +187,9 @@ export default function CommandPalette() {
           role="dialog"
           aria-modal="true"
           aria-label="Buscar en Hocker ONE"
-          className="overflow-hidden rounded-[26px] border border-white/15 bg-[#070d1a]/98 shadow-[0_40px_120px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
+          className="overflow-hidden rounded-[22px] border border-white/10 bg-[#07101f]/98 shadow-[0_32px_100px_rgba(0,0,0,0.58)] backdrop-blur-2xl"
         >
-          <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
+          <div className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-3.5">
             <Search className="h-5 w-5 shrink-0 text-slate-500" />
             <input
               ref={inputRef}
@@ -188,20 +197,20 @@ export default function CommandPalette() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Buscar vista, app, AGI, herramienta o función…"
+              placeholder="Buscar en Hocker One…"
               className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-white placeholder:text-slate-500 focus:outline-none"
               aria-label="Buscar en Hocker ONE"
               autoComplete="off"
               spellCheck={false}
             />
-            <kbd className="hidden shrink-0 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[10px] font-bold text-slate-400 sm:block">ESC</kbd>
+            <kbd className="hidden shrink-0 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-bold text-slate-400 sm:block">ESC</kbd>
           </div>
 
           <div ref={listRef} className="max-h-[68dvh] overflow-y-auto p-2 hko-sidebar-scroll">
             {filtered.length === 0 ? (
               <div className="px-4 py-10 text-center">
                 <p className="text-sm font-medium text-slate-300">Sin resultados para “{query}”</p>
-                <p className="mt-1 text-xs text-slate-600">Prueba con una capacidad, repositorio, módulo o responsable.</p>
+                <p className="mt-1 text-xs text-slate-600">Prueba con una app, AGI, recurso o acción.</p>
               </div>
             ) : (
               Array.from(grouped.entries()).map(([group, items]) => (
@@ -220,14 +229,14 @@ export default function CommandPalette() {
                         onClick={() => navigate(item)}
                         onMouseEnter={() => setActiveIndex(index)}
                         className={[
-                          "flex min-h-11 w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
+                          "flex min-h-11 w-full items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left transition",
                           active
-                            ? "border-sky-300/25 bg-sky-400/12 text-white"
+                            ? "border-sky-300/20 bg-sky-400/10 text-white"
                             : "border-transparent text-slate-400 hover:bg-white/[0.04]",
                         ].join(" ")}
                       >
                         <Icon className={active ? "h-[18px] w-[18px] text-sky-300" : "h-[18px] w-[18px] text-slate-500"} />
-                        <span className="flex-1 text-[13px] font-bold tracking-[0.02em]">{item.label}</span>
+                        <span className="flex-1 text-[13px] font-bold tracking-[0.01em]">{item.label}</span>
                         {active ? <kbd className="rounded-lg border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-bold text-slate-400">↵</kbd> : null}
                       </button>
                     );
@@ -237,7 +246,7 @@ export default function CommandPalette() {
             )}
           </div>
 
-          <div className="flex items-center justify-between border-t border-white/10 px-4 py-2.5">
+          <div className="flex items-center justify-between border-t border-white/[0.07] px-4 py-2.5">
             <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600">
               <span>↑↓ Navegar</span>
               <span>↵ Abrir</span>
