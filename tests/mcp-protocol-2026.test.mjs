@@ -16,10 +16,12 @@ test("MCP client prefers the 2026-07-28 stateless protocol with explicit routing
   assert.match(client, /io\.modelcontextprotocol\/protocolVersion/);
 });
 
-test("MCP client preserves an explicit initialize-era fallback for older servers", async () => {
+test("MCP client preserves an explicit current initialize-era fallback", async () => {
   const client = await read("src/lib/mcp/mcp-client.ts");
 
-  assert.match(client, /2024-11-05/);
+  assert.match(client, /2025-11-25/);
   assert.match(client, /legacy/i);
   assert.match(client, /initialize/);
+  assert.match(client, /notifications\/initialized/);
+  assert.match(client, /MCP-Session-Id/);
 });
