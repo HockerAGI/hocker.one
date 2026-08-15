@@ -54,8 +54,9 @@ test("guided GitHub chains never convert cancelled evidence into completion", as
 });
 
 test("Signal v1.1 UI consumes real state, progress and mobile reserve contracts", async () => {
-  const [resources, pulso, shell, navigation, chat, chain, css] = await Promise.all([
+  const [resources, integrations, pulso, shell, navigation, chat, chain, css] = await Promise.all([
     read("src/app/app/recursos/page.tsx"),
+    read("src/app/integrations/page.tsx"),
     read("src/app/app/pulso/page.tsx"),
     read("src/components/PrivateShell.tsx"),
     read("src/lib/hocker-navigation.ts"),
@@ -69,6 +70,11 @@ test("Signal v1.1 UI consumes real state, progress and mobile reserve contracts"
   assert.match(resources, /Avance verificado/);
   assert.match(resources, /Con problemas/);
   assert.doesNotMatch(resources, /Preparado/);
+
+  assert.match(integrations, /providerReadiness/);
+  assert.match(integrations, /Avance verificado/);
+  assert.match(integrations, /provider\.lastError/);
+  assert.doesNotMatch(integrations, /liveStatusLabel\(provider\.connected, provider\.configured\)/);
 
   assert.match(pulso, /completion_percent/);
   assert.match(pulso, /Avance verificable/);
