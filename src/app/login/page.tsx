@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { HockerOwnerLoginSurface } from "@/components/hocker-2c/auth/HockerOwnerLoginSurface";
 
 export const metadata: Metadata = {
-  title: "Login | Hocker ONE",
+  title: "Login",
   description: "Acceso privado al centro owner de Hocker ONE.",
   robots: {
     index: false,

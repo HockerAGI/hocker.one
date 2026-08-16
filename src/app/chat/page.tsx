@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "NOVA · Hocker ONE",
+  title: "NOVA",
   description: "Chat privado para operar Hocker ONE con aprobación, evidencia y ejecución controlada.",
   robots: { index: false, follow: false, noarchive: true },
 };
