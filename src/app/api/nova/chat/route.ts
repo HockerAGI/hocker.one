@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
@@ -12,6 +13,7 @@ import {
   shouldAnswerCapabilitiesLocally,
 } from "@/lib/hocker-tool-router";
 import { log } from "@/lib/logger";
+import { persistDedicatedNovaFallbackTurn } from "@/lib/agi-session-store";
 import { runToolEnabledUnifiedNovaChat } from "@/lib/unified-nova-chat-runtime";
 
 export const runtime = "nodejs";
@@ -214,7 +216,7 @@ export async function POST(req: Request): Promise<Response> {
         actions: [],
         trace_id: null,
         meta: {
-          reason: "Respuesta local desde capabilities_contract. No se llamó a nova.agi porque es estado real del sistema.",
+          reason: "Respuesta local desde capabilities_contract. No se llamó a un runtime de inferencia porque es estado real del sistema.",
           controls: {
             allow_write: false,
             requested_actions: false,
@@ -239,8 +241,11 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
+  const requestThreadId = parsed.data.thread_id ?? randomUUID();
+  const requestTraceId = randomUUID();
   const guardedPayload = {
     ...parsed.data,
+    thread_id: requestThreadId,
     project_id: chatCtx.project_id,
     user_id: chatCtx.user.id,
     user_email: chatCtx.user.email ?? null,
@@ -254,6 +259,7 @@ export async function POST(req: Request): Promise<Response> {
           ? parsed.data.context_data.hocker_runtime
           : {}),
         ...upstreamRuntimeContext,
+        request_trace_id: requestTraceId,
       },
     },
   };
@@ -285,7 +291,7 @@ export async function POST(req: Request): Promise<Response> {
           project_id: chatCtx.project_id,
           created_by: upstreamActionActorId,
           original_message: parsed.data.message,
-          trace_id: responseJson.trace_id ?? null,
+          trace_id: responseJson.trace_id ?? requestTraceId,
           upstream_meta: responseMeta,
         });
       } catch (error) {
@@ -346,13 +352,14 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const local = await runToolEnabledUnifiedNovaChat({
       project_id: chatCtx.project_id,
-      thread_id: parsed.data.thread_id ?? null,
+      thread_id: requestThreadId,
       message: parsed.data.message,
       user_id: chatCtx.user.id,
       user_email: chatCtx.user.email ?? null,
       context_data: guardedPayload.context_data,
       allow_actions: Boolean(upstreamActionActorId),
       oidc_token: req.headers.get("x-vercel-oidc-token"),
+      trace_id: requestTraceId,
     });
 
     return await finalizeRuntimeResponse(
@@ -367,6 +374,7 @@ export async function POST(req: Request): Promise<Response> {
     log.error("NOVA unified runtime failure", {
       route: "/api/nova/chat",
       detail: localError instanceof Error ? localError.message.slice(0, 240) : "unknown",
+      request_trace_id: requestTraceId,
     });
   }
 
@@ -379,6 +387,7 @@ export async function POST(req: Request): Promise<Response> {
           ...injectedMeta,
           runtime_primary: "hocker-one-unified",
           dedicated_fallback_available: false,
+          request_trace_id: requestTraceId,
         },
       },
       { status: 503, headers: { "Cache-Control": "no-store, max-age=0" } },
@@ -400,7 +409,7 @@ export async function POST(req: Request): Promise<Response> {
       cache: "no-store",
     });
     const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-    if (!res.ok || responseJson.ok !== true) {
+    if (!res.ok || responseJson.ok !== true || !String(responseJson.reply ?? "").trim()) {
       return NextResponse.json(
         {
           ok: false,
@@ -410,18 +419,58 @@ export async function POST(req: Request): Promise<Response> {
             runtime_primary: "hocker-one-unified",
             dedicated_fallback_used: true,
             dedicated_fallback_result: "unavailable",
+            request_trace_id: requestTraceId,
           },
         },
         { status: 502, headers: { "Cache-Control": "no-store, max-age=0" } },
       );
     }
 
+    try {
+      await persistDedicatedNovaFallbackTurn({
+        thread_id: requestThreadId,
+        project_id: chatCtx.project_id,
+        user_id: chatCtx.user.id,
+        user_message: parsed.data.message,
+        assistant_message: String(responseJson.reply),
+        request_trace_id: requestTraceId,
+        provider: responseJson.provider ?? null,
+        model: responseJson.model ?? null,
+        meta: {
+          dedicated_trace_id: responseJson.trace_id ?? null,
+          imported_at: new Date().toISOString(),
+        },
+      });
+    } catch (memoryError) {
+      log.error("NOVA dedicated fallback memory import failed", {
+        route: "/api/nova/chat",
+        detail: memoryError instanceof Error ? memoryError.message.slice(0, 240) : "unknown",
+        request_trace_id: requestTraceId,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "NOVA obtuvo una respuesta, pero no pudo asegurar la continuidad de memoria. Reintenta la solicitud.",
+          meta: {
+            ...injectedMeta,
+            runtime_primary: "hocker-one-unified",
+            dedicated_fallback_used: true,
+            dedicated_fallback_result: "memory_import_failed",
+            request_trace_id: requestTraceId,
+          },
+        },
+        { status: 503, headers: { "Cache-Control": "no-store, max-age=0" } },
+      );
+    }
+
     return await finalizeRuntimeResponse(
-      responseJson,
+      { ...responseJson, thread_id: requestThreadId },
       {
         runtime_primary: "hocker-one-unified",
         dedicated_fallback_used: true,
         dedicated_fallback_runtime: "nova-dedicated-compatibility",
+        fallback_memory_imported: true,
+        request_trace_id: requestTraceId,
       },
       res.status,
     );
@@ -430,6 +479,7 @@ export async function POST(req: Request): Promise<Response> {
     log.error("NOVA compatibility fallback failure", {
       route: "/api/nova/chat",
       timeout: isTimeout,
+      request_trace_id: requestTraceId,
     });
     return NextResponse.json(
       {
@@ -440,6 +490,7 @@ export async function POST(req: Request): Promise<Response> {
           runtime_primary: "hocker-one-unified",
           dedicated_fallback_used: true,
           dedicated_fallback_result: isTimeout ? "timeout" : "unavailable",
+          request_trace_id: requestTraceId,
         },
       },
       { status: 502, headers: { "Cache-Control": "no-store, max-age=0" } },
