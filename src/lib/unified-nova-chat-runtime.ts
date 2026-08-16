@@ -93,7 +93,7 @@ function publicReplyFromToolEnvelope(input: {
   if (input.tool_call_count > 0) {
     return input.phase === "post-tool"
       ? "La consulta adicional requiere otra operación de herramienta. No ejecuté una segunda ronda automáticamente; puedo continuar con la evidencia ya obtenida o preparar la siguiente acción para revisión."
-      : "Voy a validar la información con las herramientas disponibles antes de responder.";
+      : "";
   }
   return safeText(input.raw_text);
 }
