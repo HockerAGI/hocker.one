@@ -12,6 +12,9 @@ import { getNovaChatActionDraftPublicContext } from "@/lib/nova-chat-action-draf
 import { getNovaGitHubActionMaterializerPublicContext } from "@/lib/nova-github-action-materializer";
 import { getHockerNovaAlwaysOnAwarenessContext } from "@/lib/hocker-nova-always-on-awareness";
 
+const CONTEXT_BRIDGE_DOC = "docs/operations/CONTEXT_BRIDGE_V1.md";
+const PLATFORM_CLOSURE_GATE = "docs/operations/PLATFORM_CLOSURE_GATE_2026-08-14.md";
+
 export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one") {
   const tools = getRuntimeToolSummary();
   const capabilities = getHockerCapabilitiesContract(projectId);
@@ -19,54 +22,39 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
   return {
     ok: true,
     generated_at: new Date().toISOString(),
+    context_contract: {
+      mode: "evidence_driven",
+      context_bridge_doc: CONTEXT_BRIDGE_DOC,
+      closure_gate: PLATFORM_CLOSURE_GATE,
+      rule: "El Context Pack no define fases ni porcentajes manuales. Estado, salud y avance se derivan de registries, Context Bridge, Supabase, deployments, tests y evidence packs vigentes.",
+    },
     project: {
       id: projectId,
       name: "Hocker ONE",
-      purpose: "Panel privado operativo del ecosistema HOCKER para coordinar NOVA, AGIs, herramientas reales, aprobación owner, auditoría y ejecución controlada.",
+      purpose: "Control plane privado del ecosistema HOCKER para coordinar NOVA, AGIs, capacidades reales, Owner Gate, auditoría y ejecución controlada.",
     },
-    current_phase: {
-      name: "12.7M-2 — Hocker ONE ↔ NOVA Always-On Awareness Sync",
-      status: "in_progress",
-      objective: "Sincronizar Hocker ONE con NOVA.AGI 12.7M-1 Always-On Cognitive Mesh sin duplicar router, sin exponer proveedor/modelo/fallback al usuario y sin tocar ejecución productiva.",
-      previous_stable_phase: "12.7M-1 — NOVA.AGI Always-On Cognitive Mesh",
-      next_target: "12.7Z-1 — SQL normalization + idempotent GitHub worker.",
-    },
-    public_private_topology: {
-      ...getHockerPublicPrivateTopologyContext(),
-      pwa_lighthouse_diagnostics: {
-        version: "12.7L-2C-B",
-        status: "active",
-        manifest_start_url: "/app/nova",
-        header_trace: "12.7L-2C-private-noindex-clean",
-        lighthouse_status: "diagnostics_router_active",
-        provider_router_version: "12.7L-2C-B",
-        rule: "No avanzar a Fase 13 hasta tener Lighthouse real o error documentado con causa clara. Fallback documentado no equivale a éxito.",
-      },
-      app_shell_aliases: {
-        version: "12.7L-2A",
-        status: "active",
-        routes: ["/app", "/app/nova", "/app/actividad", "/app/pendientes", "/app/ecosistema", "/app/ajustes"],
-        compatibility_routes: ["/dashboard", "/chat", "/live", "/commands", "/map", "/owner", "/integrations"],
-        rule: "Aliases privados sin eliminar rutas heredadas; todos conservan noindex por header.",
-      },
-      private_noindex_header_hardening: {
-        version: "12.7L-1B",
-        status: "active",
-        source: "next.config.headers",
-        headers: ["X-Robots-Tag", "X-Hocker-Topology"],
-        objective: "Forzar noindex/nofollow/noarchive en rutas privadas, protegidas y API sin depender únicamente del middleware.",
-      },
-    },
+    public_private_topology: getHockerPublicPrivateTopologyContext(),
     provider_orchestrator_inventory: getHockerProviderOrchestratorPublicContext(),
     diagnostics_provider_router: getHockerDiagnosticsProviderRouterPublicContext(),
     nova_always_on_awareness: getHockerNovaAlwaysOnAwarenessContext(),
     non_negotiable_rules: [
       "Nada de escritura directa a main.",
-      "Nada de ejecución real sin Owner Gate.",
-      "Toda acción sensible debe pasar por agi_action_queue.",
-      "Toda ejecución debe guardar execution_result o execution_error.",
-      "No inventar integraciones: si falta llave o executor, marcarlo como faltante.",
+      "Nada de ejecución material sin el gate de autorización correspondiente.",
+      "Toda acción sensible debe pasar por Owner Gate / agi_action_queue.",
+      "Toda ejecución debe guardar execution_result o execution_error y evidencia trazable.",
+      "No inventar integraciones: configuración no equivale a conexión y ausencia de evidencia equivale a pendiente/no verificado.",
+      "No inventar porcentajes: sólo reportar avance cuando existe un denominador explícito de gates observables.",
+      "No copiar secretos, tokens, cookies, TOTP, KYC, PII restringida ni conversaciones privadas a Context Bridge o Memory Mirror.",
     ],
+    progress_reporting: {
+      mode: "observable_gates_only",
+      aggregate_percentages_in_context_pack: false,
+      rule: "Los porcentajes pertenecen a contratos que puedan demostrar passed/total. Para AGIs usar la matriz de certificación; para Apps e integraciones usar sus gates verificables y estado vivo. No reutilizar estimaciones históricas.",
+      canonical_counts: {
+        apps: APP_REGISTRY.length,
+        agis: AGI_REGISTRY.length,
+      },
+    },
     implemented_runtime: {
       github_read: ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"],
       github_write_gate: ["create_branch", "upsert_file", "create_pr"],
@@ -76,8 +64,18 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       owner_gate: true,
       audit_chain: true,
     },
-    apps: APP_REGISTRY.map((app) => ({ key: app.key, title: app.title, status: app.status, category: app.group })),
-    agis: AGI_REGISTRY.map((agi) => ({ key: agi.key, title: agi.title, status: agi.status, category: agi.group })),
+    apps: APP_REGISTRY.map((app) => ({
+      key: app.key,
+      title: app.title,
+      status: app.status,
+      category: app.group,
+    })),
+    agis: AGI_REGISTRY.map((agi) => ({
+      key: agi.key,
+      title: agi.title,
+      status: agi.status,
+      category: agi.group,
+    })),
     integrations: tools.tools.map((tool) => ({
       tool_key: tool.tool_key,
       name: tool.name,
@@ -90,24 +88,12 @@ export function getHockerContinuityContextPack(projectId = process.env.NEXT_PUBL
       next_step: tool.next_step,
     })),
     capabilities_contract: capabilities.public_context,
-    updated_percentages: {
-      hocker_one_private_operational_panel: 84,
-      mobile_web_ux_ui: 90,
-      agi_runtime_base: 69,
-      github_real_tooling: 94,
-      owner_gate_operational_security: 84,
-      nova_as_real_operator: 72,
-      syntia_context_memory: 77,
-      real_autonomous_agis: 61,
-      complete_real_hocker_ecosystem: 63,
-    },
     syntia_operational_memory: {
-      version: "12.7F-1",
       status: "available_via_async_context",
       endpoint: "/api/agi/runtime/memory",
-      rule: "Solo lectura. No ejecuta acciones ni escribe memoria desde Context Pack.",
+      rule: "Solo lectura desde el Context Pack. La publicación de memoria reutilizable conserva sus gates de revisión.",
     },
-    handoff_prompt_for_nova: "Antes de responder o preparar acciones, lee el Context Pack, revisa agi_action_queue, respeta Queue Lock, consulta capabilities_contract y usa syntia_operational_memory como continuidad real. NOVA debe hablar natural, elegir AGI/modelo automáticamente, no fingir integraciones y no iniciar tareas nuevas si hay cola pendiente. Toda acción sensible requiere Owner Gate, pruebas, auditoría y rollback.",
+    handoff_prompt_for_nova: "Antes de responder o preparar acciones, usa el contexto operativo más reciente, revisa agi_action_queue, respeta Queue Lock, consulta capabilities_contract y usa memoria SYNTIA sólo dentro de su alcance autorizado. NOVA no debe fingir integraciones, salud, certificaciones ni avance. Toda acción sensible requiere Owner Gate, pruebas, auditoría y reversa/compensación cuando aplique.",
   };
 }
 
@@ -128,8 +114,7 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
     nova_chat_action_drafts: getNovaChatActionDraftPublicContext(),
     nova_github_action_materializer: getNovaGitHubActionMaterializerPublicContext(),
     nova_chat_guided_execution: {
-      version: "12.7K-2C",
-      status: "active",
+      status: "active_contract",
       mode: "chat_owner_buttons_guided_github_chain_with_clean_ux",
       rules: {
         button_visibility_only_when_needed: true,
@@ -143,10 +128,6 @@ export async function getHockerContinuityContextPackWithMemory(projectId = proce
         technical_ids_hidden_by_default: true,
         evidence_and_rollback_visible_on_demand: true,
       },
-    },
-    updated_percentages: {
-      ...base.updated_percentages,
-      syntia_context_memory: memory.ok ? 82 : base.updated_percentages.syntia_context_memory,
     },
   };
 }
