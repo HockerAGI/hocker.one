@@ -52,22 +52,42 @@ test("legacy NOVA compatibility is post-turn, idempotent and observable", async 
   assert.match(migration, /legacy_sync_state = 'pending_reconcile'/);
 });
 
-test("legacy NOVA history backfills idempotently and reports unmapped rows", async () => {
-  const migration = await read("supabase/migrations/20260816073000_unified_agi_sessions.sql");
-  assert.match(migration, /backfill_legacy_nova_sessions/);
-  assert.match(migration, /legacy_source/);
-  assert.match(migration, /nova_threads/);
-  assert.match(migration, /nova_messages/);
+test("legacy history with unknown ownership is preserved but quarantined", async () => {
+  const migration = await read("supabase/migrations/20260816073200_unified_agi_legacy_quarantine.sql");
+  assert.match(migration, /legacy_unowned/);
+  assert.match(migration, /legacy_unmatched/);
+  assert.match(migration, /reconcile_required/);
+  assert.match(migration, /AGI_SESSION_OWNERSHIP_RECONCILIATION_REQUIRED/);
+  assert.match(migration, /legacy_thread_id_raw/);
+  assert.match(migration, /synthetic_thread_id/);
+  assert.match(migration, /reconcile_legacy_agi_session_owner/);
   assert.match(migration, /unmapped_message_count/);
-  assert.match(migration, /on conflict \(legacy_source, legacy_id\).*do nothing/is);
+  assert.doesNotMatch(migration, /drop\s+table\s+.*nova_(threads|messages)/i);
 });
 
-test("dedicated fallback imports into the same global turn without duplicating usage", async () => {
+test("dedicated fallback is linked to exact legacy rows by trace IDs", async () => {
+  const migration = await read("supabase/migrations/20260816073300_link_dedicated_nova_fallback.sql");
   const source = await read("src/lib/agi-session-store.ts");
+  assert.match(migration, /link_dedicated_nova_fallback_turn/);
+  assert.match(migration, /request_trace_id/);
+  assert.match(migration, /dedicated_trace_id/);
+  assert.match(migration, /agi_messages_link_dedicated_nova_fallback/);
+  assert.match(migration, /external_fallback_linked/);
+  assert.match(migration, /NOVA_FALLBACK_LEGACY_ASSISTANT_NOT_FOUND/);
   assert.match(source, /message_key: `\$\{input\.request_trace_id\}:user`/);
   assert.match(source, /message_key: `\$\{input\.request_trace_id\}:assistant`/);
   assert.match(source, /source_provider/);
   assert.match(source, /source_model/);
+  assert.match(source, /Do not overwrite legacy_sync_state here/);
+  assert.doesNotMatch(source, /legacy_sync_state:\s*"external_fallback"/);
+});
+
+test("fallback import does not duplicate provider usage", async () => {
+  const source = await read("src/lib/agi-session-store.ts");
   assert.match(source, /Do not pass provider\/model into appendAgiMessage here/);
-  assert.match(source, /legacy_sync_state: "external_fallback"/);
+  const fallbackSection = source.slice(source.indexOf("export async function persistDedicatedNovaFallbackTurn"));
+  const assistantSection = fallbackSection.slice(fallbackSection.indexOf("const assistant = await appendAgiMessage"), fallbackSection.indexOf("const \{ error: messageError \}", fallbackSection.indexOf("const assistant = await appendAgiMessage")));
+  assert.doesNotMatch(assistantSection, /provider:\s*input\.provider/);
+  assert.doesNotMatch(assistantSection, /model:\s*input\.model/);
+  assert.match(fallbackSection, /update\(\{ provider: input\.provider \?\? null, model: input\.model \?\? null \}\)/);
 });
