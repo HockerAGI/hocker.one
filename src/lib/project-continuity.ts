@@ -271,7 +271,7 @@ async function reconcileGithub(): Promise<ContinuitySourceResult> {
     source: "github",
     ok: true,
     revision,
-    checkpoint_id: typeof checkpoint.id === "string" ? checkpoint.id : null,
+    checkpoint_id: checkpoint.content_hash,
   };
 }
 
@@ -340,7 +340,7 @@ async function reconcileSupabase(): Promise<ContinuitySourceResult> {
     source: "supabase",
     ok: true,
     revision,
-    checkpoint_id: typeof checkpoint.id === "string" ? checkpoint.id : null,
+    checkpoint_id: checkpoint.content_hash,
   };
 }
 
@@ -391,7 +391,7 @@ async function reconcileVercel(): Promise<ContinuitySourceResult> {
     source: "vercel",
     ok: verified,
     revision,
-    checkpoint_id: typeof checkpoint.id === "string" ? checkpoint.id : null,
+    checkpoint_id: checkpoint.content_hash,
     ...(verified ? {} : { error: "vercel_runtime_metadata_incomplete" }),
   };
 }
