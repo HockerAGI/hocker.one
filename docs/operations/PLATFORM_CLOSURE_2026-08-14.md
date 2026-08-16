@@ -46,7 +46,7 @@ Do not silence advisors with broad authenticated policies.
 
 ### G4 — Supabase migration branch health
 
-Supabase branch metadata currently reports `MIGRATIONS_FAILED` for the default branch while the preview project reports healthy. Resolve/reconcile migration-branch state before using branching as the safety boundary for new DDL. No production DDL is authorized by this document.
+Supabase branch metadata currently reports `MIGRATIONS_FAILED` for the default branch while the preview project reports healthy. The branch metadata predates subsequent production migrations and recent branch-action logs do not establish a cause. Reconcile the branching resource before using it as a DDL safety boundary; do not reset/rebase merely to clear the status. No production DDL is authorized by this document.
 
 ### G5 — Database performance debt
 
@@ -97,6 +97,26 @@ Gate requirements:
 - never use raw conversations, secrets, TOTP/KYC/PII or private-domain content as global shared memory.
 
 `AGENTS.md` is repo operating guidance for Codex; Context Bridge is operational continuity; SYNTIA/Memory Mirror is reviewed reusable learning. These are complementary and must not be collapsed into a raw shared-chat store.
+
+### G11 — CHIDO Lab / Games cutover and duplicate cleanup
+
+The current target boundary is:
+
+- `chido.lab` = factory, math/fairness/simulation, CHIDO Proof and immutable release evidence;
+- `chido.games` = immutable release consumption, neutral CHIDO API/conformance and future partner/RGS/runtime packaging;
+- `chido.casino` = operator/player boundary.
+
+`chido.lab` still contains pre-split naming and legacy CHIDO API packages while `chido.games` reports the R3 CHIDO API Foundation migration complete. This is explicit migration debt, not authorization to delete files.
+
+Gate requirements before F8 duplicate deletion or package renaming:
+
+- cross-repository contract/parity tests are green;
+- every active consumer is identified and switched to the intended owner;
+- release bundle/checksum compatibility is verified;
+- rollback to the pre-cutover consumer is demonstrated;
+- no operator wallet/KYC/settlement dependency has leaked into Lab/Games neutral packages;
+- CI is green on both sides of the cutover;
+- legacy deletion is a final dedicated PR, never bundled into unrelated cleanup.
 
 ## 3. HOCKER MCP / Cloudflare Zero Trust target
 
@@ -154,7 +174,8 @@ Hocker One and the canonical AGI platform can be called ready for downstream pro
 12. Cloudflare MCP/Worker controls are either verified in the account or explicitly tracked as a launch-blocking exception for affected internal endpoints;
 13. rollback/runbooks/evidence references are current;
 14. no critical open drift is hidden by documentation;
-15. Context Bridge checkpoints/manifest reflect the frozen candidate evidence set and any activation is backed by Owner + MFA AAL2 evidence.
+15. Context Bridge checkpoints/manifest reflect the frozen candidate evidence set and any activation is backed by Owner + MFA AAL2 evidence;
+16. cross-repository migration debt that could cause duplicate ownership or destructive cleanup (including CHIDO Lab/Games F8) is reconciled or explicitly scoped out of the release.
 
 Until then, downstream repositories may continue **documentation, isolated development and non-production work**, but should not depend on Hocker One as a certified production action plane.
 
@@ -187,11 +208,13 @@ The primary project still carries Security Advisor WARN/INFO findings and defaul
 
 ### 6.3 Code/history regression audit
 
-PR #213 is based on the exact current `main` baseline and is ahead without being behind. Version comparison found one real capability-discoverability regression: unmounting the old `WorkspaceBar` hid the only visible `toggleTutorial()` and `resetWorkspace()` controls while their underlying `WorkspaceContext` remained intact.
+PR #213 is based on the exact current `main` baseline. Full comparison of audited head `b07f0765a077fe25870321e46d397fd3a2a6527a` against baseline reports **69 commits ahead, 0 behind and no deleted files**. The suspected functionality loss came from unmounting/restructuring existing UI, not deleting source files.
 
-The #213 branch now restores those controls compactly under `Más/Ajustes` instead of restoring the old persistent bar. CI/exact-SHA preview evidence remains required before merge.
+Version comparison found one real capability-discoverability regression: unmounting the old `WorkspaceBar` hid the only visible `toggleTutorial()` and `resetWorkspace()` controls while their underlying `WorkspaceContext` remained intact.
 
-Other removed Signal-era layers reviewed so far (`HockerLiveBackground`, `HockerVfxLayer`) are presentation layers; no functional dependency has been established. Detailed secondary routes remain defined/searchable even though persistent sidebar navigation was simplified.
+The #213 branch restores those controls compactly under `Más/Ajustes` instead of restoring the old persistent bar. The repaired head passed repository CI and its exact Vercel Preview was READY with no error/fatal logs in the queried preview window. Authenticated exact-SHA mobile QA remains required before merge.
+
+Other removed Signal-era layers reviewed (`HockerLiveBackground`, `HockerVfxLayer`) are presentation layers; no functional dependency has been established. Detailed secondary routes remain defined/searchable even though persistent sidebar navigation was simplified.
 
 ### 6.4 Codex/context drift
 
@@ -204,3 +227,7 @@ The old root `INTEGRATION_VERIFICATION.md` dated 2025-07-09 claimed a four-repo 
 ### 6.5 Formal canonical publication drift
 
 The 2026-08-05 PDF publications remain the approved human editions but their factual inventories require a new formal edition. The reconciled evidence is tracked in PR #214 (`docs/operations/DOC_ALIGNMENT_2026-08-15.md`) until editable canonical masters are published through the governed document release process.
+
+### 6.6 CHIDO repository-boundary drift
+
+`chido.games/main` reflects the current Lab -> Release Bundle -> Games separation, but `chido.lab/main` retains legacy `CHIDO Games` naming and CHIDO API copies from the pre-split architecture. Draft `chido.lab` PR #6 corrects the README boundary without deleting packages. Final F8 cleanup remains blocked on cross-repository parity, consumer cutover, rollback and CI evidence.
