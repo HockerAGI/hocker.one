@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { runServerlessAgiWorkerOnce } from "@/lib/serverless-agi-runtime";
+import { runUnifiedAgiWorkerOnce } from "@/lib/unified-agi-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,8 +52,6 @@ async function authorizeAndConsume(req: Request): Promise<RuntimeToken | null> {
 
   if (error || !data) return null;
 
-  // Query-string credentials are accepted only for a single-use verification.
-  // Recurring automation must send the token in the protected request header.
   if (supplied.source === "query" && !data.one_time) return null;
 
   if (data.one_time) {
@@ -93,7 +91,7 @@ async function execute(req: Request): Promise<Response> {
 
   const url = new URL(req.url);
   const assignedAgi = String(url.searchParams.get("agi") ?? "").trim() || null;
-  const result = await runServerlessAgiWorkerOnce({
+  const result = await runUnifiedAgiWorkerOnce({
     project_id: token.project_id,
     assigned_agi: assignedAgi,
     requested_by: `runtime-token:${token.purpose}`,
