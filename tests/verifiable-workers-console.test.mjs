@@ -22,12 +22,13 @@ test("workers console is discoverable from shared navigation and global catalog"
 
 test("workers API keeps reads private and writes role-gated", async () => {
   const route = await read("src/app/api/agi/workers/route.ts");
-  const runtime = await read("src/lib/serverless-agi-runtime.ts");
+  const runtime = await read("src/lib/unified-agi-runtime.ts");
 
   assert.match(route, /requireProjectRole\(projectId, \["owner", "admin", "operator", "viewer"\]\)/);
   assert.match(route, /requireProjectRole\(action\.project_id, \["owner", "admin", "operator"\]\)/);
   assert.match(route, /requireProjectRole\(action\.project_id, \["owner"\]\)/);
-  assert.match(route, /runServerlessAgiWorkerOnce/);
+  assert.match(route, /getUnifiedAgiWorkerStatus/);
+  assert.match(route, /runUnifiedAgiWorkerOnce/);
   assert.match(runtime, /claim_next_agi_task/);
   assert.match(runtime, /complete_serverless_agi_execution/);
   assert.match(runtime, /fail_agi_task/);
@@ -53,6 +54,6 @@ test("manual execution processes one task and stale recovery remains explicit", 
 
   assert.match(console, /operation: "run_once"/);
   assert.match(console, /operation: "recover_stale"/);
-  assert.match(route, /runServerlessAgiWorkerOnce/);
+  assert.match(route, /runUnifiedAgiWorkerOnce/);
   assert.match(route, /recoverStaleServerlessAgiTasks/);
 });
