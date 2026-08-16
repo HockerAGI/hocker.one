@@ -4,10 +4,10 @@ import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib"
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
   createServerlessAgiTask,
-  getServerlessAgiWorkerStatus,
+  getUnifiedAgiWorkerStatus,
   recoverStaleServerlessAgiTasks,
-  runServerlessAgiWorkerOnce,
-} from "@/lib/serverless-agi-runtime";
+  runUnifiedAgiWorkerOnce,
+} from "@/lib/unified-agi-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,7 +80,7 @@ export async function GET(req: Request): Promise<Response> {
     const [taskState, runs, status] = await Promise.all([
       loadTasks(projectId),
       loadRuns(projectId),
-      getServerlessAgiWorkerStatus(projectId, req.headers.get("x-vercel-oidc-token")),
+      getUnifiedAgiWorkerStatus(projectId, req.headers.get("x-vercel-oidc-token")),
     ]);
 
     return json({
@@ -122,7 +122,7 @@ export async function POST(req: Request): Promise<Response> {
 
     const ctx = await requireProjectRole(action.project_id, ["owner"]);
     if (action.operation === "run_once") {
-      const result = await runServerlessAgiWorkerOnce({
+      const result = await runUnifiedAgiWorkerOnce({
         project_id: ctx.project_id,
         assigned_agi: action.assigned_agi ?? null,
         requested_by: ctx.user.id,
