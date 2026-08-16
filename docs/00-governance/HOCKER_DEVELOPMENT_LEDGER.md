@@ -4,7 +4,7 @@ status: ACTIVE-DRAFT
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-16T09:50:31-07:00
+last_verified_at: 2026-08-16T12:54:32-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only change log; snapshots may be reconciled only from evidence
 ---
@@ -18,13 +18,13 @@ Durable continuity record for the HOCKER ecosystem. This ledger records only evi
 
 Connected inventory on 2026-08-16 found **9 GitHub repositories** under `HockerAGI`: `hocker.one`, `hocker.agi`, `nova.agi`, `hocker-node-agent`, `chido.casino`, `chido.lab`, `chido.games`, `hocker.ads`, and `punto.g`.
 
-Current connected provider inventory also verifies **3 Vercel projects** in team `Hocker AGI`: `hocker-one`, `hocker.agi`, and `chido-casino`; and **2 Supabase projects** in the HOCKER organization: production/shared `Hocker AGI Technologies` (`yvuibbcuntqpyqiuqggd`, ACTIVE_HEALTHY, us-west-1, Postgres 17.6.1.063) plus `chido-hardening-validation-20260806` (`pswlloziztxjsjazfiiy`, ACTIVE_HEALTHY, us-west-1, Postgres 17.6.1.155). Provider state is directly observable for these surfaces. Conversation context remains secondary evidence.
+Current connected provider inventory verifies **3 Vercel projects** in team `Hocker AGI`: `hocker-one`, `hocker.agi`, and `chido-casino`; and **2 Supabase projects** in the HOCKER organization: production/shared `Hocker AGI Technologies` (`yvuibbcuntqpyqiuqggd`, ACTIVE_HEALTHY, us-west-1, Postgres 17.6.1.063) plus `chido-hardening-validation-20260806` (`pswlloziztxjsjazfiiy`, ACTIVE_HEALTHY, us-west-1, Postgres 17.6.1.155). Provider state is directly observable for these surfaces. Conversation context remains secondary evidence.
 
 ## Ecosystem snapshot
 
 | Repository | Visibility | Canonical/product role | Verified current state | Immediate gate / next action |
 |---|---|---|---|---|
-| `HockerAGI/hocker.one` | public | Hocker One control plane; governance of 16 AGIs | `main` includes guarded Owner+AAL2 runtime eval and read-only tool runtime through PR #208. Open PR #209 is the global evidence-based closure gate. Open PR #214 adds continuity/context reconciliation with successful CI and READY Vercel Preview evidence in its PR record, but explicitly does not authorize merge. Open PR #213 is an isolated HOCKER Signal UI draft. PR #215 contains this global ledger; exact head `348bc5be767140ac5282af9e1c9773eba9574499` has GitHub Actions CI run `31957706393` = SUCCESS and Vercel Preview `dpl_7ZmdDZar2FQucDxnP6DbZQuNNnsB` = READY. PR #215 remains open, non-draft and mergeable; approved-review/branch-protection authorization remains `PENDING EVIDENCE`. Separate branch `work/p0-provider-independent-agi-memory-20260816` has no PR and previously generated repeated Vercel Preview ERROR deployments. | Do not claim platform closure. Resolve #209 blockers; review #214 against #209 and Owner/AAL2 requirements; keep #213 isolated. PR #215 remains unmerged because approval/branch-protection authorization is not evidenced. Do not merge the unreviewed provider-independent AGI/memory branch while preview failures remain unexplained. |
+| `HockerAGI/hocker.one` | public | Hocker One control plane; governance of 16 AGIs | `main` includes guarded Owner+AAL2 runtime eval and read-only tool runtime through PR #208. Open PR #209 is the global evidence-based closure gate. Draft PR #214 is now at head `d1c2a9a9584c918d4b7b51f87c0d56b699c2e247`, mergeable, with GitHub Actions CI run `31968693820` = SUCCESS and exact Vercel Preview `dpl_E3bLLEom133WVQdgxbzUhi1Nzc18` = READY; it still has zero submitted reviews and explicitly states it does not authorize merge. Open PR #213 remains isolated HOCKER Signal UI work. PR #215 contains this ledger; prior exact head `b6d40bc52bec1eb75bafb1f4c6ce41ba747ca1c6` has GitHub Actions CI run `31959905737` = SUCCESS and Vercel Preview `dpl_3upykPjCVogPbCwQAdsqW1o1Dh77` = READY. PR #215 remains open, non-draft and mergeable; approved-review/branch-protection authorization remains `PENDING EVIDENCE`. Separate branch `work/p0-provider-independent-agi-memory-20260816` now also points to `d1c2a9a...` and its latest Vercel Preview `dpl_9xaGoaudG1xjA3wPUWYYgJ8AdvkS` = READY after multiple prior ERROR previews, but that branch itself still has no dedicated PR/review gate. | Do not claim platform closure. Resolve #209 blockers. Review #214 against #209 and Owner/AAL2 requirements; draft + zero reviews block promotion despite green CI/Preview. Keep #213 isolated. PR #215 remains unmerged because approval/branch-protection authorization is not evidenced. Treat the work branch recovery as build evidence only, not merge authorization. |
 | `HockerAGI/hocker.agi` | public | corporate/public HOCKER surface | Active; open dependency PRs include TypeScript 7 (#15) and `@types/node` 26 (#12). Vercel project exists. | Dependency upgrades require compatibility/build/security evidence before merge. |
 | `HockerAGI/nova.agi` | public | dedicated NOVA runtime | Open PR #32 establishes durable recovery/continuity; CI SUCCESS at recorded head. Dedicated live Railway revision, readiness, logs/heartbeat and authenticated Hocker One→NOVA E2E remain unverified in PR evidence. | Keep runtime deployment status fail-closed until exact live revision + readiness + logs + authenticated E2E are evidenced. |
 | `HockerAGI/hocker-node-agent` | public | authorized local executor | Repository exists and is accessible. No fresh execution evidence was observed in the current cross-repo audit. | `PENDING EVIDENCE`: verify current main SHA, CI, allowlists, HMAC/non-root/sandbox posture and active-node evidence before asserting readiness. |
@@ -40,8 +40,9 @@ Current connected provider inventory also verifies **3 Vercel projects** in team
 
 - Team: `Hocker AGI` (`team_nEtACFYtjltFLERznYyZ40pK`).
 - Projects: `hocker-one`, `hocker.agi`, `chido-casino`.
-- Hocker One PR #215 exact head `348bc5be767140ac5282af9e1c9773eba9574499`: Preview `dpl_7ZmdDZar2FQucDxnP6DbZQuNNnsB` = `READY`; GitHub Actions CI run `31957706393` = `SUCCESS`.
-- Branch `work/p0-provider-independent-agi-memory-20260816` previously produced repeated `ERROR` previews and has no open PR in connected GitHub search; it is not a merge candidate.
+- Hocker One PR #214 exact head `d1c2a9a9584c918d4b7b51f87c0d56b699c2e247`: Preview `dpl_E3bLLEom133WVQdgxbzUhi1Nzc18` = `READY`; GitHub Actions CI run `31968693820` = `SUCCESS`.
+- Hocker One PR #215 prior exact head `b6d40bc52bec1eb75bafb1f4c6ce41ba747ca1c6`: Preview `dpl_3upykPjCVogPbCwQAdsqW1o1Dh77` = `READY`; GitHub Actions CI run `31959905737` = `SUCCESS`.
+- Branch `work/p0-provider-independent-agi-memory-20260816` recovered from repeated `ERROR` previews at latest head `d1c2a9a...`; latest Preview `dpl_9xaGoaudG1xjA3wPUWYYgJ8AdvkS` = `READY`. Recovery does not establish review/merge authorization.
 
 ### Supabase
 
@@ -70,9 +71,9 @@ The canonical HOCKER portfolio remains 10 applications and 16 AGIs per the 2026.
 1. **Repository inventory drift is real:** connected GitHub exposes 9 repositories, while older canonical architecture/security documents recorded 5.
 2. **Provider inventory drift is also real:** direct provider access verifies 3 Vercel projects and 2 Supabase projects; the second Supabase validation project is not represented in the prior ecosystem snapshot.
 3. **Supabase closure remains blocked:** production/shared project retains security WARN/INFO findings and branch state `MIGRATIONS_FAILED`; validation project previously showed at least one security `ERROR` plus wallet/wager SECURITY DEFINER WARNs.
-4. **Hocker One has an unreviewed high-churn work branch:** previous repeated Vercel Preview ERROR states show that green local/code assumptions are insufficient; no main integration is allowed until exact-head preview/build failures are resolved and a PR/review gate exists.
+4. **Hocker One memory/runtime branch build regression recovered at current head:** branch `work/p0-provider-independent-agi-memory-20260816` moved from repeated Vercel Preview ERROR states to READY at `d1c2a9a...`. The same commit is the current head of draft PR #214, whose CI is also green, but no review/Owner authorization exists; recovery is not promotion evidence by itself.
 5. **Hocker Ads E-060 progressed materially:** PR #18 exact-head CI was green across all four observed workflows, but it is still a draft and remains local/provider-neutral by contract.
-6. **Ledger promotion gate is technically green but not fully authorized:** PR #215 exact head `348bc5be767140ac5282af9e1c9773eba9574499` has exact-head CI SUCCESS and Vercel Preview READY, but approved-review/branch-protection requirements remain `PENDING EVIDENCE`.
+6. **Ledger promotion gate remains technically green but not fully authorized:** PR #215 prior exact head `b6d40bc52bec1eb75bafb1f4c6ce41ba747ca1c6` has exact-head CI SUCCESS and Vercel Preview READY, but approved-review/branch-protection requirements remain `PENDING EVIDENCE`.
 7. **Regulated/destructive surfaces remain fail-closed:** CHIDO real money, Wallet/financial actions, sensitive KYC, production DDL, secret rotation, AGI material actions and equivalent high-risk changes require the canonical human/Owner gates.
 
 ## Documentation drift queue
@@ -82,7 +83,7 @@ The canonical HOCKER portfolio remains 10 applications and 16 AGIs per the 2026.
 | Global repository inventory | Canonical 2026.08 sources describe five repositories; connected inventory is nine. | Update editable DOC-00/DOC-05/DOC-07 inventory sources after classification of `chido.lab`, `chido.games`, `hocker.ads`, `punto.g`; regenerate derived PDFs only through the existing document pipeline. | PENDING OWNER CLASSIFICATION |
 | Provider inventory | Prior snapshot omitted direct Vercel/Supabase provider state and second Supabase validation project. | Reconcile editable architecture/security inventory with 3 Vercel + 2 Supabase projects and explicit validation-project lifecycle/retirement policy. | OPEN DRIFT |
 | Supabase security | DOC-07 describes earlier P0/P1 findings, but current advisor output contains a broader/new set including GraphQL exposure, SECURITY DEFINER execution, leaked-password protection and validation-project RLS ERROR. | Update editable security evidence/runbook source after owner/security review; remediate through migrations/configuration, then rerun advisors. | BLOCKED / ACTION REQUIRED |
-| Hocker One continuity | PR #214 introduces continuity protocol, last-known-state and context reconciliation. | Review against #209 closure gate and this global ledger; merge only after required approvals/gates. | OPEN PR |
+| Hocker One continuity | PR #214 introduces continuity protocol, last-known-state and context reconciliation; exact head is now CI/Preview green after earlier branch-level preview failures. | Review against #209 closure gate and this global ledger; merge only after draft removal, required approvals and Owner/AAL2 gates. | OPEN DRAFT PR |
 | NOVA continuity | PR #32 adds durable continuity but live Railway evidence is missing. | Preserve UNKNOWN live deployment status until exact runtime evidence exists. | OPEN PR |
 | Hocker Ads | Repository has advanced into E-060 with exact-head CI green. | Reconcile APP-06 editable product/architecture sources after E-060 semantic review/stabilization; do not claim remote provider activation. | IN PROGRESS |
 | CHIDO | Lab/Games split and R3 release-bundle architecture post-date older five-repo canon. | Reconcile architecture inventory and CHIDO product docs while preserving DEMO/REAL legal gates. | IN PROGRESS |
@@ -92,10 +93,11 @@ The canonical HOCKER portfolio remains 10 applications and 16 AGIs per the 2026.
 
 **No automatic merge performed in this run.** Evidence-based reasons:
 
-- Hocker One #209/#214 explicitly retain global/provider/Owner blockers.
-- Hocker One #213 is draft/TDD UI work.
-- Hocker One #215 exact head `348bc5be767140ac5282af9e1c9773eba9574499` has CI SUCCESS and Vercel Preview READY, but approved-review/branch-protection authorization remains `PENDING EVIDENCE`.
-- Hocker One provider-independent AGI/memory branch has no PR and previous multiple Vercel Preview ERROR deployments.
+- Hocker One #209 retains global/provider/Owner blockers.
+- Hocker One #214 is still draft, has zero submitted reviews and explicitly states it does not authorize merge, despite exact-head CI SUCCESS and Vercel READY.
+- Hocker One #213 remains isolated UI/TDD work.
+- Hocker One #215 prior exact head `b6d40bc52bec1eb75bafb1f4c6ce41ba747ca1c6` has CI SUCCESS and Vercel Preview READY, but approved-review/branch-protection authorization remains `PENDING EVIDENCE`; this ledger update creates a new exact head that must itself be gated.
+- Hocker One provider-independent AGI/memory branch now has a READY latest preview but still lacks a dedicated PR/review authorization path; prior failures remain relevant regression history.
 - NOVA #32 lacks exact live runtime/deployment/E2E evidence.
 - Hocker Ads #18 is still draft; green CI does not substitute semantic/security review or its independent provider gates.
 - CHIDO #9/#10 and Lab #6 are design/boundary work, not regulated-production authorizations.
@@ -179,3 +181,13 @@ For every material delta capture, when accessible: repository + SHA, PR, CI/chec
 - Rechecked production/shared Supabase: project remains `ACTIVE_HEALTHY`, branch `main` remains `MIGRATIONS_FAILED`; current advisors still report RLS-no-policy INFO, anon/authenticated GraphQL exposure WARNs, SECURITY DEFINER execution WARNs and leaked-password-protection disabled.
 - Cross-repo commit scan found no newer product/runtime commits than the already-recorded CHIDO Games/Hocker Ads work; no new promotable implementation was evidenced in this interval.
 - Performed no main merge, production DDL, secret/configuration mutation, regulated activation or other high-risk action because review/authorization and platform-security gates remain incomplete.
+
+### 2026-08-16 12:54 PDT — Hocker One PR #214 exact-head recovered to green
+
+- Verified draft PR #214 current head `d1c2a9a9584c918d4b7b51f87c0d56b699c2e247` is open and mergeable but remains draft with zero submitted reviews.
+- Verified exact-head GitHub Actions CI run `31968693820` completed with `success`.
+- Verified exact-head Vercel Preview `dpl_E3bLLEom133WVQdgxbzUhi1Nzc18` is `READY`.
+- Verified the parallel branch `work/p0-provider-independent-agi-memory-20260816` also has a latest READY Preview `dpl_9xaGoaudG1xjA3wPUWYYgJ8AdvkS` for the same commit after multiple prior ERROR previews; this closes the observed build regression at current head but not the review/authorization gate.
+- Verified PR #215 prior head `b6d40bc52bec1eb75bafb1f4c6ce41ba747ca1c6` has GitHub Actions CI run `31959905737` = `success` and Vercel Preview `dpl_3upykPjCVogPbCwQAdsqW1o1Dh77` = `READY`; PR #215 remains open/non-draft/mergeable but approval and readable branch-protection authorization remain `PENDING EVIDENCE`.
+- Rechecked provider inventory: still 3 Vercel projects and 2 Supabase projects; production/shared Supabase `main` remains `MIGRATIONS_FAILED`, and current security advisors remain materially unchanged (RLS-no-policy INFO, GraphQL exposure WARNs, SECURITY DEFINER execution WARNs, leaked-password-protection disabled).
+- Performed no main merge, production DDL, grant/RLS mutation, secret/configuration change, regulated activation or Owner-gated action.
