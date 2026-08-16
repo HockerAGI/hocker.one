@@ -124,7 +124,7 @@ export async function buildAgiInferenceContext(input: {
       })
       .join("\n");
     const part = withinBudget(
-      `Memory Mirror aprobado y aplicable:\n${formatted}`,
+      `Memory Mirror seguro, activo y aplicable:\n${formatted}`,
       Math.min(systemRemaining, 9000),
     );
     if (part.text) systemParts.push(part.text);
