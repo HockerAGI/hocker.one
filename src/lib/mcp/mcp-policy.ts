@@ -8,6 +8,7 @@ const SENSITIVE_KEY = /(authorization|cookie|password|passwd|secret|token|api[_-
 const SAFE_TOOL_NAME = /^[a-z0-9_.:-]+$/i;
 const SAFE_REPOSITORY_PART = /^[a-z0-9_.-]+$/i;
 const SAFE_GITHUB_PATH = /^[a-z0-9_./@+()\[\] -]+$/i;
+const SENSITIVE_GITHUB_READ_PATH = /(^|\/)(?:\.env(?:\.[^/]*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|credentials?|secrets?|[^/]*\.(?:pem|key|p12|pfx|jks|keystore)|[^/]*service[-_]?account[^/]*\.json)(?:\/|$)/i;
 const MAX_ARGS_BYTES = 16 * 1024;
 
 const DEFAULT_GITHUB_REPOSITORIES = [
@@ -19,6 +20,7 @@ const DEFAULT_GITHUB_REPOSITORIES = [
   "HockerAGI/hocker.ads",
   "HockerAGI/chido.lab",
   "HockerAGI/chido.games",
+  "HockerAGI/punto.g",
 ] as const;
 
 const GITHUB_MUTATION_TOOLS = new Set([
@@ -107,6 +109,13 @@ function envList(name: string, fallback: readonly string[]): string[] {
     .filter(Boolean);
 }
 
+function allowedGithubRepositories(): Set<string> {
+  return new Set(
+    envList("HOCKER_GITHUB_ALLOWED_REPOS", DEFAULT_GITHUB_REPOSITORIES)
+      .map((item) => item.toLowerCase()),
+  );
+}
+
 function githubRepository(args: Record<string, unknown>): string {
   const explicit = String(
     args.repository_full_name ??
@@ -126,6 +135,28 @@ function githubRepository(args: Record<string, unknown>): string {
     throw new Error("La mutación GitHub requiere un repositorio explícito owner/repo.");
   }
 
+  return `${parts[0]}/${parts[1]}`;
+}
+
+function githubReadRepository(args: Record<string, unknown>): string {
+  const explicit = String(
+    args.repository_full_name ??
+      args.repo_full_name ??
+      args.repository ??
+      "",
+  ).trim();
+  const fallbackOwner = String(process.env.GITHUB_OWNER ?? "HockerAGI").trim();
+  const fallbackRepo = String(process.env.GITHUB_REPO ?? "hocker.one").trim();
+  const combined = explicit || (
+    args.owner && args.repo
+      ? `${String(args.owner).trim()}/${String(args.repo).trim()}`
+      : `${fallbackOwner}/${fallbackRepo}`
+  );
+
+  const parts = combined.split("/").filter(Boolean);
+  if (parts.length !== 2 || !parts.every((part) => SAFE_REPOSITORY_PART.test(part))) {
+    throw new Error("Repositorio GitHub inválido para lectura AGI.");
+  }
   return `${parts[0]}/${parts[1]}`;
 }
 
@@ -171,18 +202,27 @@ function assertSafeGitHubPath(value: unknown): void {
   }
 }
 
+function assertSafeGitHubReadPath(value: unknown): void {
+  if (value === undefined || value === null || String(value).trim() === "") return;
+  const path = String(value).trim().replace(/^\/+/, "");
+  if (!path || path.length > 500 || !SAFE_GITHUB_PATH.test(path)) {
+    throw new Error("Path GitHub inválido para lectura AGI.");
+  }
+  if (path.includes("..") || path.includes("\\") || path.startsWith(".git/")) {
+    throw new Error("Path GitHub fuera de política de lectura AGI.");
+  }
+  if (SENSITIVE_GITHUB_READ_PATH.test(path)) {
+    throw new Error("Path sensible bloqueado para lectura AGI.");
+  }
+}
+
 function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>): void {
   if (!GITHUB_MUTATION_TOOLS.has(tool)) {
     throw new Error(`Mutación GitHub no permitida por Owner Gate: ${tool}`);
   }
 
   const repository = githubRepository(args);
-  const allowed = new Set(
-    envList("HOCKER_GITHUB_ALLOWED_REPOS", DEFAULT_GITHUB_REPOSITORIES)
-      .map((item) => item.toLowerCase()),
-  );
-
-  if (!allowed.has(repository.toLowerCase())) {
+  if (!allowedGithubRepositories().has(repository.toLowerCase())) {
     throw new Error(`Repositorio GitHub fuera de allowlist: ${repository}`);
   }
 
@@ -209,6 +249,31 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
 export function isReadOnlyMcpTool(provider: McpProviderId, tool: string): boolean {
   const clean = String(tool || "").trim();
   return READ_ONLY_TOOLS[provider].some((pattern) => pattern.test(clean));
+}
+
+export function assertMcpReadToolPolicy(
+  provider: McpProviderId,
+  tool: string,
+  rawArgs: Record<string, unknown>,
+): void {
+  const args = asRecord(rawArgs);
+  if (!isReadOnlyMcpTool(provider, tool)) {
+    throw new Error("Herramienta MCP no clasificada como lectura.");
+  }
+  if (hasSensitiveKey(args)) {
+    throw new Error("Argumentos MCP de lectura contienen credenciales o secretos.");
+  }
+  if (Buffer.byteLength(JSON.stringify(args), "utf8") > MAX_ARGS_BYTES) {
+    throw new Error("Argumentos MCP de lectura demasiado grandes.");
+  }
+
+  if (provider === "github") {
+    const repository = githubReadRepository(args);
+    if (!allowedGithubRepositories().has(repository.toLowerCase())) {
+      throw new Error(`Repositorio GitHub fuera de allowlist de lectura: ${repository}`);
+    }
+    assertSafeGitHubReadPath(args.path);
+  }
 }
 
 export function validateDeferredMcpDraft(raw: unknown): ValidatedMcpDraft {
