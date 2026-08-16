@@ -33,12 +33,28 @@ Snapshot observado el 2026-08-15: 9 repositorios accesibles (`hocker.one`, `nova
 
 `punto.g`, Chido, Wallet, NEXPA, Trackhok y otros dominios sensibles mantienen aislamiento de datos. Compartir sólo hechos operativos autorizados, agregados o explícitamente aprobados.
 
-## 4. Contexto y memoria compartida
+## 4. Contexto, continuidad y memoria compartida
 
-- **Context Bridge** (`docs/operations/CONTEXT_BRIDGE_V1.md`, `src/lib/context-bridge.ts`) es el registro de continuidad operativa entre ChatGPT, Codex, GitHub, Google Drive, Supabase y Vercel.
+- **Context Bridge** (`docs/operations/CONTEXT_BRIDGE_V1.md`, `src/lib/context-bridge.ts`) es el registro durable de continuidad operativa entre ChatGPT, Codex, GitHub, Google Drive, Supabase y Vercel.
+- **Continuity Protocol** (`docs/operations/CONTINUITY_PROTOCOL.md`) define cómo recuperar una sesión, cuándo emitir checkpoints y cómo reconciliar actividad de repositorios sin depender de un chat abierto.
+- **Last Known State** (`docs/operations/LAST_KNOWN_STATE.md`) es un handoff humano de emergencia y de hitos; no reemplaza los checkpoints vivos ni debe editarse por cada evento menor.
 - **Context Pack** (`src/lib/hocker-context-pack.ts`) debe derivarse de registries/estado observable. No debe contener fases o porcentajes manuales que aparenten estado vivo.
 - **SYNTIA / Memory Mirror** conserva conocimiento reutilizable revisado; no es un volcado de chats ni un sustituto de Context Bridge.
 - Un nuevo manifiesto de Context Bridge se genera desde checkpoints actuales y sólo se activa mediante Owner + MFA AAL2. No reescribas manifiestos activos históricos.
+
+### Protocolo obligatorio al iniciar trabajo
+
+1. leer este `AGENTS.md`;
+2. leer `docs/operations/LAST_KNOWN_STATE.md`;
+3. consultar el manifiesto/checkpoints activos de Context Bridge si la identidad disponible lo permite;
+4. volver a consultar GitHub/Supabase/Vercel para hechos que puedan haber cambiado;
+5. revisar PRs abiertos y el SHA exacto antes de modificar código.
+
+### Protocolo obligatorio de handoff
+
+Después de un hito material —repo creado/eliminado/renombrado, nueva fase aprobada, PR abierto/cerrado, merge, deployment, migración, cambio de gate, blocker nuevo/resuelto o cierre de sesión importante— publica un checkpoint normalizado con resumen, decisiones, pendientes y referencias exactas. Nunca guardes el chat crudo.
+
+Si el agente no puede publicar el checkpoint, actualiza `LAST_KNOWN_STATE.md` en la misma rama como fallback y deja explícita la falta de checkpoint. No uses GitHub commits como heartbeat periódico.
 
 ## 5. Arquitectura
 
@@ -59,9 +75,12 @@ Antes de implementar:
 4. implementa el cambio mínimo compatible;
 5. ejecuta lint, typecheck, unit/contract/integration tests y build aplicables;
 6. para cambios sensibles, revisa diff de seguridad y autorización/RLS;
-7. usa preview/staging para E2E; no uses producción como entorno de prueba.
+7. usa preview/staging para E2E; no uses producción como entorno de prueba;
+8. al cerrar el trabajo, deja el checkpoint/handoff de continuidad actualizado.
 
 No silencies Advisors de Supabase con políticas amplias. RLS, grants, exposición GraphQL y `SECURITY DEFINER` se revisan objeto por objeto.
+
+Los workflows generales de CI ignoran cambios únicamente Markdown para conservar minutos gratuitos. Si una modificación documental acompaña código, configuración, tests o migraciones, el CI sigue siendo obligatorio. Los workflows Android/emulador sólo se ejecutan por sus paths o manualmente en el candidate SHA final.
 
 ## 7. Hocker One UI
 

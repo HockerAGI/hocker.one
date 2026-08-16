@@ -5,6 +5,12 @@
   "installCommand": "npm ci",
   "outputDirectory": ".next",
   "regions": ["sfo1"],
+  "crons": [
+    {
+      "path": "/api/context-bridge/reconcile",
+      "schedule": "17 8 * * *"
+    }
+  ],
   "git": {
     "deploymentEnabled": {
       "ci-repair-no-deploy-20260803": false,
