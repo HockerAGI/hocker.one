@@ -86,8 +86,14 @@ test("fallback import does not duplicate provider usage", async () => {
   const source = await read("src/lib/agi-session-store.ts");
   assert.match(source, /Do not pass provider\/model into appendAgiMessage here/);
   const fallbackSection = source.slice(source.indexOf("export async function persistDedicatedNovaFallbackTurn"));
-  const assistantSection = fallbackSection.slice(fallbackSection.indexOf("const assistant = await appendAgiMessage"), fallbackSection.indexOf("const \{ error: messageError \}", fallbackSection.indexOf("const assistant = await appendAgiMessage")));
-  assert.doesNotMatch(assistantSection, /provider:\s*input\.provider/);
-  assert.doesNotMatch(assistantSection, /model:\s*input\.model/);
+  const assistantStart = fallbackSection.indexOf("const assistant = await appendAgiMessage");
+  const assistantSection = fallbackSection.slice(
+    assistantStart,
+    fallbackSection.indexOf("const { error: messageError }", assistantStart),
+  );
+  assert.doesNotMatch(assistantSection, /^\s*provider:\s*input\.provider/m);
+  assert.doesNotMatch(assistantSection, /^\s*model:\s*input\.model/m);
+  assert.match(assistantSection, /source_provider:\s*input\.provider/);
+  assert.match(assistantSection, /source_model:\s*input\.model/);
   assert.match(fallbackSection, /update\(\{ provider: input\.provider \?\? null, model: input\.model \?\? null \}\)/);
 });
