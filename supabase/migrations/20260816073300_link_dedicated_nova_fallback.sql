@@ -1,7 +1,7 @@
 -- Link exact legacy nova.agi fallback rows to the provider-independent AGI Session Store.
 -- Hocker One injects hocker_runtime.request_trace_id into context_data. The dedicated
 -- NOVA runtime already persists that context_data on the user message and its own
--- trace_id on the assistant message. This function uses those two durable identifiers;
+-- trace_id on the assistant message. This uses those durable identifiers only;
 -- it never matches by message content.
 
 create or replace function public.link_dedicated_nova_fallback_turn(
@@ -108,5 +108,69 @@ $function$;
 revoke all on function public.link_dedicated_nova_fallback_turn(uuid,uuid,uuid,text,text) from public, anon, authenticated;
 grant execute on function public.link_dedicated_nova_fallback_turn(uuid,uuid,uuid,text,text) to service_role;
 
+create or replace function public.link_imported_dedicated_nova_fallback_message()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  v_request_trace text;
+  v_dedicated_trace text;
+  v_user_message_id uuid;
+begin
+  if new.role <> 'assistant'
+    or new.meta->>'runtime' <> 'nova-dedicated-compatibility-import' then
+    return new;
+  end if;
+
+  if new.message_key is null or new.message_key !~ ':assistant$' then
+    raise exception 'NOVA_FALLBACK_IMPORTED_MESSAGE_KEY_INVALID';
+  end if;
+
+  v_request_trace := regexp_replace(new.message_key, ':assistant$', '');
+  v_dedicated_trace := nullif(btrim(new.meta->>'dedicated_trace_id'), '');
+  if v_dedicated_trace is null then
+    raise exception 'NOVA_FALLBACK_DEDICATED_TRACE_REQUIRED';
+  end if;
+
+  select m.id into v_user_message_id
+  from public.agi_messages m
+  where m.session_id = new.session_id
+    and m.message_key = v_request_trace || ':user'
+    and m.role = 'user'
+  limit 1;
+  if v_user_message_id is null then
+    raise exception 'NOVA_FALLBACK_USER_MESSAGE_NOT_FOUND';
+  end if;
+
+  perform 1
+  from public.link_dedicated_nova_fallback_turn(
+    new.session_id,
+    v_user_message_id,
+    new.id,
+    v_request_trace,
+    v_dedicated_trace
+  );
+
+  return new;
+end;
+$function$;
+
+revoke all on function public.link_imported_dedicated_nova_fallback_message() from public, anon, authenticated;
+grant execute on function public.link_imported_dedicated_nova_fallback_message() to service_role;
+
+drop trigger if exists agi_messages_link_dedicated_nova_fallback on public.agi_messages;
+create trigger agi_messages_link_dedicated_nova_fallback
+after insert on public.agi_messages
+for each row
+when (
+  new.role = 'assistant'
+  and new.meta->>'runtime' = 'nova-dedicated-compatibility-import'
+)
+execute function public.link_imported_dedicated_nova_fallback_message();
+
 comment on function public.link_dedicated_nova_fallback_turn(uuid,uuid,uuid,text,text) is
   'Links exact dedicated nova.agi legacy messages to the canonical AGI Session Store using request/dedicated trace IDs; no content heuristics.';
+comment on function public.link_imported_dedicated_nova_fallback_message() is
+  'Fail-closed trigger hook: imported dedicated fallback assistants must link to exact legacy rows before their insert can commit.';
