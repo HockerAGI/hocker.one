@@ -85,7 +85,8 @@ function record(value: unknown): JsonRecord {
 
 function errorCode(error: unknown): string {
   if (!(error instanceof Error)) return "AGI_LEGACY_SYNC_FAILED";
-  return error.message.split(":")[0].replace(/[^A-Z0-9_]/gi, "_").toUpperCase().slice(0, 160);
+  const rawCode = error.message.split(":")[0] ?? "AGI_LEGACY_SYNC_FAILED";
+  return rawCode.replace(/[^A-Z0-9_]/gi, "_").toUpperCase().slice(0, 160);
 }
 
 export async function ensureAgiSession(input: EnsureAgiSessionInput): Promise<AgiSessionRef> {
