@@ -90,7 +90,9 @@ export async function buildAgiInferenceContext(input: {
   });
 
   const context_budget = Math.max(8000, Math.min(input.context_budget ?? 32000, 80000));
-  let remaining = context_budget;
+  const messageBudget = Math.max(4000, Math.min(18_000, Math.floor(context_budget * 0.45)));
+  let systemRemaining = Math.max(3000, context_budget - messageBudget);
+  let messageRemaining = messageBudget;
   const evidence_refs: string[] = [];
 
   // Authority order is intentional and tested: canonical_profile -> recent_messages -> durable_summary -> memory_items.
@@ -100,17 +102,20 @@ export async function buildAgiInferenceContext(input: {
   const memory_items = memories;
 
   const systemParts: string[] = [];
-  const canonPart = withinBudget(canonical_profile, remaining);
+  const canonPart = withinBudget(canonical_profile, systemRemaining);
   systemParts.push(canonPart.text);
-  remaining -= canonPart.used;
+  systemRemaining -= canonPart.used;
 
-  if (durable_summary && remaining > 0) {
-    const part = withinBudget(`Resumen durable de la sesión:\n${durable_summary}`, Math.min(remaining, 9000));
+  if (durable_summary && systemRemaining > 0) {
+    const part = withinBudget(
+      `Resumen durable de la sesión:\n${durable_summary}`,
+      Math.min(systemRemaining, 8000),
+    );
     if (part.text) systemParts.push(part.text);
-    remaining -= part.used;
+    systemRemaining -= part.used;
   }
 
-  if (memory_items.length && remaining > 0) {
+  if (memory_items.length && systemRemaining > 0) {
     const formatted = memory_items
       .map((item) => {
         evidence_refs.push(`memory:${item.id}`);
@@ -118,30 +123,37 @@ export async function buildAgiInferenceContext(input: {
         return `- ${cleanText(item.title, 260)}: ${cleanText(item.summary, 1200)}`;
       })
       .join("\n");
-    const part = withinBudget(`Memory Mirror aprobado y aplicable:\n${formatted}`, Math.min(remaining, 10000));
-    if (part.text) systemParts.push(part.text);
-    remaining -= part.used;
-  }
-
-  if (input.operational_context && Object.keys(input.operational_context).length && remaining > 0) {
     const part = withinBudget(
-      `Contexto operativo de la solicitud (no sustituye canon):\n${jsonText(input.operational_context, 8000)}`,
-      Math.min(remaining, 9000),
+      `Memory Mirror aprobado y aplicable:\n${formatted}`,
+      Math.min(systemRemaining, 9000),
     );
     if (part.text) systemParts.push(part.text);
-    remaining -= part.used;
+    systemRemaining -= part.used;
   }
 
-  const messages: ChatMessage[] = [];
-  for (const message of recent_messages) {
-    if (remaining <= 0) break;
-    if (message.role !== "user" && message.role !== "assistant") continue;
-    const part = withinBudget(cleanText(message.content, 8000), remaining);
-    if (!part.text) continue;
-    messages.push({ role: message.role, content: part.text });
-    evidence_refs.push(`message:${message.id}`);
-    remaining -= part.used;
+  if (input.operational_context && Object.keys(input.operational_context).length && systemRemaining > 0) {
+    const part = withinBudget(
+      `Contexto operativo de la solicitud (no sustituye canon):\n${jsonText(input.operational_context, 7000)}`,
+      Math.min(systemRemaining, 8000),
+    );
+    if (part.text) systemParts.push(part.text);
+    systemRemaining -= part.used;
   }
+
+  // Select newest messages first so the current/latest user turn survives any budget pressure,
+  // then restore chronological order for inference.
+  const selectedNewestFirst: ChatMessage[] = [];
+  for (let index = recent_messages.length - 1; index >= 0; index -= 1) {
+    if (messageRemaining <= 0) break;
+    const message = recent_messages[index];
+    if (message.role !== "user" && message.role !== "assistant") continue;
+    const part = withinBudget(cleanText(message.content, 8000), messageRemaining);
+    if (!part.text) continue;
+    selectedNewestFirst.push({ role: message.role, content: part.text });
+    evidence_refs.push(`message:${message.id}`);
+    messageRemaining -= part.used;
+  }
+  const messages = selectedNewestFirst.reverse();
 
   evidence_refs.push(`session:${conversation.session_id}`, `thread:${conversation.thread_id}`);
   return {
