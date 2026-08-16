@@ -20,8 +20,8 @@ Observed repositories: **9**
 4. `HockerAGI/hocker.agi` — public — corporate/public web.
 5. `HockerAGI/chido.casino` — public — Chido operator/experience.
 6. `HockerAGI/hocker.ads` — private — APP-06 engineering/product repository.
-7. `HockerAGI/chido.lab` — private — math/simulation/certification lab.
-8. `HockerAGI/chido.games` — private — partner-neutral game/API/runtime packaging.
+7. `HockerAGI/chido.lab` — private — game factory, math/simulation/CHIDO Proof and release-evidence source, with explicit legacy migration debt.
+8. `HockerAGI/chido.games` — private — immutable release consumption, partner-neutral CHIDO API/conformance and future B2B/RGS/runtime packaging.
 9. `HockerAGI/punto.g` — private — separate governed product/domain repository; not automatically a canonical HOCKER app.
 
 Repository inventory reconciliation: **9/9 observed repositories classified at repository level = 100% inventory coverage for this snapshot.** This percentage is inventory coverage only; it is not product completion.
@@ -49,7 +49,7 @@ Observed projects: **2**
 
 The validation project currently has Security Advisor findings including an **ERROR for RLS disabled on `public.validation_settlement_marker`** plus exposed `SECURITY DEFINER` RPC warnings. Keep it classified as validation-only until explicitly remediated/reclassified or retired through a controlled lifecycle decision.
 
-The primary project is healthy at service level but still has Security Advisor WARN/INFO findings requiring object-by-object review. Its default Supabase branch metadata currently reports `MIGRATIONS_FAILED`; no branch-action logs were available in the last 24 hours, so the cause is not inferred and no reset/rebase is authorized by this document.
+The primary project is healthy at service level but still has Security Advisor WARN/INFO findings requiring object-by-object review. Its default Supabase branch metadata currently reports `MIGRATIONS_FAILED`; the branch metadata is older than subsequent production migrations, no recent branch-action logs explain the failure, and the cause must not be inferred. No reset/rebase is authorized by this document.
 
 ## 3. Canonical products and AGIs
 
@@ -71,29 +71,33 @@ These percentages describe only their named evidence contracts. They do **not** 
 
 Current `main` baseline at audit start: `a5f4b1838674d6f0c5d648064f8505c280303d34`.
 
-PR #213 (`feat/hocker-signal-nova-workspace-20260814`) is based on that exact `main` SHA and is ahead without being behind. Therefore suspected regressions come from PR changes, not from missing newer `main` commits.
+PR #213 (`feat/hocker-signal-nova-workspace-20260814`) is based on that exact `main` SHA and the current audited head `b07f0765a077fe25870321e46d397fd3a2a6527a` is **69 commits ahead and 0 behind**.
+
+A full commit comparison reports **no deleted files** in the PR delta. All affected paths are `added` or `modified`. Therefore the suspected loss was caused by UI components being unmounted/restructured, not by source files being deleted.
 
 Confirmed behavior changes:
 
 - `WorkspaceBar` was unmounted from `PrivateShell`.
 - `WorkspaceContext` and its state/actions remain in code.
 - The removed bar contained the only located visible controls for `toggleTutorial()` and `resetWorkspace()`.
-- This is a real functional discoverability regression: the controls were hidden, not the underlying capability deleted.
-- Correct remediation is to expose those controls compactly under the new `Más/Ajustes` information architecture rather than restoring the old persistent bar.
+- This was a real functional discoverability regression: the controls were hidden, not the underlying capability deleted.
+- The #213 branch now restores those controls compactly under `Más/Ajustes` through `WorkspaceControlsCard`, reusing the existing `WorkspaceContext` instead of restoring the old persistent bar.
 - `HockerLiveBackground` and `HockerVfxLayer` were unmounted as presentation layers; no functional dependency has been established in this audit.
 - Detailed secondary navigation was removed from the persistent sidebar, but route definitions remain in `hocker-navigation.ts` and are available through the command palette; this is a navigation-surface change, not route deletion.
+- Password-login review found the post-login destination changed from `/owner` to `/app/nova`; the authentication validation itself was not removed in the reviewed handler.
+- Supabase server-env changes broaden publishable/anon-key variable-name compatibility; no `service_role` exposure to the client was established by the reviewed diff.
 
-PR #213 remains draft and must not merge until mobile dock overlap, compact command palette behavior, health/readiness semantics, the restored workspace controls and authenticated exact-SHA QA are green.
+The repaired #213 head passed repository CI and its exact Vercel Preview is READY with no error/fatal runtime logs in the queried preview window. It remains draft because authenticated exact-SHA mobile QA and the remaining visual/UX gates are separate evidence requirements.
 
 ## 5. Context / shared-memory reconciliation
 
 ### Codex instructions
 
-Root `AGENTS.md` in Hocker One was stale/incomplete and contained provider-specific operational advice without current governance, Context Bridge, repo inventory, AGI/app counts, data-isolation rules or evidence-only percentage policy. It is updated in the accompanying reconciliation branch to become a durable repo operating contract.
+Root `AGENTS.md` in Hocker One was stale/incomplete and contained provider-specific operational advice without current governance, Context Bridge, repo inventory, AGI/app counts, data-isolation rules or evidence-only percentage policy. PR #214 updates it into a durable repo operating contract.
 
 `punto.g/AGENTS.md` already contains strong domain-specific isolation and safety rules. Those private-domain rules must **not** be flattened into global shared memory.
 
-`nova.agi` currently has no root `AGENTS.md`; a separate repo PR should add one pointing to its own deployment/security contracts and the HOCKER Context Bridge without copying private-domain data.
+`nova.agi` had no root `AGENTS.md`; draft PR #32 adds a runtime-specific Codex contract that points to HOCKER context/governance while preserving NOVA's deployment/security boundaries and sensitive-domain isolation.
 
 ### Context Bridge
 
@@ -112,13 +116,29 @@ The later AAL2 addendum superseded the earlier HOLD at code/deployment level, bu
 
 ### Context Pack
 
-`src/lib/hocker-context-pack.ts` previously embedded obsolete phase labels and subjective percentages (84%, 90%, 69%, etc.). Those values had no observable denominator and violated the current evidence-only reporting rule. The reconciliation branch removes manual phase/progress claims and keeps registries, capabilities, runtime/tool state and evidence pointers.
+`src/lib/hocker-context-pack.ts` previously embedded obsolete phase labels and subjective percentages (84%, 90%, 69%, etc.). Those values had no observable denominator and violated the current evidence-only reporting rule. PR #214 removes manual phase/progress claims, keeps registries/capabilities/runtime evidence pointers and adds a regression test preventing subjective progress fields from returning.
 
 ## 6. Historical integration document
 
-Root `INTEGRATION_VERIFICATION.md` dated 2025-07-09 claimed all four-repo integrations were verified and described Chido `gamesPaused` as fail-open. That statement conflicts with current fail-closed security posture and the expanded ecosystem. The reconciliation branch marks it as a historical snapshot rather than deleting the history.
+Root `INTEGRATION_VERIFICATION.md` dated 2025-07-09 claimed all four-repo integrations were verified and described Chido `gamesPaused` as fail-open. That statement conflicts with current fail-closed security posture and the expanded ecosystem. PR #214 marks it as a historical snapshot rather than deleting the history.
 
-## 7. Documentation publications requiring formal next edition
+## 7. CHIDO Lab / CHIDO Games boundary reconciliation
+
+The conceptual split is valid, but the repository cleanup is not finished.
+
+Current `chido.games/main` defines:
+
+- CHIDO Lab as game factory/math/RNG/simulation/CHIDO Proof source;
+- CHIDO Games as immutable release consumer, neutral CHIDO API/conformance and future B2B/RGS/runtime boundary;
+- Chido Casino as the operator/player boundary.
+
+However `chido.lab/main` still carried pre-split `CHIDO Games` naming in its README and root package (`@hocker/chido-games`) and still compiles legacy `chido-api-contracts` / `chido-api-conformance` copies. The historical architecture spec in Lab confirms the migration rule **COPY/REBUILD FIRST -> COMPATIBILITY TEST -> SWITCH CONSUMER -> DELETE DUPLICATE LAST**, with deletion reserved for F8 after parity/cutover/rollback evidence.
+
+Draft `chido.lab` PR #6 corrects the README boundary without deleting code. Its first CI run correctly failed because a repository boundary test required the explicit phrase `does not mutate wallet`; the README was amended to retain that executable contract. Final CI must be green before the documentation change is considered validated.
+
+Do not delete the legacy API packages or rename the root package solely for cleanliness until cross-repository compatibility tests and consumer cutover prove they are no longer referenced.
+
+## 8. Documentation publications requiring formal next edition
 
 The following factual sections of the 2026-08-05 PDFs must be updated in the next approved publication cycle:
 
@@ -133,8 +153,8 @@ The following factual sections of the 2026-08-05 PDFs must be updated in the nex
 
 - inventory table must include `hocker.ads`, `chido.lab`, `chido.games`, `punto.g` with their actual roles/states;
 - `nova.agi` deployment must be labeled configuration/contract present but live dedicated runtime unverified until connected health evidence exists;
-- Hocker Ads is no longer documentation-only: it has app/data/test scaffolding and active EXP-01 engineering, while production providers/payments remain unverified;
-- Chido Lab/Games separation must be recorded explicitly;
+- Hocker Ads is no longer documentation-only: it has app/data/test scaffolding and active EXP-01/E-060 engineering, while production providers/payments remain unverified;
+- Chido Lab/Games separation and remaining F8 duplicate-cleanup debt must be recorded explicitly;
 - Supabase validation project and branch-state drift must be classified.
 
 ### DOC-07 — Seguridad, Privacidad, Soberanía y Continuidad
@@ -148,13 +168,14 @@ The following factual sections of the 2026-08-05 PDFs must be updated in the nex
 
 - add Context Bridge freshness/manifest lifecycle to operational evidence;
 - add Supabase branch migration-state reconciliation;
-- define exact-SHA authenticated preview/mobile QA as a release artifact.
+- define exact-SHA authenticated preview/mobile QA as a release artifact;
+- track cross-repository compatibility/cutover evidence before F8 duplicate removal.
 
-## 8. Current closure relationship
+## 9. Current closure relationship
 
-This document complements, not replaces, `docs/operations/PLATFORM_CLOSURE_GATE_2026-08-14.md` (PR #209). #209 remains the global fail-closed release evidence pack. Any material new blocker found here must be reflected there rather than creating a competing closure checklist.
+This document complements, not replaces, `docs/operations/PLATFORM_CLOSURE_2026-08-14.md` (PR #209). #209 remains the global fail-closed release evidence pack. Any material new blocker found here must be reflected there rather than creating a competing closure checklist.
 
-## 9. Non-authorizations
+## 10. Non-authorizations
 
 This alignment does not authorize:
 
@@ -166,15 +187,17 @@ This alignment does not authorize:
 - wallet custody/transfers;
 - enabling AGI material actions;
 - automatic Context Bridge manifest activation;
-- creation of production infrastructure for `punto.g`.
+- creation of production infrastructure for `punto.g`;
+- deletion of CHIDO Lab legacy API packages before F8 compatibility/cutover evidence.
 
-## 10. Next evidence gates
+## 11. Next evidence gates
 
-1. Finish current repo-by-repo CI/governance/version snapshot.
+1. Confirm final CI for the CHIDO Lab/Games boundary documentation fix.
 2. Resolve or explicitly classify Supabase Security Advisor findings.
 3. Reconcile `MIGRATIONS_FAILED` branch metadata without destructive assumptions.
 4. Obtain current runtime deployment/health evidence for NOVA.
 5. Generate real 16-AGI eval/tool evidence through the governed path.
-6. Finish #213 UI regression/mobile/authenticated exact-SHA QA.
+6. Finish #213 authenticated exact-SHA mobile/visual QA.
 7. Refresh Context Bridge checkpoints and create a new draft manifest.
-8. Publish formal updated DOC-00/DOC-05/DOC-07/DOC-11 from an approved editable source when the evidence set is frozen.
+8. Finish CHIDO cross-repo parity/consumer cutover before F8 duplicate deletion.
+9. Publish formal updated DOC-00/DOC-05/DOC-07/DOC-11 from an approved editable source when the evidence set is frozen.
