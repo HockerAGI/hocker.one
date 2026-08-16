@@ -25,6 +25,14 @@ test("legacy NOVA sync cannot invalidate an already durable unified turn", async
   assert.match(source, /The unified store is canonical/);
 });
 
+test("blocked or unavailable tools cannot leave NOVA in an unresolved validation reply", async () => {
+  const source = await read("src/lib/unified-nova-chat-runtime.ts");
+  assert.match(source, /tool_call_count > 0/);
+  assert.match(source, /phase === "post-tool"[\s\S]*?: "";/);
+  assert.match(source, /No pude generar una respuesta verificable con la evidencia disponible\./);
+  assert.doesNotMatch(source, /: "Voy a validar la información con las herramientas disponibles antes de responder\.";/);
+});
+
 test("MCP read tools are allowlisted and sensitive GitHub paths are blocked before execution", async () => {
   const policy = await read("src/lib/mcp/mcp-policy.ts");
   const runtime = await read("src/lib/agi-mcp-runtime.ts");
