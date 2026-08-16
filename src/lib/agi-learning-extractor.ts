@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { submitSyntiaMemoryProposal } from "@/lib/syntia-memory-write-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
@@ -76,7 +76,7 @@ export async function extractLearningCandidate(input: {
     return null;
   }
 
-  const traceId = input.trace_id || crypto.randomUUID();
+  const traceId = input.trace_id || randomUUID();
   await submitSyntiaMemoryProposal(
     {
       project_id: input.project_id,
