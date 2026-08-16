@@ -27,15 +27,18 @@ test("direct provider adapters use independent endpoints", async () => {
   const anthropic = await read("src/lib/agi-model-providers/anthropic.ts");
   const ollama = await read("src/lib/agi-model-providers/ollama.ts");
   assert.match(openai, /api\.openai\.com\/v1\/responses/);
+  assert.match(openai, /store: false/);
   assert.match(gemini, /generativelanguage\.googleapis\.com/);
   assert.match(anthropic, /api\.anthropic\.com\/v1\/messages/);
   assert.match(ollama, /\/api\/chat/);
 });
 
-test("provider and model remain internal telemetry, not NOVA identity", async () => {
-  const runtime = await read("src/lib/serverless-agi-runtime.ts");
-  assert.match(runtime, /owner_gate_required_for_actions|owner_gate_only/);
-  assert.match(runtime, /provider: completion\.provider/);
-  assert.match(runtime, /model: completion\.model/);
-  assert.match(runtime, /Responde como NOVA|identity/i);
+test("provider and model remain telemetry while the public identity stays NOVA", async () => {
+  const runtime = await read("src/lib/unified-nova-chat-runtime.ts");
+  assert.match(runtime, /provider: finalCompletion\.provider/);
+  assert.match(runtime, /model: finalCompletion\.model/);
+  assert.match(runtime, /Identidad pública: NOVA/);
+  assert.match(runtime, /La identidad pública siempre es NOVA/);
+  assert.match(runtime, /No menciones proveedores, modelos, créditos, cuotas, balance, fallback/);
+  assert.match(runtime, /owner_gate_only/);
 });
