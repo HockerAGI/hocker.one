@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   MCP_PROVIDER_IDS,
+  assertMcpReadToolPolicy,
   isReadOnlyMcpTool,
   type McpProviderId,
 } from "@/lib/mcp/mcp-policy";
@@ -40,6 +41,18 @@ const SAFE_TOOL = /^[a-z0-9_.:-]+$/i;
 const SENSITIVE_KEY = /(authorization|cookie|password|passwd|secret|token|api[_-]?key|private[_-]?key)/i;
 const PROVIDERS = new Set<string>(MCP_PROVIDER_IDS);
 
+const SENSITIVE_TEXT_PATTERNS: Array<[RegExp, string]> = [
+  [/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/g, "[redacted-private-key]"],
+  [/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}\b/gi, "Bearer [redacted]"],
+  [/\bsk-(?:proj-)?[A-Za-z0-9_-]{12,}\b/g, "[redacted-openai-key]"],
+  [/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[redacted-github-token]"],
+  [/\bAIza[0-9A-Za-z_-]{20,}\b/g, "[redacted-google-key]"],
+  [/\bAKIA[0-9A-Z]{16}\b/g, "[redacted-aws-key]"],
+  [/\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{12,}\b/g, "[redacted-stripe-key]"],
+  [/\bwhsec_[A-Za-z0-9_-]{12,}\b/g, "[redacted-webhook-secret]"],
+  [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, "[redacted-jwt]"],
+];
+
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonRecord)
@@ -55,11 +68,23 @@ function hasSensitiveKey(value: unknown, depth = 0): boolean {
   );
 }
 
+function sanitizeTextValue(value: string): string {
+  let text = value;
+  for (const [pattern, replacement] of SENSITIVE_TEXT_PATTERNS) {
+    text = text.replace(pattern, replacement);
+  }
+  text = text.replace(
+    /((?:api[_-]?key|secret|token|password|passwd|authorization)\s*[:=]\s*["']?)[^\s"',;}{]{8,}/gi,
+    "$1[redacted]",
+  );
+  return text.length > 12_000 ? `${text.slice(0, 11_999)}…` : text;
+}
+
 function sanitizeResult(value: unknown, qualifiedName: string, depth = 0): unknown {
   if (depth > 8) return "[truncated]";
   if (Array.isArray(value)) return value.slice(0, 100).map((item) => sanitizeResult(item, qualifiedName, depth + 1));
   if (!value || typeof value !== "object") {
-    if (typeof value === "string" && value.length > 12_000) return `${value.slice(0, 11_999)}…`;
+    if (typeof value === "string") return sanitizeTextValue(value);
     return value;
   }
 
@@ -238,6 +263,19 @@ export async function executeAgiMcpToolCalls(
     }
 
     try {
+      assertMcpReadToolPolicy(call.provider, call.tool, call.args);
+    } catch {
+      results.push({
+        id: call.id,
+        name: call.qualified_name,
+        executed: false,
+        needs_approval: false,
+        result: { ok: false, error: "MCP_READ_BLOCKED_BY_POLICY" },
+      });
+      continue;
+    }
+
+    try {
       const raw = await registry.executeTool(call.provider, call.tool, call.args);
       results.push({
         id: call.id,
@@ -246,7 +284,7 @@ export async function executeAgiMcpToolCalls(
         needs_approval: false,
         result: { ok: true, data: sanitizeResult(raw, call.qualified_name) },
       });
-    } catch (error) {
+    } catch {
       results.push({
         id: call.id,
         name: call.qualified_name,
@@ -254,7 +292,7 @@ export async function executeAgiMcpToolCalls(
         needs_approval: false,
         result: {
           ok: false,
-          error: error instanceof Error ? error.message.slice(0, 300) : "MCP_TOOL_EXECUTION_FAILED",
+          error: "MCP_TOOL_EXECUTION_FAILED",
         },
       });
     }
