@@ -12,9 +12,9 @@ La continuidad debe registrar altas/bajas/renombres de repositorios, ramas/SHAs,
 
 1. **Una verdad dinámica, no nueve copias.** El estado vivo reside en Context Bridge/Supabase; los repos contienen reglas durables y proyecciones mínimas.
 2. **Event-driven primero; reconciliación después.** Los eventos actualizan el ledger en segundos cuando el proveedor lo permite. Un reconciliador periódico detecta eventos perdidos o drift.
-3. **Append-only para historia; materialized current state para velocidad.** Nunca se pierde la secuencia de cambios, pero una nueva sesión no necesita releer todo el historial.
+3. **Append-only para historia; current-state projection para velocidad.** Nunca se pierde la secuencia de cambios, pero una nueva sesión no necesita releer todo el historial.
 4. **Evidence first.** Un evento recibido no convierte por sí solo una capacidad en `verified`; los estados de readiness siguen usando evidencia reproducible.
-5. **Fail closed.** Si una fuente no está disponible o una firma no valida, se conserva el último estado conocido y se marca `stale`/`unverified`.
+5. **Fail closed.** Si una fuente no está disponible o una firma/validación no es suficiente, se conserva el último estado conocido y se marca `stale`/`unverified`.
 6. **No raw chat memory.** Sólo decisiones, objetivo, bloqueadores, next action y referencias verificables.
 7. **No CI como heartbeat.** GitHub Actions se reserva para código/config/tests/migraciones importantes.
 8. **No auto-merge.** El sistema puede calcular readiness; `main` sólo se promueve cuando los gates del candidate exacto están verdes y el Owner autoriza.
@@ -28,27 +28,28 @@ La continuidad debe registrar altas/bajas/renombres de repositorios, ramas/SHAs,
 - El receptor valida `X-Hub-Signature-256` con HMAC-SHA256 y deduplica con `X-GitHub-Delivery`.
 - El endpoint debe responder 2XX antes de 10 segundos; el procesamiento pesado debe ser asíncrono.
 - GitHub no reenvía automáticamente webhooks fallidos. El sistema debe reconciliar/redeliver como backstop.
-- `installation` e `installation_repositories` permiten detectar cambios de acceso a repositorios; el inventario API detecta altas/bajas/renombres aunque un evento haya fallado.
-- La autenticación automatizada debe usar GitHub App installation tokens, no PAT de usuario como arquitectura final.
+- `installation` e `installation_repositories` permiten detectar cambios de acceso; el inventario API detecta altas/bajas/renombres aunque un evento haya fallado.
+- La autenticación automatizada final usa GitHub App installation tokens, no PAT de usuario como arquitectura permanente.
 
 ### Supabase
 
 - Supabase Queues/PGMQ proporciona cola durable para procesamiento asíncrono.
 - Supabase Cron permite jobs frecuentes y registra historial de ejecución.
-- Edge Functions son adecuadas como webhook receivers; webhooks externos deben validar la firma del proveedor dentro de la función.
+- Edge Functions son adecuadas como webhook receivers; webhooks externos deben validar la autenticidad disponible del proveedor dentro de la función.
 - Secrets/Vault se usan para credenciales server-only.
-- El ledger y snapshots permanecen bajo grants/RLS explícitos y no se exponen a `anon`/`authenticated` salvo vistas sanitizadas aprobadas.
+- Ledger y snapshots permanecen service-only por defecto con grants/RLS explícitos.
 
 ### Vercel
 
-- Los Account Webhooks del dashboard requieren Pro/Enterprise; por lo tanto no son una dependencia obligatoria del diseño actual.
+- Account Webhooks del dashboard requieren Pro/Enterprise; no son dependencia obligatoria del diseño actual.
 - Vercel REST API permite reconstruir proyectos/deployments con token server-only.
-- Hobby Cron tiene frecuencia mínima diaria, por lo que no sirve como motor de continuidad casi-real-time.
-- El reconciliador central debe usar Supabase Cron para backstop y Vercel REST para obtener estado cuando no haya webhook disponible.
+- Hobby Cron tiene frecuencia mínima diaria, por lo que no sirve como motor casi-real-time.
+- El reconciliador central usa Supabase Cron como backstop y Vercel REST para obtener estado cuando no haya webhook disponible.
 
 ### Railway / NOVA
 
 - Railway ofrece webhooks por proyecto para cambios de estado de deployments y alertas.
+- La documentación pública revisada no define una firma criptográfica de Railway para esos webhooks; por tanto se tratan como **señal advisory**, no como evidencia autenticada suficiente.
 - Railway healthchecks validan el arranque del deployment, pero no constituyen monitoreo continuo posterior.
 - NOVA sólo se declara live/verificada cuando deployment identificado + SHA + `/health/ready` + heartbeat/logs + E2E Hocker One→NOVA coinciden en el candidate.
 
@@ -63,8 +64,8 @@ La continuidad debe registrar altas/bajas/renombres de repositorios, ramas/SHAs,
 Provider events / agent handoffs
        |
        v
-Signed ingress adapters
-(GitHub App / Railway / future providers)
+Ingress adapters
+(GitHub App verified / Railway advisory / future providers)
        |
        v
 continuity_events  -- append-only, idempotent by provider+delivery_id
@@ -75,14 +76,14 @@ continuity_events  -- append-only, idempotent by provider+delivery_id
        |     continuity processor
        |          |
        |          +--> Context Bridge checkpoints
-       |          +--> repository_lifecycle/current state
+       |          +--> repository current/lifecycle state
        |          +--> provider deployment/runtime current state
        |          +--> handoff/current next action
        |
        v
-context_current_state / materialized projection
+context_current_state projection
        |
-       +--> Hocker One recovery/status UI/API
+       +--> Hocker One recovery/status API/UI
        +--> Codex/ChatGPT bootstrap response
        +--> redacted GitHub continuity mirror
 
@@ -90,8 +91,8 @@ Supabase Cron
        |
        +--> reconcile GitHub installation/repositories/PR heads
        +--> reconcile Vercel deployments/projects
-       +--> check stale sources / failed webhook delivery gaps
-       +--> verify NOVA runtime evidence when credentials/endpoint exist
+       +--> check stale sources / failed webhook gaps
+       +--> verify NOVA runtime evidence via Railway API + readiness when configured
 ```
 
 ## Component boundaries
@@ -120,27 +121,27 @@ Append-only event ledger. Required fields:
 
 Unique key: `(provider, delivery_id)`.
 
-The raw signed HTTP body is used only transiently for signature validation; it is not persisted.
+El body HTTP crudo se usa sólo de forma transitoria para validar firmas cuando el proveedor las ofrece; no se persiste.
 
 ### 2. `continuity_repository_state`
 
-One current row per GitHub repository ID. Tracks:
+Una fila vigente por GitHub repository ID:
 
-- GitHub stable repository ID;
-- current full name/name;
+- stable repository ID;
+- full name/name actuales;
 - visibility/private/archive state;
 - default branch;
-- current head SHA;
+- head SHA;
 - last push/update;
-- lifecycle state: `active|archived|removed|unreachable`;
-- first/last seen timestamps;
-- last event/checkpoint reference.
+- lifecycle `active|archived|removed|unreachable`;
+- first/last seen;
+- last event/checkpoint ref.
 
-Renames are detected by stable repository ID, not by repository name.
+Los renombres se detectan por repository ID estable, no por nombre.
 
 ### 3. `continuity_provider_state`
 
-Current state for external runtime/deployment resources. Initial scopes:
+Estado actual de recursos externos. Scopes iniciales:
 
 - `vercel.project`
 - `vercel.deployment`
@@ -150,160 +151,177 @@ Current state for external runtime/deployment resources. Initial scopes:
 - `supabase.project`
 - `supabase.branch`
 
-No secrets are stored. Store provider IDs, states, timestamps, SHA/revision, environment and evidence refs.
+No guarda secretos. Guarda provider IDs, estado, timestamps, SHA/revision, environment y evidence refs.
 
 ### 4. `continuity_handoffs`
 
-Structured intent/decision ledger for things infrastructure cannot infer:
+Ledger estructurado de intención/decisiones que infraestructura no puede inferir:
 
 - objective;
 - current phase/gate;
-- decisions made;
+- decisions;
 - blockers;
 - next action;
-- repo/branch/PR/SHA references;
+- repo/branch/PR/SHA refs;
 - evidence refs;
 - actor;
 - created_at.
 
-No raw transcript/message arrays.
+No almacena transcript ni arrays de mensajes crudos.
 
 ### 5. Current-state projection
 
-A database function/view returns a compact recovery payload:
+Una función/vista devuelve un payload compacto de recuperación:
 
-- ecosystem repository inventory and lifecycle deltas;
-- Hocker One candidate/current release state;
-- NOVA runtime contract/live evidence;
-- AGI evidence counts and missing gates;
-- open PRs/heads for focus repos;
-- last material handoff and next action;
-- stale/missing providers;
-- active/draft Context Bridge manifest refs.
+- inventario y lifecycle del ecosistema;
+- estado release/candidate de Hocker One;
+- contrato y evidencia live de NOVA;
+- métricas AGI con denominadores explícitos;
+- PRs/heads de repos foco;
+- último handoff y next action;
+- providers stale/missing;
+- manifest Context Bridge active/draft refs.
 
-It must be fast enough to hydrate a new session without historical scans.
+Debe permitir hidratar una sesión sin escanear el historial completo.
 
 ### 6. GitHub App ingress
 
-Public webhook endpoint hosted as Supabase Edge Function or Hocker One API with identical validation rules. Preferred production receiver: **Supabase Edge Function**, because the continuity ledger remains available even if Vercel/Hocker One is unavailable.
+Receptor preferido: **Supabase Edge Function**, para que el ledger pueda seguir recibiendo actividad aunque Hocker One/Vercel esté temporalmente fuera.
 
 Flow:
 
-1. read raw request body;
-2. validate HMAC signature with GitHub webhook secret;
-3. require `X-GitHub-Delivery` and `X-GitHub-Event`;
-4. normalize allowed metadata only;
-5. insert idempotently into `continuity_events`;
-6. enqueue delivery ID into PGMQ;
-7. return 2XX immediately;
-8. processor creates/updates projections and Context Bridge checkpoint.
+1. leer raw request body;
+2. validar HMAC GitHub;
+3. exigir `X-GitHub-Delivery` y `X-GitHub-Event`;
+4. normalizar sólo metadata permitida;
+5. insertar idempotentemente en `continuity_events`;
+6. encolar delivery ID en PGMQ;
+7. responder 2XX antes de 10 s;
+8. processor actualiza projections/checkpoint.
 
-Initial subscribed events are limited to continuity value: installation, installation_repositories, repository, push, pull_request, workflow_run, deployment/deployment_status when applicable, release and create/delete branch/tag if needed. Permissions remain read-only unless a future separate Owner-gated capability requires writes.
+Eventos iniciales de valor: installation, installation_repositories, repository, push, pull_request, workflow_run, release y create/delete de branch/tag cuando aporte lifecycle. Permisos read-only y least-privilege.
 
-### 7. Railway ingress
+### 7. Railway/NOVA ingress
 
-Signed/secret-authenticated webhook endpoint receives deployment state changes. It stores deployment/service/project IDs and state, then asynchronously verifies NOVA evidence when the event concerns the NOVA project.
+Railway webhook aporta una señal rápida de deployment status. Como la documentación pública revisada no define firma criptográfica de esos payloads:
 
-A Railway `Active` state is useful evidence but not sufficient to mark NOVA fully verified because Railway does not continuously monitor the health endpoint after activation.
+1. el endpoint Railway usa un URL secreto no publicado como control adicional de entrada;
+2. el payload se registra como `advisory` y nunca eleva NOVA a `verified` por sí solo;
+3. el processor contrasta deployment/service/project ID, estado y commit con Railway Public API usando token server-only;
+4. si el deployment corresponde a NOVA, verifica `/health/ready` y exige heartbeat/log evidence del mismo candidate;
+5. sólo la evidencia corroborada se publica como checkpoint de producción.
+
+Un Railway `Active` es señal útil pero insuficiente porque Railway no hace health monitoring continuo posterior al deployment.
 
 ### 8. Reconciliation backstop
 
-Supabase Cron runs incremental reconciliation. Target cadence: every 5 minutes for repository/provider drift while volume is small; dynamically reduce if rate limits/cost indicate no benefit.
+Supabase Cron ejecuta reconciliación incremental. Cadencia objetivo inicial: **cada 5 minutos** para drift de repos/proveedores mientras volumen/costos sean bajos; puede reducirse si rate limits o costo lo justifican.
 
-The reconciler uses last cursors/timestamps and only fetches mutable resources since the previous checkpoint. It does not perform a full nine-repository audit each run.
+El reconciliador usa cursores/timestamps y consulta sólo recursos mutables. No ejecuta una auditoría profunda de todos los repos cada vez.
 
-For GitHub, the reconciler also detects failed/missing webhook periods and can query GitHub App webhook delivery metadata/redeliver recent failures when app credentials are configured. If redelivery is unavailable, inventory reconciliation still repairs current state and records an evidence gap.
+Para GitHub:
 
-For Vercel Hobby, reconciliation uses REST API rather than Account Webhooks.
+- reconcilia instalación, repo IDs, lifecycle, heads y PRs relevantes;
+- consulta GitHub App delivery metadata para detectar fallos;
+- redeliver de eventos recientes cuando credenciales/App lo permitan;
+- si no hay redelivery, reconstruye current state por API y deja gap histórico explícito.
+
+Para Vercel Hobby: usa REST API, no Account Webhooks.
+
+Para Railway: API polling confirma o corrige los eventos advisory.
 
 ### 9. Redundant recovery mirror
 
-Primary truth remains Supabase. A redacted **GitHub issue** in `hocker.one` mirrors only the latest safe recovery snapshot at material milestones. Updating the issue does not create commits or consume GitHub Actions. It contains:
+Supabase sigue siendo la fuente primaria. Un **GitHub issue** en `hocker.one` mantiene un mirror sanitizado del último estado material. Actualizar un issue no crea commits ni consume GitHub Actions.
 
-- last global checkpoint time;
-- repository count/lifecycle changes;
-- Hocker One/NOVA focus SHA/PR state;
-- active blockers;
+Incluye sólo:
+
+- timestamp de checkpoint global;
+- repo count/lifecycle changes;
+- Hocker One/NOVA SHA/PR focus;
+- blockers activos;
 - next action;
-- Context Bridge manifest/version references.
+- Context Bridge manifest/version refs.
 
-It never contains secrets, private payloads, chat transcripts or restricted-domain data.
+Nunca incluye secretos, payloads privados, chats o datos de dominios restringidos.
 
-This provides recovery when Supabase is temporarily unavailable but GitHub remains accessible. `LAST_KNOWN_STATE.md` remains a release/milestone artifact, not a realtime heartbeat.
+`LAST_KNOWN_STATE.md` queda como artefacto de release/hito, no heartbeat realtime.
 
 ## Repo-local projection policy
 
-Every HOCKER repository should eventually have:
+Cada repo HOCKER debe converger a:
 
-- a concise root `AGENTS.md` personalized to that repo;
-- one repo-local continuity/architecture pointer (`docs/CONTINUITY.md` or equivalent);
-- links to the global Context Bridge bootstrap/recovery source;
-- no duplicated global percentages, repo counts or mutable provider state.
+- `AGENTS.md` corto y personalizado;
+- un pointer de continuidad/arquitectura local (`docs/CONTINUITY.md` o equivalente);
+- referencia al bootstrap global Context Bridge;
+- cero repo counts, porcentajes o provider states globales hardcodeados.
 
-Repos with regulated/sensitive domains preserve their own data/memory isolation. The global ledger records only lifecycle/engineering metadata unless a domain explicitly authorizes more.
+Dominios sensibles/regulados mantienen aislamiento. El ledger global registra metadata de ingeniería/lifecycle salvo autorización explícita del dominio.
 
 ## Recovery procedure
 
-A fresh ChatGPT/Codex/engineer session does:
+Una sesión nueva:
 
-1. read repo `AGENTS.md`;
-2. read local continuity pointer;
-3. query compact Context Bridge current-state projection;
-4. compare repository current SHA/open PR with the last checkpoint;
-5. re-query only sources marked stale or changed;
-6. load latest structured handoff;
-7. continue from `next_action` or record an explicit superseding decision.
+1. lee `AGENTS.md`;
+2. lee el pointer local;
+3. consulta la current-state projection de Context Bridge;
+4. compara SHA/PR local contra el checkpoint;
+5. reconsulta sólo fuentes stale/cambiadas;
+6. carga último structured handoff;
+7. continúa desde `next_action` o registra una decisión que lo sustituya.
 
-A full ecosystem audit is required only when reconciliation integrity fails, schema changes materially or a high-risk release gate requests it.
+Auditoría completa sólo cuando falla integridad de reconciliación, cambia materialmente el schema o un gate de alto riesgo lo exige.
 
 ## Failure handling
 
-- Invalid webhook signature → `401/403`, no persistence.
-- Duplicate delivery ID → idempotent `2XX`, no duplicate event.
-- Queue processor failure → message remains/reappears after visibility timeout; event row records error without losing history.
-- Provider unavailable → preserve last state, mark stale and record next reconciliation time.
-- GitHub webhook delivery lost → scheduled delivery audit/redelivery where possible + inventory reconciliation.
-- Supabase unavailable → provider webhook may fail; GitHub can redeliver recent App deliveries and GitHub recovery mirror retains last material snapshot.
-- Vercel unavailable → continuity persists in Supabase; no loss of GitHub/hand-off history.
-- Hocker One unavailable → Supabase Edge Function remains preferred ingress; UI catches up on recovery.
+- GitHub signature inválida → `401/403`, sin persistencia.
+- Duplicate delivery → idempotent `2XX`, sin evento duplicado.
+- Railway webhook inesperado → advisory rechazado/ignorado hasta corroboración API.
+- Queue processor failure → mensaje reaparece tras visibility timeout; historia no se pierde.
+- Provider unavailable → conservar último estado, marcar stale y reintentar por backstop.
+- GitHub webhook perdido → delivery audit/redelivery cuando sea posible + API reconciliation.
+- Supabase temporalmente unavailable → GitHub puede redeliver deliveries recientes; GitHub recovery mirror conserva el último estado material.
+- Vercel unavailable → no afecta ledger GitHub/handoffs.
+- Hocker One unavailable → Supabase Edge Function sigue siendo ingress principal.
 
 ## Security
 
-- GitHub App permissions start read-only and least-privilege.
-- GitHub App private key, webhook secret, Vercel token and Railway webhook secret are server-only secrets; never stored in Context Bridge checkpoints.
-- `continuity_events`, repository/provider state and handoffs are service-only by default; no client grants.
-- Any future action that mutates provider state is a separate capability and passes Owner Gate. Continuity ingestion itself is read/evidence only.
-- Payload sanitizer rejects credential-like fields and raw-content/transcript/message arrays.
-- Delivery IDs and payload hashes support replay detection/audit.
+- GitHub App: read-only y least-privilege al inicio.
+- GitHub private key/webhook secret, Vercel token y Railway API token son server-only y nunca aparecen en checkpoints.
+- `continuity_events`, repository/provider state y handoffs son service-only por defecto.
+- Cualquier mutación futura de proveedor es una capability separada bajo Owner Gate; continuity ingestion es evidencia/lectura.
+- Sanitizer rechaza credenciales y raw-content/transcript/messages.
+- Delivery IDs + payload hashes soportan replay detection/audit.
 
 ## GitHub Actions budget policy
 
-- No scheduled GitHub Actions for continuity polling or webhook redelivery.
-- Markdown-only commits should not run general CI after the CI path policy reaches `main`.
-- Use one final candidate CI per meaningful code/config/migration batch plus mandatory security/release checks.
-- Android/emulator and other expensive workflows remain path/manual gated.
+- Sin scheduled GitHub Actions para polling/redelivery de continuidad.
+- Markdown-only no debe correr CI general una vez que la policy alcance `main`.
+- Un CI final por batch significativo de code/config/migration + controles obligatorios de release/security.
+- Android/emulator y workflows caros siguen path/manual gated.
 
-## Release gates for this feature
+## Release gates
 
-The continuity system can be considered complete for merge only when:
+La continuidad queda lista para merge sólo cuando:
 
-1. schema/migration tests pass;
-2. webhook signature and replay tests pass;
-3. GitHub event normalization tests cover repository add/remove/rename, push and PR lifecycle;
-4. queue processing is idempotent and retry-safe;
-5. current-state projection reproduces the observed repo inventory;
-6. backstop reconciliation repairs a deliberately missed event in test/validation;
-7. no raw secret/chat content is persisted;
-8. Hocker One CI/typecheck/lint/build/security audit pass on one candidate SHA;
-9. preview deployment is READY without new error/fatal cluster;
-10. NOVA repo CI remains green for its continuity contract;
-11. Context Bridge draft generated from fresh checkpoints has expected coverage and remains unactivated until Owner+AAL2;
-12. `main` is merged only after the above gates are reviewed and green.
+1. schema/migration tests pasan;
+2. GitHub signature/replay tests pasan;
+3. event normalization cubre repo add/remove/rename, push y PR lifecycle;
+4. queue processing es idempotent/retry-safe;
+5. current-state projection reproduce inventario observado;
+6. backstop repara un evento omitido deliberadamente en validation;
+7. no se persiste raw secret/chat content;
+8. Hocker One tests/typecheck/lint/build/security audit pasan en un candidate SHA;
+9. preview exacto está READY sin nuevo error/fatal cluster;
+10. NOVA CI sigue verde;
+11. NOVA live evidence se mantiene `unverified` hasta corroborar Railway API + SHA + readiness + heartbeat/E2E;
+12. Context Bridge draft usa checkpoints frescos y no se activa sin Owner+AAL2;
+13. `main` sólo se mergea después de revisar todos los gates verdes.
 
-## Non-goals for this implementation
+## Non-goals
 
-- Completing unrelated CHIDO/Hocker Ads/Wallet/Casino product logic.
-- Writing restricted-domain business payloads into global memory.
-- Using an LLM to infer canonical state when provider evidence exists.
-- Automatically activating manifests or merging PRs.
-- Replacing domain-specific release/legal gates.
+- Completar lógica de CHIDO/Hocker Ads/Wallet/Casino desde este flujo.
+- Guardar payloads sensibles de dominios restringidos en memoria global.
+- Usar LLM para inferir estado cuando existe evidencia de proveedor.
+- Activar manifests o hacer auto-merge.
+- Sustituir gates legales/regulatorios por código.
