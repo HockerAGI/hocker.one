@@ -1,101 +1,66 @@
-# Inter-Repo Integration Verification
+# Inter-Repo Integration Verification — HISTORICAL SNAPSHOT
 
-**Date:** 2025-07-09
-**Scope:** hocker.one ↔ nova.agi ↔ hocker-node-agent ↔ chido.casino
-**Result:** ✅ All integration contracts verified and aligned
+> **STATUS: RETIRED AS CURRENT EVIDENCE.** This document records a verification performed on **2025-07-09** against four repositories. It must not be used to claim current integration readiness. The ecosystem, security posture and fail-closed contracts changed materially after this snapshot. Current closure evidence lives in `docs/operations/PLATFORM_CLOSURE_GATE_2026-08-14.md` and the Context Bridge/evidence reconciliation documents.
+>
+> In particular, the historical `gamesPaused` fail-open behavior described below is **not** the current HOCKER security principle. Current policy is fail-closed for protected/high-impact operations unless an explicitly approved availability exception exists.
 
----
-
-## 1. hocker.one ↔ nova.agi (HTTP Orchestrator)
-
-### Contract
-| Item | hocker.one (caller) | nova.agi (receiver) | Aligned |
-|------|---------------------|---------------------|---------|
-| Base URL | `process.env.NOVA_AGI_URL` | binds to `0.0.0.0:PORT` | ✅ |
-| Auth header | `Authorization: Bearer ${NOVA_ORCHESTRATOR_KEY}` | validates `auth === Bearer ${config.orchestratorKey}` | ✅ |
-| Chat endpoint | `POST ${baseUrl}/api/v1/chat` | `app.post("/api/v1/chat", handleChat)` | ✅ |
-| Health check | `GET ${NOVA_AGI_HEALTH_URL || NOVA_AGI_URL}/health` | preHandler skips auth for `GET /health*` | ✅ |
-| Key env var | `NOVA_ORCHESTRATOR_KEY` | `config.orchestratorKey` ← `env.NOVA_ORCHESTRATOR_KEY` | ✅ |
-
-### Verified Paths
-- `src/app/api/nova/chat/route.ts` → fetch `${NOVA_AGI_URL}/api/v1/chat` with `Bearer ${NOVA_ORCHESTRATOR_KEY}`
-- `src/app/api/nova/chat/stream/route.ts` → streaming variant
-- `src/app/api/system/status/route.ts` → health check to nova
-- `src/lib/external-services.ts` → service registry health probing
+**Historical date:** 2025-07-09  
+**Historical scope:** hocker.one ↔ nova.agi ↔ hocker-node-agent ↔ chido.casino  
+**Current authority:** historical comparison only
 
 ---
 
-## 2. hocker.one ↔ hocker-node-agent (Command Queue + Polling)
+## 1. hocker.one ↔ nova.agi (historical HTTP Orchestrator contract)
 
-### Contract
-| Item | hocker.one (dispatcher) | node-agent (executor) | Aligned |
-|------|------------------------|----------------------|---------|
-| Shared table | `.from("commands").insert(row)` | `.from("commands").select("*")` polling | ✅ |
-| HMAC secret | `HOCKER_COMMAND_HMAC_SECRET` (fallback `COMMAND_HMAC_SECRET`) | `HOCKER_COMMAND_HMAC_SECRET` (fallback `COMMAND_HMAC_SECRET`) | ✅ |
-| Signature algorithm | `HMAC-SHA256`, base = `id|project_id|node_id|command|signedCreatedAt|canonicalJson(payload)` | `HMAC-SHA256`, base = `id|project_id|node_id|command|signedCreatedAt|stableJson(payload)` | ✅ |
-| Canonical JSON | sorted keys, recursive arrays, circular→`[Circular]` | sorted keys, recursive arrays (no circular guard) | ✅* |
-| Timestamp tolerance | 5 min (`MAX_TIME_DRIFT_MS`) | 5 min (`maxCommandAgeMs` default 300000) | ✅ |
-| Kill switch | reads `system_controls` | reads `system_controls.kill_switch, allow_write` before executing | ✅ |
-| Heartbeat | reads `nodes` table | upserts `nodes` table every 15s | ✅ |
-| Events | reads `events` table | inserts into `events` table | ✅ |
-| Health URL | `HOCKER_NODE_AGENT_HEALTH_URL` (fallback `HOCKER_NODE_AGENT_URL`) | exposes `GET /health` | ✅ |
+At the 2025-07-09 snapshot the following contract was reviewed:
 
-\* For non-circular payloads (all command payloads), both canonical JSON implementations produce identical output. The hocker.one version adds circular reference protection that node-agent lacks, but this is a superset — it doesn't change output for normal payloads.
+| Item | hocker.one (caller) | nova.agi (receiver) |
+|------|---------------------|---------------------|
+| Base URL | `process.env.NOVA_AGI_URL` | binds to `0.0.0.0:PORT` |
+| Auth header | `Authorization: Bearer ${NOVA_ORCHESTRATOR_KEY}` | validates orchestrator key |
+| Chat endpoint | `POST ${baseUrl}/api/v1/chat` | `/api/v1/chat` handler |
+| Health check | `GET ${NOVA_AGI_HEALTH_URL || NOVA_AGI_URL}/health` | `/health*` |
 
-### Verified Paths
-- `src/app/api/commands/route.ts` → inserts into `commands` table with HMAC signature
-- `src/lib/security.ts` → `signCommand()` / `verifyCommandSignature()`
-- `src/lib/stable-json.ts` → `canonicalJson` (sorted-key deterministic serialization)
-- node-agent `src/index.ts` → poll loop, `system_controls` check, heartbeat, `nodes` upsert
-- node-agent `src/lib/signature.ts` → `signCommand()` / `verifyCommandSignature()`
-- node-agent `src/stable-json.ts` → `stableJson` (sorted-key deterministic serialization)
+These paths/contracts must be revalidated against the current `nova.agi` deployment and the current Hocker One caller before any live-readiness claim. A Docker/Railway deployment contract exists in `nova.agi`, but current connected evidence has not established a healthy dedicated NOVA production runtime.
 
 ---
 
-## 3. hocker.one ↔ chido.casino (Admin Controls)
+## 2. hocker.one ↔ hocker-node-agent (historical command queue contract)
 
-### Contract
-| Item | hocker.one (admin) | chido.casino (standalone) | Aligned |
-|------|---------------------|--------------------------|---------|
-| Shared DB | Same Supabase project (service role key) | Same Supabase project (service role key) | ✅ |
-| Kill switch write | `POST /api/chido/admin {action:"games_pause"}` → upserts `system_controls(id="chido-casino-games", kill_switch=true)` | reads `system_controls(id="chido-casino-games").kill_switch` via `gamesPaused.ts` | ✅ |
-| Kill switch read | admin page loads `system_controls` status | `assertGamesNotPaused()` in crash/play + taco-slot/spin | ✅ |
-| Casino settings | admin updates `casino_settings` (cashback caps, wager multipliers) | reads `casino_settings` in `promoLimits.ts`, `applyPromoForDeposit.ts` | ✅ |
-| KYC management | admin updates `kyc_requests.status` + `profiles.kyc_status` | reads `kyc_requests` in admin API, `profiles.kyc_status` in UI | ✅ |
-| Deposits/withdrawals | admin updates `manual_deposit_requests`, `withdraw_requests`, `balances` | standalone deposit/withdraw APIs use same tables | ✅ |
-
-### Games Paused Integration (NEW)
-- `chido.casino/src/lib/gamesPaused.ts` — shared utility (fail-open design)
-- `chido.casino/src/app/api/games/crash/play/route.ts` — calls `assertGamesNotPaused()` before processing bet
-- `chido.casino/src/app/api/games/taco-slot/spin/route.ts` — calls `assertGamesNotPaused()` before processing spin
-- Returns HTTP 423 Locked with `{error: "GAMES_PAUSED", message: ...}` when paused
-
-### No Breakage Verification
-- chido.casino typecheck: ✅ 0 errors
-- Standalone operation unaffected: gamesPaused fails-open (returns not-paused) on any Supabase error, so the casino never accidentally locks itself out
-- All existing chido.casino admin APIs remain intact (separate `ADMIN_API_TOKEN` auth)
-- hocker.one admin uses `requireOwnerOrInternal()` gate — independent auth path, no conflict
+The 2025 snapshot reviewed the shared `commands`, `nodes`, `events` and `system_controls` contracts plus HMAC command signing. These remain useful historical evidence, but current authorization, migration and runtime behavior must be verified from `main`, Supabase and current node-agent tests before release.
 
 ---
 
-## 4. Supabase Shared Database
+## 3. hocker.one ↔ chido.casino (historical admin controls)
 
-All four repos share the same Supabase project (`yvuibbcuntqpyqiuqggd`):
-- **hocker.one**: service role key for admin operations, publishable key for browser reads
-- **nova.agi**: service role key for AGI memory/state
-- **hocker-node-agent**: service role key for command queue polling
-- **chido.casino**: service role key for admin, publishable key for client reads
+The 2025 snapshot reviewed shared database controls including casino pause state, settings, KYC/admin and payment-related tables.
 
-### Shared Tables
-- `commands` — command queue (hocker.one writes, node-agent polls)
-- `nodes` — node presence registry (node-agent upserts, hocker.one reads)
-- `events` — audit/event log (all repos write, hocker.one reads)
-- `system_controls` — kill switch (hocker.one admin writes, node-agent + chido.casino reads)
-- `casino_settings` — casino config (hocker.one admin writes, chido.casino reads)
-- `kyc_requests`, `manual_deposit_requests`, `withdraw_requests`, `balances`, `transactions`, `profiles` — casino operations (shared)
+### Retired assertion
+
+The old document explicitly described `gamesPaused` as **fail-open** when Supabase failed. That assertion is retained in Git history only and is not approved as the current safety model. Protected casino/payment actions must follow the current security/legal canon and current Chido hardening evidence.
+
+Real-money operation remains a separate legal/regulatory gate and is not authorized by this document.
 
 ---
 
-## 5. Conclusion
+## 4. Supabase shared database — current interpretation
 
-All inter-repo integration contracts are verified and aligned. The newly added kill-switch bridge between hocker.one admin and chido.casino games closes the last integration gap: admin pause/resume from Hocker ONE now takes immediate effect on the standalone casino app. No breaking changes were introduced — all modifications are additive and fail-safe.
+Sharing a Supabase project does **not** imply shared authorization. Each domain must be reconciled through grants, RLS, tenant/project boundaries, `SECURITY DEFINER` review and explicit consumers. Security Advisor findings must be classified object by object; broad policies must not be introduced merely to silence warnings.
+
+A separate project named `chido-hardening-validation-20260806` also exists as of 2026-08-15 and is not a second production backend. Its lifecycle and security findings must be treated as validation-environment evidence until explicitly reclassified.
+
+---
+
+## 5. Current conclusion
+
+This file is **not a current green gate**. It is a version-history marker that helps detect regressions and understand earlier contracts.
+
+For current readiness use, in order:
+
+1. production/configuration and connected evidence;
+2. current `main`, migrations and executable tests;
+3. `docs/operations/PLATFORM_CLOSURE_GATE_2026-08-14.md` and later addenda;
+4. Context Bridge current checkpoints/manifests;
+5. current canonical documentation after reconciliation.
+
+Do not infer current health, security, deployment or 100% completion from this historical snapshot.
