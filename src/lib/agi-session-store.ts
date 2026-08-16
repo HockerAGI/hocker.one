@@ -197,7 +197,8 @@ export async function persistDedicatedNovaFallbackTurn(input: {
   });
 
   // Do not pass provider/model into appendAgiMessage here: the dedicated runtime already
-  // recorded its own usage. We attach telemetry afterward without creating duplicate usage.
+  // recorded its own usage. The AFTER INSERT trigger must link both exact legacy rows before
+  // this assistant insert can commit. Provider/model telemetry is attached afterward only.
   const assistant = await appendAgiMessage({
     session_id: session.session_id,
     project_id: input.project_id,
@@ -215,7 +216,6 @@ export async function persistDedicatedNovaFallbackTurn(input: {
     },
   });
 
-  const now = new Date().toISOString();
   const { error: messageError } = await db()
     .from("agi_messages")
     .update({ provider: input.provider ?? null, model: input.model ?? null })
@@ -223,17 +223,8 @@ export async function persistDedicatedNovaFallbackTurn(input: {
     .eq("session_id", session.session_id);
   if (messageError) throw new Error(`AGI_FALLBACK_MESSAGE_TELEMETRY_FAILED: ${messageError.message}`);
 
-  const { error } = await db()
-    .from("agi_sessions")
-    .update({
-      legacy_sync_state: "external_fallback",
-      legacy_synced_at: now,
-      legacy_sync_error: null,
-      updated_at: now,
-    })
-    .eq("id", session.session_id);
-  if (error) throw new Error(`AGI_FALLBACK_SESSION_MARK_FAILED: ${error.message}`);
-
+  // Do not overwrite legacy_sync_state here. The database trigger owns the exact invariant
+  // and has already set `external_fallback_linked` or aborted the assistant insert.
   return {
     session_id: session.session_id,
     user_message_id: user.id,
