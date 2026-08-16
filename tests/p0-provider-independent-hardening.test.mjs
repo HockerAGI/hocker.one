@@ -48,6 +48,12 @@ test("MCP results redact free-form credentials and never return raw connector er
   assert.doesNotMatch(runtime, /error instanceof Error \? error\.message\.slice\(0, 300\)/);
 });
 
+test("Gemini direct auth stays in headers rather than the request URL", async () => {
+  const source = await read("src/lib/agi-model-providers/gemini.ts");
+  assert.match(source, /"x-goog-api-key": apiKey\(\)/);
+  assert.doesNotMatch(source, /generateContent\?key=/);
+});
+
 test("dedicated NOVA fallback linking uses exact trace IDs rather than content heuristics", async () => {
   const migration = await read("supabase/migrations/20260816073300_link_dedicated_nova_fallback.sql");
 
