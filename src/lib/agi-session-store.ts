@@ -196,6 +196,8 @@ export async function persistDedicatedNovaFallbackTurn(input: {
     },
   });
 
+  // Do not pass provider/model into appendAgiMessage here: the dedicated runtime already
+  // recorded its own usage. We attach telemetry afterward without creating duplicate usage.
   const assistant = await appendAgiMessage({
     session_id: session.session_id,
     project_id: input.project_id,
@@ -204,22 +206,30 @@ export async function persistDedicatedNovaFallbackTurn(input: {
     role: "assistant",
     content: input.assistant_message,
     trace_id: input.request_trace_id,
-    provider: input.provider ?? null,
-    model: input.model ?? null,
     meta: {
       ...(input.meta ?? {}),
       runtime: "nova-dedicated-compatibility-import",
       imported_from_dedicated_fallback: true,
+      source_provider: input.provider ?? null,
+      source_model: input.model ?? null,
     },
   });
+
+  const now = new Date().toISOString();
+  const { error: messageError } = await db()
+    .from("agi_messages")
+    .update({ provider: input.provider ?? null, model: input.model ?? null })
+    .eq("id", assistant.id)
+    .eq("session_id", session.session_id);
+  if (messageError) throw new Error(`AGI_FALLBACK_MESSAGE_TELEMETRY_FAILED: ${messageError.message}`);
 
   const { error } = await db()
     .from("agi_sessions")
     .update({
       legacy_sync_state: "external_fallback",
-      legacy_synced_at: new Date().toISOString(),
+      legacy_synced_at: now,
       legacy_sync_error: null,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
     .eq("id", session.session_id);
   if (error) throw new Error(`AGI_FALLBACK_SESSION_MARK_FAILED: ${error.message}`);
