@@ -259,11 +259,21 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     },
   });
 
-  const legacySync = await syncAgiTurnToLegacyNova({
-    session_id: session.session_id,
-    user_message_id: userMessage.id,
-    assistant_message_id: assistantMessage.id,
-  });
+  // The unified store is canonical. Legacy NOVA sync is compatibility-only and must never
+  // invalidate a conversation that is already durably persisted in agi_sessions/agi_messages.
+  let legacySync: unknown;
+  try {
+    legacySync = await syncAgiTurnToLegacyNova({
+      session_id: session.session_id,
+      user_message_id: userMessage.id,
+      assistant_message_id: assistantMessage.id,
+    });
+  } catch {
+    legacySync = {
+      state: "pending_reconcile",
+      canonical_persistence_intact: true,
+    };
+  }
 
   try {
     await extractLearningCandidate({
