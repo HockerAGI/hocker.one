@@ -12,8 +12,7 @@ import {
   shouldAnswerCapabilitiesLocally,
 } from "@/lib/hocker-tool-router";
 import { log } from "@/lib/logger";
-import { sanitizePublicError } from "@/lib/sanitize-error";
-import { runServerlessNovaChat } from "@/lib/serverless-agi-runtime";
+import { runToolEnabledUnifiedNovaChat } from "@/lib/unified-nova-chat-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -259,91 +258,18 @@ export async function POST(req: Request): Promise<Response> {
     },
   };
 
-  const serverlessFallback = async (reason: string): Promise<Response> => {
-    const local = await runServerlessNovaChat({
-      project_id: chatCtx.project_id,
-      thread_id: parsed.data.thread_id ?? null,
-      message: parsed.data.message,
-      user_id: chatCtx.user.id,
-      user_email: chatCtx.user.email ?? null,
-      context_data: guardedPayload.context_data,
-      oidc_token: req.headers.get("x-vercel-oidc-token"),
-    });
-
-    const safe = sanitizeNovaPayload(
-      local as unknown as NovaChatResponse,
-      {
-        ...injectedMeta,
-        runtime_fallback: {
-          active: true,
-          reason,
-          runtime: "hocker-one-serverless",
-          upstream_called: Boolean(baseUrl && key),
-        },
-      },
-      null,
-    );
-
-    return NextResponse.json(safe, {
-      status: 200,
-      headers: { "Cache-Control": "no-store, max-age=0" },
-    });
-  };
-
-  if (!baseUrl || !key) {
-    try {
-      return await serverlessFallback("NOVA_UPSTREAM_NOT_CONFIGURED");
-    } catch (error) {
-      return NextResponse.json(
-        { ok: false, error: sanitizePublicError(error), meta: injectedMeta },
-        { status: 503 },
-      );
-    }
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8_000);
-
-  try {
-    const res = await fetch(`${baseUrl}/api/v1/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-        "X-Hocker-Source": "hocker.one.production-gate",
-      },
-      body: JSON.stringify(guardedPayload),
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
-    const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
-    if (!res.ok || responseJson.ok !== true) {
-      try {
-        return await serverlessFallback(`NOVA_UPSTREAM_HTTP_${res.status}`);
-      } catch (fallbackError) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: sanitizePublicError(fallbackError),
-            meta: {
-              ...injectedMeta,
-              upstream_error: `http_${res.status}`,
-              fallback_error: true,
-            },
-          },
-          { status: 502 },
-        );
-      }
-    }
-
+  const finalizeRuntimeResponse = async (
+    responseJson: NovaChatResponse,
+    runtimeMeta: Record<string, unknown>,
+    status = 200,
+  ): Promise<Response> => {
     let mcpBridge: Awaited<ReturnType<typeof materializeNovaMcpActionsFromUpstream>> = {
       actions: [],
       rejected: [],
     };
 
     const responseMeta = responseJson.meta;
-    const upstreamMcp =
+    const responseMcp =
       responseMeta &&
       typeof responseMeta.mcp === "object" &&
       responseMeta.mcp !== null &&
@@ -351,7 +277,7 @@ export async function POST(req: Request): Promise<Response> {
         ? (responseMeta.mcp as Record<string, unknown>)
         : {};
     const hasDeferredMcpActions =
-      Array.isArray(upstreamMcp.deferred_actions) && upstreamMcp.deferred_actions.length > 0;
+      Array.isArray(responseMcp.deferred_actions) && responseMcp.deferred_actions.length > 0;
 
     if (upstreamActionActorId && hasDeferredMcpActions) {
       try {
@@ -365,12 +291,20 @@ export async function POST(req: Request): Promise<Response> {
       } catch (error) {
         mcpBridge = {
           actions: [],
-          rejected: [{ reason: sanitizePublicError(error) }],
+          rejected: [{ reason: "El borrador MCP no pasó la validación de Hocker One." }],
         };
+        log.error("NOVA MCP Owner Gate materialization rejected", {
+          route: "/api/nova/chat",
+          detail: error instanceof Error ? error.message.slice(0, 240) : "unknown",
+        });
       }
     }
 
-    const safePayload = sanitizeNovaPayload(responseJson, injectedMeta, localActionDraft);
+    const safePayload = sanitizeNovaPayload(
+      responseJson,
+      { ...injectedMeta, ...runtimeMeta },
+      localActionDraft,
+    );
     const currentActions = Array.isArray(safePayload.actions) ? safePayload.actions : [];
     safePayload.actions = [...currentActions, ...mcpBridge.actions];
 
@@ -404,34 +338,112 @@ export async function POST(req: Request): Promise<Response> {
     safePayload.meta = safeMeta;
 
     return NextResponse.json(safePayload, {
-      status: res.status,
+      status,
       headers: { "Cache-Control": "no-store, max-age=0" },
     });
-  } catch (error) {
-    const isTimeout = error instanceof Error && error.name === "AbortError";
-    log.error("NOVA chat upstream failure", {
-      route: "/api/nova/chat",
-      timeout: isTimeout,
+  };
+
+  try {
+    const local = await runToolEnabledUnifiedNovaChat({
+      project_id: chatCtx.project_id,
+      thread_id: parsed.data.thread_id ?? null,
+      message: parsed.data.message,
+      user_id: chatCtx.user.id,
+      user_email: chatCtx.user.email ?? null,
+      context_data: guardedPayload.context_data,
+      allow_actions: Boolean(upstreamActionActorId),
+      oidc_token: req.headers.get("x-vercel-oidc-token"),
     });
 
-    try {
-      return await serverlessFallback(
-        isTimeout ? "NOVA_UPSTREAM_TIMEOUT" : "NOVA_UPSTREAM_UNAVAILABLE",
-      );
-    } catch (fallbackError) {
+    return await finalizeRuntimeResponse(
+      local as unknown as NovaChatResponse,
+      {
+        runtime_primary: "hocker-one-unified",
+        dedicated_fallback_used: false,
+      },
+      200,
+    );
+  } catch (localError) {
+    log.error("NOVA unified runtime failure", {
+      route: "/api/nova/chat",
+      detail: localError instanceof Error ? localError.message.slice(0, 240) : "unknown",
+    });
+  }
+
+  if (!baseUrl || !key) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "NOVA no pudo completar la solicitud con las rutas disponibles.",
+        meta: {
+          ...injectedMeta,
+          runtime_primary: "hocker-one-unified",
+          dedicated_fallback_available: false,
+        },
+      },
+      { status: 503, headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "X-Hocker-Source": "hocker.one.compatibility-fallback",
+      },
+      body: JSON.stringify(guardedPayload),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    const responseJson = (await res.json().catch(() => ({}))) as NovaChatResponse;
+    if (!res.ok || responseJson.ok !== true) {
       return NextResponse.json(
         {
           ok: false,
-          error: sanitizePublicError(fallbackError),
+          error: "NOVA no pudo completar la solicitud con las rutas disponibles.",
           meta: {
             ...injectedMeta,
-            upstream_error: isTimeout ? "timeout" : "unavailable",
-            fallback_error: true,
+            runtime_primary: "hocker-one-unified",
+            dedicated_fallback_used: true,
+            dedicated_fallback_result: "unavailable",
           },
         },
-        { status: 502 },
+        { status: 502, headers: { "Cache-Control": "no-store, max-age=0" } },
       );
     }
+
+    return await finalizeRuntimeResponse(
+      responseJson,
+      {
+        runtime_primary: "hocker-one-unified",
+        dedicated_fallback_used: true,
+        dedicated_fallback_runtime: "nova-dedicated-compatibility",
+      },
+      res.status,
+    );
+  } catch (error) {
+    const isTimeout = error instanceof Error && error.name === "AbortError";
+    log.error("NOVA compatibility fallback failure", {
+      route: "/api/nova/chat",
+      timeout: isTimeout,
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "NOVA no pudo completar la solicitud con las rutas disponibles.",
+        meta: {
+          ...injectedMeta,
+          runtime_primary: "hocker-one-unified",
+          dedicated_fallback_used: true,
+          dedicated_fallback_result: isTimeout ? "timeout" : "unavailable",
+        },
+      },
+      { status: 502, headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   } finally {
     clearTimeout(timeoutId);
   }
