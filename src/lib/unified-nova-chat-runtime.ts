@@ -82,6 +82,22 @@ function mcpSummary(results: AgiMcpToolResult[]) {
   };
 }
 
+function publicReplyFromToolEnvelope(input: {
+  raw_text: string;
+  reply: string;
+  tool_call_count: number;
+  phase: "initial" | "post-tool";
+}): string {
+  const reply = safeText(input.reply);
+  if (reply) return reply;
+  if (input.tool_call_count > 0) {
+    return input.phase === "post-tool"
+      ? "La consulta adicional requiere otra operación de herramienta. No ejecuté una segunda ronda automáticamente; puedo continuar con la evidencia ya obtenida o preparar la siguiente acción para revisión."
+      : "Voy a validar la información con las herramientas disponibles antes de responder.";
+  }
+  return safeText(input.raw_text);
+}
+
 export async function runToolEnabledUnifiedNovaChat(params: {
   project_id: string;
   thread_id?: string | null;
@@ -173,7 +189,12 @@ export async function runToolEnabledUnifiedNovaChat(params: {
 
   const executedReads = toolResults.filter((item) => item.executed);
   let finalCompletion = first;
-  let finalReply = safeText(envelope.reply || first.text);
+  let finalReply = publicReplyFromToolEnvelope({
+    raw_text: first.text,
+    reply: envelope.reply,
+    tool_call_count: envelope.tool_calls.length,
+    phase: "initial",
+  });
 
   if (executedReads.length > 0) {
     await recordIntermediateUsage({
@@ -187,7 +208,10 @@ export async function runToolEnabledUnifiedNovaChat(params: {
 
     const followUpMessages: AgiModelMessage[] = [
       ...baseMessages,
-      { role: "assistant", content: envelope.reply || "Voy a consultar las herramientas disponibles." },
+      {
+        role: "assistant",
+        content: envelope.reply || "Voy a consultar las herramientas disponibles.",
+      },
       { role: "user", content: buildAgiMcpResultBlock(toolResults) },
     ];
     finalCompletion = await completeAgi({
@@ -196,7 +220,12 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       oidc_token: params.oidc_token,
     });
     const followUpEnvelope = parseAgiMcpEnvelope(finalCompletion.text);
-    finalReply = safeText(followUpEnvelope.reply || finalCompletion.text);
+    finalReply = publicReplyFromToolEnvelope({
+      raw_text: finalCompletion.text,
+      reply: followUpEnvelope.reply,
+      tool_call_count: followUpEnvelope.tool_calls.length,
+      phase: "post-tool",
+    });
   }
 
   if (!finalReply) {
