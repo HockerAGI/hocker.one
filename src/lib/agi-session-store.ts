@@ -36,13 +36,13 @@ export type EnsureAgiSessionInput = {
   title?: string | null;
   channel?: string;
   surface?: string | null;
-  sync_legacy_nova?: boolean;
 };
 
 export type AppendAgiMessageInput = {
   session_id: string;
   project_id: string;
   agi_id: string;
+  message_key?: string | null;
   role: AgiConversationMessage["role"];
   content: string;
   trace_id?: string | null;
@@ -51,7 +51,6 @@ export type AppendAgiMessageInput = {
   tokens_in?: number | null;
   tokens_out?: number | null;
   meta?: JsonRecord;
-  sync_legacy_nova?: boolean;
 };
 
 export type LoadAgiConversationContextInput = {
@@ -84,6 +83,11 @@ function record(value: unknown): JsonRecord {
     : {};
 }
 
+function errorCode(error: unknown): string {
+  if (!(error instanceof Error)) return "AGI_LEGACY_SYNC_FAILED";
+  return error.message.split(":")[0].replace(/[^A-Z0-9_]/gi, "_").toUpperCase().slice(0, 160);
+}
+
 export async function ensureAgiSession(input: EnsureAgiSessionInput): Promise<AgiSessionRef> {
   const { data, error } = await rpcDb().rpc<Array<{ session_id: string; thread_id: string }>>(
     "ensure_agi_session",
@@ -95,7 +99,6 @@ export async function ensureAgiSession(input: EnsureAgiSessionInput): Promise<Ag
       p_title: input.title ?? null,
       p_channel: input.channel ?? "hocker-one",
       p_surface: input.surface ?? null,
-      p_sync_legacy_nova: Boolean(input.sync_legacy_nova),
     },
   );
 
@@ -108,13 +111,14 @@ export async function ensureAgiSession(input: EnsureAgiSessionInput): Promise<Ag
 
 export async function appendAgiMessage(
   input: AppendAgiMessageInput,
-): Promise<{ id: string; legacy_message_id: string | null; usage_id: string | null }> {
+): Promise<{ id: string; usage_id: string | null }> {
   const { data, error } = await rpcDb().rpc<
-    Array<{ message_id: string; legacy_message_id: string | null; usage_id: string | null }>
+    Array<{ message_id: string; usage_id: string | null }>
   >("append_agi_message", {
     p_session_id: input.session_id,
     p_project_id: input.project_id,
     p_agi_id: input.agi_id,
+    p_message_key: input.message_key ?? null,
     p_role: input.role,
     p_content: input.content,
     p_trace_id: input.trace_id ?? null,
@@ -123,17 +127,107 @@ export async function appendAgiMessage(
     p_tokens_in: input.tokens_in ?? null,
     p_tokens_out: input.tokens_out ?? null,
     p_meta: input.meta ?? {},
-    p_sync_legacy_nova: Boolean(input.sync_legacy_nova),
   });
 
   const row = data?.[0];
   if (error || !row?.message_id) {
     throw new Error(`AGI_MESSAGE_APPEND_FAILED: ${error?.message ?? "empty_result"}`);
   }
+  return { id: row.message_id, usage_id: row.usage_id ?? null };
+}
+
+export async function syncAgiTurnToLegacyNova(input: {
+  session_id: string;
+  user_message_id: string;
+  assistant_message_id: string;
+}): Promise<{ ok: boolean; error_code?: string }> {
+  const { data, error } = await rpcDb().rpc<
+    Array<{ legacy_user_message_id: string; legacy_assistant_message_id: string }>
+  >("sync_agi_turn_to_legacy_nova", {
+    p_session_id: input.session_id,
+    p_user_message_id: input.user_message_id,
+    p_assistant_message_id: input.assistant_message_id,
+  });
+
+  if (!error && data?.[0]?.legacy_user_message_id && data?.[0]?.legacy_assistant_message_id) {
+    return { ok: true };
+  }
+
+  const code = errorCode(new Error(error?.message ?? "AGI_LEGACY_SYNC_EMPTY_RESULT"));
+  await rpcDb().rpc<null>("mark_agi_legacy_sync_pending", {
+    p_session_id: input.session_id,
+    p_error_code: code,
+  });
+  return { ok: false, error_code: code };
+}
+
+export async function persistDedicatedNovaFallbackTurn(input: {
+  thread_id: string;
+  project_id: string;
+  user_id: string;
+  user_message: string;
+  assistant_message: string;
+  request_trace_id: string;
+  provider?: string | null;
+  model?: string | null;
+  meta?: JsonRecord;
+}): Promise<{ session_id: string; user_message_id: string; assistant_message_id: string }> {
+  const session = await ensureAgiSession({
+    thread_id: input.thread_id,
+    project_id: input.project_id,
+    user_id: input.user_id,
+    agi_id: "nova",
+    title: input.user_message.slice(0, 120),
+    channel: "hocker-one",
+    surface: "nova-chat",
+  });
+
+  const user = await appendAgiMessage({
+    session_id: session.session_id,
+    project_id: input.project_id,
+    agi_id: "nova",
+    message_key: `${input.request_trace_id}:user`,
+    role: "user",
+    content: input.user_message,
+    trace_id: input.request_trace_id,
+    meta: {
+      runtime: "nova-dedicated-compatibility-import",
+      imported_from_dedicated_fallback: true,
+    },
+  });
+
+  const assistant = await appendAgiMessage({
+    session_id: session.session_id,
+    project_id: input.project_id,
+    agi_id: "nova",
+    message_key: `${input.request_trace_id}:assistant`,
+    role: "assistant",
+    content: input.assistant_message,
+    trace_id: input.request_trace_id,
+    provider: input.provider ?? null,
+    model: input.model ?? null,
+    meta: {
+      ...(input.meta ?? {}),
+      runtime: "nova-dedicated-compatibility-import",
+      imported_from_dedicated_fallback: true,
+    },
+  });
+
+  const { error } = await db()
+    .from("agi_sessions")
+    .update({
+      legacy_sync_state: "external_fallback",
+      legacy_synced_at: new Date().toISOString(),
+      legacy_sync_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", session.session_id);
+  if (error) throw new Error(`AGI_FALLBACK_SESSION_MARK_FAILED: ${error.message}`);
+
   return {
-    id: row.message_id,
-    legacy_message_id: row.legacy_message_id ?? null,
-    usage_id: row.usage_id ?? null,
+    session_id: session.session_id,
+    user_message_id: user.id,
+    assistant_message_id: assistant.id,
   };
 }
 
