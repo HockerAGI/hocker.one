@@ -146,6 +146,7 @@ export async function buildAgiInferenceContext(input: {
   for (let index = recent_messages.length - 1; index >= 0; index -= 1) {
     if (messageRemaining <= 0) break;
     const message = recent_messages[index];
+    if (!message) continue;
     if (message.role !== "user" && message.role !== "assistant") continue;
     const part = withinBudget(cleanText(message.content, 8000), messageRemaining);
     if (!part.text) continue;
