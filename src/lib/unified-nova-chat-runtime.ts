@@ -15,7 +15,11 @@ import {
   parseAgiMcpEnvelope,
   type AgiMcpToolResult,
 } from "@/lib/agi-mcp-runtime";
-import { appendAgiMessage, ensureAgiSession } from "@/lib/agi-session-store";
+import {
+  appendAgiMessage,
+  ensureAgiSession,
+  syncAgiTurnToLegacyNova,
+} from "@/lib/agi-session-store";
 import { extractLearningCandidate } from "@/lib/agi-learning-extractor";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import type { AgiCompletionResult, AgiModelMessage } from "@/lib/agi-model-providers/types";
@@ -87,18 +91,18 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   context_data?: JsonRecord;
   allow_actions?: boolean;
   oidc_token?: string | null;
+  trace_id?: string | null;
 }): Promise<JsonRecord> {
   if (!params.user_id) throw new Error("NOVA_CHAT_AUTH_REQUIRED");
   if (!safeText(params.message)) throw new Error("NOVA_CHAT_MESSAGE_REQUIRED");
 
   const threadId = params.thread_id || randomUUID();
-  const traceId = randomUUID();
+  const traceId = params.trace_id || randomUUID();
   const selectedProfileId = routeChatProfile(params.message);
   const specialist = requireCanonicalAgi(selectedProfileId);
   const nova = requireCanonicalAgi("nova");
-  const routes = configuredAgiRoutes(params.oidc_token);
-  if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
+  // Persist the user turn before any provider call. This is the crash/retry recovery anchor.
   const session = await ensureAgiSession({
     thread_id: threadId,
     project_id: params.project_id,
@@ -107,13 +111,13 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     title: params.message.slice(0, 120),
     channel: "hocker-one",
     surface: "nova-chat",
-    sync_legacy_nova: true,
   });
 
   const userMessage = await appendAgiMessage({
     session_id: session.session_id,
     project_id: params.project_id,
     agi_id: "nova",
+    message_key: `${traceId}:user`,
     role: "user",
     content: params.message,
     trace_id: traceId,
@@ -123,8 +127,10 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       runtime: "hocker-one-unified",
       canon_version: HOCKER_AGI_CANON_VERSION,
     },
-    sync_legacy_nova: true,
   });
+
+  const routes = configuredAgiRoutes(params.oidc_token);
+  if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
   const [context, mcpPrompt] = await Promise.all([
     buildAgiInferenceContext({
@@ -204,6 +210,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     session_id: session.session_id,
     project_id: params.project_id,
     agi_id: "nova",
+    message_key: `${traceId}:assistant`,
     role: "assistant",
     content: finalReply,
     trace_id: traceId,
@@ -221,7 +228,12 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       owner_gate_only: true,
       mcp: mcpSummary(toolResults),
     },
-    sync_legacy_nova: true,
+  });
+
+  const legacySync = await syncAgiTurnToLegacyNova({
+    session_id: session.session_id,
+    user_message_id: userMessage.id,
+    assistant_message_id: assistantMessage.id,
   });
 
   try {
@@ -261,6 +273,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       persisted: {
         user_message_id: userMessage.id,
         assistant_message_id: assistantMessage.id,
+        legacy_sync: legacySync,
       },
       mcp: {
         ...mcpSummary(toolResults),
