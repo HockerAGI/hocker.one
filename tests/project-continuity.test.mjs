@@ -89,3 +89,15 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(bridge, /capability.*evidence|evidencia.*capacidad/i);
   assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
 });
+
+test("recovery snapshot keeps production authority and incomplete context gates explicit", async () => {
+  const state = await source("docs/operations/LAST_KNOWN_STATE.md");
+  assert.match(state, /945ed9cdeda909faa9823230d2a4f47ff84173c7/);
+  assert.match(state, /dpl_BbKA86LqvHBkbTDD2vnnsdRcYmT4/);
+  assert.match(state, /PR #214[\s\S]*already merged|PR #214[\s\S]*ya.*merged/i);
+  assert.match(state, /PR #216/);
+  assert.match(state, /google-drive-canon[\s\S]*partial/i);
+  assert.match(state, /Codex[\s\S]*not.*refreshed|Codex[\s\S]*no fue.*refresc/i);
+  assert.match(state, /agi_eval_result[\s\S]*0/);
+  assert.match(state, /agi_tool_eval_result[\s\S]*0/);
+});
