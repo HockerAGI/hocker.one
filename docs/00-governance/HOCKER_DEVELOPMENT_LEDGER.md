@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T13:03:26-07:00
+last_verified_at: 2026-08-17T15:52:30-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -162,9 +162,9 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
 - PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI SUCCESS and exact-head Vercel READY still unresolved.
-- PR #231: active Ledger reconciliation PR. Exact head `eff53a7e8f8281e3725bad19e1c84ea311dc0a4c` now has Vercel Preview `dpl_Hh576zY7FrHnGgvdGRFp2m7WuSEw` = READY. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
+- PR #231: active Ledger reconciliation PR. Exact head `9b899bc913b1b696fae522ff6f55441f5120cce3` has Vercel Preview `dpl_5EC3Qwvtr1QtT44Tt9mhLw7ru8YR` = READY. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
 - PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
-- Hocker One dependency PRs #233-#237 are newly open Dependabot candidates. #233 (`next` 16.2.12→16.3.1) has Vercel READY but CI `32055006518` FAILURE; #234 (`zod` 3.25.76→4.4.3) has CI `32055015015` FAILURE and Vercel build ERROR from a Zod v4 type-contract incompatibility at `z.record(z.unknown())`; #235 (`sonner` 2.0.7→2.0.8) has a READY Preview but still requires full exact-head gate/review; #236 (`@next/eslint-plugin-next` 16.3.0→16.3.1) has a READY Preview but still requires full exact-head gate/review; #237 (`@capacitor/android` 8.3.1→8.5.0) fails CI, Android Debug APK, Android Signed Release, Android Emulator QA and Vercel because `@capacitor/core` remains 8.3.1 while Android 8.5.0 requires `^8.5.0`. None is authorized for merge in this cut.
+- Hocker One dependency PRs #233-#237 remain open Dependabot candidates. #233 (`next` 16.2.12→16.3.1) has Vercel READY but CI `32055006518` FAILURE; #234 (`zod` 3.25.76→4.4.3) has CI `32055015015` FAILURE and Vercel build ERROR from a Zod v4 type-contract incompatibility at `z.record(z.unknown())`; #235 (`sonner` 2.0.7→2.0.8), exact head `b4ea0c88d3ed95d527f30f88accea282d9785df2`, now has CI `32055019545`, Android Debug APK `32055019586`, Android Signed Release `32055019570`, Android Emulator QA `32055019583` all SUCCESS plus Vercel Preview `dpl_3UTQhCXyLZqtGMZU2ZGo4SYbmYKS` READY, but has zero submitted reviews; #236 (`@next/eslint-plugin-next` 16.3.0→16.3.1), exact head `57701945ce86f3553c313c1d7408f5351ebe347b`, now has CI `32055036014`, Android Debug APK `32055035985`, Android Signed Release `32055036036`, Android Emulator QA `32055036038` all SUCCESS plus Vercel Preview `dpl_3Y9s7NXNxArMagq5aE4aWqxV3Hed` READY, but has zero submitted reviews; #237 (`@capacitor/android` 8.3.1→8.5.0) fails CI, Android Debug APK, Android Signed Release, Android Emulator QA and Vercel because `@capacitor/core` remains 8.3.1 while Android 8.5.0 requires `^8.5.0`. None is authorized for merge in this cut.
 - New dependency PRs are also present in `hocker.agi`, `nova.agi`, `hocker-node-agent` and `chido.casino`; these are dependency-review backlog, not implementation authority, until each repo's exact-head checks and compatibility review pass.
 - PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`. Phase 2B is present in Neon development/validation `main`; no production/customer activation follows from that state.
 - PUNTO·G PR #6: closed duplicate/no-op; no changes.
@@ -232,8 +232,9 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The 05:56 reconciliation exact head `123ef091a2a8f341271c222a7b78960f02cdb33d` has Vercel Preview `dpl_3ue5HteeV3C4TdtNiRytXuGK9FAK` = READY; GitHub returns no workflow for the Markdown-only head.
 - The 07:09 reconciliation exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa` has Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` = READY; GitHub returns no workflow for the Markdown-only head.
 - The 08:50 reconciliation exact head `47ab5658a92744f5a94412c43f544e16ea15a4c8` has Vercel Preview `dpl_FaeDMXba3zScBr4Cqk94HuGqGium` = READY.
-- The 11:56 reconciliation exact head `eff53a7e8f8281e3725bad19e1c84ea311dc0a4c` now has Vercel Preview `dpl_Hh576zY7FrHnGgvdGRFp2m7WuSEw` = READY; GitHub returns no workflow for the Markdown-only head.
-- This 13:03 evidence reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
+- The 11:56 reconciliation exact head `eff53a7e8f8281e3725bad19e1c84ea311dc0a4c` has Vercel Preview `dpl_Hh576zY7FrHnGgvdGRFp2m7WuSEw` = READY; GitHub returns no workflow for the Markdown-only head.
+- The 13:03 reconciliation exact head `9b899bc913b1b696fae522ff6f55441f5120cce3` has Vercel Preview `dpl_5EC3Qwvtr1QtT44Tt9mhLw7ru8YR` = READY.
+- This 15:52 evidence reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -304,7 +305,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Hocker One PR #233 (`next` 16.2.12→16.3.1), head `1aa99d76c5b4593ec0d8162fb946ac5b5b3ba0da`, has Vercel Preview `dpl_7WgeKyXTS6LC1dZCZDyCKQ6g8Xna` = READY but CI `32055006518` = FAILURE. Android Debug APK, Signed Release and Emulator QA were SUCCESS. It is blocked from merge.
 - Hocker One PR #234 (`zod` 3.25.76→4.4.3), head `3c54d269fe95405a4b0afe23b69b761c8f8075c2`, has CI `32055015015` = FAILURE and Vercel deployment `dpl_4GhmjDFHj1cCNB64E3zdQ2URj4jR` = ERROR. Build logs show a concrete Zod v4 API incompatibility in `src/app/api/agi/runtime/actions/route.ts`: `z.record(z.unknown())` no longer satisfies the expected argument contract. No merge.
 - Hocker One PR #237 (`@capacitor/android` 8.3.1→8.5.0), head `cbd1c37dc37e352fc2e49672062c2732c3dc0993`, fails CI `32055043699`, Android Debug APK `32055043691`, Signed Release `32055043778`, Emulator QA `32055043706`, and Vercel `dpl_2MxnuyRVaC6uEkTqWp7B9iCXAEp5`. Vercel logs show `ERESOLVE`: `@capacitor/android@8.5.0` requires peer `@capacitor/core@^8.5.0` while the repository remains on `@capacitor/core@8.3.1`. No force/legacy-peer-deps bypass is authorized.
-- Hocker One PRs #235 (`sonner` 2.0.8) and #236 (`@next/eslint-plugin-next` 16.3.1) have READY previews in current Vercel inventory, but no auto-merge was performed because full exact-head compatibility/review/branch-protection evidence was not established in this cut.
+- Hocker One PRs #235 (`sonner` 2.0.8) and #236 (`@next/eslint-plugin-next` 16.3.1) had READY previews in current Vercel inventory, but no auto-merge was performed because full exact-head compatibility/review/branch-protection evidence was not established in this earlier cut.
 - PR #230 remains draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`; no new exact-head READY Preview was observed, so the Owner/AAL2 16-AGI certification candidate remains blocked.
 - Production Supabase Security Advisor remains materially unchanged: contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new RLS-disabled/no-policy critical regression was observed.
 - No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
@@ -315,6 +316,15 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - `hocker.one/main` has no newer commits since the prior evidence cut; no product/runtime merge was observed.
 - PR #230 remains draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`; its exact-head Vercel READY gate remains unresolved.
 - Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; Security Advisor remains limited to the previously contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
+- No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-17 15:52 PDT — Ledger Preview green; two dependency candidates reach technical green
+
+- PR #231 exact prior head `9b899bc913b1b696fae522ff6f55441f5120cce3` now has Vercel Preview `dpl_5EC3Qwvtr1QtT44Tt9mhLw7ru8YR` = `READY`.
+- Hocker One PR #235 (`sonner` 2.0.7→2.0.8), exact head `b4ea0c88d3ed95d527f30f88accea282d9785df2`, now has CI `32055019545`, Android Debug APK `32055019586`, Android Signed Release `32055019570`, Android Emulator QA `32055019583` all `SUCCESS`, plus Vercel Preview `dpl_3UTQhCXyLZqtGMZU2ZGo4SYbmYKS` = `READY`. PR remains open/mergeable/non-draft with zero submitted reviews, so no merge is authorized.
+- Hocker One PR #236 (`@next/eslint-plugin-next` 16.3.0→16.3.1), exact head `57701945ce86f3553c313c1d7408f5351ebe347b`, now has CI `32055036014`, Android Debug APK `32055035985`, Android Signed Release `32055036036`, Android Emulator QA `32055036038` all `SUCCESS`, plus Vercel Preview `dpl_3Y9s7NXNxArMagq5aE4aWqxV3Hed` = `READY`. PR remains open/mergeable/non-draft with zero submitted reviews, so no merge is authorized.
+- Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; no product/runtime merge was observed.
+- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ## Handoff rule
