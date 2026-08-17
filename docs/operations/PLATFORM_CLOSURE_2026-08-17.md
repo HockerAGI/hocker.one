@@ -18,7 +18,7 @@ Core Integration Ready is **NOT YET VERIFIED** until all mandatory gates in sect
 
 Includes release/mobile/provider/perimeter/credential and product-specific gates beyond the core control plane. Full Launch/GA can remain open after Core Integration Ready when the open capability is explicitly out of the integration scope and fail-closed.
 
-No document may translate either state into a claim of being bug-free, perfectly secure or universally complete.
+No document may translate either state into a claim of cero defectos, seguridad perfecta o completitud universal.
 
 ## 2. Closed engineering blockers
 
