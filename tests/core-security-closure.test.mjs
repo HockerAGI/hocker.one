@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("core command/node write policies do not overlap authenticated SELECT", async () => {
-  const sql = await read("supabase/migrations/20260817004000_core_command_node_policy_reconciliation.sql");
+  const sql = await read("supabase/migrations/20260817003451_core_command_node_policy_reconciliation_20260817.sql");
 
   assert.match(sql, /drop policy if exists "commands_owner_admin_write" on public\.commands/i);
   assert.match(sql, /create policy "commands_owner_admin_insert"[\s\S]*for insert[\s\S]*private\.is_project_owner_or_admin\(project_id\)/i);

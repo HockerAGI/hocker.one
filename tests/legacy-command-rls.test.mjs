@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const migrationPath = "../supabase/migrations/20260807_hocker_one_commands_owner_gate_hardening.sql";
+const migrationPath = "../supabase/migrations/20260808215301_hocker_one_commands_owner_gate_hardening.sql";
 
 test("legacy commands writes are restricted to owner/admin by migration", async () => {
   const sql = await readFile(new URL(migrationPath, import.meta.url), "utf8");

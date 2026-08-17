@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("gateway health requires evidence-backed completed runs", async () => {
-  const sql = await read("supabase/migrations/20260804014500_ai_gateway_health_automation.sql");
+  const sql = await read("supabase/migrations/20260804014747_ai_gateway_health_automation.sql");
 
   assert.match(sql, /verified_model_completion/);
   assert.match(sql, /input_sha256/);

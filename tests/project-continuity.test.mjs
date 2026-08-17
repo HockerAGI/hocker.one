@@ -40,7 +40,7 @@ test("general CI does not spend a full run on Markdown-only changes", async () =
 });
 
 test("backend-only Hocker One and NOVA tables get explicit deny policies without new grants", async () => {
-  const migration = await source("supabase/migrations/20260816061500_hocker_nova_service_only_policy_intent.sql");
+  const migration = await source("supabase/migrations/20260816215532_hocker_nova_service_only_policy_intent.sql");
   for (const relation of [
     "private.nova_rate_limit_buckets",
     "public.agi_chat_messages",

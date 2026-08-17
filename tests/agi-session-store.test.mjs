@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("unified AGI session schema is additive and fail-closed", async () => {
-  const migration = await read("supabase/migrations/20260816073000_unified_agi_sessions.sql");
+  const migration = await read("supabase/migrations/20260816215830_unified_agi_sessions.sql");
   assert.match(migration, /create table if not exists public\.agi_sessions/i);
   assert.match(migration, /create table if not exists public\.agi_messages/i);
   assert.match(migration, /alter table public\.agi_sessions enable row level security/i);
@@ -34,7 +34,7 @@ test("session store exposes durable provider-independent contracts", async () =>
 });
 
 test("new messages are idempotent by session message_key", async () => {
-  const migration = await read("supabase/migrations/20260816073000_unified_agi_sessions.sql");
+  const migration = await read("supabase/migrations/20260816215830_unified_agi_sessions.sql");
   const source = await read("src/lib/agi-session-store.ts");
   assert.match(migration, /message_key text/);
   assert.match(migration, /agi_messages_message_key_unique_idx/);
@@ -43,7 +43,7 @@ test("new messages are idempotent by session message_key", async () => {
 });
 
 test("legacy NOVA compatibility is post-turn, idempotent and observable", async () => {
-  const migration = await read("supabase/migrations/20260816073000_unified_agi_sessions.sql");
+  const migration = await read("supabase/migrations/20260816215830_unified_agi_sessions.sql");
   assert.match(migration, /legacy_sync_state text not null default 'not_applicable'/i);
   assert.match(migration, /sync_agi_turn_to_legacy_nova/);
   assert.match(migration, /mark_agi_legacy_sync_pending/);
@@ -53,7 +53,7 @@ test("legacy NOVA compatibility is post-turn, idempotent and observable", async 
 });
 
 test("legacy history with unknown ownership is preserved but quarantined", async () => {
-  const migration = await read("supabase/migrations/20260816073200_unified_agi_legacy_quarantine.sql");
+  const migration = await read("supabase/migrations/20260816220010_unified_agi_legacy_quarantine.sql");
   assert.match(migration, /legacy_unowned/);
   assert.match(migration, /legacy_unmatched/);
   assert.match(migration, /reconcile_required/);
@@ -66,7 +66,7 @@ test("legacy history with unknown ownership is preserved but quarantined", async
 });
 
 test("dedicated fallback is linked to exact legacy rows by trace IDs", async () => {
-  const migration = await read("supabase/migrations/20260816073300_link_dedicated_nova_fallback.sql");
+  const migration = await read("supabase/migrations/20260816220105_link_dedicated_nova_fallback.sql");
   const source = await read("src/lib/agi-session-store.ts");
   assert.match(migration, /link_dedicated_nova_fallback_turn/);
   assert.match(migration, /request_trace_id/);

@@ -63,7 +63,7 @@ test("Gemini direct auth stays in headers rather than the request URL", async ()
 });
 
 test("dedicated NOVA fallback linking uses exact trace IDs rather than content heuristics", async () => {
-  const migration = await read("supabase/migrations/20260816073300_link_dedicated_nova_fallback.sql");
+  const migration = await read("supabase/migrations/20260816220105_link_dedicated_nova_fallback.sql");
 
   assert.match(migration, /request_trace_id/);
   assert.match(migration, /agi_messages_link_dedicated_nova_fallback/);

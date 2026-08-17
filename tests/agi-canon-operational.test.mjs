@@ -94,10 +94,10 @@ test("serverless worker executes canonical prompts and complete routing", async 
 });
 
 test("database migrations enforce canonical identities and complete Memory Mirror", async () => {
-  const runtime = await read("supabase/migrations/20260804012400_agi_runtime_normalization.sql");
-  const constraints = await read("supabase/migrations/20260804012430_agi_runtime_constraints.sql");
-  const memory = await read("supabase/migrations/20260804012500_agi_memory_mirror_completion.sql");
-  const validation = await read("supabase/migrations/20260804012600_agi_canon_validation.sql");
+  const runtime = await read("supabase/migrations/20260804012554_agi_runtime_normalization.sql");
+  const constraints = await read("supabase/migrations/20260804012803_agi_runtime_constraints.sql");
+  const memory = await read("supabase/migrations/20260804012856_agi_memory_mirror_completion.sql");
+  const validation = await read("supabase/migrations/20260804012929_agi_canon_validation.sql");
 
   assert.match(runtime, /delete from public\.agi_agents/);
   assert.match(runtime, /status='missing_code'/);

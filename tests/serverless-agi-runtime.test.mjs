@@ -47,7 +47,7 @@ test("planned profiles remain fail-closed in the unified worker", async () => {
 
 test("public worker trigger stores only hashes and consumes query credentials once", async () => {
   const route = await read("src/app/api/agi/serverless-worker-trigger/route.ts");
-  const migration = await read("supabase/migrations/20260803003000_serverless_agi_runtime_tokens.sql");
+  const migration = await read("supabase/migrations/20260803003021_serverless_agi_runtime_tokens.sql");
 
   assert.match(route, /createHash\("sha256"\)/);
   assert.match(route, /x-hocker-worker-token/);
@@ -109,7 +109,7 @@ test("chat authenticates membership, uses one durable turn identity and keeps co
 test("new chat persistence is canonical in agi_sessions/agi_messages and legacy sync is post-turn", async () => {
   const runtime = await read("src/lib/unified-nova-chat-runtime.ts");
   const store = await read("src/lib/agi-session-store.ts");
-  const migration = await read("supabase/migrations/20260816073000_unified_agi_sessions.sql");
+  const migration = await read("supabase/migrations/20260816215830_unified_agi_sessions.sql");
 
   assert.match(runtime, /ensureAgiSession/);
   assert.match(runtime, /message_key: `\$\{traceId\}:user`/);
@@ -124,8 +124,8 @@ test("new chat persistence is canonical in agi_sessions/agi_messages and legacy 
 
 test("verified run startup and completion remain service-only atomic contracts", async () => {
   const runtime = await read("src/lib/unified-agi-runtime.ts");
-  const startMigration = await read("supabase/migrations/20260803004700_start_serverless_agi_execution.sql");
-  const completeMigration = await read("supabase/migrations/20260803004500_atomic_serverless_agi_completion.sql");
+  const startMigration = await read("supabase/migrations/20260803004413_start_serverless_agi_execution.sql");
+  const completeMigration = await read("supabase/migrations/20260803003709_atomic_serverless_agi_completion.sql");
 
   const completionPosition = runtime.indexOf("const completion = await completeAgi");
   const runStartPosition = runtime.indexOf("runId = await startVerifiedRun");
