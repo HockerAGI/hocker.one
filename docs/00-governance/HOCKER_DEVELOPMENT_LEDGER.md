@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T07:09:00-07:00
+last_verified_at: 2026-08-17T08:50:00-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -162,7 +162,7 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
 - PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI SUCCESS and externally blocked by exact-head Vercel deployment rate limiting.
-- PR #231: active Ledger reconciliation PR. Exact head `123ef091a2a8f341271c222a7b78960f02cdb33d` has Vercel Preview `dpl_3ue5HteeV3C4TdtNiRytXuGK9FAK` = READY. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
+- PR #231: active Ledger reconciliation PR. Exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa` has Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` = READY. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
 - PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
 - PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`. Phase 2B is present in Neon development/validation `main`; no production/customer activation follows from that state.
 - PUNTO·G PR #6: closed duplicate/no-op; no changes.
@@ -228,7 +228,8 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - PR #231 remains open, non-draft and mergeable. Preview readiness does not substitute required review/authorization or branch-protection satisfaction.
 - This 04:59 reconciliation created exact head `2c0c2a632b0a4c01be4c94ee50cb323cdf97ff8d`; that head also has Vercel Preview `dpl_BJ2ZBUcRLj2q69u7LN1k1nxudqh6` = READY.
 - The 05:56 reconciliation created exact head `123ef091a2a8f341271c222a7b78960f02cdb33d`; Vercel Preview `dpl_3ue5HteeV3C4TdtNiRytXuGK9FAK` is now `READY`. GitHub returns no workflow for this Markdown-only head.
-- This 07:09 evidence-only reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
+- The 07:09 reconciliation created exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa`; Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` is now `READY`. GitHub returns no workflow for this Markdown-only head.
+- This 08:50 evidence-only reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -283,6 +284,13 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - PR #230 remains open, mergeable, draft and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`; its exact-head Vercel READY gate remains unresolved.
 - Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output shows the same contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - Neon inventory still exposes the single PUNTO.G project `frosty-mode-96257627`; no provider mutation was executed in this cut.
+- No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-17 08:50 PDT — Ledger exact-head Preview closed green; no product/runtime delta
+
+- PR #231 exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa` now has Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` = `READY`; GitHub returns no workflow for the Markdown-only head.
+- Organization PR activity since the prior cut shows no new product/runtime PR; PR #230 remains open, mergeable, draft and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`, with exact-head Vercel READY still unresolved.
+- Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains limited to the contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ## Handoff rule
