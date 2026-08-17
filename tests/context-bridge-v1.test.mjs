@@ -115,7 +115,7 @@ test("Context Bridge builds coverage manifests and keeps active reads evidence-b
   assert.match(contract, /ContextBridgeManifestSchema/);
   assert.match(contract, /createContextBridgeManifest/);
   assert.match(contract, /getActiveContextBridgeManifest/);
-  for (const coverageState of ["complete", "missing", "stale"]) {
+  for (const coverageState of ["complete", "partial", "missing", "stale", "blocked"]) {
     assert.match(contract, new RegExp(`"${coverageState}"`));
   }
   assert.match(contract, /create_context_bridge_manifest/);
@@ -125,4 +125,16 @@ test("Context Bridge builds coverage manifests and keeps active reads evidence-b
   assert.match(sql, /CONTEXT_MANIFEST_COVERAGE_INCOMPLETE/);
   assert.match(sql, /revoke all on function public\.create_context_bridge_manifest\(jsonb\) from public, anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.create_context_bridge_manifest\(jsonb\) to service_role/i);
+});
+
+test("Context Bridge provider coverage cannot become complete from checkpoint recency alone", async () => {
+  const contract = await read("src/lib/context-bridge.ts");
+
+  assert.match(contract, /deriveProviderCoverageStatus/);
+  assert.match(contract, /providerCapabilities/);
+  assert.match(contract, /newestSourceId/);
+  assert.doesNotMatch(
+    contract,
+    /const status = !newest[\s\S]*observedAt < staleBefore[\s\S]*\? "stale"[\s\S]*: "complete"/,
+  );
 });
