@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T00:15:11-07:00
+last_verified_at: 2026-08-17T01:09:29-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -50,7 +50,7 @@ These are mutable and must be re-queried before mutation:
 
 - Owner AAL2 human ceremony.
 - 16/16 durable `agi_eval_result` / required `agi_tool_eval_result` evidence.
-- Supabase Leaked Password Protection provider setting and verification.
+- Supabase Leaked Password Protection provider setting and verification remains the current `main` closure requirement; PR #230 proposes a provider-plan reclassification but is not merged authority.
 
 PR #230 is the current candidate for the resumable Owner/AAL2 certification workflow. It is not merged or certified.
 
@@ -62,7 +62,7 @@ See `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` for the current decision bo
 
 Hocker One remains the primary NOVA runtime/control plane. Provider/model identity is internal telemetry; Owner Gate remains authoritative for material actions.
 
-PR #230 exact head `052060abd79f97b4018a6764607cdfa27c881c01` adds only a resumable Owner certification control over existing AAL2-protected runtime/tool evaluation endpoints. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence and fail-closed canonical ID checks. Exact-head GitHub CI `32004789564` is SUCCESS and PR evidence records CodeQL/code scanning SUCCESS, but the PR remains draft with zero submitted reviews and has no exact-head Vercel Preview because the provider returned a deployment-rate-limit failure. Earlier READY previews are not exact-head evidence. Do not merge until the deployment/review gates close.
+PR #230 advanced four commits from prior ledger head `052060abd79f97b4018a6764607cdfa27c881c01` to exact head `00b505221f5ff8bdd112aa6a970380973d5c68f2`. The delta updates `PLATFORM_CLOSURE_2026-08-17.md`, `AgiEvalBatchControl.tsx` and the AGI/core closure regression tests. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence and fail-closed canonical ID checks; adds a visible `Elevar sesión a AAL2` entry to the existing MFA flow; explicitly reuses an already-verified Owner TOTP factor rather than inventing a second enrollment; and proposes classifying Leaked Password Protection as `ACCEPTED_PROVIDER_PLAN_LIMITATION / FREE` for Core while leaving the provider setting visibly disabled. Exact-head GitHub Actions CI `32006651356` / run #795 is SUCCESS and PR evidence records 230/230 regressions, typecheck, lint, build, dependency audit and CodeQL/code scanning success. The PR remains draft with zero submitted reviews. Exact-head GitHub commit status is FAILURE only on Vercel with `Deployment rate limited — retry in 24 hours`; no exact-head Preview exists. Earlier READY previews on the same branch belong to older SHAs and are not promotion evidence. Do not merge until exact-head deployment and review gates close.
 
 ### Physical Node Agent
 
@@ -110,7 +110,7 @@ Any new Advisor finding or weakening of those invariants reopens security review
 
 ### Still open
 
-- Leaked Password Protection.
+- Leaked Password Protection is still disabled in directly observed provider state. Current `main` closure documents continue to treat it as open; PR #230 proposes reclassification based on Free-plan availability but has not merged.
 
 Fresh Security Advisor output still reports GraphQL exposure WARNs and the existing SECURITY DEFINER RPC WARNs governed by the exception contracts, plus leaked-password protection disabled. These warnings are not silently equivalent to global security closure.
 
@@ -120,7 +120,7 @@ Fresh Security Advisor output still reports GraphQL exposure WARNs and the exist
 - `allow_actions=false`: 16/16;
 - eval infrastructure exists;
 - durable certification remains incomplete until real AAL2-protected eval evidence is generated;
-- PR #230 is a candidate UX/control path for that evidence and remains blocked from merge by exact-head Vercel evidence plus draft/review gates.
+- PR #230 exact head `00b505221f5ff8bdd112aa6a970380973d5c68f2` is the current candidate UX/control path and remains blocked from merge by exact-head Vercel rate limiting plus draft/review gates.
 
 Never manufacture certification by inserting feedback/eval rows directly.
 
@@ -148,7 +148,8 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #209: historical closure snapshot; superseded operationally by current `PLATFORM_CLOSURE_2026-08-17.md`.
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
-- PR #230: current AGI certification candidate; draft and externally blocked by exact-head Vercel rate limiting.
+- PR #230: current AGI certification candidate at `00b505221f5ff8bdd112aa6a970380973d5c68f2`; draft, zero reviews and externally blocked by exact-head Vercel deployment rate limiting.
+- PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
 
 ## Preserved perimeter target from historical closure work
 
@@ -196,11 +197,14 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 
 ### AGI Owner certification candidate — PR #230
 
-- PR #230 is open/mergeable/draft at `052060abd79f97b4018a6764607cdfa27c881c01`.
-- Exact-head CI `32004789564` = SUCCESS; PR evidence records CodeQL/code scanning SUCCESS.
-- Exact-head Vercel status = FAILURE due deployment/build rate limiting; no exact-head Preview exists.
-- Earlier READY branch previews belong to older SHAs and are not promotion evidence.
-- Zero submitted reviews were observed. No merge is authorized.
+- Prior ledger head `052060abd79f97b4018a6764607cdfa27c881c01` advanced four commits to exact head `00b505221f5ff8bdd112aa6a970380973d5c68f2`.
+- The four-commit delta modifies `docs/operations/PLATFORM_CLOSURE_2026-08-17.md`, `src/components/agi/AgiEvalBatchControl.tsx`, `tests/agi-eval-batch.test.mjs` and `tests/core-closure-reconciliation.test.mjs`.
+- The visible Owner AAL2 step-up now points to the existing `/auth/mfa?returnTo=/agis` flow and explicitly reuses an already verified TOTP factor; the certification workflow remains sequential, resumable, server-derived and fail-closed around the exact 16-AGI set.
+- The candidate now documents Leaked Password Protection as disabled but unavailable on the current Free plan and proposes `ACCEPTED_PROVIDER_PLAN_LIMITATION / FREE` rather than claiming the control enabled. Because this is not merged, current `main` authority remains unchanged.
+- Exact-head GitHub Actions CI `32006651356` / #795 = SUCCESS; PR evidence records 230/230 regressions, typecheck, lint, build, dependency audit and CodeQL/code scanning SUCCESS.
+- Exact-head GitHub Vercel status = FAILURE with `Deployment rate limited — retry in 24 hours`; no exact-head Preview exists. Earlier READY branch previews are older SHAs.
+- PR #230 remains open, mergeable, draft and with zero submitted reviews. No merge is authorized.
+- PR #232 was opened only for the provider-plan documentation delta and then closed without merge as superseded by #230, preserving one executable evidence set.
 
 ### NOVA continuity merge — PR #32
 
