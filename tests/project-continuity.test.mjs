@@ -79,7 +79,7 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(policy, /CRON_SECRET/);
   assert.match(policy, /GitHub App|webhook/i);
   assert.match(policy, /changes\.watch/i);
-  assert.match(policy, /renov/i);
+  assert.match(policy, /renew|renov/i);
   assert.match(policy, /Memory Mirror/i);
   assert.match(policy, /revisad|review/i);
   assert.match(policy, /chat crudo|raw chat/i);
