@@ -4,10 +4,11 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("node mirror liveness is derived only from the node heartbeat timestamp", async () => {
+test("node mirror liveness is derived only from the real node heartbeat row", async () => {
   const source = await read("src/lib/hocker-node-mirror-summary.ts");
 
-  assert.match(source, /\.from\("nodes"\)[\s\S]*\.select\("node_id,last_seen_at"\)/);
+  assert.match(source, /\.from\("nodes"\)[\s\S]*\.select\("id,last_seen_at"\)[\s\S]*\.eq\("project_id", "hocker-one"\)[\s\S]*\.eq\("id", nodeId\)[\s\S]*\.maybeSingle\(\);/);
+  assert.doesNotMatch(source, /\.from\("nodes"\)[\s\S]*\.select\("node_id,last_seen_at"\)/);
   assert.match(source, /const lastSeenAt = asString\(node\?\.last_seen_at\)/);
   assert.doesNotMatch(
     source,
