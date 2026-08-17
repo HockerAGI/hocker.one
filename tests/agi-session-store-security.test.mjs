@@ -5,9 +5,9 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("unified AGI session store is deny-by-default and service_role is least-privilege", async () => {
-  const base = await read("supabase/migrations/20260816073000_unified_agi_sessions.sql");
-  const deny = await read("supabase/migrations/20260816073100_unified_agi_session_explicit_deny_policies.sql");
-  const hardening = await read("supabase/migrations/20260816073700_unified_agi_sessions_service_role_least_privilege.sql");
+  const base = await read("supabase/migrations/20260816215830_unified_agi_sessions.sql");
+  const deny = await read("supabase/migrations/20260816215914_unified_agi_session_explicit_deny_policies.sql");
+  const hardening = await read("supabase/migrations/20260816220145_unified_agi_sessions_service_role_least_privilege.sql");
 
   assert.match(base, /alter table public\.agi_sessions enable row level security/i);
   assert.match(base, /alter table public\.agi_messages enable row level security/i);

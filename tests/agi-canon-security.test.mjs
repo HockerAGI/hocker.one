@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("AGI canon validation is security-invoker and service-only", async () => {
-  const migration = await read("supabase/migrations/20260810122000_agi_canon_validation_privilege_hardening.sql");
+  const migration = await read("supabase/migrations/20260810191558_agi_canon_validation_privilege_hardening.sql");
 
   assert.match(migration, /alter view public\.v_agi_canon_completeness[\s\S]*security_invoker\s*=\s*true/i);
   assert.match(migration, /revoke all on public\.v_agi_canon_completeness[\s\S]*public, anon, authenticated/i);

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const migrationPath = "../supabase/migrations/20260811023000_commands_read_role_alignment.sql";
+const migrationPath = "../supabase/migrations/20260811094745_commands_read_role_alignment_20260811.sql";
 const routePath = "../src/app/api/commands/route.ts";
 
 test("legacy command queue read access is owner/admin/operator only", async () => {

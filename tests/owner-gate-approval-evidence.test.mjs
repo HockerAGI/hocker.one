@@ -7,9 +7,9 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 test("Context Bridge activation binds human Owner AAL2 approval to action and resource", async () => {
   const [route, migration, aal2Migration, retirement] = await Promise.all([
     read("src/app/api/context-bridge/manifests/activate/route.ts"),
-    read("supabase/migrations/20260810123000_owner_gate_approval_evidence_v1.sql"),
-    read("supabase/migrations/20260811213000_context_bridge_owner_aal2_evidence.sql"),
-    read("supabase/migrations/20260810123500_owner_gate_approval_legacy_path_retirement.sql"),
+    read("supabase/migrations/20260810192259_owner_gate_approval_evidence_v1.sql"),
+    read("supabase/migrations/20260811213752_context_bridge_owner_aal2_evidence.sql"),
+    read("supabase/migrations/20260810202047_owner_gate_legacy_activation_retirement.sql"),
   ]);
 
   assert.match(route, /requireOwnerAal2Api\(\)/);

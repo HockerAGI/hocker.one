@@ -26,7 +26,7 @@ test("Context Bridge keeps operational continuity separate from approved Memory 
 });
 
 test("Context Bridge persistence is service-only, evidence-backed and owner-gated", async () => {
-  const sql = await read("supabase/migrations/20260808194500_context_bridge_v1.sql");
+  const sql = await read("supabase/migrations/20260808215327_context_bridge_v1.sql");
 
   for (const table of [
     "context_bridge_sources",
@@ -88,8 +88,8 @@ test("Context Bridge activation requires a human Owner AAL2 session and one-time
   const [activationRoute, page, evidenceMigration, aal2Migration] = await Promise.all([
     read("src/app/api/context-bridge/manifests/activate/route.ts"),
     read("src/app/owner/context-bridge/page.tsx"),
-    read("supabase/migrations/20260810123000_owner_gate_approval_evidence_v1.sql"),
-    read("supabase/migrations/20260811213000_context_bridge_owner_aal2_evidence.sql"),
+    read("supabase/migrations/20260810192259_owner_gate_approval_evidence_v1.sql"),
+    read("supabase/migrations/20260811213752_context_bridge_owner_aal2_evidence.sql"),
   ]);
 
   assert.match(activationRoute, /requireOwnerAal2Api\(\)/);
@@ -110,7 +110,7 @@ test("Context Bridge builds coverage manifests and keeps active reads evidence-b
     read("src/lib/context-bridge.ts"),
     read("src/lib/context-bridge-coverage.ts"),
     read("src/app/api/context-bridge/manifests/active/route.ts"),
-    read("supabase/migrations/20260808194500_context_bridge_v1.sql"),
+    read("supabase/migrations/20260808215327_context_bridge_v1.sql"),
   ]);
 
   assert.match(contract, /ContextBridgeManifestSchema/);
