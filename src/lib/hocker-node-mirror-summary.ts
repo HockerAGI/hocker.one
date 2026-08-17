@@ -45,17 +45,7 @@ function asBoolean(value: unknown): boolean | null {
   return null;
 }
 
-function newestDate(...values: Array<string | null | undefined>): string | null {
-  const valid = values
-    .filter(Boolean)
-    .map((value) => String(value))
-    .filter((value) => !Number.isNaN(new Date(value).getTime()))
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-
-  return valid[0] ?? null;
-}
-
-function isRecent(value: string | null, minutes = 20): boolean {
+function isRecent(value: string | null, minutes = 5): boolean {
   if (!value) return false;
   const time = new Date(value).getTime();
   if (Number.isNaN(time)) return false;
@@ -75,6 +65,13 @@ async function getNodeRuntime(
   roleLabel: "Principal" | "Espejo",
 ): Promise<HockerNodeRuntimeSummary> {
   const sb = createAdminSupabase();
+
+  const { data: node } = await sb
+    .from("nodes")
+    .select("node_id,last_seen_at")
+    .eq("project_id", "hocker-one")
+    .eq("node_id", nodeId)
+    .maybeSingle();
 
   const { data: latestCommand } = await sb
     .from("commands")
@@ -97,22 +94,7 @@ async function getNodeRuntime(
     .limit(1)
     .maybeSingle();
 
-  const { data: latestEvent } = await sb
-    .from("events")
-    .select("id,project_id,node_id,level,type,message,created_at")
-    .eq("project_id", "hocker-one")
-    .eq("node_id", nodeId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const lastSeenAt = newestDate(
-    asString(latestCommand?.finished_at),
-    asString(latestCommand?.executed_at),
-    asString(latestCommand?.completed_at),
-    asString(latestEvent?.created_at),
-  );
-
+  const lastSeenAt = asString(node?.last_seen_at);
   const result = asRecord(latestStatusCommand?.result ?? latestCommand?.result);
   const sandbox = asRecord(result.sandbox);
   const controls = asRecord(result.controls);
