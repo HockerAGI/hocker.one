@@ -41,7 +41,7 @@ A verified MFA factor exists, but certification endpoints require a real human O
 
 Pass condition: an actual Owner AAL2 session is used through supported Hocker One/Supabase Auth flow and the resulting protected requests succeed without bypass.
 
-### G2 — 16/16 AGI runtime certification — **OPEN**
+### G2 — 16/16 AGI runtime eval certification — **OPEN**
 
 Current durable evidence remains:
 
