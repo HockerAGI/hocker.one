@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T08:50:00-07:00
+last_verified_at: 2026-08-17T11:56:55-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -66,7 +66,7 @@ Hocker One remains the primary NOVA runtime/control plane. Provider/model identi
 
 PR #230's latest **code-bearing** exact head is `30a414ad95c25cd0bb61b241e63d43ab786d107b`, three commits ahead of the prior ledger head `00b505221f5ff8bdd112aa6a970380973d5c68f2`. That code delta is limited to `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`. It passes the server certification snapshot into the Owner batch control and fails closed when that snapshot is partial, preventing synthetic 16-AGI reruns or unnecessary model spend from incomplete evidence. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence, the visible existing AAL2 MFA flow and the Owner's already-verified TOTP factor. GitHub Actions CI `32011301053` / run #798 for `30a414ad...` is SUCCESS; PR evidence records regression, typecheck, lint, build and full dependency audit success, with CodeQL/code scanning also reported green.
 
-Documentation drift for that new fail-closed condition was corrected in the editable source `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` on the same PR branch, producing current PR head `1ced536e40a7610a7fed291712baed87c626371a`. The documentation now states that a partial/incomplete server certification snapshot must block batch execution rather than synthesize a full-set rerun. Current-head GitHub Actions CI `32012349597` / #799 is now `SUCCESS`. Exact-head Vercel status remains `FAILURE` with `Deployment rate limited — retry in 24 hours`; no READY Preview exists for `1ced536e...`. PR #230 remains draft, mergeable and has zero submitted reviews. Do not merge until the current exact head has a READY Vercel Preview with reviewed build/runtime logs, required review/authorization and branch-protection satisfaction.
+Documentation drift for that new fail-closed condition was corrected in the editable source `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` on the same PR branch, producing current PR head `1ced536e40a7610a7fed291712baed87c626371a`. The documentation now states that a partial/incomplete server certification snapshot must block batch execution rather than synthesize a full-set rerun. Current-head GitHub Actions CI `32012349597` / #799 is now `SUCCESS`. Exact-head Vercel status remains unresolved: the prior status is `FAILURE` with `Deployment rate limited — retry in 24 hours`, and no new READY Preview for `1ced536e...` was observed in the latest deployment inventory. PR #230 remains draft, mergeable and has zero submitted reviews. Do not merge until the current exact head has a READY Vercel Preview with reviewed build/runtime logs, required review/authorization and branch-protection satisfaction.
 
 ### Physical Node Agent
 
@@ -124,8 +124,8 @@ Fresh Security Advisor output still reports the contract-governed GraphQL exposu
 - `allow_actions=false`: 16/16;
 - eval infrastructure exists;
 - durable certification remains incomplete until real AAL2-protected eval evidence is generated;
-- PR #230 current head `1ced536e40a7610a7fed291712baed87c626371a` is the active candidate; latest code-bearing head `30a414ad95c25cd0bb61b241e63d43ab786d107b` has full CI green, and the current documentation-aligned head now also has CI `32012349597` SUCCESS while Vercel remains blocked by provider rate limiting.
-- Partial server certification snapshots now fail closed in both implementation and the editable closure source rather than triggering a synthetic full-set execution.
+- PR #230 current head `1ced536e40a7610a7fed291712baed87c626371a` is the active candidate; latest code-bearing head `30a414ad95c25cd0bb61b241e63d43ab786d107b` has full CI green, and the current documentation-aligned head has CI `32012349597` SUCCESS while exact-head Vercel READY remains unresolved.
+- Partial server certification snapshots fail closed in both implementation and the editable closure source rather than triggering a synthetic full-set execution.
 
 Never manufacture certification by inserting feedback/eval rows directly.
 
@@ -142,7 +142,7 @@ Current PUNTO·G architecture remains provider-neutral:
 - Supabase remains a supported future migration target rather than mandatory current authority;
 - Hocker One administration must use a minimized/audited PUNTO Control Contract, not direct provider-admin credentials.
 
-**Phase 2B is now merged and materialized in Neon development/validation `main`.** PR #5 merged at `01cb92519cebb9c22696731930039d0fa7952005` with final PR head `7ea99faa0cc439bcd45bf817f4213711ba775e68`. Its recorded full-CI baseline was GitHub Actions `32022459354` = SUCCESS at `b43c574aa4c9964e96d51f29deaab1ac285f5915`; the later dependency-free hardening delta was documented with targeted local/Neon verification. Direct provider state now verifies Phase 2B tables/functions in Neon `main`, and `docs/operations/ENVIRONMENTS-RELEASE.md` explicitly records the promotion, backup and post-promotion cleanup. This is development/validation state, not public production authorization.
+**Phase 2B is now merged and materialized in Neon development/validation `main`.** PR #5 merged at `01cb92519cebb9c22696731930039d0fa7952005` with final PR head `7ea99faa0cc439bcd45bf817f4213711ba775e68`. Its recorded full-CI baseline was GitHub Actions `32022459354` = SUCCESS at `b43c574aa4c9964e96d51f29deaab1ac285f5915`; the later dependency-free hardening delta was documented with targeted local/Neon verification. Direct provider state verifies Phase 2B tables/functions in Neon `main`, and `docs/operations/ENVIRONMENTS-RELEASE.md` records the promotion, backup and post-promotion cleanup. This is development/validation state, not public production authorization.
 
 After PR #5, `punto.g/main` advanced **21 direct commits** to `acca73397d28a542b31e2faae3c98ba7436198f5`. The verified delta adds **Phase 2C portable Object Storage**: `ObjectStoragePort`, dependency-free S3 Signature V4 presigning, R2-compatible runtime configuration, managed object-key policy, private/quarantine separation, MIME/size/path validation, tests, ADR-0008, `STORAGE-MEDIA.md`, audit evidence and roadmap/source updates. `docs/audits/2026-08-17-phase-2c-object-storage.md` records RED→GREEN and 9/9 local storage tests plus independent SigV4 recomputation. No Cloudflare/R2 resource activation is evidenced; bucket/token/CORS/lifecycle setup remains an external provider gate.
 
@@ -161,9 +161,11 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #209: historical closure snapshot; superseded operationally by current `PLATFORM_CLOSURE_2026-08-17.md`.
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
-- PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI SUCCESS and externally blocked by exact-head Vercel deployment rate limiting.
-- PR #231: active Ledger reconciliation PR. Exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa` has Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` = READY. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
+- PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI SUCCESS and exact-head Vercel READY still unresolved.
+- PR #231: active Ledger reconciliation PR. Exact head `47ab5658a92744f5a94412c43f544e16ea15a4c8` has Vercel Preview `dpl_FaeDMXba3zScBr4Cqk94HuGqGium` = READY. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
 - PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
+- Hocker One dependency PRs #233-#237 are newly open Dependabot candidates. #233 (`next` 16.2.12→16.3.1) has Vercel READY but CI `32055006518` FAILURE; #234 (`zod` 3.25.76→4.4.3) has CI `32055015015` FAILURE and Vercel build ERROR from a Zod v4 type-contract incompatibility at `z.record(z.unknown())`; #235 (`sonner` 2.0.7→2.0.8) has a READY Preview but still requires full exact-head gate/review; #236 (`@next/eslint-plugin-next` 16.3.0→16.3.1) has a READY Preview but still requires full exact-head gate/review; #237 (`@capacitor/android` 8.3.1→8.5.0) fails CI, Android Debug APK, Android Signed Release, Android Emulator QA and Vercel because `@capacitor/core` remains 8.3.1 while Android 8.5.0 requires `^8.5.0`. None is authorized for merge in this cut.
+- New dependency PRs are also present in `hocker.agi`, `nova.agi`, `hocker-node-agent` and `chido.casino`; these are dependency-review backlog, not implementation authority, until each repo's exact-head checks and compatibility review pass.
 - PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`. Phase 2B is present in Neon development/validation `main`; no production/customer activation follows from that state.
 - PUNTO·G PR #6: closed duplicate/no-op; no changes.
 
@@ -218,22 +220,23 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The three-commit code delta modifies only `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`: the server certification snapshot is passed to the Owner batch control, and partial snapshots explicitly block batch execution rather than synthesizing a 16-AGI rerun.
 - GitHub Actions CI `32011301053` / #798 for that code-bearing head = SUCCESS; PR evidence records regression tests, typecheck, lint, build, dependency audit and CodeQL/code scanning SUCCESS.
 - Drift audit found the editable platform-closure source did not explicitly state the new partial-snapshot block. `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` was therefore aligned on the same PR branch, creating current head `1ced536e40a7610a7fed291712baed87c626371a` without runtime/DDL/provider/permission changes.
-- Current-head CI `32012349597` / #799 is now `SUCCESS`; exact-head Vercel status remains FAILURE with `Deployment rate limited — retry in 24 hours`. No current-head READY Preview exists.
+- Current-head CI `32012349597` / #799 is `SUCCESS`; exact-head Vercel READY remains unresolved. No current-head READY Preview was observed in the latest deployment inventory.
 - PR #230 remains open, mergeable, draft and with zero submitted reviews. No merge is authorized.
 - PR #232 remains closed without merge as superseded by #230, preserving one executable evidence set.
 
 ### Active Ledger gate — PR #231
 
-- Prior Ledger exact head `665b14ac6f879e449263f73a83e499494c6d4592` now has Vercel Preview `dpl_8eSRCpgrX1wPNieyCW3434tyXUUX` = READY; GitHub returns no workflow for the Markdown-only head.
+- Prior Ledger exact head `665b14ac6f879e449263f73a83e499494c6d4592` has Vercel Preview `dpl_8eSRCpgrX1wPNieyCW3434tyXUUX` = READY; GitHub returns no workflow for the Markdown-only head.
 - PR #231 remains open, non-draft and mergeable. Preview readiness does not substitute required review/authorization or branch-protection satisfaction.
-- This 04:59 reconciliation created exact head `2c0c2a632b0a4c01be4c94ee50cb323cdf97ff8d`; that head also has Vercel Preview `dpl_BJ2ZBUcRLj2q69u7LN1k1nxudqh6` = READY.
-- The 05:56 reconciliation created exact head `123ef091a2a8f341271c222a7b78960f02cdb33d`; Vercel Preview `dpl_3ue5HteeV3C4TdtNiRytXuGK9FAK` is now `READY`. GitHub returns no workflow for this Markdown-only head.
-- The 07:09 reconciliation created exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa`; Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` is now `READY`. GitHub returns no workflow for this Markdown-only head.
-- This 08:50 evidence-only reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
+- The 04:59 reconciliation exact head `2c0c2a632b0a4c01be4c94ee50cb323cdf97ff8d` has Vercel Preview `dpl_BJ2ZBUcRLj2q69u7LN1k1nxudqh6` = READY.
+- The 05:56 reconciliation exact head `123ef091a2a8f341271c222a7b78960f02cdb33d` has Vercel Preview `dpl_3ue5HteeV3C4TdtNiRytXuGK9FAK` = READY; GitHub returns no workflow for the Markdown-only head.
+- The 07:09 reconciliation exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa` has Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` = READY; GitHub returns no workflow for the Markdown-only head.
+- The 08:50 reconciliation exact head `47ab5658a92744f5a94412c43f544e16ea15a4c8` now has Vercel Preview `dpl_FaeDMXba3zScBr4Cqk94HuGqGium` = READY.
+- This 11:56 evidence reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
-- PR #230 exact head `1ced536e40a7610a7fed291712baed87c626371a`: GitHub Actions CI `32012349597` / #799 completed `SUCCESS`; Vercel commit status remains `FAILURE` solely due to `Deployment rate limited — retry in 24 hours`; PR remains draft, mergeable and zero-review, so no merge is authorized.
+- PR #230 exact head `1ced536e40a7610a7fed291712baed87c626371a`: GitHub Actions CI `32012349597` / #799 completed `SUCCESS`; prior Vercel commit status was `FAILURE` due to deployment rate limiting; PR remains draft, mergeable and zero-review, so no merge is authorized.
 - PR #231 exact head `edf6c1993dcbacfe80a975a3af893ce45ca7200a`: Vercel Preview `dpl_4xun9MaSMCoeKwZsDHAuAbsohQ3H` is `READY`; no GitHub workflow is returned for the Markdown-only commit. Review/branch-protection authorization remains required.
 - Production Supabase remains `ACTIVE_HEALTHY` with branch `main=FUNCTIONS_DEPLOYED`. Fresh Security Advisor output remains limited to the contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new RLS-disabled/no-policy critical regression was observed.
 - No production DDL, RLS/grant mutation, secret change, provider activation, AGI action enablement, regulated functionality or `main` merge was executed in this audit cut.
@@ -291,6 +294,18 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - PR #231 exact head `4456908c7c76c1acbc1a02de5b311bc2dff7cdaa` now has Vercel Preview `dpl_E4rHvtK1jRV3KJYFtHcrG5tZDrmk` = `READY`; GitHub returns no workflow for the Markdown-only head.
 - Organization PR activity since the prior cut shows no new product/runtime PR; PR #230 remains open, mergeable, draft and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`, with exact-head Vercel READY still unresolved.
 - Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains limited to the contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
+- No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-17 11:56 PDT — Dependency update wave detected; no merge-safe candidate promoted
+
+- PR #231 previous head `47ab5658a92744f5a94412c43f544e16ea15a4c8` now has Vercel Preview `dpl_FaeDMXba3zScBr4Cqk94HuGqGium` = `READY`.
+- A new Dependabot wave is open across Hocker One, `hocker.agi`, `nova.agi`, `hocker-node-agent` and `chido.casino`. These are dependency candidates only; no default-branch implementation authority follows from PR creation.
+- Hocker One PR #233 (`next` 16.2.12→16.3.1), head `1aa99d76c5b4593ec0d8162fb946ac5b5b3ba0da`, has Vercel Preview `dpl_7WgeKyXTS6LC1dZCZDyCKQ6g8Xna` = READY but CI `32055006518` = FAILURE. Android Debug APK, Signed Release and Emulator QA were SUCCESS. It is blocked from merge.
+- Hocker One PR #234 (`zod` 3.25.76→4.4.3), head `3c54d269fe95405a4b0afe23b69b761c8f8075c2`, has CI `32055015015` = FAILURE and Vercel deployment `dpl_4GhmjDFHj1cCNB64E3zdQ2URj4jR` = ERROR. Build logs show a concrete Zod v4 API incompatibility in `src/app/api/agi/runtime/actions/route.ts`: `z.record(z.unknown())` no longer satisfies the expected argument contract. No merge.
+- Hocker One PR #237 (`@capacitor/android` 8.3.1→8.5.0), head `cbd1c37dc37e352fc2e49672062c2732c3dc0993`, fails CI `32055043699`, Android Debug APK `32055043691`, Signed Release `32055043778`, Emulator QA `32055043706`, and Vercel `dpl_2MxnuyRVaC6uEkTqWp7B9iCXAEp5`. Vercel logs show `ERESOLVE`: `@capacitor/android@8.5.0` requires peer `@capacitor/core@^8.5.0` while the repository remains on `@capacitor/core@8.3.1`. No force/legacy-peer-deps bypass is authorized.
+- Hocker One PRs #235 (`sonner` 2.0.8) and #236 (`@next/eslint-plugin-next` 16.3.1) have READY previews in current Vercel inventory, but no auto-merge was performed because full exact-head compatibility/review/branch-protection evidence was not established in this cut.
+- PR #230 remains draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`; no new exact-head READY Preview was observed, so the Owner/AAL2 16-AGI certification candidate remains blocked.
+- Production Supabase Security Advisor remains materially unchanged: contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new RLS-disabled/no-policy critical regression was observed.
 - No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ## Handoff rule
