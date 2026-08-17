@@ -66,3 +66,26 @@ test("agent contract requires durable recovery and milestone handoff", async () 
   assert.match(agents, /Protocolo obligatorio al iniciar trabajo/);
   assert.match(agents, /Protocolo obligatorio de handoff/);
 });
+
+test("context freshness policy makes operational continuity event-driven and memory review-only", async () => {
+  const [policy, bridge, protocol] = await Promise.all([
+    source("docs/operations/CONTEXT_FRESHNESS_POLICY.md"),
+    source("docs/operations/CONTEXT_BRIDGE_V1.md"),
+    source("docs/operations/CONTINUITY_PROTOCOL.md"),
+  ]);
+
+  assert.match(policy, /milestone|hito/i);
+  assert.match(policy, /17 8 \* \* \*/);
+  assert.match(policy, /CRON_SECRET/);
+  assert.match(policy, /GitHub App|webhook/i);
+  assert.match(policy, /changes\.watch/i);
+  assert.match(policy, /renov/i);
+  assert.match(policy, /Memory Mirror/i);
+  assert.match(policy, /revisad|review/i);
+  assert.match(policy, /chat crudo|raw chat/i);
+  assert.match(policy, /credencial|secret/i);
+  assert.match(policy, /manifiest/i);
+  assert.match(policy, /AAL2/i);
+  assert.match(bridge, /capability.*evidence|evidencia.*capacidad/i);
+  assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
+});
