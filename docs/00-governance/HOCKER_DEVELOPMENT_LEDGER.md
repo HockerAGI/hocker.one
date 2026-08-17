@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T02:50:13-07:00
+last_verified_at: 2026-08-17T03:51:27-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -31,6 +31,7 @@ These are mutable and must be re-queried before mutation:
 - Supabase Branching: `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` at the latest read.
 - NOVA dedicated repository `main`: `db417f262dfcddcad8e82f6be977415d0b0f3e89` after PR #32.
 - PUNTO·G repository `main`: `31accb4c1ebc965a037578431f5a017e3728df60` after PR #4.
+- PUNTO·G Neon development project: `PUNTO.G` / `frosty-mode-96257627`; default `main=br-little-art-au9zcb71`; isolated Phase 2B branch `phase-2b-auth-postgres=br-weathered-brook-auuuw1hi`. No Phase 2B promotion to Neon `main` is evidenced.
 
 ## Current Hocker One closure snapshot
 
@@ -131,16 +132,20 @@ Never manufacture certification by inserting feedback/eval rows directly.
 
 PR #4 merged documentation-only Canon `1.0-rc4` at `31accb4c1ebc965a037578431f5a017e3728df60`.
 
-Current PUNTO·G architecture is provider-neutral for future work:
+Current PUNTO·G architecture remains provider-neutral:
 
 - PostgreSQL is the portable persistence contract;
-- Neon is selected as the first DB provider to activate later, without becoming a domain dependency;
+- Neon is the selected first DB provider without becoming a domain dependency;
 - Better Auth is CURRENT behind a PUNTO·G-owned identity boundary;
 - object storage uses an S3-compatible port, with Cloudflare R2 candidate/preferred for first activation;
 - Supabase remains a supported future migration target rather than mandatory current authority;
 - Hocker One administration must use a minimized/audited PUNTO Control Contract, not direct provider-admin credentials.
 
-This documentation merge created/configured no Neon, R2, Supabase, Vercel, KYC, PSP, domain, secret or production resource. Historical Supabase-oriented Phase 2 evidence remains historical and must not be rewritten as if it had been provider-neutral at the time.
+**Phase 2B development activation is now verified.** Open draft PR #5 (`feat/phase-2b-portable-auth-postgres`) adds the portable identity/PostgreSQL foundation, Better Auth adapter boundary, three versioned DB migrations and auth/identity tests. The implementation exact head `e386550b350e75b1ce8d9ddfc13dc1a37b60ff50` had GitHub Actions CI `32020302373` = SUCCESS. Direct Neon evidence verifies project `PUNTO.G` (`frosty-mode-96257627`) and isolated branch `phase-2b-auth-postgres` (`br-weathered-brook-auuuw1hi`) with the Phase 2B identity/Auth schema delta; Neon `main` (`br-little-art-au9zcb71`) remains separate and unpromoted. Managed Neon Auth is not provisioned.
+
+Drift audit found `CANON.md`, ADR-0007 and `docs/operations/ENVIRONMENTS-RELEASE.md` still stated or implied that no Neon resource existed. Those editable sources were reconciled on PR #5 without changing production/provider state, producing current PR head `b43c574aa4c9964e96d51f29deaab1ac285f5915`. Current-head CI `32022459354` is `in_progress` at this cut. PR #5 remains draft, mergeable and has zero reviews; identity/Auth/provider promotion requires human review/Owner authorization. No merge or Neon `main` promotion is authorized.
+
+R2, KYC provider, payments, AI, hosting production and customer traffic remain unactivated/PENDING EVIDENCE. Historical Supabase-oriented Phase 2 evidence remains historical and must not be rewritten as if it had been provider-neutral at the time.
 
 ## Repository/governance continuity
 
@@ -152,8 +157,9 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
 - PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI SUCCESS and externally blocked by exact-head Vercel deployment rate limiting.
-- PR #231: active Ledger reconciliation PR at prior exact head `edf6c1993dcbacfe80a975a3af893ce45ca7200a`; Vercel Preview `dpl_4xun9MaSMCoeKwZsDHAuAbsohQ3H` is READY and GitHub returns no workflow for the Markdown-only head. It remains open, non-draft, mergeable and must still satisfy review/authorization and branch-protection policy before merge.
+- PR #231: active Ledger reconciliation PR at prior exact head `d10caba18f069a5711bef691c65e1538d015e735`; Vercel Preview `dpl_BqVwEeeJ6kvdPyGAiVFKuddNfZVw` is READY and GitHub returns no workflow for the Markdown-only head. It remains open, non-draft, mergeable and must still satisfy review/authorization and branch-protection policy before merge.
 - PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
+- PUNTO·G PR #5: current Phase 2B portable Auth/PostgreSQL candidate. Implementation head `e386550b...` had CI SUCCESS; current head `b43c574a...` includes required documentation drift corrections and has CI in progress. It remains draft/zero-review and cannot be merged or promoted to Neon `main` without identity/security Owner review.
 
 ## Preserved perimeter target from historical closure work
 
@@ -212,9 +218,9 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 
 ### Active Ledger gate — PR #231
 
-- Prior Ledger exact head `edf6c1993dcbacfe80a975a3af893ce45ca7200a` now has Vercel Preview `dpl_4xun9MaSMCoeKwZsDHAuAbsohQ3H` = READY; GitHub returns no workflow for the Markdown-only head.
+- Prior Ledger exact head `d10caba18f069a5711bef691c65e1538d015e735` now has Vercel Preview `dpl_BqVwEeeJ6kvdPyGAiVFKuddNfZVw` = READY; GitHub returns no workflow for the Markdown-only head.
 - PR #231 remains open, non-draft and mergeable. Preview readiness does not substitute required review/authorization or branch-protection satisfaction.
-- This 02:50 reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
+- This 03:51 reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -234,6 +240,15 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - PUNTO·G PR #4 merged documentation-only Canon `1.0-rc4` at `31accb4c1ebc965a037578431f5a017e3728df60`.
 - Mandatory Supabase assumptions are superseded for future PUNTO work by provider-neutral persistence/auth/storage contracts.
 - No provider or production infrastructure was activated by the merge.
+
+### 2026-08-17 03:51 PDT — PUNTO·G Phase 2B development infrastructure verified
+
+- Detected open draft PUNTO·G PR #5, `feat: Phase 2B portable auth and PostgreSQL foundation`, initially at implementation head `e386550b350e75b1ce8d9ddfc13dc1a37b60ff50` with GitHub Actions CI `32020302373` = SUCCESS.
+- PR #5 adds 21 implementation/test/migration files at that head, including a server-only Better Auth route/boundary, PostgreSQL identity repository/runtime config, identity/Auth migrations and invariant tests. No managed Neon Auth, AI, payments, KYC provider or customer traffic is activated by the PR contract.
+- Direct Neon verification found project `PUNTO.G` (`frosty-mode-96257627`, PostgreSQL 18) with default branch `main` (`br-little-art-au9zcb71`) and isolated child branch `phase-2b-auth-postgres` (`br-weathered-brook-auuuw1hi`). Schema comparison confirms the identity/Auth/audit delta exists only in the child branch; no Phase 2B promotion to Neon `main` was executed.
+- Drift audit found `CANON.md` still claimed no Neon resource existed, while ADR-0007's registry said provider direction did not prove resource existence and `ENVIRONMENTS-RELEASE.md` did not record the real development branch. Following PUNTO·G governance, all three editable sources were reconciled in PR #5 without changing runtime/provider production state.
+- Documentation reconciliation produced current PR #5 head `b43c574aa4c9964e96d51f29deaab1ac285f5915`; exact-head CI `32022459354` is `in_progress` at this cut. PR remains draft, mergeable and has zero reviews. Because it touches identity/Auth/security and remote DB state, no merge or Neon `main` promotion is authorized without exact-head green gates plus human/Owner review.
+- Production HOCKER Supabase remains `ACTIVE_HEALTHY`, `main=FUNCTIONS_DEPLOYED`; current Advisor findings remain the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled. No new HOCKER production DDL, RLS/grant, secret, payment, AGI action or regulated activation was executed by this audit.
 
 ## Handoff rule
 
