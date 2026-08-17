@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { deriveProviderCoverageStatus } from "@/lib/context-bridge-coverage";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 export const CONTEXT_BRIDGE_VERSION = "context-bridge-v1" as const;
@@ -201,33 +202,6 @@ export async function createContextBridgeManifest(input: ContextBridgeManifestIn
     if (sourceId && !latestBySource.has(sourceId)) latestBySource.set(sourceId, checkpoint);
   }
 
-  const staleBefore = Date.now() - manifest.max_staleness_hours * 60 * 60 * 1000;
-  const coverage = manifest.required_providers.map((provider) => {
-    const providerSources = sources.filter((source) => source.provider === provider);
-    const providerCheckpoints = providerSources
-      .map((source) => latestBySource.get(String(source.id ?? "")))
-      .filter((item): item is Record<string, unknown> => Boolean(item))
-      .sort((left, right) =>
-        Date.parse(String(right.observed_at ?? "")) - Date.parse(String(left.observed_at ?? "")),
-      );
-    const newest = providerCheckpoints[0];
-    const observedAt = newest ? Date.parse(String(newest.observed_at ?? "")) : Number.NaN;
-    const status = !newest
-      ? "missing"
-      : !Number.isFinite(observedAt) || observedAt < staleBefore
-        ? "stale"
-        : "complete";
-    return {
-      domain_key: `provider:${provider}`,
-      expected_refs: 1,
-      verified_refs: status === "complete" ? 1 : 0,
-      status,
-      missing_refs: status === "complete" ? [] : [provider],
-      evidence_refs: newest ? [String(newest.external_ref ?? "")] : [],
-      verified_at: status === "complete" ? String(newest?.observed_at ?? "") : null,
-    };
-  });
-
   let capabilities: Array<Record<string, unknown>> = [];
   if (sourceIds.length > 0) {
     const { data: capabilityData, error: capabilityError } = await supabase
@@ -238,6 +212,36 @@ export async function createContextBridgeManifest(input: ContextBridgeManifestIn
     if (capabilityError) throw capabilityError;
     capabilities = (capabilityData ?? []) as Array<Record<string, unknown>>;
   }
+
+  const staleBefore = Date.now() - manifest.max_staleness_hours * 60 * 60 * 1000;
+  const coverage = manifest.required_providers.map((provider) => {
+    const providerSources = sources.filter((source) => source.provider === provider);
+    const providerCheckpoints = providerSources
+      .map((source) => latestBySource.get(String(source.id ?? "")))
+      .filter((item): item is Record<string, unknown> => Boolean(item))
+      .sort((left, right) =>
+        Date.parse(String(right.observed_at ?? "")) - Date.parse(String(left.observed_at ?? "")),
+      );
+    const newest = providerCheckpoints[0];
+    const newestSourceId = String(newest?.source_id ?? "");
+    const providerCapabilities = capabilities.filter(
+      (capability) => capability.provider === provider && capability.source_id === newestSourceId,
+    );
+    const status = deriveProviderCoverageStatus({
+      checkpointObservedAt: newest?.observed_at,
+      staleBefore,
+      capabilities: providerCapabilities,
+    });
+    return {
+      domain_key: `provider:${provider}`,
+      expected_refs: 1,
+      verified_refs: status === "complete" ? 1 : 0,
+      status,
+      missing_refs: status === "complete" ? [] : [provider],
+      evidence_refs: newest ? [String(newest.external_ref ?? "")] : [],
+      verified_at: status === "complete" ? String(newest?.observed_at ?? "") : null,
+    };
+  });
 
   const checkpointIds = [...latestBySource.values()]
     .map((checkpoint) => String(checkpoint.id ?? ""))

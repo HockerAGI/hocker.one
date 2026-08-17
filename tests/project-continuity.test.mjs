@@ -66,3 +66,38 @@ test("agent contract requires durable recovery and milestone handoff", async () 
   assert.match(agents, /Protocolo obligatorio al iniciar trabajo/);
   assert.match(agents, /Protocolo obligatorio de handoff/);
 });
+
+test("context freshness policy makes operational continuity event-driven and memory review-only", async () => {
+  const [policy, bridge, protocol] = await Promise.all([
+    source("docs/operations/CONTEXT_FRESHNESS_POLICY.md"),
+    source("docs/operations/CONTEXT_BRIDGE_V1.md"),
+    source("docs/operations/CONTINUITY_PROTOCOL.md"),
+  ]);
+
+  assert.match(policy, /milestone|hito/i);
+  assert.match(policy, /17 8 \* \* \*/);
+  assert.match(policy, /CRON_SECRET/);
+  assert.match(policy, /GitHub App|webhook/i);
+  assert.match(policy, /changes\.watch/i);
+  assert.match(policy, /renew|renov/i);
+  assert.match(policy, /Memory Mirror/i);
+  assert.match(policy, /revisad|review/i);
+  assert.match(policy, /chat crudo|raw chat/i);
+  assert.match(policy, /credencial|secret/i);
+  assert.match(policy, /manifiest/i);
+  assert.match(policy, /AAL2/i);
+  assert.match(bridge, /capability.*evidence|evidencia.*capacidad/i);
+  assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
+});
+
+test("recovery snapshot keeps production authority and incomplete context gates explicit", async () => {
+  const state = await source("docs/operations/LAST_KNOWN_STATE.md");
+  assert.match(state, /945ed9cdeda909faa9823230d2a4f47ff84173c7/);
+  assert.match(state, /dpl_BbKA86LqvHBkbTDD2vnnsdRcYmT4/);
+  assert.match(state, /PR #214[\s\S]*already merged|PR #214[\s\S]*ya.*merged/i);
+  assert.match(state, /PR #216/);
+  assert.match(state, /google-drive-canon[\s\S]*partial/i);
+  assert.match(state, /Codex[\s\S]*not.*refreshed|Codex[\s\S]*no fue.*refresc/i);
+  assert.match(state, /agi_eval_result[\s\S]*0/);
+  assert.match(state, /agi_tool_eval_result[\s\S]*0/);
+});
