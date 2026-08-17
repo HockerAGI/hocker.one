@@ -4,7 +4,7 @@ status: ACTIVE-DRAFT
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-16T19:00:10-07:00
+last_verified_at: 2026-08-16T19:54:09-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only change log; snapshots may be reconciled only from evidence
 ---
@@ -24,15 +24,15 @@ Current connected provider inventory verifies **3 Vercel projects** in team `Hoc
 
 | Repository | Visibility | Canonical/product role | Verified current state | Immediate gate / next action |
 |---|---|---|---|---|
-| `HockerAGI/hocker.one` | public | Hocker One control plane; governance of 16 AGIs | `main` is protected and now points to verified merge commit `a32a0a01c8198477d542e201889f80d21a13573f` from PR #220. Since the previous Ledger cut, PR #218 merged at `482d53a3a1e0e3837a8107cc9421033873f3eca3` after exact-head CI `31984564513` SUCCESS and READY Vercel Preview; PR #219 merged at `733e2283a3a4462c88ef0c81060f5cda18ffebfa` after exact-head CI `31984920401` SUCCESS and READY Preview; PR #220 merged at `a32a0a01c8198477d542e201889f80d21a13573f` from head `4850a9d8d6fa383d8ea2a65cd01cacdc44138d34`, with `Verify Hocker ONE` CI `31985556548` SUCCESS, CodeQL SUCCESS, Preview READY and verified production commit metadata stating Owner authorization. #218/#219 reconciled Git migration history to production without blind reset/rebase or schema replay; #220 made deny-by-default client intent explicit for `compliance_events`, `game_history` and `wager_progress_ledger`, preserving service-role-only behavior. Production Vercel deployment `dpl_EF3RTXT7XfxS7nGTAz8jb187PT31` for #220 is READY. Supabase branch status is now `FUNCTIONS_DEPLOYED`, replacing the prior `MIGRATIONS_FAILED` state. Open PR #209 remains the broader closure gate; #213 remains isolated UI work; #215 contains this Ledger. | Treat #218/#219 migration parity and #220 backend-only deny intent as current production authority. Do not claim full platform-security closure: GraphQL exposure, existing SECURITY DEFINER RPCs, leaked-password protection, Owner/AAL2 and other #209 gates remain. Preserve Casino/Wallet/KYC/regulated actions fail-closed. |
+| `HockerAGI/hocker.one` | public | Hocker One control plane; governance of 16 AGIs | `main` is protected and now points to verified docs-only merge `9dfdc688f73f6cad69c40179c1bb3a0a831bbb45` from PR #222. The latest functional/security authority remains PR #221 merge `f122b15c8136c8885edfd24396115c6bda1b6329`, which hardened `project_members` writes to owner/admin only and registered production migration `20260817021859`. PR #221 final head `8da74eaf759c935926594dad21d301a2128f3da8` had CI #756 SUCCESS, CodeQL SUCCESS and Preview `dpl_5vJE8kAxY93xj5UNq5ZUeyMzcxCC` READY; production deployment `dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf` is READY. PR #222 then reconciled `DOC_ALIGNMENT_2026-08-17.md` and `LAST_KNOWN_STATE.md` to that authority and deployed docs-only production `dpl_Eaa9Gi3XYWa4ZzWLTL9hFuaA9cCR` READY. New draft PR #223 (`docs/stabilize-snapshot-semantics-20260817`) is docs-only, mergeable, exact head `c6b72f644c7e5d56a96acd2a2c81d5bd7f90af92`; CodeQL and all observed code-scanning checks are SUCCESS and Vercel Preview `dpl_8wNpzv8GPiRM1NNXWA9oUbVC5rF7` is READY, but it remains draft with zero reviews and no `Verify Hocker ONE` run because Markdown-only CI is path-ignored. PR #209 remains the broader closure gate; #213 remains isolated UI work; #215 contains this Ledger. | Treat `f122b15c...` as latest functional/security authority and `9dfdc688...` as docs-only ancestry. Do not merge #223 while it is draft and lacks full promotion authorization/status evidence. Do not claim full platform-security closure: GraphQL exposure, existing SECURITY DEFINER RPCs, leaked-password protection, Owner/AAL2 and other #209 gates remain. Preserve Casino/Wallet/KYC/regulated actions fail-closed. |
 | `HockerAGI/hocker.agi` | public | corporate/public HOCKER surface | Active; open dependency PRs include TypeScript 7 (#15) and `@types/node` 26 (#12). Vercel project exists. No new default-branch change was observed in this audit. | Dependency upgrades require compatibility/build/security evidence before merge. |
-| `HockerAGI/nova.agi` | public | dedicated NOVA runtime | Open PR #32 establishes durable recovery/continuity; CI SUCCESS at recorded head. Dedicated live Railway revision, readiness, logs/heartbeat and authenticated Hocker One→NOVA E2E remain unverified. Hocker One unified NOVA runtime remains primary. | Keep dedicated-runtime live status fail-closed until exact Railway revision + readiness + logs + authenticated E2E are evidenced. |
-| `HockerAGI/hocker-node-agent` | public | authorized local executor | Repository exists and is accessible. No fresh live execution evidence was observed in this interval. | `PENDING EVIDENCE`: verify current main SHA, CI, allowlists, HMAC/non-root/sandbox posture and active-node evidence before asserting readiness. |
-| `HockerAGI/chido.casino` | public | CHIDO Casino product | Launch Preview remains design/review only; real-money activation remains fail-closed. Vercel project exists. Shared production Supabase still contains gaming/wallet objects with current GraphQL/SECURITY DEFINER security-advisor WARNs. #218/#219/#220 authorizations did not activate regulated product behavior. | Do not enable real money/KYC-public/regulated functionality. Resolve security-advisor findings and legal/Owner gates before production expansion. |
-| `HockerAGI/chido.lab` | private | CHIDO laboratory / upstream experimentation | Open PR #6 reconciles Lab→immutable Release Bundle→CHIDO Games ownership and preserves compatibility debt. | Keep Lab experimental; only promote immutable tested artifacts after consumer cutover and rollback evidence. |
-| `HockerAGI/chido.games` | private | CHIDO Originals / B2B game runtime boundary | R3 migration is merged as DEMO/synthetic only. Open #9/#10 define Taco Heat Premium VS1 and VS1-A planning. | Implement VS1-A by TDD without crossing DEMO/REAL or Casino production gates. |
-| `HockerAGI/hocker.ads` | private | Hocker Ads | EXP-01 local data foundation and E-050 service/version catalog are merged. Draft PR #18 remains the E-060 order-draft/Checkout abstraction candidate with prior exact-head CI green across Docs Contract, Web Core, Web Foundation and Local DB; scope still forbids remote Supabase, Stripe, Vercel and customer traffic. | Review E-060 implementation/diff and remove draft only when semantic/security review passes. Remote provider gates remain independent. |
-| `HockerAGI/punto.g` | private | PUNTO·G separate platform | PRs #1/#2/#3 are merged. Main contains canonical specification, Phase 1 foundation/fail-closed policy and Phase 2 Auth/Identity/KYC foundation. | Preserve dedicated data/security boundaries; no real KYC/payment/production activation without provider and legal evidence. |
+| `HockerAGI/nova.agi` | public | dedicated NOVA runtime | Open PR #32 establishes durable recovery/continuity; CI SUCCESS at recorded head. Dedicated live Railway revision, readiness, logs/heartbeat and authenticated Hocker One→NOVA E2E remain unverified. Hocker One unified NOVA runtime remains primary. No new default-branch change was observed in this audit. | Keep dedicated-runtime live status fail-closed until exact Railway revision + readiness + logs + authenticated E2E are evidenced. |
+| `HockerAGI/hocker-node-agent` | public | authorized local executor | Repository exists and is accessible. No fresh live execution evidence or default-branch change was observed in this interval. | `PENDING EVIDENCE`: verify current main SHA, CI, allowlists, HMAC/non-root/sandbox posture and active-node evidence before asserting readiness. |
+| `HockerAGI/chido.casino` | public | CHIDO Casino product | Launch Preview remains design/review only; real-money activation remains fail-closed. Vercel project exists. Shared production Supabase still contains gaming/wallet objects with current GraphQL/SECURITY DEFINER security-advisor WARNs. No new default-branch change was observed in this audit. | Do not enable real money/KYC-public/regulated functionality. Resolve security-advisor findings and legal/Owner gates before production expansion. |
+| `HockerAGI/chido.lab` | private | CHIDO laboratory / upstream experimentation | Open PR #6 reconciles Lab→immutable Release Bundle→CHIDO Games ownership and preserves compatibility debt. No new default-branch change was observed in this audit. | Keep Lab experimental; only promote immutable tested artifacts after consumer cutover and rollback evidence. |
+| `HockerAGI/chido.games` | private | CHIDO Originals / B2B game runtime boundary | R3 migration is merged as DEMO/synthetic only. Open #9/#10 define Taco Heat Premium VS1 and VS1-A planning. No new default-branch change was observed in this audit. | Implement VS1-A by TDD without crossing DEMO/REAL or Casino production gates. |
+| `HockerAGI/hocker.ads` | private | Hocker Ads | EXP-01 local data foundation and E-050 service/version catalog are merged. Draft PR #18 remains the E-060 order-draft/Checkout abstraction candidate with prior exact-head CI green across Docs Contract, Web Core, Web Foundation and Local DB; scope still forbids remote Supabase, Stripe, Vercel and customer traffic. No new default-branch change was observed in this audit. | Review E-060 implementation/diff and remove draft only when semantic/security review passes. Remote provider gates remain independent. |
+| `HockerAGI/punto.g` | private | PUNTO·G separate platform | PRs #1/#2/#3 are merged. Main contains canonical specification, Phase 1 foundation/fail-closed policy and Phase 2 Auth/Identity/KYC foundation. No new default-branch change was observed in this audit. | Preserve dedicated data/security boundaries; no real KYC/payment/production activation without provider and legal evidence. |
 
 ## Provider snapshot
 
@@ -40,26 +40,27 @@ Current connected provider inventory verifies **3 Vercel projects** in team `Hoc
 
 - Team: `Hocker AGI` (`team_nEtACFYtjltFLERznYyZ40pK`).
 - Projects: `hocker-one`, `hocker.agi`, `chido-casino`.
-- PR #218 production deployment: `dpl_4w8zdi1JWkvS7g4WmaNuRWgH7hLp`, commit `482d53a3a1e0e3837a8107cc9421033873f3eca3`, target `production`, state `READY`.
-- PR #219 production deployment: `dpl_D3KfBWkzoki7oDR8Y3YpPwsz7H5f`, commit `733e2283a3a4462c88ef0c81060f5cda18ffebfa`, target `production`, state `READY`.
-- PR #220 production deployment: `dpl_EF3RTXT7XfxS7nGTAz8jb187PT31`, commit `a32a0a01c8198477d542e201889f80d21a13573f`, target `production`, state `READY`.
-- Additional branch `docs/reconcile-live-state-20260816` has READY previews (`cb3a31d0...`, `ea6fc1f2...`) but no open PR was observed; those previews are not authority over `main`.
+- PR #221 functional/security production deployment: `dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf`, commit `f122b15c8136c8885edfd24396115c6bda1b6329`, target `production`, state `READY`.
+- PR #222 docs-only production deployment: `dpl_Eaa9Gi3XYWa4ZzWLTL9hFuaA9cCR`, commit `9dfdc688f73f6cad69c40179c1bb3a0a831bbb45`, target `production`, state `READY`.
+- PR #223 exact-head Preview: `dpl_8wNpzv8GPiRM1NNXWA9oUbVC5rF7`, commit `c6b72f644c7e5d56a96acd2a2c81d5bd7f90af92`, target `preview`, state `READY`; not production authority.
 
 ### Supabase
 
-Production/shared project `yvuibbcuntqpyqiuqggd` remains `ACTIVE_HEALTHY` and branch metadata now reports `main=FUNCTIONS_DEPLOYED`.
+Production/shared project `yvuibbcuntqpyqiuqggd` remains `ACTIVE_HEALTHY` and branch metadata reports `main=FUNCTIONS_DEPLOYED`.
 
 **Migration continuity:**
 
 - PR #218 reconciled previously missing remote migration versions into Git history without replaying production schema.
 - PR #219 expanded parity to the complete production migration ledger and imported the final missing CHIDO migration source at remote version `20260802200541`.
 - PR #220 production commit metadata states its scoped migration is registered as `20260817013714`; no regulated functionality is enabled.
-- The prior `MIGRATIONS_FAILED` branch-state blocker is therefore closed by current connected branch evidence.
+- PR #221 production migration is registered as `20260817021859_project_members_owner_admin_write_hardening.sql`; post-DDL verification kept `authenticated` effective privileges SELECT-only while all three `project_members` write policies now require `private.is_project_owner_or_admin(project_id)`.
+- Branch state remains `FUNCTIONS_DEPLOYED`; no migration-ledger regression was observed in this audit.
 
 **Current Security Advisor:**
 
-- the prior `RLS Enabled No Policy` findings for `compliance_events`, `game_history` and `wager_progress_ledger` are no longer present after #220;
-- GraphQL exposure WARNs remain for anon/authenticated roles across catalog/gaming/wallet/audit/node/KYC/LLM and other existing objects;
+- the prior `RLS Enabled No Policy` findings for `compliance_events`, `game_history` and `wager_progress_ledger` remain absent;
+- no new advisor warning specific to PR #221 appeared;
+- GraphQL exposure WARNs remain for anon/authenticated roles across catalog/gaming/wallet/audit/node/KYC/LLM and other existing objects, including `project_members` discoverability to `authenticated`;
 - existing SECURITY DEFINER RPC WARNs remain for public leaderboard/recent-wins and authenticated crash/slot-history functions;
 - leaked-password protection remains disabled (WARN).
 
@@ -73,11 +74,12 @@ The canonical HOCKER portfolio remains 10 applications and 16 AGIs per the 2026.
 
 1. **Repository inventory drift remains real:** connected GitHub exposes 9 repositories while older canonical architecture/security documents recorded 5.
 2. **Provider inventory drift remains real:** direct provider access verifies 3 Vercel projects and 2 Supabase projects.
-3. **Supabase migration-history blocker is closed at branch-state level:** `main` moved from `MIGRATIONS_FAILED` to `FUNCTIONS_DEPLOYED` after Owner-authorized #218/#219 parity reconciliation.
-4. **Backend-only RLS intent is now explicit:** #220 removed the three prior no-policy INFO findings while preserving service-role-only behavior.
-5. **Global Supabase security is improved but not closed:** GraphQL exposure, SECURITY DEFINER and leaked-password protection WARNs remain.
-6. **Legacy NOVA ownership remains intentionally unresolved:** the P0 fail-closed backlog remains; none of #218/#219/#220 authorizes automatic ownership assignment.
-7. **Hocker Ads E-060 remains draft/provider-neutral; regulated/destructive surfaces remain fail-closed.**
+3. **Supabase migration-history blocker remains closed:** `main=FUNCTIONS_DEPLOYED`; PR #221 added a verified narrow security migration without reintroducing branch-state drift.
+4. **Project membership boundary hardened:** operator-equivalent helper semantics are no longer used for `project_members` INSERT/UPDATE/DELETE; owner/admin-only helper is now production authority while current authenticated table privileges remain SELECT-only.
+5. **Operational documentation caught up:** PR #222 updated editable continuity/alignment sources after #221. PR #223 proposes a further semantics refinement that separates mutable pointers from frozen functional authority, but it remains draft and unmerged.
+6. **Global Supabase security is improved but not closed:** GraphQL exposure, SECURITY DEFINER and leaked-password protection WARNs remain.
+7. **Legacy NOVA ownership remains intentionally unresolved:** fail-closed reconciliation backlog remains; none of #221/#222 authorizes automatic ownership assignment.
+8. **Hocker Ads E-060 remains draft/provider-neutral; regulated/destructive surfaces remain fail-closed.**
 
 ## Documentation drift queue
 
@@ -85,9 +87,9 @@ The canonical HOCKER portfolio remains 10 applications and 16 AGIs per the 2026.
 |---|---|---|---|
 | Global repository inventory | Canonical 2026.08 sources describe five repositories; connected inventory is nine. | Update editable DOC-00/DOC-05/DOC-07 inventory sources after classification of `chido.lab`, `chido.games`, `hocker.ads`, `punto.g`; regenerate derived PDFs only through the existing document pipeline. | PENDING OWNER CLASSIFICATION |
 | Provider inventory | Prior canonical snapshot omitted direct 3-Vercel/2-Supabase provider state. | Reconcile editable architecture/security inventory and validation-project lifecycle policy. | OPEN DRIFT |
-| Supabase migration continuity | Older runbooks/Ledger state described `MIGRATIONS_FAILED` and missing migration history. #218/#219 closed parity and branch state is now `FUNCTIONS_DEPLOYED`. | Update editable operations/security sources that still describe migration-ledger failure. Do not regenerate PDFs except through the canonical pipeline. | IMPLEMENTATION CLOSED / DOC DRIFT OPEN |
-| Supabase security | #220 removed the three backend-only no-policy findings, but GraphQL/SECURITY DEFINER/auth WARNs remain. | Reconcile editable security/runbook evidence to current advisor output and remediate remaining findings in separately reviewed slices. | PARTIALLY REMEDIATED |
-| Hocker One continuity | #216–#220 are now production authority for continuity, migration parity and scoped RLS intent. | Treat `main` + production as authority; preserve #209 as broader closure gate. | PRODUCTION / FOLLOW-UP OPEN |
+| Supabase migration continuity | Earlier runbooks described `MIGRATIONS_FAILED`; #218/#219 closed parity and provider branch state remains `FUNCTIONS_DEPLOYED`. | Current Hocker One editable operations state is reconciled by #222; older global canonical DOC sources still require owner-led refresh through their editable source/pipeline. | IMPLEMENTATION CLOSED / GLOBAL DOC DRIFT OPEN |
+| Supabase security | #220 removed three backend-only no-policy findings and #221 hardened project membership writes; GraphQL/SECURITY DEFINER/auth WARNs remain. | Reconcile editable security/runbook evidence to current advisor output and remediate remaining findings in separately reviewed slices. | PARTIALLY REMEDIATED |
+| Hocker One continuity | #221 is latest functional/security authority; #222 is docs-only ancestry; #223 proposes snapshot-semantics hardening. | Keep mutable Git/Vercel pointers re-queryable, preserve frozen functional evidence, and do not promote #223 until draft/status/review gates are satisfied. | PRODUCTION / DOC PR OPEN |
 | NOVA continuity | Dedicated NOVA live Railway evidence remains missing; Hocker One unified runtime is primary. | Preserve UNKNOWN dedicated live status until exact deployment/readiness/logs/E2E evidence exists. | OPEN PR / DRIFT CHECK |
 | Hocker Ads | Repository remains at E-060 candidate stage. | Reconcile APP-06 editable product/architecture sources after semantic review/stabilization; do not claim remote provider activation. | IN PROGRESS |
 | CHIDO | Lab/Games split and R3 release-bundle architecture post-date older five-repo canon. | Reconcile architecture inventory while preserving DEMO/REAL legal gates. | IN PROGRESS |
@@ -95,12 +97,12 @@ The canonical HOCKER portfolio remains 10 applications and 16 AGIs per the 2026.
 
 ## Main/merge audit
 
-**Three material merges were observed since the previous Ledger cut; none was performed by this audit.**
+**Two material merges were observed since the previous Ledger cut; none was performed by this audit.**
 
-- PR #218 merged at `482d53a3a1e0e3837a8107cc9421033873f3eca3` from head `3ec601e373adec8c31711239f8ecd4214f1d84f9`; exact-head GitHub CI `31984564513` = SUCCESS and Vercel Preview was READY. No submitted GitHub review was observed; verified merge metadata states Owner authorization and no production DDL/reset/rebase/schema replay.
-- PR #219 merged at `733e2283a3a4462c88ef0c81060f5cda18ffebfa` from head `25764735938491483453420d57fa1ff020bec238`; exact-head GitHub CI `31984920401` = SUCCESS and Vercel Preview was READY. No submitted GitHub review was observed; verified merge metadata states Owner authorization and full production migration-ledger parity.
-- PR #220 merged at `a32a0a01c8198477d542e201889f80d21a13573f` from head `4850a9d8d6fa383d8ea2a65cd01cacdc44138d34`; exact-head `Verify Hocker ONE` CI `31985556548` = SUCCESS, CodeQL = SUCCESS, Vercel Preview = READY, production Vercel = READY. No submitted GitHub review was observed; verified merge metadata states Owner authorization and production migration registration `20260817013714`.
-- `main` is protected; connected branch metadata exposes required status context `Verify Hocker ONE` for non-admin enforcement. Full protection policy fields outside the branch response remain `PENDING EVIDENCE` where inaccessible.
+- PR #221 merged at `f122b15c8136c8885edfd24396115c6bda1b6329` from final head `8da74eaf759c935926594dad21d301a2128f3da8`. Exact-head CI #756 = SUCCESS, CodeQL = SUCCESS and Vercel Preview `dpl_5vJE8kAxY93xj5UNq5ZUeyMzcxCC` = READY. The PR documents isolated validation of the latent operator→membership escalation boundary, production migration `20260817021859`, unchanged owner counts, owner/admin-only write policies, and authenticated SELECT-only effective grants. No broad grant revocation, role-model change or Owner Gate/AGI autonomy change was bundled.
+- PR #222 merged at `9dfdc688f73f6cad69c40179c1bb3a0a831bbb45` from head `af7b5e3cc6e63dd413c6a4b73ad0e65442bf1a8f`; documentation-only scope updated `DOC_ALIGNMENT_2026-08-17.md` and `LAST_KNOWN_STATE.md`. Production `dpl_Eaa9Gi3XYWa4ZzWLTL9hFuaA9cCR` is READY.
+- `main` is protected and points to `9dfdc688...`; connected branch metadata exposes required status context `Verify Hocker ONE` for non-admin enforcement.
+- PR #223 is open/mergeable/draft at `c6b72f64...`, has zero submitted reviews, CodeQL/code-scanning checks SUCCESS and READY Preview, but no `Verify Hocker ONE` application workflow run because Markdown-only changes are excluded by CI paths. It was not merged or marked ready by this audit.
 - PR #209 remains the broader platform-closure gate; #213 remains isolated UI/TDD work; #215 remains the governance Ledger PR.
 - NOVA #32 lacks exact dedicated live runtime/deployment/E2E evidence; Hocker Ads #18 remains draft; CHIDO/Wallet/KYC/regulated actions remain gated.
 
@@ -267,3 +269,13 @@ For every material delta capture, when accessible: repository + SHA, PR, CI/chec
 - Reran production Security Advisor. The three prior RLS-no-policy INFO findings are gone. Remaining material security WARNs are GraphQL exposure for existing anon/authenticated objects, existing SECURITY DEFINER RPC executability, and leaked-password protection disabled.
 - Documentation drift changed materially: editable operations/security sources that still describe `MIGRATIONS_FAILED`, missing migration parity or the three no-policy backend tables are now stale and require owner-led reconciliation. A separate `docs/reconcile-live-state-20260816` branch has READY previews but no open PR was observed, so it was not promoted by this audit.
 - No merge, production DDL, secret/grant mutation, regulated activation or other Owner-gated action was executed by this audit. Updated only the governance Ledger branch.
+
+### 2026-08-16 19:54 PDT — Project-membership authorization hardening + continuity docs merge
+
+- Detected two new verified Hocker One `main` merges since the 19:00 PDT Ledger cut: PR #221 at `f122b15c8136c8885edfd24396115c6bda1b6329` and docs-only PR #222 at `9dfdc688f73f6cad69c40179c1bb3a0a831bbb45`. No new default-branch commits were returned for the other eight monitored repositories.
+- PR #221 closed a latent `project_members` authorization boundary. Its validation reproduced operator→owner membership creation only when synthetic authenticated write grants were enabled; after the narrow policy fix the same attempt failed with PostgreSQL `42501`, while a legitimate owner→viewer insert succeeded. Current production effective `authenticated` privileges remain SELECT-only, so this is defense-in-depth hardening rather than evidence of an active production escalation before the fix.
+- PR #221 final candidate head `8da74eaf759c935926594dad21d301a2128f3da8` had CI #756 SUCCESS, CodeQL SUCCESS and Vercel Preview `dpl_5vJE8kAxY93xj5UNq5ZUeyMzcxCC` READY. Production migration `20260817021859_project_members_owner_admin_write_hardening.sql` is registered; post-DDL verification preserved owner count `3`, all three write policies now call `private.is_project_owner_or_admin(project_id)`, and `authenticated` effective table privileges remain SELECT-only.
+- PR #222 merged the editable documentation correction after #221: `DOC_ALIGNMENT_2026-08-17.md` and `LAST_KNOWN_STATE.md`. Current `main` is `9dfdc688...`, protected, with required status context `Verify Hocker ONE`. Vercel production for #221 (`dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf`) and docs-only #222 (`dpl_Eaa9Gi3XYWa4ZzWLTL9hFuaA9cCR`) are READY.
+- Rechecked Supabase: production remains `ACTIVE_HEALTHY`, branch status remains `FUNCTIONS_DEPLOYED`, and no migration-continuity regression was observed. Security Advisor adds no warning specific to #221; remaining material WARNs are existing GraphQL exposure, existing SECURITY DEFINER RPC executability and leaked-password protection disabled.
+- New docs-only draft PR #223 is open/mergeable at exact head `c6b72f644c7e5d56a96acd2a2c81d5bd7f90af92`, with zero submitted reviews. CodeQL/code-scanning checks are SUCCESS and Vercel Preview `dpl_8wNpzv8GPiRM1NNXWA9oUbVC5rF7` is READY, but the PR remains draft and no `Verify Hocker ONE` application CI run exists because Markdown-only changes are path-ignored. It was not marked ready or merged.
+- No merge, production DDL, grant/secret/configuration mutation, regulated activation or Owner-gated action was executed by this audit. Updated only this governance Ledger branch.
