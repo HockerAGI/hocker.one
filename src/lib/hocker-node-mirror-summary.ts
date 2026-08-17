@@ -68,9 +68,9 @@ async function getNodeRuntime(
 
   const { data: node } = await sb
     .from("nodes")
-    .select("node_id,last_seen_at")
+    .select("id,last_seen_at")
     .eq("project_id", "hocker-one")
-    .eq("node_id", nodeId)
+    .eq("id", nodeId)
     .maybeSingle();
 
   const { data: latestCommand } = await sb
