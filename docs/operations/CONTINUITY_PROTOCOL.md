@@ -2,147 +2,167 @@
 
 Status: **ACTIVE OPERATING CONTRACT**  
 Scope: Hocker One, NOVA and ecosystem-level repository inventory.  
-Purpose: recover the exact work state after a lost chat, closed IDE, crashed session, provider outage or handoff without treating conversation memory as the system of record.
+Purpose: recover exact work state after a lost chat, closed IDE, crashed session, provider outage or handoff without treating conversation memory as system of record.  
+Freshness rules: `docs/operations/CONTEXT_FRESHNESS_POLICY.md`.
 
 ## 1. Continuity objective
 
-A new ChatGPT/Codex/engineer session must be able to answer, from durable evidence:
+A new ChatGPT/Codex/engineer session must answer from durable evidence:
 
 1. What repositories exist now?
-2. Which repositories were added, removed, renamed or archived since the previous checkpoint?
-3. What are the exact default-branch SHAs?
-4. What Hocker One/NOVA PRs are open and at what head SHA?
+2. Which repos were added/removed/renamed/archived since previous checkpoint?
+3. What are exact default-branch SHAs and branch-protection states?
+4. What Hocker One/NOVA PRs are open and at what heads?
 5. What deployment/runtime evidence exists?
-6. What is the current AGI certification/eval evidence state?
-7. What decisions were made, what phase/gate changed and what remains open?
-8. What was the next intended action when the previous session stopped?
+6. What is current AGI certification/eval evidence state?
+7. What security/provider blockers remain?
+8. What decisions changed a phase/gate?
+9. What is the next intended action?
 
-The system must reconstruct facts; it must not rely on a model remembering a prior conversation.
+The system reconstructs facts; it never relies on a model remembering prior conversation.
 
 ## 2. Layers and responsibilities
 
 ### Layer A — GitHub
 
-Durable code/history/PR evidence. The continuity reconciler inventories every repository visible to the HOCKER owner account and stores exact default-branch SHAs. Hocker One and NOVA additionally record open PR heads.
+Durable code/history/PR/security evidence. Reconcile all repositories visible to HOCKER with exact default heads. Event-level out-of-band target is a scoped GitHub App/webhook; until then use milestone checkpoints + daily reconciliation.
 
 ### Layer B — Supabase Context Bridge
 
-Durable append-only normalized checkpoints, coverage and manifests. This is the primary operational continuity ledger.
+Append-only normalized checkpoints, coverage, manifests and capability evidence. This is the primary operational continuity ledger.
 
-### Layer C — Vercel / runtime evidence
+### Layer C — Vercel/runtime
 
-Hocker One runtime metadata is checkpointed from deployment environment metadata. A configured runtime is not called healthy unless exact deployment evidence exists.
+Deployment metadata/log evidence tied to exact Git SHA. Configured is not equivalent to healthy/deployed.
 
 ### Layer D — Human/agent handoff
 
-`LAST_KNOWN_STATE.md` preserves the last material intent, decision sequence and next action. It is an emergency/readability layer, not a heartbeat database.
+`LAST_KNOWN_STATE.md` preserves material continuation state. It is an emergency/readability layer, not a heartbeat database.
 
 ### Layer E — SYNTIA / Memory Mirror
 
-Reviewed reusable knowledge only. Raw chats, secrets and private-domain data never become global continuity memory.
+Reviewed reusable knowledge only. Raw chat, secrets, credentials, TOTP/KYC/PII and unreviewed operational events never become global memory automatically.
+
+### Layer F — Canon / Google Drive
+
+Drive canon freshness is evidence-backed. Target adapter is renewable `changes.watch` + change-feed read. A search result or PDF timestamp alone does not prove editable canonical freshness.
 
 ## 3. Automatic reconciliation
 
-`GET /api/context-bridge/reconcile` is an internal fail-closed route. It:
+`GET /api/context-bridge/reconcile` is internal and fail-closed. It:
 
 - authenticates with `CRON_SECRET` / `HOCKER_ONE_INTERNAL_TOKEN` using constant-time comparison;
-- performs GitHub read-only inventory and exact-head reads;
-- detects repo add/remove/rename/archive/head changes by comparing the previous checkpoint cursor;
+- performs read-only GitHub inventory/exact-head reads;
+- detects persistent repo lifecycle/head drift;
 - records Hocker One/NOVA open PR heads;
-- reuses the canonical eight-gate AGI certification implementation for Supabase evidence;
-- records Vercel runtime metadata only when the environment actually exposes it;
-- writes normalized Context Bridge checkpoints;
-- never activates a Context Bridge manifest;
-- never performs a GitHub/Vercel/Supabase external material mutation;
+- reuses the canonical eight-gate AGI certification implementation;
+- records Vercel runtime metadata only when environment evidence exists;
+- writes normalized checkpoints;
+- never activates a manifest;
+- never performs GitHub/Vercel/Supabase material external mutation;
 - never stores tokens, cookies, raw conversations or secret values.
 
-The Vercel backstop runs once per day because Hobby cron jobs cannot run more frequently. This is a **reconciliation safety net**, not the only update mechanism.
+The Vercel backstop runs `17 8 * * *` once daily. It is a reconciliation safety net, not the near-real-time mechanism.
 
 ## 4. Immediate checkpoint triggers
 
-A checkpoint must be emitted as soon as practical after any material event:
+Emit a checkpoint after material events:
 
-- repository created, deleted, renamed, archived or restored;
-- branch/PR opened, closed, merged or materially rebased;
-- approved project phase/gate transition;
-- production/preview deployment or rollback;
-- database migration or RLS/permission change;
-- integration/provider connected, disconnected or reclassified;
-- AGI eval/tool-eval evidence changes;
+- repo created/deleted/renamed/archived/restored;
+- branch/PR opened/closed/merged/materially rebased;
+- phase/gate transition;
+- preview/production deployment or rollback;
+- DB migration, RLS/grant/RPC change;
+- provider connected/disconnected/reclassified;
+- AGI eval/tool-eval evidence change;
 - material blocker discovered/resolved;
-- important architecture/canon decision;
-- session handoff after meaningful work.
+- architecture/canon decision;
+- meaningful ChatGPT/Codex handoff.
 
-ChatGPT/Codex should use the existing normalized checkpoint route/API when an authorized identity is available. If unavailable, update `LAST_KNOWN_STATE.md` in the working branch and mark `checkpoint_pending=true` in the handoff.
+ChatGPT/Codex should use the normalized checkpoint API when authorized. If unavailable, update `LAST_KNOWN_STATE.md` in the working branch and mark checkpoint pending. Do not write Git commits as periodic heartbeats.
 
 ## 5. What is and is not real-time
 
-### Near-real-time for work performed through HOCKER agents
+### Near-real-time
 
-Agents checkpoint immediately at material milestones. No GitHub Action is required.
+Milestone/event checkpoints publish immediately after material work performed through HOCKER agents.
 
-### Daily reconciliation for out-of-band changes
+### Daily out-of-band reconciliation
 
-The cron catches changes performed manually in GitHub or by other tooling and compares them to the last repository snapshot.
+The once-daily Vercel cron catches persistent drift performed manually or by other tooling.
 
-### Event-level GitHub lifecycle target
+### GitHub event target
 
-The account `HockerAGI` is a GitHub user account, not an organization. A future GitHub App installation/webhook is the appropriate event source for second-level lifecycle events across repositories. Until that exists, polling plus milestone checkpoints is the supported design.
+Use a scoped GitHub App/webhook for repository lifecycle events. Until deployed, a create+delete event entirely between polls can be missed. Do not claim otherwise.
 
-A repository created and deleted completely between two polls can theoretically escape the daily inventory if no milestone checkpoint/webhook observed it. Do not claim otherwise.
+### Google Drive event target
 
-## 6. Recovery procedure after loss of chat/session
+Use renewable `changes.watch` channels and then read the Drive change feed. Channels expire and require renewal. Until a canonical editable source set and renewable adapter are proven, Drive remains `partial/stale` as evidence dictates.
+
+## 6. Recovery procedure
 
 1. Read root `AGENTS.md`.
 2. Read `docs/operations/LAST_KNOWN_STATE.md`.
-3. Read the current Context Bridge active manifest plus latest checkpoints.
-4. Query GitHub again; never trust the last snapshot for mutable facts.
-5. Query Supabase/Vercel/runtime evidence applicable to the task.
-6. Compare observed state against the handoff and identify drift before writing.
-7. Resume from the named next action or explicitly supersede it with evidence.
+3. Read `docs/operations/CONTEXT_FRESHNESS_POLICY.md`.
+4. Read current active manifest plus latest Context Bridge checkpoints.
+5. Query GitHub again; never trust snapshot for mutable facts.
+6. Query Supabase/Vercel/runtime evidence applicable to the task.
+7. Compare observed state against handoff and explicitly identify drift.
+8. Resume from named next action or supersede it with evidence.
 
-If Context Bridge is temporarily unavailable, GitHub + `LAST_KNOWN_STATE.md` provide a degraded recovery path. If GitHub is unavailable, Supabase checkpoints retain the last observed SHAs/PR/repository inventory. Catastrophic simultaneous permanent loss of all providers requires an independent backup provider and is outside what any single cloud control plane can guarantee.
+If Context Bridge is temporarily unavailable, GitHub + `LAST_KNOWN_STATE.md` are the degraded path. If GitHub is unavailable, Supabase checkpoints retain last observed SHAs/PR/inventory. Permanent simultaneous provider loss requires independent backup and is outside any single control plane.
 
-## 7. Context Bridge manifest lifecycle
+## 7. Manifest lifecycle
 
-Checkpoints update continuously/by milestone. Manifests do not.
+Checkpoints update per milestone. Manifests do not.
 
-Create a new draft manifest when a coherent evidence set is ready for a handoff/release/canon transition. Do not rewrite the active historical manifest.
+Create a new draft for a coherent handoff/release/canon transition. Never rewrite an active historical manifest.
+
+Coverage must combine checkpoint recency with current capability evidence. Freshness alone is insufficient.
 
 Activation remains:
 
-`draft -> coverage review -> human Owner session -> MFA AAL2 -> one-time evidence-bound approval -> active`
+`draft -> evidence-backed coverage review -> human Owner -> MFA AAL2 -> one-time approval -> active`
 
 Scheduled/internal identities are forbidden from activation.
 
-## 8. GitHub Actions economy
+## 8. Memory lifecycle
 
-- General CI ignores commits whose changed paths are only Markdown.
-- Code, tests, configuration, migrations and workflows still trigger CI.
-- Android/emulator workflows remain path-scoped/manual and should run once on the frozen final candidate unless a relevant Android path changed.
-- Do not use Actions as a periodic heartbeat or repository monitor.
+Context Bridge operational facts do not automatically flow into Memory Mirror. Only distilled, reusable, non-sensitive knowledge that passes existing NOVA/SYNTIA/security review may be published. This prevents a real-time context feed from becoming uncontrolled long-term memory.
 
-## 9. Phase tracking
+## 9. GitHub Actions economy
 
-A phase is not inferred from prose or a percentage. A phase/gate transition becomes durable only when its checkpoint includes:
+- General CI ignores Markdown-only commits.
+- Code/tests/config/migrations/workflows trigger CI.
+- Android/emulator workflows remain path-scoped/manual and run on frozen candidate unless relevant Android paths changed.
+- Do not use Actions as periodic heartbeat/monitor.
 
-- previous phase/gate;
-- new phase/gate;
+## 10. Phase tracking
+
+A gate transition is durable only when checkpoint contains:
+
+- previous gate;
+- new gate;
 - decision/evidence reference;
-- exact repository/PR/SHA where applicable;
-- owner/approval reference when required;
-- open items for the next phase.
+- exact repo/PR/SHA;
+- owner/approval ref when required;
+- next open items.
 
-This prevents two chats from silently inventing different phase names.
+## 11. Current Plan A evidence cut
 
-## 10. Non-goals
+As of `2026-08-17T00:18:00Z`, fresh normalized checkpoints exist for GitHub ecosystem, primary Supabase AGI/security evidence, Hocker One Vercel production, current ChatGPT handoff and Google Drive audit (`partial`). Codex was intentionally not refreshed without direct current workspace/runtime evidence.
+
+PR #216 is the isolated implementation workstream. Production authority remains Hocker One `main` `945ed9cdeda909faa9823230d2a4f47ff84173c7` until an explicitly gated merge/deployment changes it.
+
+## 12. Non-goals
 
 This protocol does not authorize:
 
 - direct writes to `main`;
-- manifest activation without Owner+AAL2;
+- manifest activation without human Owner+AAL2;
 - AGI material actions;
 - secret replication;
 - raw-chat backups;
-- production DDL merely to keep a checkpoint fresh;
-- modifications to product repositories outside the scope of the active workstream.
+- production DDL merely to keep checkpoints fresh;
+- product-repo mutations outside active workstream scope;
+- fabricated freshness for Codex, Drive or any provider lacking current evidence.
