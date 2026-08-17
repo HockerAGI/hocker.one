@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const migrationPath = "supabase/migrations/20260817053000_agi_canonical_fk_indexes.sql";
+const migrationPath = "supabase/migrations/20260817052915_agi_canonical_fk_indexes.sql";
 
 test("canonical AGI foreign keys have dedicated leading indexes without destructive DDL", async () => {
   const sql = await read(migrationPath);
