@@ -62,7 +62,9 @@ See `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` for the current decision bo
 
 Hocker One remains the primary NOVA runtime/control plane. Provider/model identity is internal telemetry; Owner Gate remains authoritative for material actions.
 
-PR #230 advanced three commits from prior ledger head `00b505221f5ff8bdd112aa6a970380973d5c68f2` to exact head `30a414ad95c25cd0bb61b241e63d43ab786d107b`. The delta is limited to `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`. It passes the server certification snapshot into the Owner batch control and now fails closed when that snapshot is partial, preventing synthetic 16-AGI reruns or unnecessary model spend from incomplete evidence. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence, the visible existing AAL2 MFA flow and the Owner's already-verified TOTP factor. Exact-head GitHub Actions CI `32011301053` / run #798 is SUCCESS; PR evidence records regression, typecheck, lint, build and full dependency audit success, with CodeQL/code scanning also reported green in the PR evidence. The PR remains draft, mergeable and has zero submitted reviews. Exact-head GitHub commit status is FAILURE only on Vercel with `Deployment rate limited — retry in 24 hours`; no exact-head READY Preview exists. Earlier READY previews on the same branch belong to older SHAs and are not promotion evidence. Do not merge until exact-head deployment and review gates close.
+PR #230's latest **code-bearing** exact head is `30a414ad95c25cd0bb61b241e63d43ab786d107b`, three commits ahead of the prior ledger head `00b505221f5ff8bdd112aa6a970380973d5c68f2`. That code delta is limited to `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`. It passes the server certification snapshot into the Owner batch control and fails closed when that snapshot is partial, preventing synthetic 16-AGI reruns or unnecessary model spend from incomplete evidence. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence, the visible existing AAL2 MFA flow and the Owner's already-verified TOTP factor. GitHub Actions CI `32011301053` / run #798 for `30a414ad...` is SUCCESS; PR evidence records regression, typecheck, lint, build and full dependency audit success, with CodeQL/code scanning also reported green.
+
+Documentation drift for that new fail-closed condition was corrected in the editable source `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` on the same PR branch, producing current PR head `1ced536e40a7610a7fed291712baed87c626371a`. The documentation now states that a partial/incomplete server certification snapshot must block batch execution rather than synthesize a full-set rerun. This documentation-only correction does not inherit the previous exact-head gate: CI run `32012349597` / #799 is currently `in_progress`, while the exact-head Vercel status is FAILURE with `Deployment rate limited — retry in 24 hours`. PR #230 remains draft, mergeable and has zero submitted reviews. Do not merge until the current exact head has completed CI, a READY Vercel Preview with reviewed build/runtime logs, required review/authorization and branch-protection satisfaction.
 
 ### Physical Node Agent
 
@@ -120,8 +122,8 @@ Fresh Security Advisor output still reports the contract-governed GraphQL exposu
 - `allow_actions=false`: 16/16;
 - eval infrastructure exists;
 - durable certification remains incomplete until real AAL2-protected eval evidence is generated;
-- PR #230 exact head `30a414ad95c25cd0bb61b241e63d43ab786d107b` is the current candidate UX/control path; it is draft, unreviewed, exact-head CI green and blocked from merge by exact-head Vercel rate limiting.
-- Partial server certification snapshots now fail closed in the candidate rather than triggering a synthetic full-set execution.
+- PR #230 current head `1ced536e40a7610a7fed291712baed87c626371a` is the active candidate; latest code-bearing head `30a414ad95c25cd0bb61b241e63d43ab786d107b` has full CI green, while current documentation-aligned head has CI in progress and Vercel blocked by provider rate limiting.
+- Partial server certification snapshots now fail closed in both implementation and the editable closure source rather than triggering a synthetic full-set execution.
 
 Never manufacture certification by inserting feedback/eval rows directly.
 
@@ -149,8 +151,8 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #209: historical closure snapshot; superseded operationally by current `PLATFORM_CLOSURE_2026-08-17.md`.
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
-- PR #230: current AGI certification candidate at `30a414ad95c25cd0bb61b241e63d43ab786d107b`; draft, zero reviews, CI green and externally blocked by exact-head Vercel deployment rate limiting.
-- PR #231: active Ledger reconciliation PR. Prior exact head `eaba73a5d22226242c20b95771cfeee0058c32ba` now has Vercel deployment status SUCCESS/READY, but still has zero reviews and remains unmerged. Any new Ledger head must pass its own exact-head gate.
+- PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI in progress and externally blocked by exact-head Vercel deployment rate limiting.
+- PR #231: active Ledger reconciliation PR. Prior exact head `eaba73a5d22226242c20b95771cfeee0058c32ba` has Vercel deployment SUCCESS/READY and zero reviews; subsequent Ledger heads must pass their own exact-head gates.
 - PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
 
 ## Preserved perimeter target from historical closure work
@@ -200,17 +202,19 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 ### AGI Owner certification candidate — PR #230
 
 - Prior ledger head `052060abd79f97b4018a6764607cdfa27c881c01` first advanced to `00b505221f5ff8bdd112aa6a970380973d5c68f2`, adding the visible Owner AAL2 step-up, reuse of the verified TOTP factor and the provider-plan classification candidate while preserving sequential/resumable fail-closed certification.
-- This cut detected a further three-commit advance from `00b505221f5ff8bdd112aa6a970380973d5c68f2` to exact head `30a414ad95c25cd0bb61b241e63d43ab786d107b`.
-- The three-commit delta modifies only `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`: the server certification snapshot is now passed to the Owner batch control, and partial snapshots explicitly block batch execution rather than synthesizing a 16-AGI rerun.
-- Exact-head GitHub Actions CI `32011301053` / #798 = SUCCESS. The PR body records regression tests, typecheck, lint, build, dependency audit and CodeQL/code scanning SUCCESS.
-- Exact-head GitHub Vercel status remains FAILURE with `Deployment rate limited — retry in 24 hours`; no exact-head READY Preview exists. Earlier READY branch previews are older SHAs.
+- This cut detected a further three-commit code advance from `00b505221f5ff8bdd112aa6a970380973d5c68f2` to `30a414ad95c25cd0bb61b241e63d43ab786d107b`.
+- The three-commit code delta modifies only `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`: the server certification snapshot is passed to the Owner batch control, and partial snapshots explicitly block batch execution rather than synthesizing a 16-AGI rerun.
+- GitHub Actions CI `32011301053` / #798 for that code-bearing head = SUCCESS; PR evidence records regression tests, typecheck, lint, build, dependency audit and CodeQL/code scanning SUCCESS.
+- Drift audit found the editable platform-closure source did not explicitly state the new partial-snapshot block. `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` was therefore aligned on the same PR branch, creating current head `1ced536e40a7610a7fed291712baed87c626371a` without runtime/DDL/provider/permission changes.
+- Current-head CI `32012349597` / #799 is `in_progress`; exact-head Vercel status is FAILURE with `Deployment rate limited — retry in 24 hours`. No current-head READY Preview exists.
 - PR #230 remains open, mergeable, draft and with zero submitted reviews. No merge is authorized.
 - PR #232 remains closed without merge as superseded by #230, preserving one executable evidence set.
 
 ### Active Ledger gate — PR #231
 
-- Prior Ledger exact head `eaba73a5d22226242c20b95771cfeee0058c32ba` now has Vercel commit status SUCCESS with completed deployment; it remains unmerged and has zero submitted reviews.
-- This material PR #230 delta requires a new Ledger exact head; no previous CI/Preview state is inherited by that new commit.
+- Prior Ledger exact head `eaba73a5d22226242c20b95771cfeee0058c32ba` has Vercel commit status SUCCESS with completed deployment; it remains unmerged and has zero submitted reviews.
+- The first Ledger update for this cut produced `c40ae0e98caa83172d78f286fc8ec0e6418996af`; that head immediately received Vercel FAILURE due to the same deployment rate limit and no GitHub workflow was returned at the read time.
+- The documentation-drift correction on #230 requires this further Ledger update; no previous CI/Preview state is inherited by the new Ledger exact head.
 
 ### NOVA continuity merge — PR #32
 
