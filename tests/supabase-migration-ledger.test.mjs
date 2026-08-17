@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readdir } from "node:fs/promises";
 import test from "node:test";
 
+// Versions below are the affected timestamps observed in production
+// supabase_migrations.schema_migrations and must exist exactly once in Git.
 const REMOTE_VERSIONS_REQUIRING_GIT_PARITY = [
   "20260803001802",
   "20260803003021",
