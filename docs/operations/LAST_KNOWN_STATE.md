@@ -1,164 +1,195 @@
 # HOCKER — Last Known State
 
 Status: **RECOVERY SNAPSHOT — VERIFY MUTABLE FACTS BEFORE ACTING**  
-Captured evidence cut: `2026-08-17T00:18:00Z` plus PR #216 execution after that cut.  
-Scope: Hocker One + NOVA + canonical AGI core, with ecosystem repository/provider inventory.
+Captured evidence cut: **2026-08-17T01:46:00Z** / 2026-08-16 America/Tijuana.  
+Scope: Hocker One + NOVA + canonical AGI core, with current production authority and ecosystem/provider continuity notes.
 
-This is the emergency resume card, not the live database. Always re-query GitHub, Supabase, Vercel and applicable runtime evidence before mutating anything. Freshness rules live in `CONTEXT_FRESHNESS_POLICY.md`.
+This file is an emergency resume card, not the live database. Always re-query GitHub, Supabase, Vercel and any runtime/provider that will be changed. Detailed post-P0 reconciliation lives in `DOC_ALIGNMENT_2026-08-17.md`; historical alignment snapshots remain immutable evidence.
 
 ## 1. Exact continuation point
 
-Current workstream: **Plan A — HOCKER Core Integration Ready**.
+Current workstream: **HOCKER Core — evidence-backed integration closure**.
 
-Goal: close Hocker One + NOVA + the 16 canonical AGIs as an evidence-backed integration platform for downstream HOCKER apps without enabling unrelated regulated product capabilities.
+Goal: finish Hocker One + NOVA + the 16 canonical AGIs as a stable integration/control platform before expanding unrelated product work, without enabling regulated or material actions by implication.
 
-### Production authority
+### Current production authority
 
-- Hocker One `main`: `945ed9cdeda909faa9823230d2a4f47ff84173c7`.
-- Merge: PR #214, already merged/deployed; it is no longer a candidate.
-- Vercel production: `dpl_BbKA86LqvHBkbTDD2vnnsdRcYmT4` = `READY`.
-- Six P0 migrations from #214 are present in production through `20260816220145`.
+- Hocker One `main`: `a32a0a01c8198477d542e201889f80d21a13573f`.
+- P0 provider-independent runtime/memory commit `a8b736940900dd78c79097a8bb9f4f7808c60f7c` is already an ancestor of current `main`; **do not reapply it**.
+- PR #214 is already merged; merge commit `945ed9cdeda909faa9823230d2a4f47ff84173c7` is historical production ancestry, not the current head.
+- Current Vercel production deployment: `dpl_EF3RTXT7XfxS7nGTAz8jb187PT31` = **READY**, sourced from exact current `main` SHA above.
+- Current exact-head GitHub Actions CI: run `31985692151` / #754 = **SUCCESS**.
+- Current exact-head CodeQL default setup: run `31985691861` = **SUCCESS**.
+- Vercel runtime-error cluster query for the reviewed 24-hour window returned **no runtime errors**.
 
-### Active implementation
+Do not treat the absence of runtime errors as authenticated NOVA E2E proof.
 
-- PR #216: `feat(core): close HOCKER integration-ready gates`.
-- Branch: `ops/core-integration-ready-20260816`.
-- Base: production `main` above.
-- PR remains **draft** while Plan A gates are executed.
-- Task 1 fail-closed Context Bridge coverage passed exact-head verification at `9d50400bddfe4621830f3aa9e3703052b4757c50`: 213/213 regression tests, typecheck, lint, build and full dependency audit SUCCESS; Preview `dpl_8Z9Bzagk7yejnG4RE4dcMXCcBbk3` for that head became `READY` with no error/fatal entries in the reviewed preview window.
-- Task 2 context freshness policy is being implemented after a deliberate RED gate. The PR head is mutable during this task; query GitHub before using an exact candidate SHA.
+## 2. Repository/product inventory rule
 
-### Other Hocker One work
+The latest connected ecosystem inventory established **9 engineering repositories**. That inventory is distinct from the canonical product catalog.
 
-- PR #209 remains global fail-closed Platform Closure evidence and must be reconciled against #214/#216 evidence before promotion.
-- PR #213 HOCKER Signal UI remains draft and must not overwrite/rebase away #214 runtime/security work; core backend closure takes precedence.
-- PR #215 Development Ledger exists but must be refreshed before merge because repository/project state has moved since its first snapshot.
+Canonical counts remain:
 
-## 2. Repository inventory and branch governance
+- **10 applications**;
+- **16 AGIs**.
 
-Latest connected inventory: **9 repositories**.
-
-| Repository | Default head at evidence cut | `main` protected when observed |
-| --- | --- | --- |
-| `hocker.one` | `945ed9cdeda909faa9823230d2a4f47ff84173c7` | yes |
-| `nova.agi` | `b3de52a48ddbb61d13287d3f46c22da550723c33` | yes |
-| `hocker-node-agent` | `bc733dfb0b131c1fa7b950443ec2b16ae4bd2093` | yes |
-| `hocker.agi` | `0acbadf9e01cf4eda483f9b15661b782d04e7210` | yes |
-| `chido.casino` | `59ea6edb165b553695d246308aa81523a1e7a122` | yes |
-| `chido.lab` | `fee9fe24764cf554c1249fccbaeedb0a2d3724ea` | no |
-| `chido.games` | `32da58cfebe6a564dd832efd4884b6b514916062` | no |
-| `hocker.ads` | `cae2c1917991bb61d493f62313770954e921e01b` | no |
-| `punto.g` | `41ecbdcb302c2df1bd87dc79ed108bf1fff1749b` | no |
-
-Protection drift on the last four is a supply-chain/governance action, not authorization to change their product behavior.
+Repository count must never be converted into app count. Individual repository heads were not all re-queried in this evidence cut; query the target repository before any mutation.
 
 ## 3. NOVA state
 
-### Unified Hocker One runtime
+### Primary runtime
 
-#214 made the Hocker One unified runtime the primary path with durable `agi_sessions` / `agi_messages`, provider-independent routing, MCP read hardening and dedicated NOVA compatibility fallback.
+Hocker One is now the primary NOVA runtime path with:
+
+- provider-independent inference routing;
+- durable canonical `agi_sessions` / `agi_messages`;
+- bounded context reconstruction;
+- Hocker MCP registry reuse;
+- Owner Gate deferral for material tool actions;
+- dedicated `nova.agi` retained as compatibility/fallback architecture.
+
+Provider/model selection is internal telemetry and never changes NOVA's public identity.
 
 ### Dedicated `nova.agi`
 
-- `main`: `b3de52a48ddbb61d13287d3f46c22da550723c33`.
-- PR #32 adds durable continuity/recovery and has CI evidence in its own PR.
-- Exact live Railway revision + `/health/ready` + logs/heartbeat + authenticated Hocker One→NOVA fallback E2E remain unverified in connected evidence.
-- Until proven, dedicated runtime is not allowed to upgrade itself from compatibility/fallback to certified live dependency.
+Dedicated runtime deployment/health was **not revalidated in this checkpoint**. Do not promote it from compatibility/fallback to mandatory primary dependency based on older evidence. If continuity requires it, re-query exact deployment, readiness endpoint, logs/heartbeat and authenticated Hocker One→NOVA fallback behavior first.
 
-## 4. AGI evidence state
+## 4. AGI evidence state — current read-only snapshot
 
-Production `project_id='hocker-one'`:
+Current production registry/query evidence:
 
-- canonical AGIs: **16/16**;
+- canonical AGI rows: **16**;
 - `allow_actions=false`: **16/16**;
-- status snapshot: 1 live, 3 integration, 6 development, 6 protected;
-- runs: **39** total;
-- enabled tool assignments: **34**, covering **15 AGIs**;
+- runtime metadata status: **10 `active`, 5 `guarded`, 1 `planned`**;
+- Hocker One AGI runs: **39 total**;
+- completed Hocker One AGI runs: **2**;
 - `agi_feedback` rows `agi_eval_result`: **0**;
 - `agi_feedback` rows `agi_tool_eval_result`: **0**.
 
-Certification implementation already exists and evaluates eight gates per AGI. Durable eval evidence is stored via `agi_feedback` + referenced completed `agi_runs`; do **not** create duplicate eval tables or insert passing evidence manually.
+The runtime metadata vocabulary above is not the same as the canonical documentary lifecycle vocabulary (`live`, `integration`, `development`, `protected`, etc.). Do not translate one into the other without an explicit mapping contract.
 
-Human Owner+AAL2 execution is required for the actual versioned eval/tool-eval routes. This remains a real gate.
+There is still no durable 16/16 eval/tool-eval evidence. Do not insert passing rows manually. Certification must use the governed eval path and preserve Owner+AAL2 requirements where configured.
 
-## 5. Supabase state
+## 5. P0 durable-memory production invariants
 
-Primary: `Hocker AGI Technologies` / `yvuibbcuntqpyqiuqggd` = `ACTIVE_HEALTHY`.
+Primary Supabase project: `yvuibbcuntqpyqiuqggd`.
 
-### Scoped P0
+Current read-only counts:
 
-#214 P0 objects are deployed with fail-closed RLS/grants/RPC boundaries and the current migration chain is present.
+- `nova_threads`: **114**;
+- `nova_messages`: **238**;
+- `agi_sessions`: **116**;
+- `agi_messages`: **238**;
+- `llm_usage`: **109**;
+- legacy NOVA threads with verified `user_id`: **1**;
+- `agi_sessions.legacy_sync_state='pending_reconcile'`: **0**;
+- duplicate `(session_id, message_key)` groups: **0**.
 
-### Global blockers still open
+Current P0 database boundary:
 
-- authenticated/anon GraphQL exposure Advisor findings on existing objects;
-- existing SECURITY DEFINER RPC exposure warnings;
-- RLS-enabled/no-policy INFO on `compliance_events`, `game_history`, `wager_progress_ledger`;
-- leaked-password protection disabled at last Advisor read;
-- three current unindexed AGI FKs (`agi_agent_tools`, `agi_agents`, `agi_memory_mirror` canonical AGI references);
-- duplicate permissive authenticated SELECT policies on `commands` / `nodes`;
-- Supabase Branching metadata still reports default `main=MIGRATIONS_FAILED` even though primary service and production migration history are healthy.
+- `agi_sessions` and `agi_messages` have RLS enabled and explicit deny-direct-access policies;
+- no `anon`/`authenticated` table grants were observed on those two tables;
+- `service_role` table access is limited to `SELECT`, `INSERT`, `UPDATE`, `DELETE`;
+- P0 `SECURITY DEFINER` RPCs checked at this cut use `search_path=public`, are not executable by `anon`/`authenticated`, and are executable by `service_role`.
 
-Do not reset/rebase Branching blindly. Diagnose from logs/history/provenance.
+This is the current observed boundary. It does not justify widening privileges or moving functions without compatibility tests.
 
-Validation project `pswlloziztxjsjazfiiy` remains validation-only and not security-clean; `validation_settlement_marker` RLS-disabled ERROR must not be normalized into production assumptions.
+## 6. Supabase security state
 
-## 6. Context Bridge freshness
+P0 session tables/RPCs are not the current Advisor blockers, but global security closure is **not complete**.
 
-Fresh normalized production checkpoints at `2026-08-17T00:18:00Z`:
+Current Security Advisor categories still requiring object-by-object review include:
 
-- `github.ecosystem` — current 9-repo inventory/heads;
-- `supabase.agi-evidence` — guarded AGI/eval/security state;
-- `vercel.hocker-one-runtime` — production deployment/main authority;
-- `chatgpt-hocker-project-handoff` — Plan A approved/active;
-- `google-drive-canon` — deliberately **partial**, not complete.
+- anonymous GraphQL exposure on existing public/catalog/promotion objects;
+- authenticated GraphQL exposure on existing audit, finance/casino, profile, project, node, observability and usage objects;
+- exposed `SECURITY DEFINER` RPC warnings for public/restricted history and leaderboard functions;
+- leaked-password protection disabled.
 
-Codex was intentionally **not** refreshed because no current Codex workspace/runtime handoff was directly observed in this evidence cut.
+Current Performance Advisor also reports three unindexed canonical-AGI foreign keys on `agi_agent_tools`, `agi_agents` and `agi_memory_mirror`, plus many unused-index INFO notices.
 
-The v3 Context Bridge manifest remains `draft`. Do not activate it automatically and do not rewrite the historical active manifest.
+Rules:
 
-PR #216 corrects a real coverage bug: checkpoint recency alone cannot produce provider `complete`; fresh verified capability evidence is also required and a current block remains `blocked`.
+- do not mass-revoke grants/RLS merely to clear Advisor output;
+- validate each consumer and authorization path first;
+- do not drop an index solely because Advisor reports it unused;
+- use validation-first migrations, rollback evidence and post-DDL Advisors;
+- do not reset/rebase Supabase Branching blindly.
 
-## 7. Google Drive / canon
+## 7. Current provider-documentation watch
 
-Drive contains HOCKER sources, but this audit did not prove one unique editable source set representing the complete August canon. A credentials document was observed in Drive and is explicitly excluded from Context Bridge/Memory Mirror.
+Official provider documentation was rechecked before this snapshot. Relevant future-change gates:
 
-Target: identify exact canonical editable IDs + use renewable `changes.watch` / change-feed evidence. Until then Drive coverage remains partial/stale as observed.
+- **Supabase:** table RLS does not replace grants; functions require explicit EXECUTE/`SECURITY DEFINER` review. Keep privileged RPCs narrow and validated.
+- **OpenAI:** provider conversation storage is not HOCKER memory authority; preserve HOCKER-managed durable state and disable provider-side storage where the active API contract supports it.
+- **Gemini:** plan migration toward the newer interaction/auth model and reverify the current key-transition deadline immediately before implementation; do not perform an emergency rewrite while production is stable.
+- **Vercel AI Gateway:** remains one inference route, not a memory/identity dependency or single point of failure.
+- **Anthropic/Ollama:** code presence is not readiness; require explicit configuration, connectivity and verified inference evidence.
 
-## 8. Memory Mirror
+Any provider/model/key change is a software/configuration change and must have regression evidence and rollback.
 
-Memory Mirror is reviewed reusable knowledge, not operational real-time memory.
+## 8. Context Bridge / Memory Mirror
 
-Last production snapshot before this workstream:
+This checkpoint did **not** re-query Context Bridge manifests/checkpoints or Memory Mirror publication counts. Therefore the previous values must not be promoted as current here.
 
-- 35 active memories;
-- 34 active approved by safety + NOVA/SYNTIA;
-- 1 additional active approved by safety/NOVA but not both review flags;
-- active expired: 0;
-- latest material update observed: `2026-08-04T01:28:56Z`.
+Operational rule remains:
 
-Do not make it look “fresh” by copying current chats/provider state into it. Operational changes belong in Context Bridge. Only reusable distilled knowledge goes through the existing review/publication pipeline.
+- Context Bridge = current operational continuity/evidence;
+- Memory Mirror = reviewed reusable knowledge;
+- do not copy raw provider state, secrets, credentials or arbitrary chat history into Memory Mirror to make it look fresh;
+- do not auto-activate a Context Bridge manifest; retain Owner + MFA/AAL2 activation controls.
 
-## 9. Vercel / CI / code scanning
+Re-query those stores before using freshness/completeness claims.
 
-- Hocker One production remains `READY` on #214 main.
-- PR #216 has automatic previews.
-- Hocker One CI includes tests/typecheck/lint/build/full dependency audit.
-- GitHub CodeQL **default setup is active**; the repo intentionally has no advanced CodeQL workflow file. Verify actual current check runs before final merge rather than assuming scanning is absent.
-- External Actions are pinned by repository contract and checkout uses `persist-credentials: false` in the observed CI.
+## 9. Canon/documentation state
+
+The approved 2026-08-05 canonical PDFs remain authoritative human publications within their evidence level, but mutable technical facts have drifted.
+
+The new `DOC_ALIGNMENT_2026-08-17.md` records current differences, including:
+
+- P0 already live in current `main`/Supabase;
+- Hocker One primary provider-independent NOVA runtime;
+- dedicated `nova.agi` as compatibility/fallback unless independently re-certified;
+- current production CI/CodeQL/Vercel authority;
+- current P0 database invariants;
+- current global Supabase security blockers;
+- provider-documentation migration watch items.
+
+Formal next-edition reconciliation is required for DOC-00/DOC-05/DOC-06/DOC-07/DOC-11 after the evidence set is frozen. Do not silently rewrite historical PDFs as if they had always described the new architecture.
 
 ## 10. Next actions in order
 
-1. Finish Task 2 `CONTEXT_FRESHNESS_POLICY.md` + continuity docs and return exact-head CI/Preview to green.
-2. Create a new draft Context Bridge manifest only after the fail-closed coverage behavior is safely promotable; never auto-activate it.
-3. Refresh PR #215 ledger and PR #209 closure gate against #214/#216 + current repo/provider facts.
-4. Execute AGI certification 16/16 through human Owner+AAL2; persist real `agi_feedback`/`agi_runs` evidence.
-5. Classify/remediate global Supabase security findings through validation-first narrow changes; reconcile `MIGRATIONS_FAILED` causally.
-6. Prove or formally scope the dedicated NOVA fallback and Node Agent runtime evidence.
-7. Reconcile branch/ruleset/supply-chain coverage for unprotected repositories without mixing product activation.
-8. Freeze one final candidate and run exact-SHA PWA/Android API 36 + rollback/runbook + Context Bridge evidence gates.
-9. Declare `HOCKER Core — VERIFIED / INTEGRATION READY` only when every named gate has traceable evidence.
+1. Keep this documentation reconciliation isolated until reviewed; do not move `main` because a snapshot changed.
+2. Reconcile active Context Bridge checkpoints/manifest to the new production authority without auto-activation.
+3. Refresh global closure/ledger evidence against current `main`, not the old #214 merge head.
+4. Execute real 16/16 AGI eval/tool-eval evidence through the governed Owner+AAL2 path.
+5. Classify and remediate Supabase Advisor findings in narrow validation-first slices.
+6. Revalidate dedicated NOVA fallback only if it is required for continuity; do not make it primary by documentation alone.
+7. Run authenticated NOVA E2E/provider-fallback drills with controlled test identities/data so production memory is not polluted by arbitrary test traffic.
+8. Complete web/PWA/mobile, accessibility/performance, rollback/runbook and observability evidence before freezing a release candidate.
+9. Rotate secrets only in a coordinated, explicitly authorized window after dependencies and rollback are mapped.
+10. Declare `HOCKER Core — VERIFIED / INTEGRATION READY` only when every named gate has traceable evidence.
 
-## 11. Handoff rule
+## 11. Non-authorizations
 
-At each material milestone, update normalized Context Bridge first. Update this file only when the continuation point materially changes. Do not turn it into a chronological chat log or a fake heartbeat.
+This snapshot does not authorize:
+
+- reapplying/reverting P0;
+- direct `main` changes without review gates;
+- production DDL outside a validated change slice;
+- bulk Supabase security mutations;
+- enabling AGI material actions;
+- Context Bridge auto-activation;
+- destructive cleanup/index deletion;
+- secret rotation;
+- casino/wallet regulated activation;
+- claims of 100% ecosystem completion.
+
+## 12. Handoff rule
+
+At every material milestone:
+
+1. query mutable production facts first;
+2. record exact SHA/deployment/migration/evidence IDs;
+3. update operational continuity evidence;
+4. preserve prior snapshots as history;
+5. never convert a stale snapshot into authority by repetition.
