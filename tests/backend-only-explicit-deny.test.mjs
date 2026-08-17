@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const TABLES = ["compliance_events", "game_history", "wager_progress_ledger"];
 
 test("backend-only tables express client deny intent without opening new grants", async () => {
-  const sql = await read("supabase/migrations/20260817014500_backend_only_explicit_deny_policies.sql");
+  const sql = await read("supabase/migrations/20260817013714_backend_only_explicit_deny_policies_20260817.sql");
 
   for (const table of TABLES) {
     assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
