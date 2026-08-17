@@ -90,14 +90,17 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
 });
 
-test("recovery snapshot keeps production authority and incomplete context gates explicit", async () => {
+test("recovery snapshot separates mutable pointers from functional authority and incomplete gates", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
-  assert.match(state, /945ed9cdeda909faa9823230d2a4f47ff84173c7/);
-  assert.match(state, /dpl_BbKA86LqvHBkbTDD2vnnsdRcYmT4/);
-  assert.match(state, /PR #214[\s\S]*already merged|PR #214[\s\S]*ya.*merged/i);
-  assert.match(state, /PR #216/);
-  assert.match(state, /google-drive-canon[\s\S]*partial/i);
-  assert.match(state, /Codex[\s\S]*not.*refreshed|Codex[\s\S]*no fue.*refresc/i);
+  assert.match(state, /VERIFY MUTABLE FACTS BEFORE ACTING/);
+  assert.match(state, /mutable pointers/);
+  assert.match(state, /latest functional authority/);
+  assert.match(state, /documentation-only ancestry/);
+  assert.match(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
+  assert.match(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
+  assert.match(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
+  assert.match(state, /Do not use these as current pointers without re-querying them/);
   assert.match(state, /agi_eval_result[\s\S]*0/);
   assert.match(state, /agi_tool_eval_result[\s\S]*0/);
+  assert.match(state, /Dedicated `nova\.agi` deployment\/health was \*\*not re-certified/);
 });
