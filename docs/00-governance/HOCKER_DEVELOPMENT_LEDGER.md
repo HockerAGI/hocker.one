@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-16T22:43:00-07:00
+last_verified_at: 2026-08-17T00:15:11-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -15,7 +15,7 @@ update_policy: append-only milestones; mutable pointers must be re-queried befor
 
 Durable continuity record for the HOCKER ecosystem. It records evidence and explicit uncertainty; it does not convert repository activity into product-completion claims.
 
-**Supersedes operational use of PR #215** while preserving PR #215 and branch `ops/hocker-development-ledger` as immutable historical audit evidence through its final recorded cut. No historical PR or commit is deleted by this supersession.
+**Supersedes operational use of PR #215** while preserving PR #215 and branch `ops/hocker-development-ledger` as historical audit evidence through its final recorded cut. No historical PR or commit is deleted by this supersession.
 
 Detailed recovery semantics are governed by `docs/operations/LAST_KNOWN_STATE.md` and `DOC_ALIGNMENT_2026-08-17-R1.md`.
 
@@ -23,12 +23,14 @@ Detailed recovery semantics are governed by `docs/operations/LAST_KNOWN_STATE.md
 
 These are mutable and must be re-queried before mutation:
 
-- Hocker One `main`: `6b3b4f35820f4fb9c0906fa582dcd397d3169f88` after PR #228.
+- Hocker One `main`: `cd1f8ef1d148394955013252ac06b2add8c0f460` after PR #229.
 - Canonical counts: 10 applications / 16 AGIs.
 - Connected engineering repositories: 9.
 - Connected Vercel projects: 3 (`hocker-one`, `hocker.agi`, `chido-casino`).
 - Primary Supabase project: `yvuibbcuntqpyqiuqggd`.
 - Supabase Branching: `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` at the latest read.
+- NOVA dedicated repository `main`: `db417f262dfcddcad8e82f6be977415d0b0f3e89` after PR #32.
+- PUNTO·G repository `main`: `31accb4c1ebc965a037578431f5a017e3728df60` after PR #4.
 
 ## Current Hocker One closure snapshot
 
@@ -42,12 +44,15 @@ These are mutable and must be re-queried before mutation:
 - Node Mirror heartbeat-only liveness (#224), followed by real-schema hotfix (#226).
 - three canonical AGI foreign-key indexes (#227), production migration `20260817052915`.
 - bounded Supabase Advisor exception register (#228); intentional GraphQL/RPC warnings are no longer treated as unclassified debt.
+- Core Integration Ready vs Full Launch/GA continuity/closure reconciliation (#229), merged as documentation/tests only.
 
 ### Core Integration Ready blockers still open
 
 - Owner AAL2 human ceremony.
 - 16/16 durable `agi_eval_result` / required `agi_tool_eval_result` evidence.
 - Supabase Leaked Password Protection provider setting and verification.
+
+PR #230 is the current candidate for the resumable Owner/AAL2 certification workflow. It is not merged or certified.
 
 See `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` for the current decision boundary.
 
@@ -56,6 +61,8 @@ See `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` for the current decision bo
 ### Hocker One / NOVA primary
 
 Hocker One remains the primary NOVA runtime/control plane. Provider/model identity is internal telemetry; Owner Gate remains authoritative for material actions.
+
+PR #230 exact head `052060abd79f97b4018a6764607cdfa27c881c01` adds only a resumable Owner certification control over existing AAL2-protected runtime/tool evaluation endpoints. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence and fail-closed canonical ID checks. Exact-head GitHub CI `32004789564` is SUCCESS and PR evidence records CodeQL/code scanning SUCCESS, but the PR remains draft with zero submitted reviews and has no exact-head Vercel Preview because the provider returned a deployment-rate-limit failure. Earlier READY previews are not exact-head evidence. Do not merge until the deployment/review gates close.
 
 ### Physical Node Agent
 
@@ -69,14 +76,16 @@ No database row was rewritten merely to manufacture an offline status.
 
 State: **DEGRADED / fallback not currently certified**.
 
-Railway was already implemented; do not reinstall it. GitHub deployment evidence created by `railway-app[bot]` shows:
+PR #32 is now merged to `nova.agi/main` at `db417f262dfcddcad8e82f6be977415d0b0f3e89`. It establishes durable startup/recovery/handoff documentation and continuity contract tests; final head `5b7d97cf1a3302bcb5dacf9349db81ccc07e12e0` had CI #151 SUCCESS. It does not establish a new live deployment.
 
-- production deployment of `nova.agi` SHA `8be3cdc1891d740cc72d79e60d3aa35199b7efa2`;
-- deployment status `success` on 2026-07-15;
-- later deployment status **inactive** on 2026-07-29;
-- no newer GitHub-linked Railway deployment in the currently returned deployment history.
+Railway was already implemented; do not reinstall it. Existing evidence shows historical deployment, but the following current-live evidence remains `PENDING EVIDENCE`:
 
-This proves historical Railway deployment and an inactive latest linked record; it does not prove the whole Railway project was deleted or globally unavailable. Hocker One unified NOVA runtime remains primary.
+- exact current Railway deployment revision;
+- `/health/ready` against that exact revision;
+- runtime logs/heartbeat for the same candidate;
+- authenticated Hocker One -> NOVA E2E against it.
+
+Hocker One unified NOVA runtime remains primary.
 
 ## Supabase security state
 
@@ -86,7 +95,7 @@ This proves historical Railway deployment and an inactive latest linked record; 
 - migration branch drift is closed;
 - command/node duplicate-permissive policy overlap was reconciled;
 - three canonical AGI unindexed-FK findings were closed by migration `20260817052915`;
-- production inspection of all currently reported authenticated GraphQL tables found RLS enabled with policy coverage.
+- production inspection of currently reported authenticated GraphQL tables found RLS enabled with policy coverage.
 
 ### Accepted only under explicit contracts
 
@@ -103,24 +112,43 @@ Any new Advisor finding or weakening of those invariants reopens security review
 
 - Leaked Password Protection.
 
+Fresh Security Advisor output still reports GraphQL exposure WARNs and the existing SECURITY DEFINER RPC WARNs governed by the exception contracts, plus leaked-password protection disabled. These warnings are not silently equivalent to global security closure.
+
 ## AGI evidence state
 
 - canonical AGIs: 16;
 - `allow_actions=false`: 16/16;
 - eval infrastructure exists;
-- durable certification remains incomplete until real AAL2-protected eval evidence is generated.
+- durable certification remains incomplete until real AAL2-protected eval evidence is generated;
+- PR #230 is a candidate UX/control path for that evidence and remains blocked from merge by exact-head Vercel evidence plus draft/review gates.
 
 Never manufacture certification by inserting feedback/eval rows directly.
+
+## PUNTO·G architecture state
+
+PR #4 merged documentation-only Canon `1.0-rc4` at `31accb4c1ebc965a037578431f5a017e3728df60`.
+
+Current PUNTO·G architecture is provider-neutral for future work:
+
+- PostgreSQL is the portable persistence contract;
+- Neon is selected as the first DB provider to activate later, without becoming a domain dependency;
+- Better Auth is CURRENT behind a PUNTO·G-owned identity boundary;
+- object storage uses an S3-compatible port, with Cloudflare R2 candidate/preferred for first activation;
+- Supabase remains a supported future migration target rather than mandatory current authority;
+- Hocker One administration must use a minimized/audited PUNTO Control Contract, not direct provider-admin credentials.
+
+This documentation merge created/configured no Neon, R2, Supabase, Vercel, KYC, PSP, domain, secret or production resource. Historical Supabase-oriented Phase 2 evidence remains historical and must not be rewritten as if it had been provider-neutral at the time.
 
 ## Repository/governance continuity
 
 The canonical product catalog remains 10 apps even though connected engineering inventory contains 9 repositories. Repository count, runtime count and provider-project count are not product counts.
 
-Open legacy PRs must be interpreted against current evidence:
+Open/historical PRs must be interpreted against current evidence:
 
-- PR #209: historical closure snapshot; superseded operationally by `PLATFORM_CLOSURE_2026-08-17.md` once the latter is merged.
-- PR #215: historical ledger branch; superseded operationally by this file once merged.
+- PR #209: historical closure snapshot; superseded operationally by current `PLATFORM_CLOSURE_2026-08-17.md`.
+- PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
+- PR #230: current AGI certification candidate; draft and externally blocked by exact-head Vercel rate limiting.
 
 ## Preserved perimeter target from historical closure work
 
@@ -155,17 +183,36 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 
 ### Supabase Advisor contract closure — PR #228
 
-- Production inspection confirmed RLS enabled + policy coverage across all currently reported authenticated GraphQL table warnings.
+- Production inspection confirmed RLS enabled + policy coverage across the currently reported authenticated GraphQL table warnings.
 - Public catalog/tier/promo reads and four SECURITY DEFINER RPC families were classified by actual contracts rather than silenced through broad revocation.
 - `SUPABASE_ADVISOR_EXCEPTION_REGISTER_2026-08-17.md` made those boundaries explicit and testable.
 - Leaked Password Protection remains an open provider gate.
 
-### Railway evidence reconciliation
+### Core closure reconciliation — PR #229
 
-- GitHub deployment history confirmed Railway deployment was real and already implemented.
-- Latest GitHub-linked production deployment record found for `nova.agi` is SHA `8be3cdc1891d740cc72d79e60d3aa35199b7efa2`.
-- Its recorded state moved from `success` to **inactive**.
-- No reimplementation or blind redeploy was performed.
+- PR #229 recovered from its earlier RED regression and merged at `cd1f8ef1d148394955013252ac06b2add8c0f460`.
+- Final head `9852ef3627e896cd6dcf502917847a517be20a71` had GitHub Actions CI `32002493287` = SUCCESS and Vercel Preview `dpl_5VyirBUYy7QzZWLwhrFvDAXjVpDG` = READY.
+- It reconciles Core Integration Ready vs Full Launch/GA and historical use of #209/#215 without runtime, DDL, provider, secrets or AGI permission changes.
+
+### AGI Owner certification candidate — PR #230
+
+- PR #230 is open/mergeable/draft at `052060abd79f97b4018a6764607cdfa27c881c01`.
+- Exact-head CI `32004789564` = SUCCESS; PR evidence records CodeQL/code scanning SUCCESS.
+- Exact-head Vercel status = FAILURE due deployment/build rate limiting; no exact-head Preview exists.
+- Earlier READY branch previews belong to older SHAs and are not promotion evidence.
+- Zero submitted reviews were observed. No merge is authorized.
+
+### NOVA continuity merge — PR #32
+
+- `nova.agi` PR #32 merged at `db417f262dfcddcad8e82f6be977415d0b0f3e89`.
+- Final head `5b7d97cf1a3302bcb5dacf9349db81ccc07e12e0` had CI #151 SUCCESS.
+- Durable continuity/recovery documentation is now on `main`; current live Railway revision/readiness/logs/E2E remain unverified.
+
+### PUNTO·G provider-neutral rc4 — PR #4
+
+- PUNTO·G PR #4 merged documentation-only Canon `1.0-rc4` at `31accb4c1ebc965a037578431f5a017e3728df60`.
+- Mandatory Supabase assumptions are superseded for future PUNTO work by provider-neutral persistence/auth/storage contracts.
+- No provider or production infrastructure was activated by the merge.
 
 ## Handoff rule
 
