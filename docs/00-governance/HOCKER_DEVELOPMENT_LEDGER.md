@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T20:02:18-07:00
+last_verified_at: 2026-08-17T21:07:59-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -386,6 +386,14 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - HOCKER Supabase remains `main=FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY`; fresh Security Advisor output remains the contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - Hocker One PR #230 remains open, mergeable, draft and unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; no new exact-head Vercel READY evidence was observed, so no merge is authorized.
 - No HOCKER production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-17 21:07 PDT — Ledger exact-head Preview closed green; no product/runtime delta
+
+- PR #231 exact prior head `3ecf89d01595bea146ce74a407f485794e962485` now has Vercel Preview `dpl_HCCsx9VhQAF6ZUuQZvzrXZeHEGHj` = `READY`.
+- Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; PUNTO·G `main` remains `d8a3e9e1d1646571f986f6f25440afa21ced810c`; no new product/runtime merge was observed.
+- PR #230 remains open, draft, mergeable and unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; its exact-head READY Preview gate remains unresolved, so the Owner/AAL2 16-AGI certification candidate is not merge-authorized.
+- Fresh production Supabase Security Advisor output remains the existing contract-governed GraphQL exposure WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new critical RLS-disabled/no-policy regression was observed.
+- No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ## Handoff rule
 
