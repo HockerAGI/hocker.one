@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T12:49:40-07:00
+last_verified_at: 2026-08-18T13:53:16-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -484,6 +484,15 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL exposure WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
 - PR #230 remains open/draft/unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; Owner/AAL2 16-AGI certification remains blocked.
 - No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
+
+### 2026-08-18 13:53 PDT — Ledger exact-head Preview closed green; ecosystem state otherwise stable
+
+- PR #231 exact head `477335181ea494f30c87b74aeac2d08e22888bf7` now has Vercel Preview `dpl_Dwyw7gHS1SE6xrjSnYuQfWv75j4E` = `READY`.
+- Organization PR activity since the prior cut shows no new product/runtime PR or merge. Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f`; PUNTO·G `main` remains `62e0d8cdf533864439076737cd30a3224005ebbf` and remains unprotected with zero required checks.
+- PR #230 remains open, draft, mergeable and unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; its exact-head Vercel READY gate remains unresolved, so Owner/AAL2 16-AGI certification is still blocked from merge.
+- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
+- Neon still exposes the single project `PUNTO.G` / `frosty-mode-96257627`; no Phase 3E resource was found and no provider mutation was executed.
+- No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
 
 ## Handoff rule
 
