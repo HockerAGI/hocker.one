@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T01:58:30-07:00
+last_verified_at: 2026-08-18T03:59:23-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -30,7 +30,7 @@ These are mutable and must be re-queried before mutation:
 - Primary Supabase project: `yvuibbcuntqpyqiuqggd`.
 - Supabase Branching: `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` at the latest read.
 - NOVA dedicated repository `main`: `db417f262dfcddcad8e82f6be977415d0b0f3e89` after PR #32.
-- PUNTO·G repository `main`: `d05303ced42314bd0d9cbb985fbed9b3994b1487` after Phase 3D Social PR #9 plus immediate closure-document commits; `main` remains unprotected with zero required status checks.
+- PUNTO·G repository `main`: `62e0d8cdf533864439076737cd30a3224005ebbf`, five documentation-only commits ahead of the prior `d05303ced42314bd0d9cbb985fbed9b3994b1487` Phase 3D closure pointer; `main` remains unprotected with zero required status checks.
 - PUNTO·G Phase 3D code authority: `472c1845e61ed527cfee113b3f3390cdb0db68e8`; exact-head CI `32118414907` / #179 = SUCCESS. Phase 3D is `TECHNICALLY CLOSED / ACTIVATION GATED`; Phase 3E Account & Safety is NEXT.
 - PUNTO·G Neon development/validation project: `PUNTO.G` / `frosty-mode-96257627`; default `main=br-little-art-au9zcb71` directly exposes the `social` schema with follows, favorites/collections, stories/highlights, notifications, professional connections and collaborations in addition to the previously verified identity/marketplace/professional schemas. Production/customer activation remains separately gated.
 
@@ -158,6 +158,8 @@ Documentation drift was closed separately by PR #8, merged at `d8a3e9e1d1646571f
 
 **Phase 3D Social is now TECHNICALLY CLOSED / ACTIVATION GATED.** PR #9 merged exact feature head `472c1845e61ed527cfee113b3f3390cdb0db68e8`; CI `32118414907` / #179 = SUCCESS. The integrated scope includes Follow, private Favorites/Collections, gated Stories/Highlights, professional Connections/Collaborations, in-app Notifications, recent-first Social Home, privacy-thresholded Audience, responsive/no-store hardening, and migrations/tests `0015`–`0020`. Direct Neon read confirms `social` schema tables for those relations/content/notification/network surfaces are present on default branch `br-little-art-au9zcb71`. Immediate closure-document commits (`66fa88a...`, `c8829107...`, `d05303ce...`) align CURRENT status/README so Phase 3E Account & Safety is NEXT. Public Social activation remains separately gated.
 
+Five additional post-cut documentation-only commits advanced PUNTO·G `main` from `d05303ced42314bd0d9cbb985fbed9b3994b1487` to `62e0d8cdf533864439076737cd30a3224005ebbf`. The delta is limited to `AGENTS.md`, `docs/00-index.md`, `docs/data/DATA-MODEL.md`, `docs/operations/ENVIRONMENTS-RELEASE.md` and `docs/plans/IMPLEMENTATION-ROADMAP.md`; no runtime, migration, provider, payment or activation change is present in that compare. These commits deepen Phase 3D closure evidence and do not change the canonical next phase: Phase 3E Account & Safety.
+
 GitHub `punto.g/main` remains **unprotected** with zero required status checks. This is still a material governance risk even though Phase 3D had exact-head CI green before integration. Branch protection must be resolved before relying on default-branch enforcement for later sensitive phases.
 
 Still gated: public PUNTO·G deployment/traffic, R2/public sanitized media, real KYC provider, platform billing, marketplace payments, AI, Social activation, Phase 3E Account & Safety external/sensitive actions, and Phase 4 Requests/AI Concierge/Chat.
@@ -254,6 +256,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The 17:48 reconciliation exact head `00da99c2e079ac231ab96ffa31352dd467a0f89e` has Vercel Preview `dpl_5pFPGZWAg6LNL5LNfrUXyPGyQV6R` = READY.
 - The 18:56 reconciliation exact head `d448ef2c76ad3c4441ac8b5a8962ed0a87d35249` is superseded by this evidence update and must not be assumed green for the new head.
 - The 21:07 reconciliation exact head `75b668af35a7e72ca3e74ff2091e0ce821fc3a25` has Vercel Preview `dpl_HAutfEVb6zAAJ6weZ5yWUL4yVhEr` = READY.
+- The 01:58 reconciliation exact head `743802869405f77dcf8faa1121f5ab8a4cf833c2` has Vercel Preview `dpl_BMVKMvLAeZXNQuVVM1Yv3vD4B1Z5` = READY; GitHub returns no workflow for the Markdown-only head.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -419,6 +422,15 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Fresh HOCKER Supabase Security Advisor remains materially unchanged: contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new critical RLS-disabled/no-policy regression was observed.
 - Hocker One PR #230 remains open/draft/unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; no merge authorization was inferred.
 - This audit executed no HOCKER production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation.
+
+### 2026-08-18 03:59 PDT — PUNTO·G documentation closure deepened; Ledger exact-head Preview green
+
+- PUNTO·G `main` advanced five commits from `d05303ced42314bd0d9cbb985fbed9b3994b1487` to `62e0d8cdf533864439076737cd30a3224005ebbf`. Repository compare shows changes only in `AGENTS.md`, `docs/00-index.md`, `docs/data/DATA-MODEL.md`, `docs/operations/ENVIRONMENTS-RELEASE.md` and `docs/plans/IMPLEMENTATION-ROADMAP.md`; no runtime, migrations, providers, payments or activation surfaces changed.
+- The canonical functional state remains Phase 3D `TECHNICALLY CLOSED / ACTIVATION GATED` with Phase 3E Account & Safety NEXT. GitHub still reports `punto.g/main` unprotected with zero required status checks; the governance risk is unchanged.
+- PR #231 prior exact head `743802869405f77dcf8faa1121f5ab8a4cf833c2` now has Vercel Preview `dpl_BMVKMvLAeZXNQuVVM1Yv3vD4B1Z5` = `READY`; GitHub returns no workflow for this Markdown-only head.
+- Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; PR #230 remains open, draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`, with no new exact-head READY Preview observed.
+- Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
+- No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ## Handoff rule
 
