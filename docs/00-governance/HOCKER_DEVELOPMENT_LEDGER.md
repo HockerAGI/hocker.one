@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T05:02:09-07:00
+last_verified_at: 2026-08-18T07:06:17-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -77,7 +77,7 @@ Hocker One remains the primary NOVA runtime/control plane. Provider/model identi
 
 PR #230's latest **code-bearing** exact head is `30a414ad95c25cd0bb61b241e63d43ab786d107b`, three commits ahead of the prior ledger head `00b505221f5ff8bdd112aa6a970380973d5c68f2`. That code delta is limited to `src/app/agis/page.tsx`, `src/components/agi/AgiEvalBatchControl.tsx` and `tests/agi-eval-batch.test.mjs`. It passes the server certification snapshot into the Owner batch control and fails closed when that snapshot is partial, preventing synthetic 16-AGI reruns or unnecessary model spend from incomplete evidence. It preserves exactly 16 canonical AGIs, `allow_actions=false`, sequential execution, durable server-derived evidence, the visible existing AAL2 MFA flow and the Owner's already-verified TOTP factor. GitHub Actions CI `32011301053` / run #798 for `30a414ad...` is SUCCESS; PR evidence records regression, typecheck, lint, build and full dependency audit success, with CodeQL/code scanning also reported green.
 
-Documentation drift for that new fail-closed condition was corrected in the editable source `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` on the same PR branch, producing current PR head `1ced536e40a7610a7fed291712baed87c626371a`. The documentation now states that a partial/incomplete server certification snapshot must block batch execution rather than synthesize a full-set rerun. Current-head GitHub Actions CI `32012349597` / #799 is `SUCCESS`. Exact-head Vercel status remains unresolved: the prior status is `FAILURE` with `Deployment rate limited — retry in 24 hours`, and no new READY Preview for `1ced536e...` was observed in the latest deployment inventory. PR #230 remains draft, mergeable and has zero submitted reviews. Do not merge until the current exact head has a READY Vercel Preview with reviewed build/runtime logs, required review/authorization and branch-protection satisfaction.
+Documentation drift for that new fail-closed condition was corrected in the editable source `docs/operations/PLATFORM_CLOSURE_2026-08-17.md` on the same PR branch, producing current PR head `1ced536e40a7610a7fed291712baed87c626371a` without runtime/DDL/provider/permission changes. The documentation now states that a partial/incomplete server certification snapshot must block batch execution rather than synthesize a full-set rerun. Current-head GitHub Actions CI `32012349597` / #799 is `SUCCESS`. Exact-head Vercel status remains unresolved: the prior status is `FAILURE` with `Deployment rate limited — retry in 24 hours`, and no new READY Preview for `1ced536e...` was observed in the latest deployment inventory. PR #230 remains draft, mergeable and has zero submitted reviews. Do not merge until the current exact head has a READY Vercel Preview with reviewed build/runtime logs, required review/authorization and branch-protection satisfaction.
 
 ### Physical Node Agent
 
@@ -270,6 +270,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The 18:56 reconciliation exact head `d448ef2c76ad3c4441ac8b5a8962ed0a87d35249` is superseded by this evidence update and must not be assumed green for the new head.
 - The 21:07 reconciliation exact head `75b668af35a7e72ca3e74ff2091e0ce821fc3a25` has Vercel Preview `dpl_HAutfEVb6zAAJ6weZ5yWUL4yVhEr` = READY.
 - The 01:58 reconciliation exact head `743802869405f77dcf8faa1121f5ab8a4cf833c2` has Vercel Preview `dpl_BMVKMvLAeZXNQuVVM1Yv3vD4B1Z5` = READY; GitHub returns no workflow for the Markdown-only head.
+- The 05:02 reconciliation exact head `73a7627275e61353f09b24b25c81451af9365768` has Vercel Preview `dpl_993QDVBLA28kwhMBrkd8C7wLnGSn` = READY; GitHub returns no workflow for the Markdown-only head.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -455,6 +456,15 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - `hocker.agi` PR #20 (`@types/node` 26) and #21 (ESLint 10) were closed without merge after runtime/toolchain compatibility review. PR #15 (TypeScript 7) remains open; latest observed Vercel deployment is ERROR, so it remains blocked.
 - Fresh HOCKER Supabase provider state remains `main=FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY`; Security Advisor findings remain the contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - No merge was executed by this audit. No production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-18 07:06 PDT — Ledger exact-head Preview closed green; provider state stable
+
+- PR #231 exact head `73a7627275e61353f09b24b25c81451af9365768` now has Vercel Preview `dpl_993QDVBLA28kwhMBrkd8C7wLnGSn` = `READY`; GitHub returns no workflow for this Markdown-only head.
+- Organization PR activity after the prior cut shows no new product/runtime PR or merge. Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f`; `nova.agi/main` remains `db417f262dfcddcad8e82f6be977415d0b0f3e89`; PUNTO·G `main` remains `62e0d8cdf533864439076737cd30a3224005ebbf`.
+- PR #230 remains open, draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`. The latest Hocker One deployment inventory still contains no READY Preview for that exact head, so Owner/AAL2 16-AGI certification remains blocked from merge.
+- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL exposure WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
+- Fresh Neon provider read confirms project `PUNTO.G` still has default `main=br-little-art-au9zcb71` ready and the same functional schema set through Phase 3D (`auth_private`, `audit`, `control_private`, `identity_private`, `marketplace`, `professional_private`, `social`). No Phase 3E schema or public/customer activation was observed. Neon project inventory currently has 10 branches, all observed branches unprotected; this does not alter the existing GitHub branch-protection debt.
+- No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
 
 ## Handoff rule
 
