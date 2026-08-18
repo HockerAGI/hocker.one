@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-17T17:48:57-07:00
+last_verified_at: 2026-08-17T18:56:18-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -30,10 +30,9 @@ These are mutable and must be re-queried before mutation:
 - Primary Supabase project: `yvuibbcuntqpyqiuqggd`.
 - Supabase Branching: `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` at the latest read.
 - NOVA dedicated repository `main`: `db417f262dfcddcad8e82f6be977415d0b0f3e89` after PR #32.
-- PUNTO·G repository `main`: `d9e12ce941d65030060a0c4dff8fbfb1c8ab8eb9`; this is **95 commits ahead** of the prior Ledger pointer `a19f2c60b4533451066be196fdc7bfdef2f17a29` and contains the reconciled Phase 3B Marketplace implementation plus its editable audit/current-status documentation.
-- PUNTO·G GitHub `main` remains **not protected**; no required status checks are enforced by branch protection at this cut.
-- PUNTO·G `feat/phase-3c-professional` exists but is currently **identical to `main`** (`ahead_by=0`, `behind_by=0`): this is preparation only, not Phase 3C implementation evidence.
-- PUNTO·G Neon development/validation project: `PUNTO.G` / `frosty-mode-96257627`; default `main=br-little-art-au9zcb71` is `ready` and directly contains Phase 2B, Phase 2D, Phase 3A and Phase 3B Marketplace schema. Current retained child branches include `backup-pre-phase3b-20260817=br-young-darkness-auo4jalb`, `qa-phase3a-concurrent-privacy=br-steep-violet-augu5zel`, `backup-pre-phase3a-20260817=br-lingering-morning-aunfy131`, `backup-pre-phase2d-20260817=br-dry-thunder-auj9gu3z` and `backup-pre-phase2b-20260817=br-soft-art-aubt3ald`. Production/customer activation remains separately gated.
+- PUNTO·G repository `main`: `d9e12ce941d65030060a0c4dff8fbfb1c8ab8eb9`, still the Phase 3B authority and still unprotected with zero required status checks.
+- PUNTO·G Phase 3C candidate: draft PR #7, head `6d189d1e7437d5af1b68f9b412146e6f988adeca`, based on `feat/phase-3c-professional`; the branch is materially ahead of `main` and contains Professional tools plus migrations `0013`/`0014`.
+- PUNTO·G Neon development/validation project: `PUNTO.G` / `frosty-mode-96257627`; default `main=br-little-art-au9zcb71` is `ready` and still contains Phase 2B, Phase 2D, Phase 3A and Phase 3B Marketplace schema only. Phase 3C validation branches `phase-3c-write-model-20260817=br-hidden-voice-auwp4h1b` and `phase-3c-final-validate-20260817=br-sweet-mouse-aucr6z93` are `ready`; the final validation branch contains `professional_private`, while Neon `main` does not. Production/customer activation remains separately gated.
 
 ## Current Hocker One closure snapshot
 
@@ -149,15 +148,15 @@ After PR #5, `punto.g/main` first advanced **21 direct commits** to `acca73397d2
 
 Phase 2D HOCKER Control Contract and Phase 3A Account/Onboarding are now integrated and materialized in Neon `main`. Phase 3A remains **TECHNICALLY CLOSED / ACTIVATION GATED**; its audit records 28/28 targeted contract checks and direct Neon transaction/ACL verification, while explicitly not claiming a fresh full final-head GitHub Actions + Next.js build + lint pass.
 
-**Phase 3B Marketplace is now also TECHNICALLY CLOSED / ACTIVATION GATED.** Current repository authority is `punto.g/main=d9e12ce941d65030060a0c4dff8fbfb1c8ab8eb9`, **95 commits ahead** of the previous Ledger pointer `a19f2c60b4533451066be196fdc7bfdef2f17a29`. The verified delta adds `/home`, `/explore`, `/search`, `/search/results`, `/p/[username]`, Marketplace domain/repository contracts, PostgreSQL adapter, responsive UI primitives, migrations/tests `0011`/`0012`, CURRENT status, data model, runbook, roadmap and Phase 3B audit/spec/plan sources.
+**Phase 3B Marketplace is also TECHNICALLY CLOSED / ACTIVATION GATED.** Current repository authority remains `punto.g/main=d9e12ce941d65030060a0c4dff8fbfb1c8ab8eb9`. Direct Neon `main` verifies the `marketplace` schema and tables `marketplace.categories`, `marketplace.professional_profiles` and `marketplace.profile_categories`. Phase 3B verification remains bounded: targeted tests are recorded, but no fresh final-head full Next.js build, ESLint/typecheck, GitHub Actions CI, Playwright multi-browser or physical-device pass is claimed.
 
-Direct Neon `main` verifies the `marketplace` schema and tables `marketplace.categories`, `marketplace.professional_profiles` and `marketplace.profile_categories`. The Phase 3B audit records Owner-approved promotion of `0011` + `0012`, backup `backup-pre-phase3b-20260817=br-young-darkness-auo4jalb`, canonical SQL QA, zero QA residue, runtime direct-table SELECT denied, approved read-function EXECUTE allowed and PostgreSQL 18 `SECURITY DEFINER` search-path hardening. The earlier clean validation branch was deleted before a post-promotion comparison could be repeated, so an empty clean-child→main diff is **not** claimed; the reproducible backup-pre-3B→current-main diff contains only the expected Marketplace surface.
+**Phase 3C Professional is now IMPLEMENTED CANDIDATE / VALIDATION IN PROGRESS, not merged.** Before the audit's documentation reconciliation, `feat/phase-3c-professional` was 57 commits ahead of `main` and added the Professional dashboard/editor/preview, availability, categories, gallery, insights, plan/promote/boost gated surfaces, server-side Professional actions, `packages/professional`, `packages/infrastructure-professional`, migrations/tests `0013_phase3c_professional_write_model.sql` and `0014_phase3c_profile_identity_hardening.sql`, plus responsive/UI contracts. The continuity audit updated `CANON.md`, `docs/plans/IMPLEMENTATION-ROADMAP.md` and `docs/operations/ENVIRONMENTS-RELEASE.md` on that same branch and opened draft PR #7. Current PR #7 head is `6d189d1e7437d5af1b68f9b412146e6f988adeca`.
 
-Phase 3B verification remains bounded: targeted domain/repository/static UI tests and responsive 3/3 PASS are recorded, but there is **no fresh full-repository final-head `next build`, ESLint/typecheck, GitHub Actions CI, Playwright multi-browser or physical-device evidence**. GitHub directly returns zero workflow runs for current `d9e12ce...`; zero runs are not a pass.
+Direct Neon evidence is strictly isolated: `phase-3c-write-model-20260817=br-hidden-voice-auwp4h1b` and `phase-3c-final-validate-20260817=br-sweet-mouse-aucr6z93` are ready; the final validation branch contains `professional_private` with profile drafts, draft categories, gallery state and bounded save/publish/unpublish/availability/gallery functions. Neon `main=br-little-art-au9zcb71` does **not** contain `professional_private`, so no Phase 3C promotion is claimed.
 
-GitHub `punto.g/main` remains **unprotected** with zero required status checks. Phase 3B used a documented no-PR/non-forced integration equivalent because Actions quota was constrained; no force rewrite occurred. This does not substitute for branch protection or exact-head CI.
+PR #7 exact-head CI `32090307821` = FAILURE. Production dependency audit and all core tests completed successfully, including Professional domain/infrastructure/web-contract tests, but `Core typecheck` failed on two TypeScript errors in existing `packages/infrastructure-email/test` files: `aws-ses-email.test.ts` passes `RequestInit | undefined` into an exact optional property, and `aws-sigv4.test.ts` passes `string | undefined` where `string` is required. Web lint, web typecheck and web build were skipped after that failure. Therefore Phase 3C is blocked from merge and Neon-main promotion even though its isolated schema validation exists.
 
-The new `feat/phase-3c-professional` branch is currently identical to `main` and Neon exposes no Phase 3C branch. Therefore Phase 3C remains **PREPARED / NOT IMPLEMENTED** at this cut; do not infer implementation from branch creation alone.
+GitHub `punto.g/main` remains **unprotected** with zero required status checks. This remains a material governance blocker independently of PR #7's CI failure. No force rewrite, direct main push or Neon-main promotion was executed by this audit.
 
 R2, KYC provider, payments, AI, hosting production and customer traffic remain unactivated/PENDING EVIDENCE. Historical Supabase-oriented Phase 2 evidence remains historical and must not be rewritten as if it had been provider-neutral at the time.
 
@@ -171,13 +170,12 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #215: closed without merge and explicitly SUPERSEDED; its branch remains historical audit evidence, not the active Ledger authority.
 - PR #213: isolated HOCKER Signal UI work; not a backend Core Integration Ready blocker, but remains a Full Launch/GA UI gate.
 - PR #230: current AGI certification candidate at `1ced536e40a7610a7fed291712baed87c626371a`; draft, zero reviews, documentation drift corrected, CI SUCCESS and exact-head Vercel READY still unresolved.
-- PR #231: active Ledger reconciliation PR. Prior exact head `0d4c44ad744012f5f15a574517fbc338d240026f` has Vercel Preview `dpl_APWScu8aPhHxRkuNKRy2htLMnr2K` = READY; GitHub returns no workflow for this Markdown-only head. It remains open, non-draft and mergeable; this update creates a new exact head that must be gated independently.
-- PR #232: closed without merge and explicitly superseded by PR #230 so the Free-plan password-protection classification remains in the same executable evidence set as the AAL2/16-AGI certification candidate.
-- Hocker One dependency PRs #233-#237 remain open Dependabot candidates. #233 (`next` 16.2.12→16.3.1) has Vercel READY but CI `32055006518` FAILURE; #234 (`zod` 3.25.76→4.4.3) has CI `32055015015` FAILURE and Vercel build ERROR from a Zod v4 type-contract incompatibility at `z.record(z.unknown())`; #235 (`sonner` 2.0.7→2.0.8), exact head `b4ea0c88d3ed95d527f30f88accea282d9785df2`, has CI `32055019545`, Android Debug APK `32055019586`, Android Signed Release `32055019570`, Android Emulator QA `32055019583` all SUCCESS plus Vercel Preview `dpl_3UTQhCXyLZqtGMZU2ZGo4SYbmYKS` READY, but has zero submitted reviews; #236 (`@next/eslint-plugin-next` 16.3.0→16.3.1), exact head `57701945ce86f3553c313c1d7408f5351ebe347b`, has CI `32055036014`, Android Debug APK `32055035985`, Android Signed Release `32055036036`, Android Emulator QA `32055036038` all SUCCESS plus Vercel Preview `dpl_3Y9s7NXNxArMagq5aE4aWqxV3Hed` READY, but has zero submitted reviews; #237 (`@capacitor/android` 8.3.1→8.5.0) fails CI, Android Debug APK, Android Signed Release, Android Emulator QA and Vercel because `@capacitor/core` remains 8.3.1 while Android 8.5.0 requires `^8.5.0`. None is authorized for merge in this cut.
-- New dependency PRs are also present in `hocker.agi`, `nova.agi`, `hocker-node-agent` and `chido.casino`; these are dependency-review backlog, not implementation authority, until each repo's exact-head checks and compatibility review pass.
-- PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`. Phase 2B is present in Neon development/validation `main`; no production/customer activation follows from that state.
+- PR #231: active Ledger reconciliation PR. Previous exact head `00da99c2e079ac231ab96ffa31352dd467a0f89e` has Vercel Preview `dpl_5pFPGZWAg6LNL5LNfrUXyPGyQV6R` = READY. It remains open, non-draft and unmerged; this update creates a new exact head requiring independent gate evidence.
+- PR #232: closed without merge and explicitly superseded by PR #230.
+- Hocker One dependency PRs #233-#237 remain open candidates; #233/#234/#237 are blocked by verified CI/build incompatibilities, while #235/#236 are technically green but remain unreviewed and unmerged.
+- PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`; Phase 2B is present in Neon development/validation `main`.
 - PUNTO·G PR #6: closed duplicate/no-op; no changes.
-- PUNTO·G has no open PR at this cut; Phase 3B is on `main` through the documented integration-equivalent path.
+- PUNTO·G PR #7: open draft at head `6d189d1e7437d5af1b68f9b412146e6f988adeca`; Phase 3C candidate; CI `32090307821` FAILURE at Core typecheck; no merge or Neon-main promotion authorized.
 
 ## Preserved perimeter target from historical closure work
 
@@ -246,7 +244,8 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The 13:03 reconciliation exact head `9b899bc913b1b696fae522ff6f55441f5120cce3` has Vercel Preview `dpl_5EC3Qwvtr1QtT44Tt9mhLw7ru8YR` = READY.
 - The 15:52 reconciliation exact head `98d25576ba9511684c3675ba633401aa3432de96` has Vercel Preview `dpl_uMcRu4UsuvoA6pV4ibuKiEsGxgBz` = READY; GitHub returns no workflow for the Markdown-only head.
 - The 16:56 reconciliation exact head `0d4c44ad744012f5f15a574517fbc338d240026f` has Vercel Preview `dpl_APWScu8aPhHxRkuNKRy2htLMnr2K` = READY; GitHub returns no workflow for the Markdown-only head.
-- This 17:48 evidence reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
+- The 17:48 reconciliation exact head `00da99c2e079ac231ab96ffa31352dd467a0f89e` has Vercel Preview `dpl_5pFPGZWAg6LNL5LNfrUXyPGyQV6R` = READY.
+- This 18:56 evidence reconciliation creates a new Ledger exact head that must be gated independently; no previous Preview state is inherited.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -362,6 +361,16 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; PR #230 remains draft/zero-review at `1ced536e...` with exact-head Vercel READY unresolved. No dependency PR was merged.
 - Production HOCKER Supabase remains `main=FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY`; fresh Security Advisor output remains the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS regression.
 - No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-17 18:56 PDT — PUNTO·G Phase 3C implementation candidate verified; PR #7 opened and blocked
+
+- Re-queried `feat/phase-3c-professional` and found it materially advanced from the previous prepared-only state: before audit documentation commits it was 57 commits ahead of `main`, adding the Professional dashboard/editor/preview, availability/categories/gallery/insights, gated plan/promote/boost surfaces, Professional domain/repository packages, migrations/tests `0013`/`0014` and responsive UI contracts.
+- Direct Neon evidence now exposes two ready Phase 3C validation branches: `phase-3c-write-model-20260817=br-hidden-voice-auwp4h1b` and `phase-3c-final-validate-20260817=br-sweet-mouse-aucr6z93`. The final validation branch contains `professional_private`; default Neon `main=br-little-art-au9zcb71` does not. No Neon-main promotion occurred.
+- Documentary drift was real: `CANON.md`, `docs/plans/IMPLEMENTATION-ROADMAP.md` and `docs/operations/ENVIRONMENTS-RELEASE.md` still described 3C as NEXT/prepared. Those editable sources were reconciled on the Phase 3C feature branch before integration, explicitly preserving CANDIDATE / VALIDATION IN PROGRESS and fail-closed provider/money/media gates.
+- Opened draft PUNTO·G PR #7 `feat: Phase 3C professional tools candidate`; current head `6d189d1e7437d5af1b68f9b412146e6f988adeca`, base `d9e12ce941d65030060a0c4dff8fbfb1c8ab8eb9`. No review/merge authorization exists.
+- Exact-head CI `32090307821` completed `FAILURE`. Dependency audit and all core tests passed; `Core typecheck` failed specifically in existing `packages/infrastructure-email/test/aws-ses-email.test.ts` and `aws-sigv4.test.ts` because `exactOptionalPropertyTypes` rejects `RequestInit | undefined` and a `string | undefined` argument. Web lint, web typecheck and web build were skipped after failure.
+- PUNTO·G `main` remains unprotected with zero required status checks, independently blocking reliable promotion governance. No direct push to `main`, no merge, no production deployment and no Neon-main migration promotion were performed by this audit.
+- Hocker One `main` remains unchanged; PR #230 remains draft and unmerged. Production HOCKER Supabase remains `main=FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY` with no new critical RLS regression in the fresh advisor read.
 
 ## Handoff rule
 
