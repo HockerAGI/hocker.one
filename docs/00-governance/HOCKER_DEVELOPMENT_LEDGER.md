@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T03:59:23-07:00
+last_verified_at: 2026-08-18T05:02:09-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -24,6 +24,7 @@ Detailed recovery semantics are governed by `docs/operations/LAST_KNOWN_STATE.md
 These are mutable and must be re-queried before mutation:
 
 - Hocker One `main`: `cd1f8ef1d148394955013252ac06b2add8c0f460` after PR #229.
+- HOCKER corporate/public `hocker.agi/main`: `6c8265f290410880315e5addc2b8ce843c49e13f` after PR #23, following Precision Future vNext PR #24 at `c088bac0b009112d31ed53b5d70da8829bb327fb`.
 - Canonical counts: 10 applications / 16 AGIs.
 - Connected engineering repositories: 9.
 - Connected Vercel projects: 3 (`hocker-one`, `hocker.agi`, `chido-casino`).
@@ -33,6 +34,16 @@ These are mutable and must be re-queried before mutation:
 - PUNTO·G repository `main`: `62e0d8cdf533864439076737cd30a3224005ebbf`, five documentation-only commits ahead of the prior `d05303ced42314bd0d9cbb985fbed9b3994b1487` Phase 3D closure pointer; `main` remains unprotected with zero required status checks.
 - PUNTO·G Phase 3D code authority: `472c1845e61ed527cfee113b3f3390cdb0db68e8`; exact-head CI `32118414907` / #179 = SUCCESS. Phase 3D is `TECHNICALLY CLOSED / ACTIVATION GATED`; Phase 3E Account & Safety is NEXT.
 - PUNTO·G Neon development/validation project: `PUNTO.G` / `frosty-mode-96257627`; default `main=br-little-art-au9zcb71` directly exposes the `social` schema with follows, favorites/collections, stories/highlights, notifications, professional connections and collaborations in addition to the previously verified identity/marketplace/professional schemas. Production/customer activation remains separately gated.
+
+## HOCKER corporate/public surface
+
+- PR #24 `feat: HOCKER Precision Future vNext` merged at `c088bac0b009112d31ed53b5d70da8829bb327fb` from exact feature head `9990db399bfeb0e73374e4ac3cac096d23d7ad17`. Exact-head GitHub Actions CI `32130278693` = SUCCESS and Vercel Preview `dpl_BxENhtZ5aGerK9NXrBME3oGkh6KF` = READY.
+- The verified scope remodels the corporate site, separates `/portafolio` from `/casos`, adds an explicitly non-production AGI orchestration demonstration, hardens public claims/SEO/privacy/legal identity presentation, strengthens `/api/leads`, minimizes PII in the WhatsApp handoff URL, and updates `@types/react` safely to 19.2.18. Legal/identity copy remains fail-closed around the unverified legal entity facts required by DOC-10.
+- PR #23 then merged Next.js `16.2.12 -> 16.3.1` at `6c8265f290410880315e5addc2b8ce843c49e13f` from exact head `11d4e91ace625d20b59be60f70d7a81ba5a07db8`; CI `32131166120` = SUCCESS and exact-head Preview `dpl_CJ7jdFvLfoHVDsjGj7JPNAKKyNka` = READY.
+- Current Vercel production deployment for `hocker.agi/main` is `dpl_996QqAVEaDEgFELmdWXjeh7sADhe`, commit `6c8265f...`, state READY. A direct error/fatal log query over the reviewed two-hour window returned no entries.
+- PR #24 carries a bounded temporary production-audit exception for transitive NanoID advisory `GHSA-2v37-7h3g-55p8`, documented to expire `2026-09-15`; this must be revalidated or removed by expiry and does not permit other High/Critical findings. `/api/leads` distributed platform rate limiting/WAF/BotID remains P1 rather than implemented.
+- `@types/node` 26 PR #20 and ESLint 10 PR #21 were closed without merge after compatibility review. TypeScript 7 PR #15 remains open and its latest observed Vercel deployment is ERROR; no promotion is authorized.
+- No submitted GitHub reviews were observed for PR #24 or #23. Branch-protection/review enforcement for `hocker.agi/main` is `PENDING EVIDENCE`; successful merge and provider deployment are factual state, not proof of an unobserved review policy.
 
 ## Current Hocker One closure snapshot
 
@@ -179,6 +190,8 @@ Open/historical PRs must be interpreted against current evidence:
 - PR #231: active Ledger reconciliation PR. It remains open, non-draft and unmerged; this update creates a new exact head requiring independent gate evidence.
 - PR #232: closed without merge and explicitly superseded by PR #230.
 - Hocker One dependency PRs #233-#237 remain open candidates; #233/#234/#237 are blocked by verified CI/build incompatibilities, while #235/#236 are technically green but remain unreviewed and unmerged.
+- `hocker.agi` PR #24: merged at `c088bac0b009112d31ed53b5d70da8829bb327fb`; Precision Future vNext is in production with exact-head CI/Preview evidence green before merge.
+- `hocker.agi` PR #23: merged at `6c8265f290410880315e5addc2b8ce843c49e13f`; Next.js 16.3.1 is the current production framework baseline, with exact-head CI/Preview green. PR #20 (`@types/node` 26) and #21 (ESLint 10) were closed without merge; PR #15 (TypeScript 7) remains open and blocked.
 - PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`; Phase 2B is present in Neon development/validation `main`.
 - PUNTO·G PR #6: closed duplicate/no-op; no changes.
 - PUNTO·G PR #7: merged at exact code head `362fe1c047311fdc52cc3148f3cdc62eece84845`; Phase 3C technically closed / activation gated; CI #171 SUCCESS and Neon `main` promotion verified.
@@ -431,6 +444,17 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; PR #230 remains open, draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`, with no new exact-head READY Preview observed.
 - Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+
+### 2026-08-18 05:02 PDT — HOCKER corporate vNext and Next.js 16.3.1 promoted to production
+
+- `hocker.agi` PR #24 `feat: HOCKER Precision Future vNext` merged from exact head `9990db399bfeb0e73374e4ac3cac096d23d7ad17` at merge commit `c088bac0b009112d31ed53b5d70da8829bb327fb`. Exact-head GitHub Actions CI `32130278693` = SUCCESS and Vercel Preview `dpl_BxENhtZ5aGerK9NXrBME3oGkh6KF` = READY.
+- The release aligns public claims and legal identity wording with verifiable state, separates professional portfolio/corporate cases, adds the non-production AGI demonstration, hardens `/api/leads`, privacy/consent and WhatsApp PII handling, and updates the site's editable legal/privacy surfaces in the same implementation set; no separate material documentation drift was found against DOC-10's unverified-entity boundary.
+- `hocker.agi` PR #23 then merged Next.js `16.3.1` from exact head `11d4e91ace625d20b59be60f70d7a81ba5a07db8` at merge commit/current `main` `6c8265f290410880315e5addc2b8ce843c49e13f`. CI `32131166120` = SUCCESS and exact Preview `dpl_CJ7jdFvLfoHVDsjGj7JPNAKKyNka` = READY.
+- Direct Vercel evidence verifies current production deployment `dpl_996QqAVEaDEgFELmdWXjeh7sADhe` = READY for commit `6c8265f...`. Error/fatal runtime-log query over the reviewed two-hour window returned no entries.
+- Security debt is explicit: PR #24's temporary transitive NanoID advisory exception expires `2026-09-15` and must be revalidated/removed; distributed rate limiting/WAF/BotID for `/api/leads` remains P1. The exception does not authorize unrelated High/Critical findings.
+- `hocker.agi` PR #20 (`@types/node` 26) and #21 (ESLint 10) were closed without merge after runtime/toolchain compatibility review. PR #15 (TypeScript 7) remains open; latest observed Vercel deployment is ERROR, so it remains blocked.
+- Fresh HOCKER Supabase provider state remains `main=FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY`; Security Advisor findings remain the contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
+- No merge was executed by this audit. No production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ## Handoff rule
 
