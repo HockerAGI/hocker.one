@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T07:06:17-07:00
+last_verified_at: 2026-08-18T12:49:40-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -24,7 +24,7 @@ Detailed recovery semantics are governed by `docs/operations/LAST_KNOWN_STATE.md
 These are mutable and must be re-queried before mutation:
 
 - Hocker One `main`: `cd1f8ef1d148394955013252ac06b2add8c0f460` after PR #229.
-- HOCKER corporate/public `hocker.agi/main`: `6c8265f290410880315e5addc2b8ce843c49e13f` after PR #23, following Precision Future vNext PR #24 at `c088bac0b009112d31ed53b5d70da8829bb327fb`.
+- HOCKER corporate/public `hocker.agi/main`: `6c8265f290410880315e5addc2b8ce843c49e13f` after PR #23, following Precision Future vNext PR #24 at `c088bac0b009112d31ed53b5d70da8829bb327fb`. PR #25 TRIAD Web v2 is an unmerged candidate at `30ef8f8a0bbed73e550eff63e89e6971fe723095`.
 - Canonical counts: 10 applications / 16 AGIs.
 - Connected engineering repositories: 9.
 - Connected Vercel projects: 3 (`hocker-one`, `hocker.agi`, `chido-casino`).
@@ -41,9 +41,13 @@ These are mutable and must be re-queried before mutation:
 - The verified scope remodels the corporate site, separates `/portafolio` from `/casos`, adds an explicitly non-production AGI orchestration demonstration, hardens public claims/SEO/privacy/legal identity presentation, strengthens `/api/leads`, minimizes PII in the WhatsApp handoff URL, and updates `@types/react` safely to 19.2.18. Legal/identity copy remains fail-closed around the unverified legal entity facts required by DOC-10.
 - PR #23 then merged Next.js `16.2.12 -> 16.3.1` at `6c8265f290410880315e5addc2b8ce843c49e13f` from exact head `11d4e91ace625d20b59be60f70d7a81ba5a07db8`; CI `32131166120` = SUCCESS and exact-head Preview `dpl_CJ7jdFvLfoHVDsjGj7JPNAKKyNka` = READY.
 - Current Vercel production deployment for `hocker.agi/main` is `dpl_996QqAVEaDEgFELmdWXjeh7sADhe`, commit `6c8265f...`, state READY. A direct error/fatal log query over the reviewed two-hour window returned no entries.
+- PR #25 `feat: HOCKER TRIAD web v2` is open/non-draft/mergeable at exact PR head `30ef8f8a0bbed73e550eff63e89e6971fe723095` with zero submitted reviews. It replaces Precision Future with the approved Titanium × Cinematic × Modular system while keeping AGI Mission Experience `VISUAL_ONLY`, preserving legal/identity fail-closed claims and updating the editable README/QA/security/legal/SEO/manifest/test surfaces in the same candidate.
+- Exact PR-head GitHub Actions CI `32177836965` / #130 = SUCCESS. The `verify` job passed reproducible install, regression tests, lint, typecheck, Next.js build, production-route smoke tests, production dependency audit and full dependency audit.
+- Quota-safe preview commit `e4eaa7c554531999a2548fcba862004f33409951` is one commit ahead of the PR head with zero changed files in the compare, so it is tree-identical to `30ef8f8a...`. Vercel Preview `dpl_E3rkEFjvHZdyBEc5z9nDnQfSAeFq` = READY and an error/fatal log query over the reviewed two-hour window returned no entries. This is tree-equivalent Preview evidence, not exact-SHA identity.
+- PR #25's own release checklist and security review require authoritative Preview route/header/runtime and visual review before merge. This audit could verify deployment/readiness/log absence but Vercel SSO prevented an authoritative visual inspection in the available connector surface. Visual QA therefore remains an explicit blocker; no merge is authorized. Residual P1 distributed abuse control for `/api/leads` also remains documented rather than silently treated as implemented.
 - PR #24 carries a bounded temporary production-audit exception for transitive NanoID advisory `GHSA-2v37-7h3g-55p8`, documented to expire `2026-09-15`; this must be revalidated or removed by expiry and does not permit other High/Critical findings. `/api/leads` distributed platform rate limiting/WAF/BotID remains P1 rather than implemented.
 - `@types/node` 26 PR #20 and ESLint 10 PR #21 were closed without merge after compatibility review. TypeScript 7 PR #15 remains open and its latest observed Vercel deployment is ERROR; no promotion is authorized.
-- No submitted GitHub reviews were observed for PR #24 or #23. Branch-protection/review enforcement for `hocker.agi/main` is `PENDING EVIDENCE`; successful merge and provider deployment are factual state, not proof of an unobserved review policy.
+- `hocker.agi/main` is directly observed as protected with required status `verify`. PR #25 has zero submitted reviews; successful CI/tree-identical Preview does not replace the candidate's own visual-review release gate or any human approval required by repository governance.
 
 ## Current Hocker One closure snapshot
 
@@ -192,6 +196,7 @@ Open/historical PRs must be interpreted against current evidence:
 - Hocker One dependency PRs #233-#237 remain open candidates; #233/#234/#237 are blocked by verified CI/build incompatibilities, while #235/#236 are technically green but remain unreviewed and unmerged.
 - `hocker.agi` PR #24: merged at `c088bac0b009112d31ed53b5d70da8829bb327fb`; Precision Future vNext is in production with exact-head CI/Preview evidence green before merge.
 - `hocker.agi` PR #23: merged at `6c8265f290410880315e5addc2b8ce843c49e13f`; Next.js 16.3.1 is the current production framework baseline, with exact-head CI/Preview green. PR #20 (`@types/node` 26) and #21 (ESLint 10) were closed without merge; PR #15 (TypeScript 7) remains open and blocked.
+- `hocker.agi` PR #25: open/non-draft/mergeable at `30ef8f8a0bbed73e550eff63e89e6971fe723095`, zero reviews. Exact-head CI `32177836965` is SUCCESS across install/tests/lint/typecheck/build/smoke/audits. Tree-identical preview commit `e4eaa7c554531999a2548fcba862004f33409951` has READY deployment `dpl_E3rkEFjvHZdyBEc5z9nDnQfSAeFq` and no observed error/fatal logs, but authoritative visual Preview QA remains unavailable/blocked by Vercel SSO in this execution and is an explicit release-checklist merge blocker. Do not merge yet.
 - PUNTO·G PR #5: merged at `01cb92519cebb9c22696731930039d0fa7952005`; Phase 2B is present in Neon development/validation `main`.
 - PUNTO·G PR #6: closed duplicate/no-op; no changes.
 - PUNTO·G PR #7: merged at exact code head `362fe1c047311fdc52cc3148f3cdc62eece84845`; Phase 3C technically closed / activation gated; CI #171 SUCCESS and Neon `main` promotion verified.
@@ -271,6 +276,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The 21:07 reconciliation exact head `75b668af35a7e72ca3e74ff2091e0ce821fc3a25` has Vercel Preview `dpl_HAutfEVb6zAAJ6weZ5yWUL4yVhEr` = READY.
 - The 01:58 reconciliation exact head `743802869405f77dcf8faa1121f5ab8a4cf833c2` has Vercel Preview `dpl_BMVKMvLAeZXNQuVVM1Yv3vD4B1Z5` = READY; GitHub returns no workflow for the Markdown-only head.
 - The 05:02 reconciliation exact head `73a7627275e61353f09b24b25c81451af9365768` has Vercel Preview `dpl_993QDVBLA28kwhMBrkd8C7wLnGSn` = READY; GitHub returns no workflow for the Markdown-only head.
+- The 07:06 reconciliation exact head `7d14efad50accc00200fb68d158b4499dffc12c9` has Vercel Preview `dpl_3b37vHwKPqaCiiZm1zyD2RkKxMD1` = READY; GitHub returns no workflow for the Markdown-only head.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -465,6 +471,19 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL exposure WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
 - Fresh Neon provider read confirms project `PUNTO.G` still has default `main=br-little-art-au9zcb71` ready and the same functional schema set through Phase 3D (`auth_private`, `audit`, `control_private`, `identity_private`, `marketplace`, `professional_private`, `social`). No Phase 3E schema or public/customer activation was observed. Neon project inventory currently has 10 branches, all observed branches unprotected; this does not alter the existing GitHub branch-protection debt.
 - No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
+
+### 2026-08-18 12:49 PDT — HOCKER TRIAD Web v2 reaches CI green; tree-identical Preview READY, visual gate remains open
+
+- New `hocker.agi` PR #25 `feat: HOCKER TRIAD web v2` is open, non-draft and mergeable at exact PR head `30ef8f8a0bbed73e550eff63e89e6971fe723095`, base `6c8265f290410880315e5addc2b8ce843c49e13f`, with zero submitted reviews. Scope is a 99-file corporate-site redesign replacing Precision Future with Titanium × Cinematic × Modular while preserving the 10-product catalog, `VISUAL_ONLY` AGI experience, truthful/legal fail-closed claims, consent boundaries and lead hardening.
+- Exact-head GitHub Actions CI `32177836965` / #130 completed `SUCCESS`. Its `verify` job passed reproducible install, regression tests, ESLint, TypeScript, Next.js build, production-route smoke tests, production dependency audit and full dependency audit.
+- The PR intentionally disabled Vercel on its CI branch. After CI green, preview branch commit `e4eaa7c554531999a2548fcba862004f33409951` was created; repository compare against `30ef8f8a...` shows one commit ahead and **zero changed files**, establishing tree identity. Vercel Preview `dpl_E3rkEFjvHZdyBEc5z9nDnQfSAeFq` is `READY`; error/fatal runtime logs over the reviewed two-hour window were empty.
+- The Preview remains behind Vercel SSO in this connector surface, so authoritative visual QA could not be completed here. PR #25's editable release checklist explicitly treats inability to visually review the exact Preview as a merge blocker. The security review also keeps distributed abuse control for `/api/leads` as residual P1. Therefore no merge is authorized despite CI and tree-identical Preview readiness.
+- Documentation drift is already addressed inside PR #25: README, release/visual/brand QA, security review, legal privacy/terms, manifest, SEO and regression tests are part of the same candidate. No separate safe documentation patch was required.
+- `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f` and is protected with required status `verify`. Hocker One, NOVA, Node Agent, CHIDO Casino, CHIDO Lab, CHIDO Games, Hocker Ads and PUNTO·G default-branch pointers remain unchanged from the prior ledger cut.
+- PR #231 prior exact head `7d14efad50accc00200fb68d158b4499dffc12c9` now has Vercel Preview `dpl_3b37vHwKPqaCiiZm1zyD2RkKxMD1` = `READY`.
+- Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL exposure WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
+- PR #230 remains open/draft/unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; Owner/AAL2 16-AGI certification remains blocked.
+- No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
 
 ## Handoff rule
 
