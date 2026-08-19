@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T23:57:21-07:00
+last_verified_at: 2026-08-19T12:56:52-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -23,17 +23,21 @@ Detailed recovery semantics are governed by `docs/operations/LAST_KNOWN_STATE.md
 
 These are mutable and must be re-queried before mutation:
 
-- Hocker One `main`: `cd1f8ef1d148394955013252ac06b2add8c0f460` after PR #229.
-- HOCKER corporate/public `hocker.agi/main`: `6c8265f290410880315e5addc2b8ce843c49e13f` after PR #23, following Precision Future vNext PR #24 at `c088bac0b009112d31ed53b5d70da8829bb327fb`. PR #25 TRIAD Web v2 is an unmerged candidate at `30ef8f8a0bbed73e550eff63e89e6971fe723095`.
+- Hocker One `main`: `6905117dc5a6fd8c7925169755097f9d84ddf32f` after PR #252. The immediately preceding production sequence is PR #250 (Next.js 16.3.1), PR #251 (post-Next continuity closure), and PR #252 (remaining deprecated Edge API routes migrated to Node runtime).
+- HOCKER corporate/public `hocker.agi/main`: `6c8265f290410880315e5addc2b8ce843c49e13f` after PR #23, following Precision Future vNext PR #24 at `c088bac0b009112d31ed53b5d70da8829bb327fb`. PR #25 TRIAD Web v2 remains an unmerged candidate at `30ef8f8a0bbed73e550eff63e89e6971fe723095`.
 - Canonical counts: 10 applications / 16 AGIs.
 - Connected engineering repositories: 9.
 - Connected Vercel projects: 3 (`hocker-one`, `hocker.agi`, `chido-casino`).
 - Primary Supabase project: `yvuibbcuntqpyqiuqggd`.
 - Supabase Branching: `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` at the latest read.
-- NOVA dedicated repository `main`: `db417f262dfcddcad8e82f6be977415d0b0f3e89` after PR #32.
+- NOVA dedicated repository `main`: `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf` after PR #38. Exact current Railway revision/readiness/logs/authenticated Hocker One→NOVA E2E remain `PENDING EVIDENCE`.
 - PUNTO·G repository `main`: `88411cb307c9059e0f2d478d43e5dfeefe67f7a2`; its parent is the final validated Phase 4 code authority `56424a572dfeafc8c7c5d13c1a553a8dafd1591f`, and the current tip is a documentation-only Phase 4 closure/handoff commit. `main` remains unprotected with zero required status checks.
 - PUNTO·G Phase 3E Account & Safety remains `TECHNICALLY CLOSED / ACTIVATION GATED`. Phase 4 Requests / GIA / Chat is now `TECHNICALLY CLOSED / ACTIVATION GATED` through merged PR #12 exact functional head `56424a572dfeafc8c7c5d13c1a553a8dafd1591f`; exact-head GitHub Actions CI `32222698033` / #191 = SUCCESS. Phase 5 Trust & Safety / PWA / Admin is `NEXT — NOT STARTED`.
 - PUNTO·G Neon development/validation project: `PUNTO.G` / `frosty-mode-96257627`; default `main=br-little-art-au9zcb71` is ready and now contains Phase 4 `interaction_private.requests`, `request_events`, `conversations`, `messages`, `policy_private.jurisdiction_policies`, and private reported-message evidence in addition to the prior identity/marketplace/professional/social/account-safety schemas. Direct provider read confirms `jurisdiction_policies` contains 0 rows and `puntog_runtime` has no direct INSERT/UPDATE/DELETE on Request/Conversation/Message tables. Backup `backup-pre-phase4-20260818=br-blue-recipe-auir7vky` is retained. Production/customer activation remains separately gated.
+
+### Current reconciliation override
+
+The append-only historical sections below intentionally preserve what was believed/verified at each earlier cut. For **current operational decisions**, this snapshot and newer milestones override earlier statements that describe PR #230/#231/#243 or dependency work as still unmerged. Hocker One's resumable Owner/AAL2 certification implementation is already in `main`; later UI/runtime/continuity and dependency closures through PR #252 are also integrated. This does **not** mean the 16 AGIs are certified: direct production evidence at this cut remains 16 AGIs / 16 agents / 0 with `allow_actions=true`, 51 total `agi_runs`, 12 runs since 2026-08-19 UTC across only 3 distinct AGIs, 3 durable `agi_eval_result` rows and 0 `agi_tool_eval_result` rows. The human Owner AAL2 + complete score-v3/tool-eval evidence remains the governing closure gate.
 
 ## HOCKER corporate/public surface
 
@@ -559,3 +563,15 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f`. PR #230 remains draft/unreviewed with Owner/AAL2 16-AGI certification blocked, and hocker.agi PR #25 remains blocked by its visual/review gate.
 - Production HOCKER Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - No merge, HOCKER production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit. Only this governance Ledger was updated with connected evidence.
+
+### 2026-08-19 12:56 PDT — Hocker One Next.js 16.3.1 production closure and Node-runtime migration
+
+- Hocker One PR #250 merged Next.js `16.2.12 -> 16.3.1` from exact validated head `2426bc7454322d730ea656214b9c076dede17786` at merge commit `f5e200973de637d243b2c83e8d079ff46a8eab80`. PR evidence records exact-head GitHub CI #852, Android Debug #166, Signed Release #110, API 36 Emulator QA #67 and Vercel Preview `dpl_EujRiBuTuV6WC34u1DzYfG91niFQ` all green before merge.
+- PR #251 then merged documentation-only continuity closure at `8dbf9adb11ccb2976ffa761cfba7375da5409673`, recording the post-Next production baseline and preserving the still-pending human Owner AAL2 score-v3 gate.
+- PR #252 merged exact candidate `74c512b5b382e20f212e5db7c2c269e3261cd642` at current `main=6905117dc5a6fd8c7925169755097f9d84ddf32f`. It migrates only `/api/health/ping` and `/api/supply/orders` away from deprecated Edge runtime to Node while preserving existing auth/role/kill-switch/allow-write/idempotency boundaries; `LAST_KNOWN_STATE.md` and an executable regression were updated in the same PR. Exact candidate CI `32295492614` / #856 = SUCCESS and exact Preview `dpl_H1vCm8NLPNFhfCP1mkpFQ64csgUZ` = READY.
+- Direct Vercel production evidence verifies `dpl_5hj9CPsr83XSCQf7n74yNXoWqxha` = READY for current `main=6905117...`; an error/fatal runtime-log query over the reviewed 30-minute window returned no entries.
+- Hocker One `main` remains protected with required status `Verify Hocker ONE`. `hocker.agi/main=6c8265f290410880315e5addc2b8ce843c49e13f` and `nova.agi/main=5c022c5d95197e55fb4fc0eaab1a70d53224fcbf` remain protected with required `verify`; `hocker-node-agent/main=bc733dfb0b131c1fa7b950443ec2b16ae4bd2093` remains protected with required `verify`; PUNTO·G `main=88411cb307c9059e0f2d478d43e5dfeefe67f7a2` remains unprotected with required checks off.
+- Direct Supabase provider state remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`, preview `ACTIVE_HEALTHY`. Fresh Security Advisor output remains the already-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new critical RLS-disabled/no-policy regression was observed.
+- Direct production AGI evidence remains incomplete: 16 canonical AGIs, 16 agents, 0 with `allow_actions=true`, 51 total runs, 12 runs since 2026-08-19 UTC across only 3 distinct AGIs, latest run `2026-08-19T09:42:04.967363Z`, 3 `agi_eval_result` rows and 0 `agi_tool_eval_result` rows. No 16/16 certification is claimed and no evidence row was manufactured or altered by this audit.
+- Open merge candidates remain gated: `hocker.agi` PR #25 still requires its own authoritative visual/review gate; TypeScript 7 PR #15 remains blocked; CHIDO dependency majors/minors and Node Agent dependency PRs have not been auto-promoted; Hocker Ads PR #18 remains an unmerged provider-neutral draft. No risky/regulated change was merged by this audit.
+- This audit executed no production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality. The only repository mutation in this cut is this append-only Ledger reconciliation branch pending normal PR/review/protection gates.
