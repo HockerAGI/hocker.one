@@ -97,11 +97,11 @@ test("current UX and score-v3 recovery contracts stay explicit without freezing 
   assert.match(readme, /npm run typecheck/);
 
   assert.match(handoff, /release funcional promovido por PR #243/i);
-  assert.match(handoff, /Candidate final:\s*`[0-9a-f]{40}`/i);
-  assert.match(handoff, /CI candidate:[\s\S]*SUCCESS/i);
-  assert.match(handoff, /Preview exacto:[\s\S]*READY/i);
-  assert.match(handoff, /Merge funcional:\s*`[0-9a-f]{40}`/i);
-  assert.match(handoff, /Vercel producción funcional:[\s\S]*READY/i);
+  assert.match(handoff, /candidate final(?:\s+#243)?[^`\n]*`[0-9a-f]{40}`/i);
+  assert.match(handoff, /CI candidate[^\n]*SUCCESS/i);
+  assert.match(handoff, /Preview exacto[^\n]*READY/i);
+  assert.match(handoff, /merge funcional(?:\s+#243)?[^`\n]*`[0-9a-f]{40}`/i);
+  assert.match(handoff, /producción funcional(?: inicial)?[^\n]*READY/i);
   assert.match(handoff, /Regla autoestable/i);
   assert.match(handoff, /PR #213[\s\S]*Cerrado|Cerrado[\s\S]*PR #213/i);
 
@@ -139,11 +139,10 @@ test("recovery card keeps functional release, verified production and evidence p
   assert.match(state, /HANDOFF_2026-08-19\.md/);
   assert.match(state, /## Recovery pointers/);
   assert.match(state, /Reconsultar antes de mutar/i);
-  assert.match(state, /Release funcional vigente de Hocker One/i);
-  assert.match(state, /Producción funcional verificada de ese release/i);
-  assert.match(state, /Candidate final de #243/i);
-  assert.match(state, /CI[\s\S]*SUCCESS/i);
-  assert.match(state, /Preview[\s\S]*READY/i);
+  assert.match(state, /(?:Release funcional vigente|Baseline funcional) de Hocker One/i);
+  assert.match(state, /PR #243[^\n]*`[0-9a-f]{40}`/i);
+  assert.match(state, /Corte live observado[^\n]*`main=[0-9a-f]{40}`/i);
+  assert.match(state, /(?:Producción funcional verificada de ese release|Producción observada para ese corte)[^\n]*Vercel `dpl_[A-Za-z0-9]+`[^\n]*READY/i);
   assert.match(state, /SHAs y deployment IDs[\s\S]*evidencia histórica[\s\S]*no son punteros live/i);
   assert.match(state, /`agi_eval_result`/);
   assert.match(state, /0 filas `agi_tool_eval_result`/);
