@@ -2,20 +2,30 @@
 
 Status: **ACTIVE DELTA REGISTER — POST #243 PRODUCTION CLOSURE**
 
-Este registro describe drift vigente sin reescribir publicaciones canónicas históricas. Producción/configuración y `main` prevalecen para estado técnico actual.
+Este registro describe drift vigente sin reescribir publicaciones canónicas históricas. Producción/configuración y `main` prevalecen para estado técnico live; los SHAs listados aquí son cortes de evidencia y deben reconsultarse antes de mutar.
 
 Current handoff: `HANDOFF_2026-08-19.md`.
 
 ## Estado técnico publicado
 
+**Release funcional:**
+
 - PR #243: MERGED.
 - Candidate final: `e2cb93834e781e1f03132e767c646043413d8c36`.
 - Candidate CI `32276318988` / #836: SUCCESS en tests, typecheck, lint, build y full dependency audit.
 - Candidate Preview `dpl_HkouMPbEWHdhfPeSNCH4pj7TYQHD`: READY.
-- Hocker One `main`: `e48edf78ee2ed44d149543fa5680a3d6cb767c7a`.
-- Vercel producción: `dpl_81HqevySC8Ziq3KxQA1Gxy4Bw3ta`, READY, exact merge SHA; build sin error y sin `error`/`fatal` en la ventana revisada.
-- Supabase reconsultado: ACTIVE_HEALTHY, 16 AGIs, 16 agentes, `allow_actions=true = 0`, 3 `agi_eval_result` históricas, 0 `agi_tool_eval_result`.
-- Certificación Owner `score-v3`: pendiente de ceremonia humana AAL2; el merge no se contabiliza como 16/16.
+- Merge funcional: `e48edf78ee2ed44d149543fa5680a3d6cb767c7a`.
+- Vercel producción funcional: `dpl_81HqevySC8Ziq3KxQA1Gxy4Bw3ta`, READY, exact `e48edf78...`; build/runtime sin error/fatal en la ventana revisada.
+
+**Wrapper documental observado antes de este ajuste:**
+
+- PR #245: MERGED.
+- `main` observado: `12dc95e58125d603e12aab25cfd03b3a6c33a030`.
+- Vercel `dpl_EuAcyPVvyhcXG6sTykJZHdWoo6DF`: READY, target production, exact `12dc95e5...`, sin `error`/`fatal` en la ventana revisada.
+
+Un commit documental posterior puede mover `main` y el alias productivo sin alterar el release funcional. Reconsultar ambos antes de cualquier acción.
+
+Supabase reconsultado: ACTIVE_HEALTHY, 16 AGIs, 16 agentes, `allow_actions=true = 0`, 3 `agi_eval_result` históricas, 0 `agi_tool_eval_result`. Certificación Owner `score-v3`: pendiente de ceremonia humana AAL2; ningún merge se contabiliza como 16/16.
 
 ## Hechos canónicos preservados
 
@@ -30,7 +40,7 @@ Current handoff: `HANDOFF_2026-08-19.md`.
 
 ### UX / DOC-08
 
-La implementación en producción adopta un shell adaptativo limpio:
+El release funcional adopta un shell adaptativo limpio:
 
 - seis destinos conceptuales de escritorio: Inicio, NOVA, Trabajo, Ecosistema, Operación, Más;
 - cinco destinos móviles: Inicio, NOVA, Trabajo, Ecosistema, Más;
@@ -85,4 +95,4 @@ Aplicación demostrada:
 
 ## Publicación canónica
 
-Este delta ya vive junto al código de producción, pero **no** implica que los PDFs canónicos históricos hayan sido regenerados. No regenerar DOC-00/05/06/07/08 desde texto improvisado. Primero identificar la fuente editable aprobada y reviewers, actualizarla, validar el paquete documental y publicar derivado versionado. Hasta entonces este delta register + código/tests/evidencia conectada son la capa de reconciliación vigente.
+Este delta vive junto al código de producción, pero **no** implica que los PDFs canónicos históricos hayan sido regenerados. No regenerar DOC-00/05/06/07/08 desde texto improvisado. Primero identificar la fuente editable aprobada y reviewers, actualizarla, validar el paquete documental y publicar derivado versionado. Hasta entonces este delta register + código/tests/evidencia conectada son la capa de reconciliación vigente.
