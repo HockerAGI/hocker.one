@@ -66,7 +66,9 @@ function errorMessage(error: unknown): string {
 
 function isTransientCertificationError(error: unknown): boolean {
   const message = errorMessage(error);
-  return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|5\d\d|already_running/i.test(message);
+  // Timeouts resume at the ceremony boundary after a paced delay rather than
+  // immediately re-entering a model call that already consumed its timeout window.
+  return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|timeout|timed out|5\d\d|already_running/i.test(message);
 }
 
 async function safeSnapshot(): Promise<AgiCertificationSnapshot> {

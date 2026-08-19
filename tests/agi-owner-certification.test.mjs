@@ -22,12 +22,20 @@ test("certification endpoint derives the next step server-side under Owner AAL2"
   assert.doesNotMatch(runner, /Promise\.all|Promise\.allSettled/);
 });
 
-test("eval certification retries only transient provider failures and resumes completed cases", async () => {
+test("eval certification retries fast transient provider failures and resumes completed cases", async () => {
   const runner = await read("src/lib/agi-runtime-eval-runner.ts");
   assert.match(runner, /AGI_EVAL_TRANSIENT_MAX_ATTEMPTS/);
   assert.match(runner, /isTransientEvalError/);
-  assert.match(runner, /429|rate|quota|timeout|5\d\d/i);
+  assert.match(runner, /429|rate|quota|5\d\d/i);
   assert.match(runner, /await sleep\(/);
   assert.match(runner, /loadReusableEvalCases/);
   assert.match(runner, /reused_case/);
+});
+
+test("ceremony-level retry treats provider timeouts as transient after paced delay", async () => {
+  const runner = await read("src/lib/agi-certification-runner.ts");
+  assert.match(runner, /function isTransientCertificationError/);
+  assert.match(runner, /timeout\|timed out/);
+  assert.match(runner, /TRANSIENT_RETRY_DELAY_MS = 20_000/);
+  assert.match(runner, /retryable \? TRANSIENT_RETRY_DELAY_MS : 0/);
 });
