@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-
 import { useState, type FormEvent } from "react";
-import { Loader2, ShieldCheck, Sparkles, LockKeyhole, ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -36,20 +35,16 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
       const response = await fetch("/api/auth/password-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: cleanEmail,
-          password: cleanPassword,
-        }),
+        body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
       });
 
       const result = await response.json().catch(() => ({}));
-
       if (!response.ok || !result.ok) {
         throw new Error(result.message || "Acceso rechazado.");
       }
 
       toast.success("Acceso concedido.");
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       window.location.assign(result.redirectTo || "/owner");
     } catch (err: unknown) {
       setError(getErrorMessage(err) || "Acceso rechazado.");
@@ -61,111 +56,67 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
   return (
     <section
       className={[
-        "relative w-full max-w-[34rem] overflow-hidden rounded-[36px] border border-white/5",
-        "bg-slate-950/82 p-5 shadow-[0_30px_120px_rgba(2,6,23,0.5)] sm:p-7",
+        "w-full max-w-[30rem] rounded-[24px] border border-white/[0.07] bg-slate-950/82 p-5",
+        "shadow-[0_28px_90px_rgba(0,0,0,0.42)] sm:p-6",
         className,
       ].join(" ")}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_28%)]" />
-      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
-
-      <div className="relative flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-sky-300">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Cuenta lista
-          </div>
-
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
-            Sesión privada
-          </span>
-        </div>
-
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 place-items-center rounded-[13px] border border-sky-300/15 bg-sky-300/[0.07] text-sky-300" aria-hidden="true">
+          <LockKeyhole className="h-4 w-4" />
+        </span>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-sky-300">
-            Entrada segura
-          </p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
-            Inicia sesión
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            Acceso con Supabase Auth para mantener la matriz limpia, segura y sincronizada.
-          </p>
+          <h2 className="text-base font-semibold text-white">Acceso</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Tu espacio privado de Hocker One.</p>
         </div>
+      </div>
 
-        {error ? (
-          <div className="rounded-2xl border border-rose-400/15 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            {error}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-sky-400/10 bg-sky-500/5 px-4 py-3 text-sm text-slate-300">
-            <div className="flex items-center gap-2">
-              <LockKeyhole className="h-4 w-4 text-sky-300" />
-              Acceso privado con confirmación inmediata.
-            </div>
-          </div>
-        )}
-
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4 transition-all focus-within:border-sky-400/20 focus-within:bg-white/[0.045]">
-            <label className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
-              Correo
-            </label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              inputMode="email"
-              placeholder="tu@correo.com"
-              className="mt-2 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
-            />
-          </div>
-
-          <div className="rounded-[28px] border border-white/5 bg-white/[0.03] p-4 transition-all focus-within:border-sky-400/20 focus-within:bg-white/[0.045]">
-            <label className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
-              Contraseña
-            </label>
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••••"
-              className="mt-2 w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="hocker-button-brand w-full justify-center py-4 text-[10px] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Validando acceso
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Entrar ahora
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="flex items-center justify-between border-t border-white/5 pt-4">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">
-            Acceso privado
-          </p>
-          <Link
-            href="/"
-            className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-300 transition hover:text-sky-200"
-          >
-            Volver
-          </Link>
+      {error ? (
+        <div className="mt-5 rounded-[14px] border border-rose-300/15 bg-rose-400/[0.07] px-4 py-3 text-sm text-rose-200" role="alert">
+          {error}
         </div>
+      ) : null}
+
+      <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium text-slate-400">Correo</span>
+          <input
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            inputMode="email"
+            placeholder="tu@correo.com"
+            className="min-h-12 w-full rounded-[14px] border border-white/[0.07] bg-white/[0.025] px-4 text-base text-white outline-none transition focus:border-sky-300/25 focus:bg-white/[0.04] placeholder:text-slate-700"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium text-slate-400">Contraseña</span>
+          <input
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••••"
+            className="min-h-12 w-full rounded-[14px] border border-white/[0.07] bg-white/[0.025] px-4 text-base text-white outline-none transition focus:border-sky-300/25 focus:bg-white/[0.04] placeholder:text-slate-700"
+          />
+        </label>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-sky-200/20 bg-sky-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+          {loading ? "Entrando" : "Entrar"}
+        </button>
+      </form>
+
+      <div className="mt-5 flex items-center justify-between border-t border-white/[0.055] pt-4">
+        <span className="text-xs text-slate-600">Acceso protegido</span>
+        <Link href="/" className="text-xs font-semibold text-sky-300 transition hover:text-sky-200">
+          Volver
+        </Link>
       </div>
     </section>
   );

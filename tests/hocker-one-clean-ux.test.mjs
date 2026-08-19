@@ -42,3 +42,18 @@ test("simple user-facing state vocabulary is shared by the clean UI", async () =
     assert.match(`${agis}\n${control}`, new RegExp(label));
   }
 });
+
+test("Owner login keeps authentication behavior while removing dashboard-like noise", async () => {
+  const [surface, auth] = await Promise.all([
+    read("src/components/hocker-2c/auth/HockerOwnerLoginSurface.tsx"),
+    read("src/components/AuthBox.tsx"),
+  ]);
+
+  assert.match(surface, /Bienvenido/);
+  assert.match(surface, /AuthBox/);
+  assert.doesNotMatch(surface, /loginSignals|Principio|Estado verificable al ingresar|Acciones protegidas/);
+  assert.match(auth, /fetch\("\/api\/auth\/password-login"/);
+  assert.match(auth, /result\.redirectTo \|\| "\/owner"/);
+  assert.match(auth, /min-h-12/);
+  assert.doesNotMatch(auth, /Cuenta lista|Sesión privada|Entrada segura/);
+});
