@@ -2,8 +2,9 @@ import { AGI_EVAL_SUITE_VERSION, getAgiEvalSuite } from "@/lib/agi-eval-suites";
 import { HOCKER_AGI_CANON } from "@/lib/hocker-agi-canon";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
-export const AGI_CERTIFICATION_VERSION = "2026.08.14-5";
+export const AGI_CERTIFICATION_VERSION = "2026.08.19-1";
 export const AGI_TOOL_EVAL_VERSION = "2026.08.14-1";
+const AGI_EVAL_SCORING_VERSION = "score-v3";
 
 type AgentRow = {
   agi_id: string;
@@ -33,6 +34,7 @@ type EvalRunRow = {
   agi_id: string | null;
   status: string;
   input: unknown;
+  output: unknown;
   finished_at: string | null;
   result_hash: string | null;
 };
@@ -134,6 +136,7 @@ function hasVerifiedRuntimeEval(
   if (
     latest?.feedback_type !== "agi_eval_result"
     || payload.suite_version !== AGI_EVAL_SUITE_VERSION
+    || payload.scoring_version !== AGI_EVAL_SCORING_VERSION
     || payload.passed !== true
     || Number(payload.cases_total) !== suite.cases.length
     || Number(payload.cases_passed) !== suite.cases.length
@@ -156,8 +159,16 @@ function hasVerifiedRuntimeEval(
     if (!run.finished_at || !run.result_hash) return false;
 
     const input = asRecord(run.input);
-    return input?.eval_suite_version === AGI_EVAL_SUITE_VERSION
-      && input?.eval_case_id === evalCase.id;
+    const output = asRecord(run.output);
+    if (!input || !output) return false;
+    return input.eval_suite_version === AGI_EVAL_SUITE_VERSION
+      && input.eval_scoring_version === AGI_EVAL_SCORING_VERSION
+      && input.eval_case_id === evalCase.id
+      && output.eval_suite_version === AGI_EVAL_SUITE_VERSION
+      && output.eval_scoring_version === AGI_EVAL_SCORING_VERSION
+      && output.eval_case_id === evalCase.id
+      && output.passed === true
+      && output.external_writes_executed === false;
   });
 }
 
@@ -222,7 +233,7 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
         .order("created_at", { ascending: false })
         .limit(1000),
       sb.from("agi_runs")
-        .select("id,project_id,agi_id,status,input,finished_at,result_hash")
+        .select("id,project_id,agi_id,status,input,output,finished_at,result_hash")
         .eq("project_id", projectId)
         .eq("status", "completed")
         .order("created_at", { ascending: false })

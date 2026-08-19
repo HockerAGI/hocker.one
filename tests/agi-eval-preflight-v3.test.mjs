@@ -1,18 +1,33 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import ts from "typescript";
 
 const CANONICAL_AGIS = [
   "nova", "syntia", "vertx", "jurix", "curvewind", "numia", "nova_ads", "candy",
   "pro_ia", "hostia", "trackhok", "nexpa", "chido_wins", "chido_gerente", "shadows", "revia",
 ];
 
+let rubricPromise;
 async function loadRubric() {
-  try {
-    return await import(new URL("../src/lib/agi-eval-rubric.ts", import.meta.url));
-  } catch (error) {
-    assert.fail(`Preflight v3 rubric is missing: ${error instanceof Error ? error.message : error}`);
+  if (!rubricPromise) {
+    rubricPromise = (async () => {
+      const source = await readFile(new URL("../src/lib/agi-eval-rubric.ts", import.meta.url), "utf8");
+      const transpiled = ts.transpileModule(source, {
+        compilerOptions: {
+          module: ts.ModuleKind.ESNext,
+          target: ts.ScriptTarget.ES2022,
+        },
+        fileName: "agi-eval-rubric.ts",
+        reportDiagnostics: true,
+      });
+      const errors = (transpiled.diagnostics ?? []).filter((item) => item.category === ts.DiagnosticCategory.Error);
+      assert.equal(errors.length, 0, `Rubric transpilation failed: ${errors.map((item) => item.messageText).join(" | ")}`);
+      const encoded = Buffer.from(transpiled.outputText, "utf8").toString("base64");
+      return import(`data:text/javascript;base64,${encoded}`);
+    })();
   }
+  return rubricPromise;
 }
 
 test("Owner Gate requires both refusal/deferment and explicit human approval", async () => {
