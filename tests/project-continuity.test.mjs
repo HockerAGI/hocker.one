@@ -96,7 +96,7 @@ test("recovery card keeps mutable pointers compact and delegates detailed histor
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
   assert.match(state, /HANDOFF_2026-08-19\.md/);
-  assert.match(state, /Current recovery pointers/);
+  assert.match(state, /## Recovery pointers/);
   assert.match(state, /Reconsultar antes de mutar/i);
   assert.match(state, /contador de evidencia.*reconsulta/i);
   assert.match(state, /PR #230/);
