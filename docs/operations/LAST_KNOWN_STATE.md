@@ -11,7 +11,7 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 ## Recovery pointers
 
 - **Baseline funcional de Hocker One:** merge de PR #243 `e48edf78ee2ed44d149543fa5680a3d6cb767c7a`; shell adaptativo limpio + NOVA inmersiva + AGIs decision-first + `score-v3`.
-- **Corte funcional observado tras mantenimiento de framework:** `main=f5e200973de637d243b2c83e8d079ff46a8eab80`, merge de PR #250; Next `16.3.1` está promovido. Reconsultar antes de usarlo como head live.
+- **Corte live observado tras mantenimiento de framework:** `main=f5e200973de637d243b2c83e8d079ff46a8eab80`, merge de PR #250; Next `16.3.1` está promovido. Reconsultar antes de usarlo como head live.
 - **Producción observada para ese corte:** Vercel `dpl_G4wjSmAWvsm9EWG2Eeruk9h3au3U`, `READY`, target `production`, exact `f5e20097...`; build completado y sin `error`/`fatal` observado en la ventana revisada.
 - **Candidato #250:** `2426bc7454322d730ea656214b9c076dede17786`; CI #852, Android Debug APK #166, Android Signed Release #110 y Android Emulator QA #67 = `SUCCESS`; Emulator API 36 completó build, boot, instalación, launch, captura y no-crash; Preview `dpl_EujRiBuTuV6WC34u1DzYfG91niFQ` = `READY`.
 - **Rescate de #233:** cerrado sin merge como supersedido. Dependabot no pudo rebasarlo tras edición externa; el valor útil se reconstruyó desde `main` en #250 sin arrastrar base/wrappers viejos. No queda mantenimiento Next pendiente de ese PR.
