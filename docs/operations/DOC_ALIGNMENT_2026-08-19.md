@@ -2,71 +2,76 @@
 
 Status: **ACTIVE DELTA REGISTER**
 
-This register records present-tense drift without rewriting the 2026-08-05 canonical publications. Production/configuration and `main` outrank those publications for current technical state.
+Este registro describe drift presente sin reescribir las publicaciones canónicas históricas. Producción/configuración y `main` prevalecen para estado técnico actual.
 
 Current handoff: `HANDOFF_2026-08-19.md`.
 
-## Canonical facts preserved
+## Hechos canónicos preservados
 
-- 10 apps; 16 canonical AGIs.
-- Hocker One = governed control plane / Owner Gate.
-- Material actions are not authorized from chat by default.
-- Evidence-first, deny-by-default, least privilege and safe failure remain binding.
-- Editable GitHub sources + executable evidence precede derived PDF/DOCX publication.
+- 10 apps; 16 AGIs canónicas.
+- 9 repositorios de ingeniería conectados no equivalen a 9 productos.
+- Hocker One = control plane / Owner Gate.
+- Acciones materiales no se autorizan desde chat por defecto.
+- Evidence-first, deny-by-default, least privilege y safe failure permanecen vinculantes.
+- Editable source + evidencia ejecutable preceden derivados PDF/DOCX.
 
-## Current implementation delta
+## Delta actual de Hocker One
 
-PR #230 is now merged and production READY. The next canonical publication should incorporate, without mutable SHAs as permanent doctrine:
+### UX / DOC-08
 
-### DOC-00
+La implementación aprobada adopta un shell adaptativo limpio:
 
-- distinguish 9 connected engineering repositories from 10 product apps;
-- use one active handoff/recovery authority instead of duplicated mutable snapshots;
-- preserve history separately from current recovery pointers.
+- seis destinos conceptuales de escritorio: Inicio, NOVA, Trabajo, Ecosistema, Operación, Más;
+- cinco destinos móviles: Inicio, NOVA, Trabajo, Ecosistema, Más;
+- `/chat` = NOVA inmersiva a viewport completo;
+- `/agis` = lista compacta decision-first + una acción global Owner;
+- IDs/provider/model/evidencia técnica = detalle progresivo, no chrome permanente;
+- acceso Owner simplificado sin cambiar el contrato Auth;
+- lenguaje visible corto y preferentemente en español;
+- rutas secundarias continúan accesibles por contexto/búsqueda.
 
-### DOC-05
+Esto concreta, no reemplaza, los principios de navegación por tarea/contexto, 3–5 destinos compactos, list-detail y adaptación por container/window del canon UX.
 
-- Hocker One unified NOVA runtime/control plane is primary;
-- `nova.agi` is dedicated fallback/compatibility until independently re-certified;
-- Node liveness derives from heartbeat freshness, not command/event activity;
-- AGI certification is evidence-driven + Owner AAL2 gated;
-- provider quota/plan limits are explicit operational states, not application failures.
+### Agentes / DOC-06
 
-### DOC-06
+- `score-v3` es la versión vigente del scorer de certificación;
+- corpus offline cubre las 16 AGIs;
+- misión, Owner Gate y ausencia de evidencia tienen señales independientes;
+- evidencia v1/v2 permanece histórica y no satisface v3;
+- snapshot parcial => fail closed;
+- cliente no elige arbitrariamente el siguiente target;
+- AAL2 real mediante factor verificado; no synthetic AAL2;
+- `allow_actions=false` continúa baseline;
+- reasoning / aprobación / ejecución / evidencia siguen separados.
 
-- exact 16-ID canonical validation;
-- `allow_actions=false` guarded baseline;
-- resumable runtime/tool eval that executes only pending evidence;
-- read-only `supabase` / `github` probes; AI Gateway covered by runtime eval contract;
-- partial evidence snapshot => fail closed;
-- existing TOTP challenge/verify => AAL2; no duplicate enrollment by default;
-- durable `agi_runs` + `agi_feedback` => certification evidence;
-- future agent approval/resume must test approve/reject/retry/idempotency/timeout/abort/replay.
+### Arquitectura / DOC-05
 
-### DOC-07
+- Hocker One unified NOVA runtime/control plane es primary;
+- `nova.agi` es dedicated fallback/compatibility hasta re-certificación independiente;
+- provider/model son telemetría reemplazable;
+- Node liveness depende de heartbeat fresco;
+- Supabase durable evidence y Owner Gate son parte del boundary de certificación.
 
-- Supabase Advisor exception register and explicit provider-plan limitations;
-- exact-candidate Preview/production evidence requirements;
-- Node heartbeat liveness;
+### Seguridad / DOC-07
+
+- Supabase Advisor exception register clasifica sólo WARNs intencionales y acotados;
+- Leaked Password Protection permanece `OPEN_PROVIDER_GATE`;
+- `unused_index` INFO no se convierte en cleanup destructivo automático;
+- exact-SHA CI/Preview/producción son requisitos distintos;
 - no synthetic AAL2/eval evidence;
-- public-vs-private GitHub Actions FinOps distinction;
-- MCP metadata/annotations never replace policy/Owner Gate.
+- MCP metadata/annotations nunca sustituyen policy/Owner Gate.
 
-## MCP drift
+## Regla transversal de depuración
 
-The existing canon cites MCP `2025-11-25`; current official work reviewed for this cut uses spec `2026-07-28` / TypeScript SDK v2. The transport/lifecycle delta is material. Required future path: compatibility inventory → ADR → adapter/conformance tests → Preview → rollback. No blind dependency/citation replacement.
+Todo elemento existente pasa por cuatro filtros: aporta y sigue vigente → conservar; aporta pero quedó viejo → reconstruir/adaptar; se solapa → fusionar; no ayuda a comprender, operar, recuperar o auditar → eliminar/descartar.
 
-## External engineering references retained
+Aplicación ya demostrada:
 
-Detailed notes live in `HANDOFF_2026-08-19-PRE230.md`; current decisions remain:
+- PR #213: login adaptado; workspace/Signal solapado descartado; PR cerrado sin merge.
+- PR #244: compactación destructiva del Ledger descartada; hechos recuperables movidos a fuentes activas.
+- workflows: conservar porque aportan cobertura y ya están acotados.
+- Supabase indexes: conservar hasta que exista evidencia suficiente para clasificar cada uno.
 
-- GitHub Actions billing/runners: protect private-repo minutes; public standard runners are not the same billing constraint.
-- Vercel limits/redeploy/build evidence: provider quota != code failure.
-- Supabase MFA: real AAL2 via existing TOTP challenge/verify.
-- `openai/openai-agents-js`: resumable HITL/RunState as benchmark, not migration mandate.
-- `modelcontextprotocol/typescript-sdk`: v2/2026-07-28 as compatibility research target.
-- `vercel/ai`: approval/resume edge cases require regression testing before adoption.
+## Publicación canónica
 
-## Publication rule
-
-Do not regenerate DOC-00/05/06/07 PDFs from improvised text. First identify the approved editable-source pipeline and reviewers, update source, validate the documentary package and publish a versioned derivative. Until then this delta register + executable evidence are the current reconciliation layer.
+No regenerar DOC-00/05/06/07/08 PDFs desde texto improvisado. Primero identificar la fuente editable aprobada y reviewers, actualizarla, validar el paquete documental y publicar derivado versionado. Hasta entonces este delta register + código/tests/evidencia conectada son la capa de reconciliación actual.

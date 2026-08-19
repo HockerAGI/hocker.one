@@ -1,111 +1,59 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Bot, Clock3, RefreshCw } from "lucide-react";
-
+import { AlertTriangle, Bot, CheckCircle2, ChevronDown, Clock3 } from "lucide-react";
 import AgiEvalBatchControl from "@/components/agi/AgiEvalBatchControl";
-import AgiEvalControl from "@/components/agi/AgiEvalControl";
-import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { getAgiCertificationSnapshot, type AgiCertificationCheck } from "@/lib/agi-certification";
 import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hocker-operational-state";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-export const metadata: Metadata = {
-  title: "AGIs | Hocker ONE",
-  description: "Estado verificable y certificación de las AGIs del ecosistema HOCKER.",
-  robots: { index: false, follow: false, noarchive: true },
-};
-
-function label(status: OperationalStatus): string {
-  switch (status) {
-    case "online": return "Worker verificado";
-    case "degraded": return "Ejecución con error";
-    case "configured": return "Perfil registrado";
-    case "stale": return "Evidencia histórica";
-    case "offline": return "Sin conexión";
-    case "not_created": return "Sin worker";
-    default: return "Sin verificar";
-  }
-}
-
-function tone(status: OperationalStatus): string {
-  if (status === "online") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
-  if (status === "degraded" || status === "offline") return "border-rose-300/25 bg-rose-300/10 text-rose-100";
-  if (status === "stale") return "border-amber-300/25 bg-amber-300/10 text-amber-100";
-  if (status === "configured") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-100";
-  return "border-white/10 bg-white/[0.04] text-slate-300";
-}
+export const metadata: Metadata = { title: "AGIs | Hocker ONE", description: "Estado de las AGIs del ecosistema HOCKER.", robots: { index: false, follow: false, noarchive: true } };
 
 function formatDate(value: string | null): string {
-  if (!value) return "Sin ejecución registrada";
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "America/Tijuana",
-  }).format(new Date(value));
+  if (!value) return "Sin actividad registrada";
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Tijuana" }).format(new Date(value));
 }
-
 function certificationId(value: string): string {
-  return value.trim().toLowerCase().replaceAll("-", "_")
-    .replace(/^candy_ads$/, "candy")
-    .replace(/^nexpa_agi$/, "nexpa")
-    .replace(/^trackhok_agi$/, "trackhok");
+  return value.trim().toLowerCase().replaceAll("-", "_").replace(/^candy_ads$/, "candy").replace(/^nexpa_agi$/, "nexpa").replace(/^trackhok_agi$/, "trackhok");
 }
-
 function missingLabel(check: AgiCertificationCheck): string {
   switch (check) {
     case "canonical_profile": return "perfil";
-    case "tools_ready": return "herramientas habilitadas";
-    case "tool_runtime_evidence": return "herramientas probadas";
+    case "tools_ready": return "herramientas";
+    case "tool_runtime_evidence": return "pruebas de herramientas";
     case "memory_ready": return "memoria";
     case "runtime_evidence": return "ejecución";
-    case "allow_actions_guarded": return "gobierno";
-    case "eval_contract_suite": return "eval contractual";
-    case "individual_eval_suite": return "eval runtime";
-    default: return check;
+    case "allow_actions_guarded": return "aprobación";
+    case "eval_contract_suite": return "prueba base";
+    case "individual_eval_suite": return "prueba actual";
+    default: return "evidencia";
   }
+}
+function visibleState(status: OperationalStatus, certified: boolean): { label: "Listo" | "Pendiente" | "Requiere atención"; className: string } {
+  if (status === "degraded" || status === "offline") return { label: "Requiere atención", className: "bg-amber-300/10 text-amber-200" };
+  if (certified) return { label: "Listo", className: "bg-emerald-300/10 text-emerald-200" };
+  return { label: "Pendiente", className: "bg-white/[0.05] text-slate-300" };
 }
 
 export default async function AgisPage() {
-  const [snapshot, certification] = await Promise.all([
-    getHockerOperationalSnapshot(),
-    getAgiCertificationSnapshot(),
-  ]);
-  const verified = snapshot.agis.filter((agi) => agi.status === "online").length;
+  const [snapshot, certification] = await Promise.all([getHockerOperationalSnapshot(), getAgiCertificationSnapshot()]);
   const certificationById = new Map(certification.entries.map((entry) => [entry.agi_id, entry]));
+  const attention = snapshot.agis.filter((agi) => agi.status === "degraded" || agi.status === "offline").length;
 
   return (
-    <div className="hko-page-flow space-y-5">
-      <HockerPageHeader
-        eyebrow="Runtime verificable"
-        title="AGIs: estado y certificación"
-        text="Un perfil documentado no equivale a un worker activo. La actividad reciente y la preparación para producción son cosas distintas; esta vista muestra ambas con evidencia, sin convertir permisos bloqueados en una falsa señal de incompletitud."
-      />
+    <div className="mx-auto w-full max-w-[1180px] space-y-5 pb-8">
+      <header className="pt-2 sm:pt-4">
+        <p className="text-sm font-semibold text-sky-300">AGIs</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Estado y revisión</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Ve qué está listo y qué necesita atención. El detalle técnico aparece sólo cuando lo abres.</p>
+      </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="hko-mini-stat"><span>Perfiles canónicos</span><strong>{snapshot.agis.length}</strong></article>
-        <article className="hko-mini-stat"><span>Workers verificados</span><strong>{verified}</strong></article>
-        <article className="hko-mini-stat"><span>Certificación completa</span><strong>{certification.certified}</strong></article>
-        <article className="hko-mini-stat"><span>Pendiente</span><strong>{certification.pending}</strong></article>
+      <section className="grid grid-cols-3 gap-2" aria-label="Resumen AGI">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Total</p><strong className="mt-1 block text-2xl text-white">{snapshot.agis.length}</strong></div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Listas</p><strong className="mt-1 block text-2xl text-white">{certification.certified}</strong></div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3"><p className="text-xs text-slate-500">Atención</p><strong className="mt-1 block text-2xl text-white">{attention}</strong></div>
       </section>
 
-      <section className="hko-map-panel">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="hko-kicker">Criterio de Certificación</p>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-              El porcentaje mide cobertura de evidencia: perfil, herramientas habilitadas y su evidencia runtime, memoria, ejecuciones, gobierno, suite contractual versionada y una eval runtime aprobada con runs verificables. Una herramienta futura o deshabilitada no cuenta como capacidad activa. No mide “inteligencia” ni concede autonomía.
-            </p>
-            <p className="mt-2 text-[11px] text-slate-500">
-              Suite AGI: {certification.eval_suite_version} · Evidencia de tools: {certification.tool_eval_version}
-            </p>
-          </div>
-          <Link href="/agis" className="hko-action-secondary inline-flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" /> Actualizar
-          </Link>
-        </div>
-
+      <section aria-label="Siguiente acción">
         <AgiEvalBatchControl
           agiIds={certification.entries.map((entry) => entry.agi_id)}
           runtimeEvalTargets={certification.runtime_eval_targets}
@@ -114,55 +62,34 @@ export default async function AgisPage() {
         />
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {snapshot.agis.map((agi) => {
+      <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#07101f]/72" aria-label="Lista de AGIs">
+        {snapshot.agis.map((agi, index) => {
           const cert = certificationById.get(certificationId(agi.key));
-          const pending = cert?.missing.map(missingLabel) ?? ["evidencia no disponible"];
+          const state = visibleState(agi.status, Boolean(cert?.certified_for_current_scope));
+          const pending = cert?.missing.map(missingLabel) ?? ["evidencia"];
           return (
-            <article key={agi.key} className="hko-module-card hko-card-tight">
-              <div className="flex items-start justify-between gap-3">
-                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-cyan-100">
-                  <Bot className="h-5 w-5" />
-                </span>
-                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.15em] ${tone(agi.status)}`}>
-                  {label(agi.status)}
-                </span>
-              </div>
-
-              <h2 className="mt-4 text-xl font-black text-white">{agi.title}</h2>
-              <p className="mt-1 text-sm text-slate-400">{agi.role}</p>
-              <p className="mt-4 text-sm leading-6 text-slate-300">{agi.evidence}</p>
-
-              <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.055] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">Certificación</span>
-                  <strong className="text-sm text-white">{cert?.evidence_percent ?? 0}%</strong>
+            <details id={`agi-${cert?.agi_id ?? certificationId(agi.key)}`} key={agi.key} className={index === 0 ? "group" : "group border-t border-white/[0.055]"}>
+              <summary className="flex min-h-[72px] cursor-pointer list-none items-center gap-3 px-3 py-3 sm:px-4">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-sky-200"><Bot className="h-4 w-4" /></span>
+                <div className="min-w-0 flex-1"><h2 className="truncate text-sm font-semibold text-white">{agi.title}</h2><p className="mt-0.5 truncate text-xs text-slate-500">{agi.role}</p></div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${state.className}`}>{state.label}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-white/[0.05] bg-black/10 px-4 py-4 sm:pl-[68px]">
+                <p className="text-sm leading-6 text-slate-300">{agi.evidence}</p>
+                {!cert?.certified_for_current_scope ? <div className="mt-3 flex items-start gap-2 text-xs text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>Pendiente: {pending.join(", ")}.</span></div> : <div className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><CheckCircle2 className="h-4 w-4" />Pruebas vigentes para su alcance actual.</div>}
+                <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
+                  <p className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" />Actividad: {formatDate(agi.last_activity_at)}</p>
+                  <p>Última ejecución: {agi.last_run_status ?? "Sin registro"}</p>
+                  <p>Proceso: {agi.worker_id ?? "No identificado"}</p>
+                  <p>Registro: {agi.registry_status ?? "Sin registro"}</p>
                 </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-cyan-300" style={{ width: `${cert?.evidence_percent ?? 0}%` }} />
-                </div>
-                <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                  {cert?.certified_for_current_scope
-                    ? "Completa para su alcance actual."
-                    : `Pendiente: ${pending.join(", ")}.`}
-                </p>
               </div>
-
-              <AgiEvalControl
-                agiId={cert?.agi_id ?? certificationId(agi.key)}
-                alreadyCertified={Boolean(cert?.certified_for_current_scope)}
-              />
-
-              <div className="mt-4 space-y-2 rounded-2xl border border-white/8 bg-slate-950/45 p-4 text-xs text-slate-400">
-                <p className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Última actividad: {formatDate(agi.last_activity_at)}</p>
-                <p>Último run: {agi.last_run_status ?? "—"}</p>
-                <p>Worker: {agi.worker_id ?? "No identificado"}</p>
-                <p>Estado de catálogo: {agi.registry_status ?? "Sin registro"}</p>
-              </div>
-            </article>
+            </details>
           );
         })}
       </section>
+      <span className="sr-only">En proceso</span>
     </div>
   );
 }

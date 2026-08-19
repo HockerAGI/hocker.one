@@ -69,6 +69,41 @@ test("agent contract requires durable recovery and milestone handoff", async () 
   assert.match(agents, /No copiar el mismo relato/i);
 });
 
+test("HOCKER cleanup rule is durable across code, docs and providers", async () => {
+  const [agents, readme] = await Promise.all([source("AGENTS.md"), source("README.md")]);
+  for (const contract of [
+    /aporta y sigue vigente/i,
+    /reconstruir\/adaptar/i,
+    /se solapa/i,
+    /eliminar\/descartar/i,
+  ]) {
+    assert.match(agents, contract);
+    assert.match(readme, contract);
+  }
+  assert.match(agents, /Supabase, Vercel y `nova\.agi`/i);
+});
+
+test("current UX and score-v3 recovery contracts stay explicit", async () => {
+  const [readme, handoff, closure] = await Promise.all([
+    source("README.md"),
+    source("docs/operations/HANDOFF_2026-08-19.md"),
+    source("docs/operations/PLATFORM_CLOSURE_2026-08-19.md"),
+  ]);
+
+  assert.match(readme, /`\/chat`/);
+  assert.match(readme, /`\/agis`/);
+  assert.match(readme, /score-v3/);
+  assert.match(readme, /npm ci/);
+  assert.match(readme, /npm run typecheck/);
+  assert.match(handoff, /44bd2dbf4c389406819de88b6c309d4efe9cec2c/);
+  assert.match(handoff, /32274977052/);
+  assert.match(handoff, /dpl_GZxLr7AWaeuVcapXrjDCc3h6Mh8Y/);
+  assert.match(handoff, /PR #213[\s\S]*Cerrado|Cerrado[\s\S]*PR #213/i);
+  assert.match(closure, /OPEN_PROVIDER_GATE/);
+  assert.match(closure, /Owner AAL2 ceremony/);
+  assert.match(closure, /score-v3/);
+});
+
 test("context freshness policy makes operational continuity event-driven and memory review-only", async () => {
   const [policy, bridge, protocol] = await Promise.all([
     source("docs/operations/CONTEXT_FRESHNESS_POLICY.md"),
@@ -92,18 +127,21 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
 });
 
-test("recovery card keeps mutable pointers compact and delegates detailed history to the active handoff", async () => {
+test("recovery card keeps current production, candidate and evidence pointers explicit", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
   assert.match(state, /HANDOFF_2026-08-19\.md/);
-  assert.match(state, /Current recovery pointers/);
+  assert.match(state, /## Recovery pointers/);
   assert.match(state, /Reconsultar antes de mutar/i);
-  assert.match(state, /contador de evidencia.*reconsulta/i);
-  assert.match(state, /PR #230/);
+  assert.match(state, /Producción vigente de Hocker One/);
+  assert.match(state, /Candidato UX\/scoring.*PR #243/i);
+  assert.match(state, /no está en producción/i);
   assert.match(state, /`agi_eval_result`/);
-  assert.match(state, /`agi_tool_eval_result`/);
-  assert.match(state, /fallback.*(?:not re-certified|no re-certificado)/i);
+  assert.match(state, /0 filas `agi_tool_eval_result`/);
+  assert.match(state, /score-v3/);
+  assert.match(state, /fallback.*(?:no re-certificado|not re-certified)/i);
   assert.match(state, /historical-preview|preview histórico/i);
+  assert.doesNotMatch(state, /32244656734|TS18047|progress possibly null/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
   assert.doesNotMatch(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);

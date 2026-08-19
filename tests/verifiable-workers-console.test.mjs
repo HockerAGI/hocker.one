@@ -11,7 +11,8 @@ test("workers console is discoverable from shared navigation and global catalog"
   const page = await read("src/app/workers/page.tsx");
   const catalog = await read("src/lib/operations-catalog.ts");
 
-  assert.match(navigation, /id: "workers"[\s\S]*href: "\/workers"[\s\S]*label: "Workers AGI"/);
+  assert.match(navigation, /id: "workers"[\s\S]*href: "\/workers"[\s\S]*label: "Procesos"/);
+  assert.match(navigation, /keywords: "workers procesos agi ejecuciones"/);
   assert.match(sidebar, /HOCKER_NAVIGATION/);
   assert.match(palette, /HOCKER_NAVIGATION/);
   assert.match(page, /VerifiableWorkersConsole/);

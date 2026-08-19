@@ -72,7 +72,7 @@ test("private discovery and worker consoles remain noindex", async () => {
   assert.match(topology, /noindex, nofollow, noarchive/);
 });
 
-test("apps and AGIs pages are operational inventories, not marketing pages", async () => {
+test("apps and AGIs pages remain evidence-backed operational inventories with progressive detail", async () => {
   const apps = await read("src/app/apps/page.tsx");
   const agis = await read("src/app/agis/page.tsx");
 
@@ -80,12 +80,14 @@ test("apps and AGIs pages are operational inventories, not marketing pages", asy
   assert.match(apps, /Los conceptos documentados no se presentan como productos activos/);
   assert.doesNotMatch(apps, /PUBLIC_APPS|Solicitar implementación|Productos para acelerar tu negocio/);
 
-  assert.match(agis, /Worker verificado/);
-  assert.match(agis, /Un perfil documentado no equivale a un worker activo/);
-  assert.doesNotMatch(agis, /NovaCorePanel/);
+  assert.match(agis, /getHockerOperationalSnapshot/);
+  assert.match(agis, /getAgiCertificationSnapshot/);
+  assert.match(agis, /<details/);
+  assert.match(agis, /El detalle técnico aparece sólo cuando lo abres/);
+  assert.doesNotMatch(agis, /NovaCorePanel|Worker verificado|Un perfil documentado no equivale a un worker activo/);
 });
 
-test("NOVA status requires a verified health check", async () => {
+test("NOVA status requires verified runtime health while technical telemetry stays on demand", async () => {
   const owner = await read("src/app/owner/page.tsx");
   const chat = await read("src/components/NovaRealtimeChat.tsx");
   const runtimeRoute = await read("src/app/api/agi/runtime/summary/route.ts");
@@ -96,8 +98,10 @@ test("NOVA status requires a verified health check", async () => {
   assert.match(owner, /novaService\.status/);
 
   assert.match(chat, /service_status\?\.nova/);
-  assert.match(chat, /verificadas ·/);
-  assert.doesNotMatch(chat, /NOVA respondió sin texto visible/);
+  assert.match(chat, /serviceLabel\(novaStatus\)/);
+  assert.match(chat, /Detalle/);
+  assert.match(chat, /service_status\?\.nova\?\.detail/);
+  assert.doesNotMatch(chat, /verificadas ·|NOVA respondió sin texto visible/);
 
   assert.match(runtimeRoute, /getVerifiedAgiRuntimeSummary/);
   assert.match(verifiedRuntime, /status === "online"/);

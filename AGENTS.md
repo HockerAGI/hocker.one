@@ -12,7 +12,18 @@ Guía durable del repositorio. **No es una fuente de estado dinámico.** El esta
 
 Si divergen, registrar drift y reconciliar. Nunca elegir silenciosamente la versión más conveniente.
 
-## 2. Límites no negociables
+## 2. Regla de rescate y depuración
+
+Todo elemento existente pasa por cuatro filtros:
+
+1. **Aporta y sigue vigente → conservar.**
+2. **Aporta pero quedó viejo → reconstruir/adaptar.**
+3. **Se solapa → fusionar.**
+4. **No ayuda a comprender, operar, recuperar o auditar → eliminar/descartar.**
+
+La regla aplica a código, documentación, UI, tests, workflows, integraciones, Supabase, Vercel y `nova.agi`. Antigüedad no es motivo de conservación y novedad no es motivo de reemplazo. Evidencia histórica válida no se borra para limpiar una interfaz o un árbol documental.
+
+## 3. Límites no negociables
 
 - Branch + PR; no escribir directo a `main`.
 - No fusionar un cambio funcional sin candidate gates aplicables verdes.
@@ -24,7 +35,7 @@ Si divergen, registrar drift y reconciliar. Nunca elegir silenciosamente la vers
 - No habilitar pagos reales, casino/wallet, KYC, vigilancia/ubicación o destrucción por conveniencia técnica.
 - Incertidumbre en evidencia => fail closed.
 
-## 3. Continuidad obligatoria
+## 4. Continuidad obligatoria
 
 Al iniciar:
 
@@ -39,35 +50,47 @@ Al cerrar un hito material: actualizar una sola fuente de detalle y hacer que la
 
 Context Bridge = continuidad/evidencia operacional. Memory Mirror/SYNTIA = conocimiento reutilizable revisado. Ninguno sustituye auth, Owner Gate o evidencia conectada.
 
-El protocolo durable base permanece en `docs/operations/CONTINUITY_PROTOCOL.md`; el índice y el handoff activo gobiernan la recuperación operativa actual y evitan duplicar estado dinámico.
+El protocolo durable base permanece en `docs/operations/CONTINUITY_PROTOCOL.md`; el índice y el handoff activo gobiernan la recuperación operativa actual.
 
-## 4. Arquitectura vigente como regla durable
+## 5. Arquitectura vigente
 
 - Hocker One es control plane y **primary NOVA runtime path**.
-- `nova.agi` se conserva como dedicated fallback/compatibility; verificar live revision/readiness/logs/E2E antes de depender de él.
+- `nova.agi` se conserva como dedicated fallback/compatibility; verificar deployment/revision, readiness, logs y E2E antes de depender de él.
 - `hocker-node-agent` es executor local allowlisted/firmado; no recibe credenciales cloud maestras.
 - Supabase compartido no significa autorización compartida: tenant/project, grants y RLS siguen siendo boundaries.
 - MCP/provider connectors son reemplazables; adapter presente != provider ready.
 - Tool metadata/annotations son hints, no autorización. Policies + Owner Gate mandan.
 
-## 5. Desarrollo
+### UX privada actual
+
+Navegación conceptual de escritorio: **Inicio → NOVA → Trabajo → Ecosistema → Operación → Más**. En móvil, máximo cinco destinos: **Inicio → NOVA → Trabajo → Ecosistema → Más**; Operación permanece accesible dentro de Más/búsqueda.
+
+- `/chat` es una superficie NOVA inmersiva; no envolverla otra vez en dashboard cards, sidebar/topbar permanentes o contadores operativos.
+- `/agis` es decision-first: lista compacta, una acción global de certificación y detalle técnico progresivo. No reintroducir 16 botones de evaluación individuales en la vista normal.
+- Provider/model/IDs, hashes y evidencia técnica son detalle bajo demanda salvo que sean imprescindibles para resolver un incidente.
+- Usar nombres visibles cortos, entendibles y preferentemente en español.
+- Adaptar por viewport/container; conservar reflow equivalente a 320 px, teclado/foco, safe areas y reduced motion.
+
+## 6. Desarrollo y verificación
 
 Para feature/bugfix:
 
 1. identificar outcome, riesgo y consumidor;
-2. escribir/ajustar test que falle por el problema real;
-3. demostrar RED cuando corresponda;
+2. escribir/ajustar test que falle por el problema real cuando corresponda;
+3. demostrar RED;
 4. cambio mínimo GREEN;
 5. regression tests, typecheck, lint, build y dependency/security gates aplicables;
-6. preview exact-head + logs/smoke para cambios funcionales;
+6. Preview exact-head + build/runtime logs para cambios funcionales;
 7. merge con head esperado;
 8. producción + logs + rollback evidence;
 9. handoff actualizado.
 
-No silenciar Supabase Advisors con policies/grants amplios; revisar objeto, consumidor e invariant. No cambiar framework/provider/model en un cierre sólo por novedad: ADR + regression eval + rollback.
+No silenciar Supabase Advisors con policies/grants amplios. `unused_index` en Advisor es señal INFO, no autorización de borrado: exigir ventana de observación, workload/query plans, dependencias/FK y validación reversible antes de eliminar un índice.
 
-## 6. AGI / approvals
+## 7. AGI / approvals
 
+- Scoring vigente de certificación: `score-v3`.
+- Evidencia `score-v1`/`score-v2` se conserva como historia pero **no satisface** certificación `score-v3`.
 - Batch de certificación debe ser resumible y ejecutar sólo targets pendientes.
 - Snapshot parcial/incompleto => bloquear batch; nunca sintetizar full rerun.
 - Mantener ejecución secuencial mientras coste/timeouts/evidence boundaries dependan de ello.
@@ -75,19 +98,15 @@ No silenciar Supabase Advisors con policies/grants amplios; revisar objeto, cons
 - Nunca insertar `agi_eval_result` / `agi_tool_eval_result` manualmente para certificar.
 - Approval/resume futuros deben probar approve, reject, retry, idempotency, timeout, abort, replay y persistencia antes de producción.
 
-## 7. CI / Actions / Vercel FinOps
+## 8. CI / Actions / Vercel FinOps
 
-- No crear commits dummy para polling, rate-limit retry o únicamente para provocar un provider build si existe `Redeploy`.
+- No crear commits dummy para polling, rate-limit retry o únicamente para provocar un provider build.
 - Agrupar cambios documentales relacionados en un solo commit.
-- Markdown-only puede omitir CI general cuando el workflow/path/ruleset lo permitan sin dejar un required check Pending.
-- Standard GitHub-hosted runners en repos públicos son gratuitos bajo la política vigente de GitHub; los repos privados consumen el allowance del owner/org y los larger runners son billables. Conservar especialmente los runs de repos privados.
+- Markdown-only puede omitir CI general cuando workflow/ruleset lo permitan sin dejar un required check Pending.
+- Conservar workflows que aporten cobertura real y estén correctamente acotados por paths, dispatch o `concurrency`; no eliminarlos sólo para reducir conteo.
 - No usar `[skip ci]` si puede dejar un required check Pending.
 - `concurrency.cancel-in-progress`, dependency cache y path filters son optimizaciones válidas cuando su cambio está justificado/testeado.
-- Vercel Hobby tiene límites de deployment/build; ante rate limit, distinguir provider quota de code failure y preferir reintento/redeploy del mismo candidate.
-
-## 8. UI operativa
-
-Toda UI de estado debe distinguir salud/frescura, readiness, configuración, conexión verificada y evidencia histórica. No mezclar esas dimensiones en un solo badge/porcentaje.
+- Ante rate limit de Vercel, distinguir provider quota de code failure y reutilizar/reintentar el mismo candidate cuando sea seguro.
 
 ## 9. Release
 

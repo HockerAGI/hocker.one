@@ -1,0 +1,59 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("NOVA route is immersive instead of a dashboard card", async () => {
+  const [page, chat] = await Promise.all([
+    read("src/app/chat/page.tsx"),
+    read("src/components/NovaRealtimeChat.tsx"),
+  ]);
+
+  assert.doesNotMatch(page, /PageShell/);
+  assert.doesNotMatch(page, /min-h-\[72dvh\]|rounded-\[2rem\]/);
+  assert.match(page, /NovaRealtimeChat|NovaWorkspace/);
+  assert.match(chat, /100dvh|dvh/);
+  assert.doesNotMatch(chat, />Owner Gate</);
+});
+
+test("NOVA primary view hides operational counters and exposes optional detail", async () => {
+  const chat = await read("src/components/NovaRealtimeChat.tsx");
+  assert.match(chat, /Detalle/);
+  assert.doesNotMatch(chat, /\{verifiedConnections\} verificadas · \{configuredConnections\} configuradas/);
+  assert.doesNotMatch(chat, />Actualizar<\/button>/);
+});
+
+test("AGIs primary view is a compact list and technical history is progressive detail", async () => {
+  const page = await read("src/app/agis/page.tsx");
+  assert.match(page, /<details|AgiDetail|Detalle/);
+  assert.doesNotMatch(page, /grid gap-4 md:grid-cols-2 xl:grid-cols-3/);
+  assert.doesNotMatch(page, /Worker:/);
+  assert.doesNotMatch(page, /Estado de catálogo:/);
+  assert.doesNotMatch(page, /evidence_percent/);
+});
+
+test("simple user-facing state vocabulary is shared by the clean UI", async () => {
+  const [agis, control] = await Promise.all([
+    read("src/app/agis/page.tsx"),
+    read("src/components/agi/AgiEvalBatchControl.tsx"),
+  ]);
+  for (const label of ["Listo", "Pendiente", "En proceso", "Requiere atención"]) {
+    assert.match(`${agis}\n${control}`, new RegExp(label));
+  }
+});
+
+test("Owner login keeps authentication behavior while removing dashboard-like noise", async () => {
+  const [surface, auth] = await Promise.all([
+    read("src/components/hocker-2c/auth/HockerOwnerLoginSurface.tsx"),
+    read("src/components/AuthBox.tsx"),
+  ]);
+
+  assert.match(surface, /Bienvenido/);
+  assert.match(surface, /AuthBox/);
+  assert.doesNotMatch(surface, /loginSignals|Principio|Estado verificable al ingresar|Acciones protegidas/);
+  assert.match(auth, /fetch\("\/api\/auth\/password-login"/);
+  assert.match(auth, /result\.redirectTo \|\| "\/owner"/);
+  assert.match(auth, /min-h-12/);
+  assert.doesNotMatch(auth, /Cuenta lista|Sesión privada|Entrada segura/);
+});

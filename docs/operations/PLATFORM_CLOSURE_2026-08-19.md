@@ -1,52 +1,57 @@
 # HOCKER Core — Platform Closure Gate 2026-08-19
 
-Status: **OPEN — HUMAN AAL2 + 16/16 DURABLE EVIDENCE REMAIN**
+Status: **TECHNICAL CANDIDATE GREEN AT LAST FUNCTIONAL SHA — FINAL HEAD REVALIDATION + MERGE + HUMAN AAL2 REMAIN**
 
 Authoritative current handoff: `HANDOFF_2026-08-19.md`.
 
-## Closed technical/platform gates
+## Closed on the last functional candidate
 
 | Gate | Evidence | State |
 | --- | --- | --- |
 | Canonical catalog | 16 AGIs / 16 agents | GREEN |
-| Action boundary | 16/16 `allow_actions=false` | GREEN |
-| Resumable/fail-closed certification UI | PR #230 merged | GREEN |
-| Candidate CI | `5af606d...`, CI #807 / `32233348527`, 231/231 + typecheck/lint/build/audit | GREEN |
-| Exact candidate Preview | `dpl_EVQHb1fM9vREzbTKMDzGH6SeSdTP`, READY | GREEN |
-| Preview build/runtime review | build complete; no reviewed `error`/`fatal` logs | GREEN |
-| Merge | `expected_head_sha=5af606d...` → `6f8686f...` | GREEN |
-| Production deployment | `dpl_BTizBR6fYWG6v9A1RLov95dQnDVc`, READY, exact merge SHA | GREEN |
-| Production error/fatal review | no entries in reviewed window | GREEN |
+| Action boundary | `allow_actions=true = 0` | GREEN |
+| score-v3 implementation | versioned runner + snapshot + 16-AGI offline corpus | GREEN |
+| Clean NOVA/AGI UX | immersive `/chat`; one-action compact `/agis`; simplified Owner login | GREEN |
+| Functional candidate | `44bd2dbf4c389406819de88b6c309d4efe9cec2c` | GREEN |
+| CI | `32274977052` / #835: tests + typecheck + lint + build + full audit | GREEN |
+| Exact functional Preview | `dpl_GZxLr7AWaeuVcapXrjDCc3h6Mh8Y` READY | GREEN |
+| Preview build review | errors-only build query: no build error | GREEN |
+| Preview runtime review | no `error`/`fatal` entries in reviewed window | GREEN |
+| Stale UI branch | PR #213 closed without merge; useful login adapted only | GREEN |
+| Workflow cleanup | scoped/manual workflows retained; no redundant coverage deletion | GREEN |
 
-Prior #214–#229 platform closures remain controlled unless connected evidence contradicts them.
+The current documentary checkpoint is a child of that functional candidate. Its exact SHA must earn its own CI/Preview before merge; a green parent is not sufficient.
 
 ## Mandatory gates still open
 
 | Gate | Current evidence | State |
 | --- | --- | --- |
-| Owner AAL2 active ceremony | 1 verified MFA factor exists; no active ceremony evidence yet | OPEN |
-| Runtime eval evidence | `agi_eval_result=0` | OPEN |
-| Tool eval evidence | `agi_tool_eval_result=0` | OPEN |
-| Server-derived 16/16 certification | requires current durable evidence | OPEN |
+| Final docs-aligned head CI/Preview | must be re-queried after this checkpoint | OPEN |
+| PR #243 merge | not yet production in this document cut | OPEN |
+| Exact production deployment | production still points to `5ec9de77...` | OPEN |
+| Owner AAL2 ceremony | human step-up required | OPEN |
+| Runtime score-v3 certification | historical v1/v2 evidence does not count | OPEN |
+| Tool eval evidence | observed `agi_tool_eval_result=0` | OPEN |
+| Server-derived 16/16 certification | requires current durable score-v3 evidence | OPEN |
+| Leaked Password Protection | provider configuration not verified enabled | OPEN_PROVIDER_GATE |
+| Dedicated `nova.agi` fallback | live provider revision/readiness/E2E not certified | OPEN/DEGRADED |
+| Physical Node Agent | requires real fresh heartbeat | OPEN/DEGRADED |
 
-## Pass sequence
+## Owner certification sequence after technical release
 
 1. Owner authenticates normally in production.
-2. `/agis` → `Elevar sesión a AAL2` → challenge/verify existing TOTP.
-3. Confirm complete certification snapshot; partial snapshot must fail closed.
-4. Execute only pending targets, sequentially.
-5. Requery `agi_runs`, `agi_feedback` and certification snapshot.
-6. Investigate any failed case; do not translate request completion into certification.
-7. When and only when server-derived certification is 16/16 and all required evidence is current, update closure to verified/integration-ready.
+2. Abre `/agis` y usa la única acción de verificación/continuación.
+3. Si la sesión requiere AAL2, usar challenge/verify del TOTP existente.
+4. El servidor deriva el siguiente target; el cliente no selecciona arbitrariamente una AGI.
+5. Ejecutar sólo targets pendientes, secuencialmente.
+6. Reconsultar `agi_runs`, `agi_feedback` y snapshot.
+7. Investigar cualquier FAIL; no traducir request completion a certificación.
+8. Sólo con server-derived 16/16 `score-v3` y evidencia requerida actual puede cerrarse certificación.
 
-## Provider-plan / degraded items
+## Supabase
 
-- Leaked Password Protection: `ACCEPTED_PROVIDER_PLAN_LIMITATION / FREE`; visible, disabled, not a fake green.
-- Physical Node Agent: DEGRADED / local execution unavailable until real heartbeat.
-- Dedicated Railway NOVA: DEGRADED / fallback not currently certified.
-
-These do not authorize dependent effects; those paths remain fail-closed.
+Los WARN de GraphQL/SECURITY DEFINER se aceptan únicamente bajo el registro explícito de excepciones y sus invariantes. Leaked Password Protection **no** es una excepción aceptada. `unused_index` es INFO de rendimiento y no autoriza `DROP INDEX` sin evidencia de workload/query plan/dependencias y validación reversible.
 
 ## Forbidden shortcuts
 
-Manual eval-row insertion, synthetic AAL2/cookies, service-role substitution, enabling AGI writes, parallel full-batch fanout, blind provider redeploys, historical preview substitution, mass security revocation, or framework migration during the ceremony.
+Manual eval-row insertion, synthetic AAL2/cookies, service-role substitution, enabling AGI writes, parallel full-batch fanout, blind provider redeploys, historical Preview substitution, broad grant/RLS relaxation, index deletion por Advisor INFO o framework migration durante el cierre.

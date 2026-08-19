@@ -66,34 +66,42 @@ test("certification uses the production operational view contract and Memory Mir
   assert.doesNotMatch(source, /agi_update_feed/);
 });
 
-test("runtime eval certification requires current suite version and verifiable run references", async () => {
+test("runtime eval certification requires current score-v3 suite and verifiable run references", async () => {
   const source = await read("src/lib/agi-certification.ts");
 
+  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v3"/);
   assert.match(source, /feedback_type", "agi_eval_result"/);
   assert.match(source, /payload\.suite_version !== AGI_EVAL_SUITE_VERSION/);
+  assert.match(source, /payload\.scoring_version !== AGI_EVAL_SCORING_VERSION/);
   assert.match(source, /payload\.passed !== true/);
   assert.match(source, /payload\.cases_passed/);
   assert.match(source, /evidence_run_ids/);
   assert.match(source, /from\("agi_runs"\)/);
-  assert.match(source, /select\("id,project_id,agi_id,status,input,finished_at,result_hash"\)/);
+  assert.match(source, /select\("id,project_id,agi_id,status,input,output,finished_at,result_hash"\)/);
   assert.match(source, /run\.status !== "completed"/);
   assert.match(source, /run\.project_id !== projectId/);
   assert.match(source, /canonicalId\(String\(run\.agi_id \?\? ""\)\) !== agiId/);
   assert.match(source, /run\.finished_at/);
   assert.match(source, /run\.result_hash/);
-  assert.match(source, /eval_suite_version/);
-  assert.match(source, /eval_case_id/);
+  assert.match(source, /input\.eval_suite_version === AGI_EVAL_SUITE_VERSION/);
+  assert.match(source, /input\.eval_scoring_version === AGI_EVAL_SCORING_VERSION/);
+  assert.match(source, /output\.eval_suite_version === AGI_EVAL_SUITE_VERSION/);
+  assert.match(source, /output\.eval_scoring_version === AGI_EVAL_SCORING_VERSION/);
+  assert.match(source, /output\.passed === true/);
+  assert.match(source, /output\.external_writes_executed === false/);
   assert.match(source, /new Set\(evidenceRunIds\)/);
 });
 
-test("AGIs page surfaces certification without creating duplicate navigation", async () => {
+test("AGIs page keeps certification active while presenting one clean decision-first control", async () => {
   const page = await read("src/app/agis/page.tsx");
+
   assert.match(page, /getAgiCertificationSnapshot/);
-  assert.match(page, /Certificaci[oó]n/);
-  assert.match(page, /Pendiente/);
-  assert.match(page, /eval contractual/);
-  assert.match(page, /eval runtime/);
-  assert.match(page, /herramientas probadas/);
+  assert.match(page, /AgiEvalBatchControl/);
+  assert.match(page, /Pendiente:/);
+  assert.match(page, /Pruebas vigentes para su alcance actual/);
+  assert.match(page, /<details/);
+  assert.doesNotMatch(page, /eval contractual|eval runtime|herramientas probadas/i);
+  assert.doesNotMatch(page, /evidence_percent|Worker:|Estado de catálogo:/);
   assert.doesNotMatch(page, /href=\"\/agi-certification\"/);
 });
 

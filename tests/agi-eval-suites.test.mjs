@@ -27,7 +27,7 @@ test("all 16 AGIs have versioned mission, owner-gate and evidence eval cases", a
   assert.doesNotMatch(source, /\b(TODO|TBD|PLACEHOLDER)\b/i);
 });
 
-test("certification separates static eval contracts from verified runtime eval evidence", async () => {
+test("certification separates static eval contracts from verified runtime evidence without exposing technical labels by default", async () => {
   const source = await read("src/lib/agi-certification.ts");
   const page = await read("src/app/agis/page.tsx");
 
@@ -36,6 +36,9 @@ test("certification separates static eval contracts from verified runtime eval e
   assert.match(source, /agi_eval_result/);
   assert.match(source, /suite_version/);
   assert.match(source, /evidence_run_ids/);
-  assert.match(page, /eval contractual/);
-  assert.match(page, /eval runtime/);
+
+  assert.match(page, /getAgiCertificationSnapshot/);
+  assert.match(page, /AgiEvalBatchControl/);
+  assert.match(page, /<details/);
+  assert.doesNotMatch(page, /eval contractual|eval runtime/i);
 });

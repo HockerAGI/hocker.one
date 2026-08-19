@@ -4,58 +4,53 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("private navigation exposes exactly five persistent domains", async () => {
+test("private navigation exposes six simple destinations and preserves secondary routes", async () => {
   const source = await read("src/lib/hocker-navigation.ts");
 
-  for (const id of ["inicio", "operacion", "nova", "ecosistema", "control"]) {
-    assert.match(source, new RegExp(`\\n  \\{\\n    id: "${id}"`));
+  for (const label of ["Inicio", "NOVA", "Trabajo", "Ecosistema", "Operación", "Más"]) {
+    assert.match(source, new RegExp(`label: "${label}"`));
   }
 
-  const sectionDeclarations = source.match(/\n  \{\n    id: "(?:inicio|operacion|nova|ecosistema|control)"/g) ?? [];
-  assert.equal(sectionDeclarations.length, 5);
-  assert.match(source, /id: "workers"/);
-  assert.match(source, /href: "\/owner\/actions"/);
-  assert.match(source, /href: "\/owner\/evidence"/);
+  assert.match(source, /HOCKER_SECONDARY_NAVIGATION/);
+  for (const href of ["/workers", "/owner/actions", "/owner/evidence", "/security", "/integrations", "/memory"]) {
+    assert.match(source, new RegExp(`href: "${href.replaceAll("/", "\\/")}"`));
+  }
 });
 
-test("mobile dock uses the five domains and remains visible below desktop", async () => {
-  const source = await read("src/components/BottomDock.tsx");
+test("mobile dock uses a compact registry with Más instead of forcing every desktop destination", async () => {
+  const [source, navigation] = await Promise.all([
+    read("src/components/BottomDock.tsx"),
+    read("src/lib/hocker-navigation.ts"),
+  ]);
 
-  assert.match(source, /HOCKER_NAVIGATION\.map/);
+  assert.match(source, /HOCKER_MOBILE_NAVIGATION/);
+  assert.match(source, /HOCKER_MOBILE_NAVIGATION\.map/);
   assert.match(source, /hko-bottom-dock-wrap lg:hidden/);
-  assert.doesNotMatch(source, /data-hocker-bottom-dock/);
-  assert.doesNotMatch(source, /Alertas|Buscar \(⌘K\)/);
+  const mobileBlock = navigation.match(/export const HOCKER_MOBILE_NAVIGATION[\s\S]*?\];/)?.[0] ?? "";
+  assert.match(mobileBlock, /label: "Más"/);
+  assert.doesNotMatch(mobileBlock, /label: "Operación"/);
 });
 
-test("private shell keeps one persistent navigation layer per breakpoint", async () => {
+test("private shell removes permanent workspace noise and keeps one navigation layer per breakpoint", async () => {
   const source = await read("src/components/PrivateShell.tsx");
 
   assert.match(source, /<Sidebar \/>/);
   assert.match(source, /<Topbar \/>/);
   assert.match(source, /<BottomDock \/>/);
   assert.match(source, /<CommandPalette \/>/);
-  assert.match(source, /<WorkspaceBar \/>/);
-  assert.doesNotMatch(source, /import ContextNav/);
-  assert.doesNotMatch(source, /<ContextNav \/>/);
-  assert.match(source, /pt-\[76px\]/);
+  assert.doesNotMatch(source, /WorkspaceBar/);
+  assert.match(source, /hko-mobile-dock-reserve/);
 });
 
-test("page layouts use a cinematic header without wrapping the whole page in one surface", async () => {
-  const layout = await read("src/components/system/layout/PageLayout.tsx");
-  const legacyHeader = await read("src/components/ui-hocker/HockerPageHeader.tsx");
-
-  assert.doesNotMatch(layout, /<Surface/);
-  assert.match(layout, /radial-gradient\(circle_at_top_left/);
-  assert.match(legacyHeader, /radial-gradient\(circle_at_top_left/);
+test("desktop topbar does not duplicate the full product logo already owned by sidebar", async () => {
+  const source = await read("src/components/Topbar.tsx");
+  assert.doesNotMatch(source, /hocker-one-logo\.png/);
 });
 
-test("command palette starts with curated navigation and searches the full catalog", async () => {
+test("command palette searches primary and secondary destinations", async () => {
   const palette = await read("src/components/CommandPalette.tsx");
-  const navigation = await read("src/lib/hocker-navigation.ts");
 
-  assert.match(palette, /if \(!normalized\) return BASE_ITEMS/);
-  assert.match(palette, /SEARCHABLE_ITEMS/);
-  assert.match(palette, /HOCKER_NAVIGATION\.flatMap/);
+  assert.match(palette, /HOCKER_NAVIGATION/);
+  assert.match(palette, /HOCKER_SECONDARY_NAVIGATION/);
   assert.match(palette, /role="dialog"/);
-  assert.match(navigation, /id: "workers"[\s\S]*href: "\/workers"/);
 });

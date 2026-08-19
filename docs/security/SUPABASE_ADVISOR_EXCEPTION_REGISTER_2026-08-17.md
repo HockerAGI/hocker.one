@@ -115,3 +115,17 @@ This register does not close:
 - any future Advisor ERROR or new WARN not enumerated here.
 
 A future Advisor run that reports a new object or a changed contract is a new finding until reviewed.
+
+## 7. 2026-08-19 revalidation and performance classification
+
+Fresh production Advisor review continued to report the same classes of contract-governed GraphQL discoverability and SECURITY DEFINER warnings, plus Leaked Password Protection disabled. This revalidation does **not** broaden any exception; each object remains subject to the invariants above.
+
+Performance Advisor also reports multiple `unused_index` findings with INFO severity. These are optimization candidates, not deletion instructions. Before dropping any index require:
+
+1. sufficient observation window and representative workload;
+2. query-plan / `pg_stat_*` evidence;
+3. foreign-key, uniqueness, audit, provider-managed and incident/rollback dependency review;
+4. reversible validation outside production first;
+5. post-change regression and Advisor/query-performance verification.
+
+No production index, RLS policy, grant or SECURITY DEFINER function was mutated as part of this revalidation.
