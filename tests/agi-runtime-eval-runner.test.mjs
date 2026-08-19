@@ -27,8 +27,10 @@ test("runtime eval runner uses the existing AI Gateway model client and exact ow
   assert.match(source, /callServerlessAgiModel/);
   assert.match(source, /getAgiEvalSuite/);
   assert.match(source, /from\("agi_tasks"\)/);
-  assert.match(source, /\.eq\("id", taskId\)/);
-  assert.match(source, /\.eq\("status", "queued"\)/);
+  assert.match(source, /idempotencyKey = `agi-eval:/);
+  assert.match(source, /\.eq\("id", task\.id\)/);
+  assert.match(source, /task\.status !== "queued" && task\.status !== "failed"/);
+  assert.match(source, /\.eq\("status", previousStatus\)/);
   assert.doesNotMatch(source, /claim_next_agi_task/);
   assert.match(source, /start_serverless_agi_execution/);
   assert.match(source, /complete_serverless_agi_execution/);
