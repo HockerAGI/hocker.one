@@ -92,18 +92,21 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
 });
 
-test("recovery card keeps mutable pointers compact and delegates detailed history to the active handoff", async () => {
+test("recovery card keeps current production, candidate and evidence pointers explicit", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
   assert.match(state, /HANDOFF_2026-08-19\.md/);
   assert.match(state, /## Recovery pointers/);
   assert.match(state, /Reconsultar antes de mutar/i);
-  assert.match(state, /contador de evidencia.*reconsulta/i);
-  assert.match(state, /PR #230/);
+  assert.match(state, /Producción vigente de Hocker One/);
+  assert.match(state, /Candidato UX\/scoring: PR #243/);
+  assert.match(state, /no está en producción/i);
   assert.match(state, /`agi_eval_result`/);
-  assert.match(state, /`agi_tool_eval_result`/);
-  assert.match(state, /fallback.*(?:not re-certified|no re-certificado)/i);
+  assert.match(state, /0 filas `agi_tool_eval_result`/);
+  assert.match(state, /score-v3/);
+  assert.match(state, /fallback.*(?:no re-certificado|not re-certified)/i);
   assert.match(state, /historical-preview|preview histórico/i);
+  assert.doesNotMatch(state, /32244656734|TS18047|progress possibly null/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
   assert.doesNotMatch(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
