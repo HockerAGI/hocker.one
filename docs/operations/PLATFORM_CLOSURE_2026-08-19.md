@@ -1,48 +1,52 @@
 # HOCKER Core — Platform Closure Gate 2026-08-19
 
-Status: **OPEN — FINAL CANDIDATE EVIDENCE PENDING**
+Status: **OPEN — HUMAN AAL2 + 16/16 DURABLE EVIDENCE REMAIN**
 
-Authoritative procedure and detailed history: `HANDOFF_2026-08-19.md`.
+Authoritative current handoff: `HANDOFF_2026-08-19.md`.
 
-## Closed / controlled before this gate
+## Closed technical/platform gates
 
-The evidence chain #214–#229 closed or bounded the primary NOVA runtime, durable canonical session/message storage, Context Bridge freshness, Supabase migration parity, core RLS/write boundaries, recovery semantics, Node Mirror liveness, canonical AGI FK indexes and current Advisor exception contracts.
-
-Do not treat historical warnings or documentation ancestry as open blockers unless current connected evidence contradicts those closures.
-
-## Current mandatory gates
-
-| Gate | Current evidence | State |
+| Gate | Evidence | State |
 | --- | --- | --- |
 | Canonical catalog | 16 AGIs / 16 agents | GREEN |
 | Action boundary | 16/16 `allow_actions=false` | GREEN |
-| PR #230 deterministic code/tests | latest code-bearing `30a414ad...`; current docs-aligned head `1ced536e...` | GREEN |
-| Exact-head CI | #799 / `32012349597` SUCCESS | GREEN |
-| Exact-head Vercel Preview | no deployment observed for `1ced536e...` | **OPEN** |
-| Preview build/runtime review | requires exact-head Preview | OPEN |
-| PR review / promotion gate | #230 remains draft | OPEN |
-| Production deployment after merge | merge not performed | OPEN |
-| Owner session | one verified MFA factor exists; active AAL2 ceremony not yet performed | OPEN |
-| Durable runtime eval evidence | `agi_eval_result=0` | OPEN |
-| Durable tool eval evidence | `agi_tool_eval_result=0` | OPEN |
-| 16/16 server-derived certification | requires persisted evidence above | OPEN |
+| Resumable/fail-closed certification UI | PR #230 merged | GREEN |
+| Candidate CI | `5af606d...`, CI #807 / `32233348527`, 231/231 + typecheck/lint/build/audit | GREEN |
+| Exact candidate Preview | `dpl_EVQHb1fM9vREzbTKMDzGH6SeSdTP`, READY | GREEN |
+| Preview build/runtime review | build complete; no reviewed `error`/`fatal` logs | GREEN |
+| Merge | `expected_head_sha=5af606d...` → `6f8686f...` | GREEN |
+| Production deployment | `dpl_BTizBR6fYWG6v9A1RLov95dQnDVc`, READY, exact merge SHA | GREEN |
+| Production error/fatal review | no entries in reviewed window | GREEN |
 
-## Provider-plan item
+Prior #214–#229 platform closures remain controlled unless connected evidence contradicts them.
 
-Leaked Password Protection remains a visible provider setting/risk and must not be described as enabled. PR #230 documents its Free-plan limitation separately from MFA. This item must be revisited if provider plan or launch/security scope changes; it is not permission to weaken password policy.
+## Mandatory gates still open
 
-## Promotion sequence
+| Gate | Current evidence | State |
+| --- | --- | --- |
+| Owner AAL2 active ceremony | 1 verified MFA factor exists; no active ceremony evidence yet | OPEN |
+| Runtime eval evidence | `agi_eval_result=0` | OPEN |
+| Tool eval evidence | `agi_tool_eval_result=0` | OPEN |
+| Server-derived 16/16 certification | requires current durable evidence | OPEN |
 
-1. Redeploy exact PR #230 head through Vercel without creating a dummy commit if possible.
-2. Verify `READY` + exact `githubCommitSha` + build logs + runtime logs.
-3. Requery PR head/reviews/checks; no stale approval or stale preview.
-4. Promote/merge with expected head only.
-5. Verify production deployment source SHA and runtime errors.
-6. Owner logs in normally, follows `/auth/mfa?returnTo=/agis`, challenges the already-enrolled TOTP and reaches `aal2`.
-7. Run the resumable pending-evidence control. If server snapshot is partial, it must stay blocked.
-8. Requery durable eval rows and certification snapshot.
-9. Only when 16/16 is server-derived and all candidate gates remain green may Core be declared verified/integration-ready.
+## Pass sequence
+
+1. Owner authenticates normally in production.
+2. `/agis` → `Elevar sesión a AAL2` → challenge/verify existing TOTP.
+3. Confirm complete certification snapshot; partial snapshot must fail closed.
+4. Execute only pending targets, sequentially.
+5. Requery `agi_runs`, `agi_feedback` and certification snapshot.
+6. Investigate any failed case; do not translate request completion into certification.
+7. When and only when server-derived certification is 16/16 and all required evidence is current, update closure to verified/integration-ready.
+
+## Provider-plan / degraded items
+
+- Leaked Password Protection: `ACCEPTED_PROVIDER_PLAN_LIMITATION / FREE`; visible, disabled, not a fake green.
+- Physical Node Agent: DEGRADED / local execution unavailable until real heartbeat.
+- Dedicated Railway NOVA: DEGRADED / fallback not currently certified.
+
+These do not authorize dependent effects; those paths remain fail-closed.
 
 ## Forbidden shortcuts
 
-Historical preview substitution, manual eval-row insertion, synthetic AAL2, service-role ceremony bypass, enabling AGI writes, parallel full-batch fanout, blind provider redeploys, mass security revocations, or changing frameworks/dependencies during the final gate solely to modernize.
+Manual eval-row insertion, synthetic AAL2/cookies, service-role substitution, enabling AGI writes, parallel full-batch fanout, blind provider redeploys, historical preview substitution, mass security revocation, or framework migration during the ceremony.
