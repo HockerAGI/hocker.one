@@ -1,32 +1,43 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-19 / America/Tijuana**  
+Evidence cut: **2026-08-19 05:03 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
-**Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas; ningún SHA, deployment, contador de evidencia o estado de PR en esta tarjeta autoriza una acción sin reconsulta.
+**Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Esta tarjeta no autoriza merges, deploys ni certificaciones por sí sola.
 
-Detalle vigente: `HANDOFF_2026-08-19.md`. Historial previo a la promoción de #230: `HANDOFF_2026-08-19-PRE230.md`.
+Detalle vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HANDOFF_2026-08-19-PRE230.md`.
 
-## Current recovery pointers
+## Recovery pointers
 
-- Hocker One `main` verificado al iniciar la certificación unificada: `037d5f6cebdf1a44cd6b679b8e84c07bb16852d1` después de PR #239; reconsultar antes de cualquier merge.
-- PR #230: MERGED; candidate `5af606d001955a56858c10fb5bb6934dc778a8c9`.
-- Candidate CI #807 / `32233348527`: SUCCESS — 231/231 + typecheck + lint + build + audit.
-- Candidate Vercel Preview `dpl_EVQHb1fM9vREzbTKMDzGH6SeSdTP`: READY, exact SHA.
-- Production Vercel de #230 `dpl_BTizBR6fYWG6v9A1RLov95dQnDVc`: READY, exact merge SHA `6f8686f...`; reviewed `error`/`fatal` logs: none.
-- Supabase `yvuibbcuntqpyqiuqggd`: 16 AGIs / 16 agents / 16 `allow_actions=false`; la primera ceremonia Owner AAL2 produjo 1 `agi_eval_result` completo (NOVA), 0 `agi_tool_eval_result`; SYNTIA conservó evidencia parcial de un caso aprobado antes de un rate limit del AI Gateway.
-- Hocker One = primary NOVA runtime/control plane; `nova.agi` fallback not re-certified.
-- Physical Node Agent = degraded until real heartbeat.
+- Hocker One `main`: `5ec9de77cbe38ec869b15b30f10ea455c11436f9` — protegido; producción actual.
+- Vercel producción: `dpl_3QFyHXnHmQUvry1WsyTCQov1fVtZ` — READY, target production, exact `5ec9de77...`.
+- PR #243: OPEN / DRAFT / MERGEABLE; rama `feat/hocker-one-ux-limpia-20260819`.
+- Functional head inspeccionado antes del checkpoint documental: `b0792944724668e60ff60a089be339096dabf574`, commit real `feat(ui): make NOVA immersive and simplify AGIs`, unsigned.
+- Preview de ese functional head: `dpl_22QBY1LLNSTh3cHtGbzJva3Kynxv` — READY.
+- CI exacto `32244656734` (#820): FAILURE. Repository checks PASS, tests PASS, **typecheck FAIL**; lint/build/audit skipped.
+- Error exacto: `AgiEvalBatchControl.tsx:116`, TS18047, `progress` possibly null.
+- Los commits Markdown posteriores al functional head no cambian producto; reconsultar branch head/ancestry antes de usar evidencia exact-SHA.
+- Supabase `yvuibbcuntqpyqiuqggd`: 16 AGIs, 16 agentes, `allow_actions=true = 0`, 34 tool assignments habilitados.
+- Evidencia humana histórica: NOVA 3/3 PASS, SYNTIA 3/3 PASS, VERTX 2/3 FAIL histórico; 3 filas `agi_eval_result` total; **sin certificación score-v3**.
+- Certificación Owner: **PAUSADA** hasta endurecimiento y corpus offline 16/16 de `score-v3`.
+- `nova.agi/main`: `db417f262dfcddcad8e82f6be977415d0b0f3e89`; fallback dedicado todavía no certificado con deployment/revision runtime exactos.
 
 ## Next exact move
 
-**Cerrar Core mediante una única certificación Owner resumible.** Mantener Owner AAL2 → ejecutar sólo evidencia runtime/tool pendiente desde `/agis` → reusar evidencia válida de la suite vigente → reintentar únicamente fallos transitorios de proveedor de forma acotada → reconsultar evidencia durable y aceptar cierre sólo con certificación server-derived 16/16.
+1. Resolver por causa raíz el nullability TypeScript de `AgiEvalBatchControl`.
+2. Revalidar CI exact-head completo.
+3. Implementar/verificar `score-v3` con TDD y corpus offline de las 16 AGIs; no ampliar otra lista de substrings como solución principal.
+4. Revisar UX/Preview adaptativo y accesibilidad.
+5. Reconsultar Supabase/Vercel/`nova.agi`.
+6. Merge protegido sólo con gates verdes.
+7. Ceremonia Owner AAL2 humana únicamente después de score-v3 verde; evidencia server-derived, sin bypass/síntesis.
+8. Actualizar canon/ledger/handoff final con resultados reales.
 
 ## Non-negotiables
 
-No synthetic AAL2, manual eval rows, service-role ceremony bypass, `allow_actions` enablement, parallel full-batch fanout, historical-preview substitution, blind Railway redeploy, mass Advisor revocations, or commits used as polling.
+No synthetic AAL2, manual eval rows, service-role ceremony bypass, `allow_actions` enablement, DDL por UX, external writes para hacer pasar pruebas, historical-preview substitution, blind external-runtime claims, manual production deploy si Git integration ya corresponde, ni declarar 16/16 sin evidencia durable vigente.
 
 ## Startup order
 
-`AGENTS.md` → `docs/operations/INDEX.md` → `HANDOFF_2026-08-19.md` → this card → `PLATFORM_CLOSURE_2026-08-19.md` → `DOC_ALIGNMENT_2026-08-19.md` → requery GitHub/Vercel/Supabase.
+`AGENTS.md` → `docs/operations/INDEX.md` → `HANDOFF_2026-08-19.md` → esta tarjeta → planes 2026-08-19 → spec UX aprobada → requery GitHub/Vercel/Supabase.
