@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Bot, Clock3, RefreshCw } from "lucide-react";
 
+import AgiEvalBatchControl from "@/components/agi/AgiEvalBatchControl";
 import AgiEvalControl from "@/components/agi/AgiEvalControl";
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { getAgiCertificationSnapshot, type AgiCertificationCheck } from "@/lib/agi-certification";
@@ -104,6 +105,13 @@ export default async function AgisPage() {
             <RefreshCw className="h-4 w-4" /> Actualizar
           </Link>
         </div>
+
+        <AgiEvalBatchControl
+          agiIds={certification.entries.map((entry) => entry.agi_id)}
+          runtimeEvalTargets={certification.runtime_eval_targets}
+          toolEvalTargets={certification.tool_eval_targets}
+          certificationSource={certification.source}
+        />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

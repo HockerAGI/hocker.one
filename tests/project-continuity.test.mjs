@@ -61,10 +61,12 @@ test("backend-only Hocker One and NOVA tables get explicit deny policies without
 
 test("agent contract requires durable recovery and milestone handoff", async () => {
   const agents = await source("AGENTS.md");
+  assert.match(agents, /docs\/operations\/INDEX\.md/);
   assert.match(agents, /CONTINUITY_PROTOCOL\.md/);
   assert.match(agents, /LAST_KNOWN_STATE\.md/);
-  assert.match(agents, /Protocolo obligatorio al iniciar trabajo/);
-  assert.match(agents, /Protocolo obligatorio de handoff/);
+  assert.match(agents, /Al iniciar:/);
+  assert.match(agents, /Al cerrar un hito material:/);
+  assert.match(agents, /No copiar el mismo relato/i);
 });
 
 test("context freshness policy makes operational continuity event-driven and memory review-only", async () => {
@@ -90,17 +92,18 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
 });
 
-test("recovery snapshot separates mutable pointers from functional authority and incomplete gates", async () => {
+test("recovery card keeps mutable pointers compact and delegates detailed history to the active handoff", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
-  assert.match(state, /VERIFY MUTABLE FACTS BEFORE ACTING/);
-  assert.match(state, /mutable pointers/);
-  assert.match(state, /latest functional authority/);
-  assert.match(state, /documentation-only ancestry/);
-  assert.match(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
-  assert.match(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
-  assert.match(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
-  assert.match(state, /Do not use these as current pointers without re-querying them/);
-  assert.match(state, /agi_eval_result[\s\S]*0/);
-  assert.match(state, /agi_tool_eval_result[\s\S]*0/);
-  assert.match(state, /Dedicated `nova\.agi` deployment\/health was \*\*not re-certified/);
+  assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
+  assert.match(state, /HANDOFF_2026-08-19\.md/);
+  assert.match(state, /Current recovery pointers/);
+  assert.match(state, /Reconsultar antes de mutar/i);
+  assert.match(state, /PR #230/);
+  assert.match(state, /0 `agi_eval_result`/);
+  assert.match(state, /0 `agi_tool_eval_result`/);
+  assert.match(state, /fallback\/compatibilidad no re-certificado/i);
+  assert.match(state, /No usar preview histórico/i);
+  assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
+  assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
+  assert.doesNotMatch(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
 });

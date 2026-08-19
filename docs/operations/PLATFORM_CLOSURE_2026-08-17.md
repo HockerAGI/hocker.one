@@ -2,7 +2,7 @@
 
 Status: **OPEN / FAIL-CLOSED**  
 Scope: Hocker One control plane, primary NOVA runtime, 16 canonical AGIs and integration surfaces required to scale into other HOCKER apps/services.  
-Current pointer at preparation: `main=6b3b4f35820f4fb9c0906fa582dcd397d3169f88`. Re-query before acting.
+Current pointer at reconciliation: `main=cd1f8ef1d148394955013252ac06b2add8c0f460`. Re-query before acting.
 
 This document supersedes operational use of PR #209's 2026-08-14 closure snapshot. PR #209 remains historical evidence and retains useful Cloudflare target controls; it is not current state.
 
@@ -31,17 +31,17 @@ No document may translate either state into a claim of cero defectos, seguridad 
 | Context/recovery authority semantics | **CLOSED** | PR #223/#225 separate mutable pointers from functional authority and keep the executable continuity test aligned. |
 | Node Mirror liveness correctness | **CLOSED** | PR #224/#226. Liveness uses real `public.nodes.id` + `last_seen_at`, 5-minute freshness; commands/events cannot prove liveness. |
 | Canonical AGI foreign-key performance debt | **CLOSED** | PR #227; production migration `20260817052915`, three dedicated `agi_id` indexes, prior `unindexed_foreign_keys` findings absent. |
-| Supabase Advisor exception classification | **CLOSED** | PR #228 creates bounded exception contracts for intentional GraphQL/RPC exposure; `Leaked Password Protection` explicitly remains open. |
+| Supabase Advisor exception classification | **CLOSED** | PR #228 creates bounded exception contracts for intentional GraphQL/RPC exposure. Leaked Password Protection remains visible separately as a provider-plan limitation, not an accepted database/RPC exception. |
 
 ## 3. Mandatory blockers for Core Integration Ready
 
-### G1 — Owner AAL2 — **OPEN**
+### G1 — Owner AAL2 protected certification run — **OPEN**
 
-A verified MFA factor exists, but certification endpoints require a real human Owner session stepped up to AAL2. No service identity, SQL insert or synthetic cookie may substitute for that ceremony.
+A verified Owner TOTP factor exists and the supported Hocker One/Supabase MFA flow can elevate a user session to AAL2. Certification endpoints still require that a real human Owner session perform the protected requests. No service identity, SQL insert, copied session or synthetic cookie may substitute for that ceremony.
 
-Pass condition: an actual Owner AAL2 session is used through supported Hocker One/Supabase Auth flow and the resulting protected requests succeed without bypass.
+Pass condition: an actual Owner AAL2 session is used through the supported Hocker One/Supabase Auth flow and the resulting protected certification requests succeed without bypass.
 
-### G2 — 16/16 AGI runtime eval certification — **OPEN**
+### G2 — 16/16 AGI runtime + tool-eval certification — **OPEN**
 
 Current durable evidence remains:
 
@@ -50,15 +50,24 @@ Current durable evidence remains:
 - `agi_eval_result`: 0;
 - `agi_tool_eval_result`: 0.
 
-Pass condition: execute existing `/api/agi/evals/run` and required `/api/agi/tools/eval` flows under Owner AAL2, one scoped evaluation at a time, persisting real evidence. Do not insert passing rows manually and do not enable writes merely to satisfy certification.
+Pass condition: execute existing `/api/agi/evals/run` and required `/api/agi/tools/eval` flows under Owner AAL2, persisting real evidence. Do not insert passing rows manually and do not enable writes merely to satisfy certification.
 
-### G3 — Leaked Password Protection — **OPEN_PROVIDER_GATE**
+PR #230 prepares a resumable Owner UI for this ceremony. It derives only pending runtime/tool targets, reuses the existing protected endpoints and exposes a visible AAL2 step-up entry while preserving the already-verified TOTP factor. **If the server-side certification snapshot is partial or incomplete, the batch control must fail closed and block execution rather than synthesizing a 16-AGI rerun or spending against unverifiable pending state.** PR #230 is not production evidence until its exact candidate is deployed and verified.
 
-Supabase Security Advisor still reports Leaked Password Protection disabled. This is not covered by the Advisor exception register.
+## 4. Provider-plan limitations and degraded optional capabilities
 
-Pass condition: enable through supported Supabase Auth/provider configuration, verify sign-in/recovery compatibility, then re-run Security Advisor and record absence of the finding.
+### Leaked Password Protection — **ACCEPTED_PROVIDER_PLAN_LIMITATION / FREE**
 
-## 4. Degraded capabilities that do not falsify Core Integration readiness
+Supabase Security Advisor currently reports Leaked Password Protection disabled. Supabase documents this feature as available on Pro Plan and above. The Owner confirmed on 2026-08-17 that the current HOCKER Supabase project remains on the Free plan and therefore this control cannot presently be enabled without a paid-plan change.
+
+Disposition for Core Integration Ready:
+
+- keep the Advisor warning visible; do not mark it enabled, fixed or excepted by database policy;
+- do not require a paid-plan upgrade solely to satisfy the Core Integration Ready evidence label;
+- retain existing compensating controls such as Owner MFA/AAL2, Owner Gate and fail-closed AGI action permissions;
+- reopen as a provider hardening gate if the project moves to Pro+ or before a launch/security scope explicitly requires leaked-password screening.
+
+This classification records a provider/account limitation, not a claim that the risk is absent.
 
 ### Physical Node Agent — **DEGRADED / LOCAL_EXECUTION_UNAVAILABLE**
 
@@ -105,16 +114,17 @@ Current Advisor categories are interpreted as follows:
 - authenticated GraphQL discoverability: accepted only for current objects where production verification shows RLS enabled + policy coverage; re-query after DDL/grant/policy change;
 - anonymous public catalog/tier/promo reads: intentional bounded product surfaces documented in `SUPABASE_ADVISOR_EXCEPTION_REGISTER_2026-08-17.md`;
 - public leaderboard/recent-wins and own-history SECURITY DEFINER RPCs: accepted only under fixed search path, bounded results and their opt-in/ownership role contracts;
-- Leaked Password Protection: remains OPEN_PROVIDER_GATE;
-- any new Advisor ERROR/WARN not in the exception register: new finding until reviewed.
+- Leaked Password Protection: remains visible as `ACCEPTED_PROVIDER_PLAN_LIMITATION / FREE`; it is neither enabled nor silently excepted, and becomes actionable if the provider plan/scope changes;
+- any new Advisor ERROR/WARN not in the exception register or this explicit provider-plan classification: new finding until reviewed.
 
 ## 7. Current decision boundary
 
-At this cut, the remaining blockers for **Core Integration Ready** are intentionally narrow:
+At this cut, the remaining mandatory blockers for **Core Integration Ready** are intentionally narrow:
 
-1. real Owner AAL2 ceremony;
-2. real 16/16 AGI eval/tool-eval evidence;
-3. Supabase Leaked Password Protection provider setting and verification.
+1. a real Owner AAL2-protected certification run through the supported UI/session flow;
+2. real 16/16 AGI runtime/tool-eval durable evidence.
+
+Leaked Password Protection remains an acknowledged security hardening gap constrained by the current Supabase Free plan; it does not become a false green and it does not force a paid upgrade solely for the Core Integration Ready label.
 
 Physical Node Agent availability and the dedicated Railway fallback are degraded optional capabilities, not reasons to misrepresent the primary Hocker One runtime as unavailable. Their dependent action paths must remain fail-closed.
 

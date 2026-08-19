@@ -39,6 +39,8 @@ Al cerrar un hito material: actualizar una sola fuente de detalle y hacer que la
 
 Context Bridge = continuidad/evidencia operacional. Memory Mirror/SYNTIA = conocimiento reutilizable revisado. Ninguno sustituye auth, Owner Gate o evidencia conectada.
 
+El protocolo durable base permanece en `docs/operations/CONTINUITY_PROTOCOL.md`; el índice y el handoff activo gobiernan la recuperación operativa actual y evitan duplicar estado dinámico.
+
 ## 4. Arquitectura vigente como regla durable
 
 - Hocker One es control plane y **primary NOVA runtime path**.
