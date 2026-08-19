@@ -2,41 +2,33 @@
 
 Status: **ACTIVE INDEX**
 
-`docs/operations/` contains only current operating contracts/evidence owners. Historical checkpoints, retired integration snapshots and superseded addenda live under `docs/history/` so they remain auditable without competing with current authority.
+`docs/operations/` keeps one current owner per operating purpose. Historical dated documents retain audit value but must not compete with current authority.
 
 ## Current operating sources
 
 | Purpose | Current source | Rule |
 | --- | --- | --- |
-| Platform release/closure | `PLATFORM_CLOSURE_GATE_2026-08-14.md` | Single global fail-closed closure checklist until superseded by a dated replacement. |
-| Canon/document drift | `DOC_ALIGNMENT_2026-08-15.md` | Technical alignment between approved PDF editions and observable current state. |
-| Context Bridge architecture | `CONTEXT_BRIDGE_V1.md` | Architecture/security contract for normalized shared context. |
-| Continuity/recovery | `CONTINUITY_PROTOCOL.md` | Single operational procedure for checkpoints, repo lifecycle reconciliation and session recovery. |
-| Emergency handoff | `LAST_KNOWN_STATE.md` | Readable last material state; verify mutable facts before action. |
-| GitHub Owner Gate | `GITHUB_OWNER_GATE.md` | Current GitHub approval/action boundary where applicable. |
+| Detailed cross-session continuity | `HANDOFF_2026-08-19.md` | Read first for process, errors already found, exact next step and external research. Do not duplicate it elsewhere. |
+| Emergency recovery card | `LAST_KNOWN_STATE.md` | Compact mutable pointers + next move. Requery before action. |
+| Current Core release gate | `PLATFORM_CLOSURE_2026-08-19.md` | Fail-closed checklist for PR #230 → Preview → merge → AAL2 → 16/16 evidence. |
+| Canon/document drift | `DOC_ALIGNMENT_2026-08-19.md` | Current delta between approved publications and connected implementation. |
+| Context Bridge architecture | `CONTEXT_BRIDGE_V1.md` | Shared context architecture/security contract. |
+| Context freshness | `CONTEXT_FRESHNESS_POLICY.md` | Checkpoint/manifest freshness semantics. |
+| Continuity protocol | `CONTINUITY_PROTOCOL.md` | Durable recovery/checkpoint procedure. |
+| Development history | `../00-governance/HOCKER_DEVELOPMENT_LEDGER.md` | Cross-repo milestones/history; do not copy full current handoff into Ledger. |
+| GitHub Owner Gate | `GITHUB_OWNER_GATE.md` | GitHub action/approval boundary where applicable. |
 
-## Historical archive
+## Authority rules
 
-Historical operational evidence is preserved under `docs/history/operations/`. The retired 2025 inter-repo verification is preserved under `docs/history/INTEGRATION_VERIFICATION_2025-07-09.md`.
+1. Production/configuration + DB/logs > `main`/migrations > executable contracts/tests > approved ADR/policies > canon > historical narrative.
+2. A dated Preview is evidence only for its source SHA/tree. Never reuse it for a newer candidate without an explicit equivalence policy approved for that release.
+3. Current state belongs in the handoff/recovery sources above; historical documents remain immutable evidence for their cut.
+4. Do not create a new Markdown file when an existing current owner covers the same purpose.
+5. Do not use Git commits as polling/heartbeat. Batch documentary reconciliation into one commit when possible.
+6. Never delete migration/security/release evidence merely to simplify the tree.
 
-Moving a file into history changes **location/authority**, not its evidence value. Blob contents are preserved when possible.
+## New-session startup
 
-## Evidence and history rules
+`AGENTS.md` → this index → `HANDOFF_2026-08-19.md` → `LAST_KNOWN_STATE.md` → `PLATFORM_CLOSURE_2026-08-19.md` → `DOC_ALIGNMENT_2026-08-19.md` → requery GitHub/Vercel/Supabase.
 
-- Production/configuration and executable evidence outrank prose.
-- A dated plan/spec is retained when it explains intent or migration history; it is not silently treated as current state.
-- When a newer operating document supersedes an older one, archive the older document rather than maintaining two current checklists.
-- Do not duplicate the same policy into multiple differently worded Markdown files. Link to the current source and add only repo/domain-specific deltas.
-- Do not delete migration, security or release evidence merely to make the tree look smaller.
-- Historical files must never be cited as a current green gate without revalidation against current evidence.
-
-## Cleanup rule for future changes
-
-Before adding an operations document:
-
-1. search this index and the repository for an existing owner of the topic;
-2. update that source if its purpose is the same;
-3. create a new dated document only when the old state must remain immutable for audit/history;
-4. add the new current source to this index;
-5. archive the previous source explicitly if authority changed;
-6. prefer one current policy/runbook per purpose, with historical evidence separated by directory rather than duplicated wording.
+Older `PLATFORM_CLOSURE_*`, `DOC_ALIGNMENT_*` and recovery snapshots are historical unless this index points to them as current.
