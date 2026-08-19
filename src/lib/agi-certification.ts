@@ -37,6 +37,11 @@ type EvalRunRow = {
   result_hash: string | null;
 };
 
+export type AgiToolEvalTarget = {
+  agi_id: string;
+  tool_key: "supabase" | "github";
+};
+
 export type AgiCertificationCheck =
   | "canonical_profile"
   | "tools_ready"
@@ -69,6 +74,8 @@ export type AgiCertificationSnapshot = {
   certified: number;
   pending: number;
   entries: AgiCertificationEntry[];
+  runtime_eval_targets: string[];
+  tool_eval_targets: AgiToolEvalTarget[];
 };
 
 function canonicalId(value: string): string {
@@ -154,6 +161,30 @@ function hasVerifiedRuntimeEval(
   });
 }
 
+function hasVerifiedToolAssignmentEvidence(
+  assignment: ToolRow,
+  feedbackRows: EvalFeedbackRow[],
+  agiId: string,
+): boolean {
+  const latest = feedbackRows.find((row) => {
+    if (canonicalId(String(row.agi_id ?? "")) !== agiId) return false;
+    const payload = asRecord(row.payload);
+    return row.feedback_type === "agi_tool_eval_result"
+      && payload?.tool_key === assignment.tool_key;
+  });
+  const payload = asRecord(latest?.payload);
+  if (!payload) return false;
+
+  return latest?.feedback_type === "agi_tool_eval_result"
+    && payload.tool_eval_version === AGI_TOOL_EVAL_VERSION
+    && payload.tool_key === assignment.tool_key
+    && payload.passed === true
+    && payload.mode === "read_only"
+    && payload.external_writes_executed === false
+    && typeof payload.evidence_ref === "string"
+    && payload.evidence_ref.trim().length > 0;
+}
+
 function hasVerifiedToolRuntimeEvidence(
   assignments: ToolRow[],
   feedbackRows: EvalFeedbackRow[],
@@ -164,24 +195,7 @@ function hasVerifiedToolRuntimeEvidence(
 
   return assignments.every((assignment) => {
     if (assignment.tool_key === "ai_gateway") return individualEvalReady;
-
-    const latest = feedbackRows.find((row) => {
-      if (canonicalId(String(row.agi_id ?? "")) !== agiId) return false;
-      const payload = asRecord(row.payload);
-      return row.feedback_type === "agi_tool_eval_result"
-        && payload?.tool_key === assignment.tool_key;
-    });
-    const payload = asRecord(latest?.payload);
-    if (!payload) return false;
-
-    return latest?.feedback_type === "agi_tool_eval_result"
-      && payload.tool_eval_version === AGI_TOOL_EVAL_VERSION
-      && payload.tool_key === assignment.tool_key
-      && payload.passed === true
-      && payload.mode === "read_only"
-      && payload.external_writes_executed === false
-      && typeof payload.evidence_ref === "string"
-      && payload.evidence_ref.trim().length > 0;
+    return hasVerifiedToolAssignmentEvidence(assignment, feedbackRows, agiId);
   });
 }
 
@@ -276,6 +290,25 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       };
     });
 
+    const runtime_eval_targets = entries
+      .filter((entry) => !entry.checks.individual_eval_suite)
+      .map((entry) => entry.agi_id);
+
+    const tool_eval_targets: AgiToolEvalTarget[] = [];
+    if (!queryFailed) {
+      for (const [agiId, assignments] of assignmentsByAgi) {
+        for (const assignment of assignments) {
+          if (
+            (assignment.tool_key === "supabase" || assignment.tool_key === "github")
+            && !hasVerifiedToolAssignmentEvidence(assignment, toolFeedback, agiId)
+          ) {
+            tool_eval_targets.push({ agi_id: agiId, tool_key: assignment.tool_key });
+          }
+        }
+      }
+      tool_eval_targets.sort((a, b) => a.agi_id.localeCompare(b.agi_id) || a.tool_key.localeCompare(b.tool_key));
+    }
+
     return {
       version: AGI_CERTIFICATION_VERSION,
       checked_at: checkedAt,
@@ -285,6 +318,8 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       certified: entries.filter((entry) => entry.certified_for_current_scope).length,
       pending: entries.filter((entry) => !entry.certified_for_current_scope).length,
       entries,
+      runtime_eval_targets: queryFailed ? entries.map((entry) => entry.agi_id) : runtime_eval_targets,
+      tool_eval_targets,
     };
   } catch {
     const entries: AgiCertificationEntry[] = HOCKER_AGI_CANON.map((profile) => ({
@@ -327,6 +362,8 @@ export async function getAgiCertificationSnapshot(projectId = "hocker-one"): Pro
       certified: 0,
       pending: entries.length,
       entries,
+      runtime_eval_targets: entries.map((entry) => entry.agi_id),
+      tool_eval_targets: [],
     };
   }
 }

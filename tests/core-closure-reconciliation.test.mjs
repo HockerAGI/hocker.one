@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("current closure pack separates core integration blockers from optional degraded capabilities", async () => {
+test("current closure pack separates core integration blockers from provider-plan and optional degraded capabilities", async () => {
   const closure = await read("docs/operations/PLATFORM_CLOSURE_2026-08-17.md");
 
   assert.match(closure, /Core Integration Ready/i);
@@ -15,7 +15,11 @@ test("current closure pack separates core integration blockers from optional deg
   assert.match(closure, /Supabase Advisor exception.*CLOSED/i);
   assert.match(closure, /Owner AAL2.*OPEN/i);
   assert.match(closure, /16\/16.*eval.*OPEN/i);
-  assert.match(closure, /Leaked Password Protection.*OPEN_PROVIDER_GATE/i);
+  assert.match(closure, /Leaked Password Protection.*ACCEPTED_PROVIDER_PLAN_LIMITATION\s*\/\s*FREE/i);
+  assert.match(closure, /do not require a paid-plan upgrade solely/i);
+  assert.match(closure, /neither enabled nor silently excepted/i);
+  assert.doesNotMatch(closure, /Leaked Password Protection.*OPEN_PROVIDER_GATE/i);
+  assert.match(closure, /remaining mandatory blockers[\s\S]*1\.[\s\S]*Owner AAL2[\s\S]*2\.[\s\S]*16\/16 AGI/i);
   assert.match(closure, /physical Node Agent.*DEGRADED/i);
   assert.match(closure, /Railway.*DEGRADED/i);
   assert.match(closure, /Android.*FULL_LAUNCH_GATE/i);
@@ -26,13 +30,18 @@ test("current closure pack separates core integration blockers from optional deg
 test("development ledger records current authority and supersedes stale PR snapshots without erasing history", async () => {
   const ledger = await read("docs/00-governance/HOCKER_DEVELOPMENT_LEDGER.md");
 
+  assert.match(ledger, /truth_order:/i);
   assert.match(ledger, /append-only/i);
-  assert.match(ledger, /6b3b4f35820f4fb9c0906fa582dcd397d3169f88/);
+  assert.match(ledger, /Current pointers at this evidence cut/i);
+  assert.match(ledger, /Connected engineering repositories:\s*9/i);
   assert.match(ledger, /PR #224/);
   assert.match(ledger, /PR #226/);
   assert.match(ledger, /PR #227/);
   assert.match(ledger, /PR #228/);
   assert.match(ledger, /20260817052915/);
-  assert.match(ledger, /Railway[\s\S]*inactive/i);
+  assert.match(ledger, /Dedicated `nova\.agi` \/ Railway/i);
+  assert.match(ledger, /fallback not currently certified/i);
+  assert.match(ledger, /PENDING EVIDENCE/i);
+  assert.match(ledger, /\/health\/ready/i);
   assert.match(ledger, /Supersedes operational use of PR #215/i);
 });
