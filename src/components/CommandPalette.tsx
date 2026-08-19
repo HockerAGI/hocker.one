@@ -3,52 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import {
-  Activity,
-  AppWindow,
-  Bot,
-  Boxes,
-  Database,
-  FileCheck2,
-  Search,
-  ServerCog,
-  ShieldCheck,
-} from "lucide-react";
-import { HOCKER_NAVIGATION } from "@/lib/hocker-navigation";
+import { AppWindow, Bot, Boxes, Search, ServerCog } from "lucide-react";
+import { HOCKER_NAVIGATION, HOCKER_SECONDARY_NAVIGATION } from "@/lib/hocker-navigation";
 import { OPERATIONS_CATALOG, type OperationsCatalogKind } from "@/lib/operations-catalog";
 
-type PaletteItem = {
-  id: string;
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  group: string;
-  keywords?: string;
-};
+type PaletteItem = { id: string; label: string; href: string; icon: LucideIcon; group: string; keywords?: string };
 
-const NAVIGATION_ITEMS: PaletteItem[] = HOCKER_NAVIGATION.flatMap((section) =>
-  section.items.map((item) => ({
-    id: `nav-${item.id}`,
-    label: item.label,
-    href: item.href,
-    icon: item.icon,
-    group: section.label,
-    keywords: item.keywords,
-  })),
-);
-
-const SPECIAL_ITEMS: PaletteItem[] = [
-  { id: "security-rls", label: "Políticas RLS", href: "/security/rls", icon: ShieldCheck, group: "Control", keywords: "seguridad supabase rls policies tablas" },
-  { id: "security-grants", label: "Permisos y grants", href: "/security/grants", icon: ShieldCheck, group: "Control", keywords: "seguridad permisos grants roles" },
-  { id: "security-hardening", label: "Hardening", href: "/security/hardening", icon: ShieldCheck, group: "Control", keywords: "seguridad hardening vulnerabilidades" },
-  { id: "memory-review", label: "Revisión de memoria", href: "/memory/review", icon: FileCheck2, group: "Ecosistema", keywords: "memoria revisión evidencia aprendizaje" },
-  { id: "chido-dashboard", label: "Chido Dashboard", href: "/chido/dashboard", icon: Activity, group: "Chido", keywords: "casino dashboard monitoreo" },
-  { id: "chido-admin", label: "Chido Admin", href: "/chido/admin", icon: ShieldCheck, group: "Chido", keywords: "casino admin kyc depósitos retiros pausa" },
-  { id: "chido-ops", label: "Chido Ops", href: "/chido/ops", icon: Database, group: "Chido", keywords: "casino operaciones monitoring" },
-  { id: "jurix", label: "Jurix Compliance", href: "/admin/jurix", icon: FileCheck2, group: "Control", keywords: "jurix legal compliance auditoria exportar" },
-];
-
-const BASE_ITEMS = [...NAVIGATION_ITEMS, ...SPECIAL_ITEMS];
+const PRIMARY_ITEMS: PaletteItem[] = HOCKER_NAVIGATION.map((section) => ({ id: `main-${section.id}`, label: section.label, href: section.href, icon: section.icon, group: "Principal", keywords: section.items.map((item) => item.keywords).join(" ") }));
+const SECONDARY_ITEMS: PaletteItem[] = HOCKER_SECONDARY_NAVIGATION.map((item) => {
+  const section = HOCKER_NAVIGATION.find((candidate) => candidate.items.some((value) => value.id === item.id));
+  return { id: `nav-${item.id}`, label: item.label, href: item.href, icon: item.icon, group: section?.label ?? "Más", keywords: item.keywords };
+});
 
 function catalogIcon(kind: OperationsCatalogKind): LucideIcon {
   if (kind === "app") return AppWindow;
@@ -57,35 +22,16 @@ function catalogIcon(kind: OperationsCatalogKind): LucideIcon {
   return Boxes;
 }
 
-function catalogGroup(kind: OperationsCatalogKind): string {
-  if (kind === "app") return "Productos";
-  if (kind === "service") return "Servicios internos";
-  if (kind === "agent") return "AGIs";
-  return "Áreas";
-}
+const CATALOG_ITEMS: PaletteItem[] = OPERATIONS_CATALOG.filter((item) => item.href.startsWith("/")).map((item) => ({
+  id: `catalog-${item.id}`,
+  label: item.label,
+  href: item.href,
+  icon: catalogIcon(item.kind),
+  group: item.kind === "agent" ? "AGIs" : item.kind === "app" ? "Apps" : "Recursos",
+  keywords: [item.status, item.repository ?? "", item.runtime ?? "", item.internalTruth, ...item.keywords, ...item.ownerAgis, ...item.capabilities].join(" "),
+}));
 
-const CATALOG_ITEMS: PaletteItem[] = OPERATIONS_CATALOG
-  .filter((item) => item.href.startsWith("/"))
-  .map((item) => ({
-    id: `catalog-${item.id}`,
-    label: item.label,
-    href: item.href,
-    icon: catalogIcon(item.kind),
-    group: catalogGroup(item.kind),
-    keywords: [
-      item.status,
-      item.repository ?? "",
-      item.runtime ?? "",
-      item.internalTruth,
-      ...item.keywords,
-      ...item.ownerAgis,
-      ...item.capabilities,
-    ].join(" "),
-  }));
-
-const SEARCHABLE_ITEMS = [...BASE_ITEMS, ...CATALOG_ITEMS].filter(
-  (item, index, all) => all.findIndex((candidate) => candidate.href === item.href && candidate.label === item.label) === index,
-);
+const SEARCHABLE_ITEMS = [...PRIMARY_ITEMS, ...SECONDARY_ITEMS, ...CATALOG_ITEMS].filter((item, index, all) => all.findIndex((candidate) => candidate.href === item.href && candidate.label === item.label) === index);
 
 export default function CommandPalette() {
   const router = useRouter();
@@ -93,156 +39,43 @@ export default function CommandPalette() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((current) => !current);
-      }
-      if (event.key === "Escape" && open) setOpen(false);
-    }
-
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setOpen((value) => !value); }
+      if (event.key === "Escape") setOpen(false);
+    };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    setQuery("");
-    setActiveIndex(0);
-    const timer = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
-  }, [open]);
+  }, []);
+  useEffect(() => { if (open) { setQuery(""); setActiveIndex(0); setTimeout(() => inputRef.current?.focus(), 30); } }, [open]);
 
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("es-MX");
-    if (!normalized) return BASE_ITEMS;
-
-    return SEARCHABLE_ITEMS.filter((item) =>
-      `${item.label} ${item.group} ${item.keywords ?? ""}`
-        .toLocaleLowerCase("es-MX")
-        .includes(normalized),
-    );
+    const value = query.trim().toLocaleLowerCase("es-MX");
+    return value ? SEARCHABLE_ITEMS.filter((item) => `${item.label} ${item.group} ${item.keywords ?? ""}`.toLocaleLowerCase("es-MX").includes(value)) : [...PRIMARY_ITEMS, ...SECONDARY_ITEMS];
   }, [query]);
 
-  useEffect(() => setActiveIndex(0), [filtered]);
-
-  useEffect(() => {
-    if (!open || !listRef.current) return;
-    listRef.current
-      .querySelector<HTMLElement>(`[data-idx="${activeIndex}"]`)
-      ?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, open]);
-
-  const navigate = useCallback((item: PaletteItem) => {
-    setOpen(false);
-    router.push(item.href);
-  }, [router]);
-
-  function handleKeyDown(event: React.KeyboardEvent) {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveIndex((current) => Math.min(current + 1, Math.max(filtered.length - 1, 0)));
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveIndex((current) => Math.max(current - 1, 0));
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const item = filtered[activeIndex];
-      if (item) navigate(item);
-    }
-  }
-
+  const navigate = useCallback((item: PaletteItem) => { setOpen(false); router.push(item.href); }, [router]);
   if (!open) return null;
-
-  const grouped = new globalThis.Map<string, PaletteItem[]>();
-  for (const item of filtered) {
-    grouped.set(item.group, [...(grouped.get(item.group) ?? []), item]);
-  }
-
-  let runningIndex = 0;
 
   return (
     <>
-      <button
-        type="button"
-        className="fixed inset-0 z-[200] cursor-default bg-black/60 backdrop-blur-sm"
-        onClick={() => setOpen(false)}
-        aria-label="Cerrar búsqueda"
-      />
-
-      <div className="fixed left-1/2 top-[8%] z-[201] w-[94vw] max-w-[700px] -translate-x-1/2 sm:top-[10%]">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Buscar en Hocker ONE"
-          className="overflow-hidden rounded-[26px] border border-white/15 bg-[#070d1a]/98 shadow-[0_40px_120px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
-        >
-          <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
-            <Search className="h-5 w-5 shrink-0 text-slate-500" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Buscar vista, app, AGI, herramienta o función…"
-              className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-white placeholder:text-slate-500 focus:outline-none"
-              aria-label="Buscar en Hocker ONE"
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <kbd className="hidden shrink-0 rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[10px] font-bold text-slate-400 sm:block">ESC</kbd>
+      <button type="button" className="fixed inset-0 z-[200] cursor-default bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Cerrar búsqueda" />
+      <div className="fixed left-1/2 top-[8%] z-[201] w-[94vw] max-w-[680px] -translate-x-1/2">
+        <div role="dialog" aria-modal="true" aria-label="Buscar" className="overflow-hidden rounded-[24px] border border-white/10 bg-[#070d1a]/98 shadow-2xl">
+          <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+            <Search className="h-5 w-5 text-slate-500" />
+            <input ref={inputRef} value={query} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }} onKeyDown={(event) => {
+              if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.min(value + 1, Math.max(filtered.length - 1, 0))); }
+              if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((value) => Math.max(value - 1, 0)); }
+              if (event.key === "Enter" && filtered[activeIndex]) { event.preventDefault(); navigate(filtered[activeIndex]!); }
+            }} placeholder="Buscar en Hocker One…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-slate-600" aria-label="Buscar en Hocker One" />
           </div>
-
-          <div ref={listRef} className="max-h-[68dvh] overflow-y-auto p-2 hko-sidebar-scroll">
-            {filtered.length === 0 ? (
-              <div className="px-4 py-10 text-center">
-                <p className="text-sm font-medium text-slate-300">Sin resultados para “{query}”</p>
-                <p className="mt-1 text-xs text-slate-600">Prueba con una capacidad, repositorio, módulo o responsable.</p>
-              </div>
-            ) : (
-              Array.from(grouped.entries()).map(([group, items]) => (
-                <div key={group} className="mb-1">
-                  <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.20em] text-slate-600">{group}</p>
-                  {items.map((item) => {
-                    const Icon = item.icon;
-                    const index = runningIndex++;
-                    const active = index === activeIndex;
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        data-idx={index}
-                        onClick={() => navigate(item)}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        className={[
-                          "flex min-h-11 w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
-                          active
-                            ? "border-sky-300/25 bg-sky-400/12 text-white"
-                            : "border-transparent text-slate-400 hover:bg-white/[0.04]",
-                        ].join(" ")}
-                      >
-                        <Icon className={active ? "h-[18px] w-[18px] text-sky-300" : "h-[18px] w-[18px] text-slate-500"} />
-                        <span className="flex-1 text-[13px] font-bold tracking-[0.02em]">{item.label}</span>
-                        {active ? <kbd className="rounded-lg border border-white/10 bg-white/[0.05] px-1.5 py-0.5 text-[9px] font-bold text-slate-400">↵</kbd> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="flex items-center justify-between border-t border-white/10 px-4 py-2.5">
-            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-600">
-              <span>↑↓ Navegar</span>
-              <span>↵ Abrir</span>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-700">Hocker ONE</span>
+          <div className="max-h-[68dvh] overflow-y-auto p-2">
+            {filtered.length === 0 ? <p className="px-4 py-10 text-center text-sm text-slate-500">Sin resultados</p> : filtered.map((item, index) => {
+              const Icon = item.icon;
+              return <button key={`${item.id}-${item.href}`} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => navigate(item)} className={["flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left", index === activeIndex ? "bg-sky-400/12 text-white" : "text-slate-400 hover:bg-white/[0.04]"].join(" ")}><Icon className="h-4 w-4" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span><span className="text-[10px] text-slate-600">{item.group}</span></button>;
+            })}
           </div>
         </div>
       </div>
