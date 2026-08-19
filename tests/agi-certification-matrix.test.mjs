@@ -92,14 +92,16 @@ test("runtime eval certification requires current score-v3 suite and verifiable 
   assert.match(source, /new Set\(evidenceRunIds\)/);
 });
 
-test("AGIs page surfaces certification without creating duplicate navigation", async () => {
+test("AGIs page keeps certification active while presenting one clean decision-first control", async () => {
   const page = await read("src/app/agis/page.tsx");
+
   assert.match(page, /getAgiCertificationSnapshot/);
-  assert.match(page, /Certificaci[oó]n/);
-  assert.match(page, /Pendiente/);
-  assert.match(page, /eval contractual/);
-  assert.match(page, /eval runtime/);
-  assert.match(page, /herramientas probadas/);
+  assert.match(page, /AgiEvalBatchControl/);
+  assert.match(page, /Pendiente:/);
+  assert.match(page, /Pruebas vigentes para su alcance actual/);
+  assert.match(page, /<details/);
+  assert.doesNotMatch(page, /eval contractual|eval runtime|herramientas probadas/i);
+  assert.doesNotMatch(page, /evidence_percent|Worker:|Estado de catálogo:/);
   assert.doesNotMatch(page, /href=\"\/agi-certification\"/);
 });
 
