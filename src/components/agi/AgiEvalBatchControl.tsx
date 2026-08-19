@@ -9,21 +9,27 @@ import type { AgiToolEvalTarget } from "@/lib/agi-certification";
 
 type ToolEvalTarget = AgiToolEvalTarget;
 
-type RuntimeEvalResponse = {
-  passed?: boolean;
-  cases_total?: number;
-  cases_passed?: number;
+type CertificationStepResponse = {
+  ok?: boolean;
+  complete?: boolean;
+  halted?: boolean;
+  retryable?: boolean;
+  continue_after_ms?: number;
   mfa_required?: boolean;
   error?: string;
-};
-
-type ToolEvalResponse = {
-  passed?: boolean;
-  mode?: string;
-  external_writes_executed?: boolean;
-  evidence_ref?: string;
-  mfa_required?: boolean;
-  error?: string;
+  progress?: {
+    total?: number;
+    certified?: number;
+    pending?: number;
+    runtime_pending?: number;
+    tool_pending?: number;
+  };
+  step?: {
+    kind?: "runtime_eval" | "tool_eval" | "complete" | "blocked";
+    agi_id?: string | null;
+    tool_key?: "supabase" | "github" | null;
+    passed?: boolean | null;
+  };
 };
 
 type AgiEvalBatchControlProps = {
@@ -44,6 +50,9 @@ type BatchProgress = {
   errors: number;
   currentLabel: string | null;
 };
+
+const MAX_CERTIFICATION_STEPS = 64;
+const MAX_TRANSIENT_RESUMES = 2;
 
 function initialProgress(runtimeTotal: number, toolTotal: number): BatchProgress {
   return {
@@ -71,6 +80,21 @@ function redirectForAuth(status: number, body: { mfa_required?: boolean }): bool
   return false;
 }
 
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function stepLabel(body: CertificationStepResponse): string | null {
+  if (body.step?.kind === "runtime_eval" && body.step.agi_id) {
+    return `Runtime · ${body.step.agi_id}`;
+  }
+  if (body.step?.kind === "tool_eval" && body.step.agi_id && body.step.tool_key) {
+    return `Tool · ${body.step.agi_id} · ${body.step.tool_key}`;
+  }
+  if (body.step?.kind === "complete") return "Certificación final";
+  return null;
+}
+
 export default function AgiEvalBatchControl({
   agiIds,
   runtimeEvalTargets,
@@ -79,6 +103,7 @@ export default function AgiEvalBatchControl({
 }: AgiEvalBatchControlProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [ceremonyComplete, setCeremonyComplete] = useState(false);
   const [progress, setProgress] = useState<BatchProgress>(() => initialProgress(runtimeEvalTargets.length, toolEvalTargets.length));
   const [message, setMessage] = useState<string | null>(null);
 
@@ -93,125 +118,107 @@ export default function AgiEvalBatchControl({
     if (busy) return;
 
     if (snapshotPartial) {
-      setMessage("El snapshot parcial no permite determinar con certeza qué evidencia está pendiente. La certificación masiva permanece bloqueada hasta recuperar el estado completo del servidor.");
+      setMessage("El snapshot parcial no permite determinar con certeza qué evidencia está pendiente. La certificación Owner permanece bloqueada hasta recuperar el estado completo del servidor.");
       return;
     }
 
     if (agiIds.length !== 16 || new Set(agiIds).size !== 16 || invalidRuntimeTarget || invalidToolTarget) {
-      setMessage("El catálogo o el plan de evaluación no coincide con las 16 AGIs canónicas. La certificación masiva se bloqueó.");
+      setMessage("El catálogo o el plan de evaluación no coincide con las 16 AGIs canónicas. La certificación Owner se bloqueó.");
       return;
     }
 
     setBusy(true);
+    setCeremonyComplete(false);
     setMessage(null);
-    let runtimeCompleted = 0;
-    let runtimePassed = 0;
-    let runtimeFailed = 0;
-    let toolCompleted = 0;
-    let toolPassed = 0;
+    let transientResumes = 0;
     let errors = 0;
+    let runtimeFailed = 0;
 
-    const publishProgress = (currentLabel: string | null) => {
+    const publishProgress = (body: CertificationStepResponse) => {
+      const runtimePending = Number(body.progress?.runtime_pending ?? runtimeEvalTargets.length);
+      const toolPending = Number(body.progress?.tool_pending ?? toolEvalTargets.length);
+      const runtimeCompleted = Math.max(0, runtimeEvalTargets.length - runtimePending);
+      const toolCompleted = Math.max(0, toolEvalTargets.length - toolPending);
       setProgress({
         runtimeCompleted,
         runtimeTotal: runtimeEvalTargets.length,
-        runtimePassed,
+        runtimePassed: runtimeCompleted,
         runtimeFailed,
         toolCompleted,
         toolTotal: toolEvalTargets.length,
-        toolPassed,
+        toolPassed: toolCompleted,
         errors,
-        currentLabel,
+        currentLabel: stepLabel(body),
       });
     };
 
     try {
-      for (const agiId of runtimeEvalTargets) {
-        publishProgress(`Runtime · ${agiId}`);
+      for (let stepIndex = 0; stepIndex < MAX_CERTIFICATION_STEPS; stepIndex += 1) {
+        let response: Response;
+        let body: CertificationStepResponse;
         try {
-          const response = await fetch("/api/agi/evals/run", {
+          response = await fetch("/api/agi/certification/run", {
             method: "POST",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ agi_id: agiId }),
           });
-          const body = (await response.json().catch(() => ({}))) as RuntimeEvalResponse;
-
-          if (redirectForAuth(response.status, body)) return;
-
-          runtimeCompleted += 1;
-          if (response.status === 200 || response.status === 422) {
-            const casesPassed = Number(body.cases_passed ?? 0);
-            const casesTotal = Number(body.cases_total ?? 3);
-            if (body.passed === true && casesPassed === casesTotal) runtimePassed += 1;
-            else runtimeFailed += 1;
-          } else {
-            errors += 1;
-          }
+          body = (await response.json().catch(() => ({}))) as CertificationStepResponse;
         } catch {
-          runtimeCompleted += 1;
           errors += 1;
+          setProgress((current) => ({ ...current, errors, currentLabel: null }));
+          setMessage("La certificación Owner perdió conexión antes de completar el siguiente paso. La evidencia ya persistida se conserva y la ceremonia puede reanudarse.");
+          return;
         }
+
+        if (redirectForAuth(response.status, body)) return;
+        publishProgress(body);
+
+        if (response.ok && body.complete === true) {
+          setCeremonyComplete(true);
+          setMessage("Certificación Owner completa. Hocker One derivó el resultado final desde evidencia runtime y probes read-only persistidos.");
+          router.refresh();
+          return;
+        }
+
+        if (!response.ok || body.halted === true) {
+          if (body.retryable === true && transientResumes < MAX_TRANSIENT_RESUMES) {
+            transientResumes += 1;
+            const waitMs = Math.max(1_000, Math.min(Number(body.continue_after_ms ?? 20_000), 30_000));
+            setMessage(`Límite transitorio detectado. Reanudando automáticamente la misma certificación (${transientResumes}/${MAX_TRANSIENT_RESUMES}) sin repetir evidencia válida.`);
+            await pause(waitMs);
+            continue;
+          }
+
+          errors += 1;
+          if (body.step?.kind === "runtime_eval" && body.retryable !== true) runtimeFailed += 1;
+          publishProgress(body);
+          setMessage(
+            body.retryable === true
+              ? "El proveedor sigue limitado después de los reintentos acotados. La evidencia válida quedó guardada; vuelve a ejecutar la misma certificación para continuar desde el punto pendiente."
+              : "La certificación se detuvo por evidencia no aprobada o por un gate no evaluable automáticamente. No se considera 16/16 hasta remediar ese punto.",
+          );
+          router.refresh();
+          return;
+        }
+
+        transientResumes = 0;
+        const waitMs = Math.max(0, Math.min(Number(body.continue_after_ms ?? 0), 30_000));
+        if (waitMs > 0) await pause(waitMs);
       }
 
-      for (const target of toolEvalTargets) {
-        publishProgress(`Tool · ${target.agi_id} · ${target.tool_key}`);
-        try {
-          const response = await fetch("/api/agi/tools/eval", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ agi_id: target.agi_id, tool_key: target.tool_key }),
-          });
-          const body = (await response.json().catch(() => ({}))) as ToolEvalResponse;
-
-          if (redirectForAuth(response.status, body)) return;
-
-          toolCompleted += 1;
-          if (
-            response.status === 200
-            && body.passed === true
-            && body.mode === "read_only"
-            && body.external_writes_executed === false
-            && typeof body.evidence_ref === "string"
-            && body.evidence_ref.length > 0
-          ) {
-            toolPassed += 1;
-          } else {
-            errors += 1;
-          }
-        } catch {
-          toolCompleted += 1;
-          errors += 1;
-        }
-      }
-
-      publishProgress(null);
-      const runtimeComplete = runtimeCompleted === runtimeEvalTargets.length
-        && runtimePassed === runtimeEvalTargets.length
-        && runtimeFailed === 0;
-      const toolsComplete = toolCompleted === toolEvalTargets.length
-        && toolPassed === toolEvalTargets.length;
-
-      setMessage(
-        errors === 0 && runtimeComplete && toolsComplete
-          ? "La evidencia runtime y de herramientas terminó correctamente. Actualizando el snapshot del servidor; la certificación final sigue siendo derivada por Hocker One."
-          : "La ronda terminó con evidencia parcial. Revisa las AGIs o tools no aprobadas; no se considera certificación completa.",
-      );
+      errors += 1;
+      setProgress((current) => ({ ...current, errors, currentLabel: null }));
+      setMessage("La certificación alcanzó el límite de pasos de seguridad sin cerrar 16/16. La evidencia persistida se conserva; se requiere revisar el snapshot antes de continuar.");
       router.refresh();
     } finally {
       setBusy(false);
     }
   }
 
-  const allPassed = !busy
+  const allPassed = ceremonyComplete
+    && !busy
     && progress.errors === 0
-    && progress.runtimeCompleted === progress.runtimeTotal
-    && progress.runtimePassed === progress.runtimeTotal
-    && progress.runtimeFailed === 0
-    && progress.toolCompleted === progress.toolTotal
-    && progress.toolPassed === progress.toolTotal
-    && (progress.runtimeTotal > 0 || progress.toolTotal > 0);
+    && progress.runtimeFailed === 0;
 
   return (
     <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.055] p-4">
@@ -220,10 +227,10 @@ export default function AgiEvalBatchControl({
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">Certificación Owner 16/16</p>
           <p className="mt-1 text-xs leading-5 text-slate-400">
-            16 AGIs · hasta 48 llamadas de IA · {toolEvalTargets.length} probes read-only pendientes · ejecución secuencial. Requiere una sesión Owner AAL2 válida.
+            Una sola ceremonia Owner · 16 AGIs · runtime + herramientas read-only · ejecución secuencial y resumible. Requiere una sesión Owner AAL2 válida.
           </p>
           <p className="mt-1 text-[11px] text-slate-500">
-            Pendientes ahora: {runtimeEvalTargets.length} suites runtime + {toolEvalTargets.length} probes de herramientas. La evidencia ya vigente no se repite.
+            Pendientes ahora: {runtimeEvalTargets.length} suites runtime + {toolEvalTargets.length} probes de herramientas. Hocker One deriva cada siguiente paso desde evidencia persistida; lo vigente no se repite.
           </p>
         </div>
       </div>
@@ -244,7 +251,7 @@ export default function AgiEvalBatchControl({
       {snapshotPartial ? (
         <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100" role="alert">
           <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Snapshot parcial: Hocker One no tiene evidencia completa para calcular qué evals están pendientes. La ejecución masiva permanece bloqueada.</span>
+          <span>Snapshot parcial: Hocker One no tiene evidencia completa para calcular el siguiente paso. La certificación Owner permanece bloqueada.</span>
         </div>
       ) : null}
 
@@ -255,14 +262,14 @@ export default function AgiEvalBatchControl({
         className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100 transition hover:bg-cyan-300/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
-        {busy ? "Ejecutando evidencia pendiente…" : nothingPending ? "Evidencia de evals al día" : "Ejecutar evidencia pendiente"}
+        {busy ? "Certificando evidencia pendiente…" : nothingPending ? "Evidencia de evals al día" : "Ejecutar certificación Owner única"}
       </button>
 
       {(busy || progress.runtimeCompleted > 0 || progress.toolCompleted > 0) ? (
         <div className="mt-3 rounded-xl border border-white/8 bg-slate-950/45 px-3 py-2 text-xs text-slate-400" role="status">
           <p>Runtime: {progress.runtimeCompleted}/{progress.runtimeTotal} · {progress.runtimePassed} aprobadas · {progress.runtimeFailed} no aprobadas</p>
           <p className="mt-1">Tools: {progress.toolCompleted}/{progress.toolTotal} · {progress.toolPassed} aprobados · {progress.errors} errores acumulados</p>
-          {busy && progress.currentLabel ? <p className="mt-1 text-slate-500">Actual: {progress.currentLabel}</p> : null}
+          {busy && progress.currentLabel ? <p className="mt-1 text-slate-500">Último paso: {progress.currentLabel}</p> : null}
         </div>
       ) : null}
 

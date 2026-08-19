@@ -4,22 +4,24 @@ Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
 Evidence cut: **2026-08-19 / America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
+**Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas; ningún SHA, deployment, contador de evidencia o estado de PR en esta tarjeta autoriza una acción sin reconsulta.
+
 Detalle vigente: `HANDOFF_2026-08-19.md`. Historial previo a la promoción de #230: `HANDOFF_2026-08-19-PRE230.md`.
 
 ## Current recovery pointers
 
-- Hocker One `main`: `6f8686f6506fd6115fd94dd9e5e8fd9a9394c9f2` después de PR #230.
+- Hocker One `main` verificado al iniciar la certificación unificada: `037d5f6cebdf1a44cd6b679b8e84c07bb16852d1` después de PR #239; reconsultar antes de cualquier merge.
 - PR #230: MERGED; candidate `5af606d001955a56858c10fb5bb6934dc778a8c9`.
 - Candidate CI #807 / `32233348527`: SUCCESS — 231/231 + typecheck + lint + build + audit.
 - Candidate Vercel Preview `dpl_EVQHb1fM9vREzbTKMDzGH6SeSdTP`: READY, exact SHA.
-- Production Vercel `dpl_BTizBR6fYWG6v9A1RLov95dQnDVc`: READY, exact merge SHA `6f8686f...`; reviewed `error`/`fatal` logs: none.
-- Supabase `yvuibbcuntqpyqiuqggd`: 16 AGIs / 16 agents / 16 `allow_actions=false` / 0 `agi_eval_result` / 0 `agi_tool_eval_result` / 1 verified MFA factor.
+- Production Vercel de #230 `dpl_BTizBR6fYWG6v9A1RLov95dQnDVc`: READY, exact merge SHA `6f8686f...`; reviewed `error`/`fatal` logs: none.
+- Supabase `yvuibbcuntqpyqiuqggd`: 16 AGIs / 16 agents / 16 `allow_actions=false`; la primera ceremonia Owner AAL2 produjo 1 `agi_eval_result` completo (NOVA), 0 `agi_tool_eval_result`; SYNTIA conservó evidencia parcial de un caso aprobado antes de un rate limit del AI Gateway.
 - Hocker One = primary NOVA runtime/control plane; `nova.agi` fallback not re-certified.
 - Physical Node Agent = degraded until real heartbeat.
 
 ## Next exact move
 
-**Human Owner AAL2 ceremony + pending 16/16 runtime/tool evidence.** Login → `/agis` → `Elevar sesión a AAL2` → verify existing TOTP → ensure certification snapshot is complete → run only pending evidence sequentially → requery durable evidence/server-derived certification.
+**Cerrar Core mediante una única certificación Owner resumible.** Mantener Owner AAL2 → ejecutar sólo evidencia runtime/tool pendiente desde `/agis` → reusar evidencia válida de la suite vigente → reintentar únicamente fallos transitorios de proveedor de forma acotada → reconsultar evidencia durable y aceptar cierre sólo con certificación server-derived 16/16.
 
 ## Non-negotiables
 
