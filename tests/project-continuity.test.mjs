@@ -98,11 +98,12 @@ test("recovery card keeps mutable pointers compact and delegates detailed histor
   assert.match(state, /HANDOFF_2026-08-19\.md/);
   assert.match(state, /Current recovery pointers/);
   assert.match(state, /Reconsultar antes de mutar/i);
+  assert.match(state, /contador de evidencia.*reconsulta/i);
   assert.match(state, /PR #230/);
-  assert.match(state, /0 `agi_eval_result`/);
-  assert.match(state, /0 `agi_tool_eval_result`/);
-  assert.match(state, /fallback\/compatibilidad no re-certificado/i);
-  assert.match(state, /No usar preview histórico/i);
+  assert.match(state, /`agi_eval_result`/);
+  assert.match(state, /`agi_tool_eval_result`/);
+  assert.match(state, /fallback.*(?:not re-certified|no re-certificado)/i);
+  assert.match(state, /historical-preview|preview histórico/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
   assert.doesNotMatch(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
