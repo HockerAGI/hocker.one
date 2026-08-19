@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-18T20:03:28-07:00
+last_verified_at: 2026-08-18T21:04:40-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -288,6 +288,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - The 07:06 reconciliation exact head `7d14efad50accc00200fb68d158b4499dffc12c9` has Vercel Preview `dpl_3b37vHwKPqaCiiZm1zyD2RkKxMD1` = READY; GitHub returns no workflow for the Markdown-only head.
 - The 13:53 reconciliation exact head `59deec0bb36e8140271c26400599afafaeabaa68` has Vercel Preview `dpl_3n9JzfHBwQm6D5HtghXn8hdGjaE3` = READY; GitHub returns no workflow for the Markdown-only head.
 - The 19:02 reconciliation exact head `7d17b8c3fbc10819bb6da93119dee4dbd08830b6` has Vercel Preview `dpl_3Bs97NPtpwhmQ5ZfvcMrPuEEBLJr` = READY; GitHub returns no workflow for the Markdown-only head.
+- The 20:03 reconciliation exact head `6de546da4511e902ba219c02ac08d109a8be666a` has Vercel Preview `dpl_BafrwHH8MwPDRXzPGCGqRzCnCPXZ` = READY; GitHub returns no workflow for the Markdown-only head.
 
 ### 2026-08-17 02:50 PDT — Exact-head gate refresh
 
@@ -527,3 +528,11 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - GitHub still reports `punto.g/main` `protected=false` with zero required status checks. No Phase 4 branch or open PR is currently present, so there is nothing merge-safe to promote.
 - Hocker One `main`, `hocker.agi/main`, PR #230 and PR #25 remain unchanged from the previous cut. Production HOCKER Supabase remains `main=FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY`; fresh Security Advisor output remains the same contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - No `main` merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
+
+### 2026-08-18 21:04 PDT — Ledger exact-head Preview closed green; ecosystem state otherwise stable
+
+- PR #231 exact head `6de546da4511e902ba219c02ac08d109a8be666a` now has Vercel Preview `dpl_BafrwHH8MwPDRXzPGCGqRzCnCPXZ` = `READY`; GitHub returns no workflow for the Markdown-only head.
+- Organization PR activity since the previous cut shows no new product/runtime PR or merge. Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f`; PUNTO·G `main` remains `f424c95b4e95bf549cb040dd8bca644a272f9d15` and remains unprotected with zero required status checks.
+- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
+- Neon PUNTO.G remains the single connected Neon project; default `main=br-little-art-au9zcb71` is `ready`, with 10 branches and no new Phase 4 provider surface promoted. All observed Neon branches remain unprotected.
+- PR #230 and `hocker.agi` PR #25 remain unchanged and blocked by their previously recorded review/preview/visual gates. No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
