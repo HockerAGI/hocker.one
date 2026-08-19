@@ -21,6 +21,26 @@ type EvalCaseResult = {
   task_id: string;
   result_hash: string;
   reasons: string[];
+  reused_case: boolean;
+};
+
+type ReusableEvalRunRow = {
+  id: string;
+  task_id: string | null;
+  project_id: string;
+  agi_id: string | null;
+  status: string;
+  input: unknown;
+  output: unknown;
+  result_hash: string | null;
+  created_at: string;
+};
+
+type EvalTaskRow = {
+  id: string;
+  status: string;
+  attempt_count: number | null;
+  max_attempts: number | null;
 };
 
 export type AgiEvalRunResult = {
@@ -35,6 +55,11 @@ export type AgiEvalRunResult = {
   evidence_run_ids: string[];
   cases: EvalCaseResult[];
 };
+
+const AGI_EVAL_TRANSIENT_MAX_ATTEMPTS = 3;
+const AGI_EVAL_TRANSIENT_BASE_DELAY_MS = 2_500;
+const AGI_EVAL_INTER_CASE_DELAY_MS = 8_000;
+const EVAL_TASK_MAX_ATTEMPTS = 1;
 
 function db(): UntypedSupabase {
   return createAdminSupabase() as unknown as UntypedSupabase;
@@ -67,6 +92,31 @@ function evalGatewayModel(): string {
   const auto = String(process.env.AI_GATEWAY_MODEL_AUTO ?? "").trim();
   const fast = String(process.env.AI_GATEWAY_MODEL_FAST ?? "").trim();
   return auto || fast || "google/gemini-2.5-flash";
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientEvalError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|5\d\d/i.test(message);
+}
+
+async function completeEvalModelWithRetry(args: Parameters<typeof callServerlessAgiModel>[0]) {
+  let lastError: unknown = new Error("AGI_EVAL_MODEL_RETRY_EXHAUSTED");
+  for (let attempt = 1; attempt <= AGI_EVAL_TRANSIENT_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await callServerlessAgiModel(args);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientEvalError(error) || attempt >= AGI_EVAL_TRANSIENT_MAX_ATTEMPTS) {
+        throw error;
+      }
+      await sleep(Math.min(AGI_EVAL_TRANSIENT_BASE_DELAY_MS * (2 ** (attempt - 1)), 10_000));
+    }
+  }
+  throw lastError;
 }
 
 function scoreEvalCase(evalCase: AgiEvalCase, text: string): { passed: boolean; reasons: string[] } {
@@ -144,6 +194,54 @@ async function loadEvaluationProfile(agiId: string): Promise<ModelProfile> {
   } as ModelProfile;
 }
 
+async function loadReusableEvalCases(args: {
+  projectId: "hocker-one";
+  agiId: string;
+  evalCases: AgiEvalCase[];
+}): Promise<Map<string, EvalCaseResult>> {
+  const { data, error } = await db()
+    .from("agi_runs")
+    .select("id,task_id,project_id,agi_id,status,input,output,result_hash,created_at")
+    .eq("project_id", args.projectId)
+    .eq("agi_id", args.agiId)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) throw new Error(`AGI_EVAL_REUSABLE_LOOKUP_FAILED: ${error.message}`);
+  const expectedCases = new Map(args.evalCases.map((evalCase) => [evalCase.id, evalCase]));
+  const reusable = new Map<string, EvalCaseResult>();
+
+  for (const row of (data ?? []) as ReusableEvalRunRow[]) {
+    const input = asRecord(row.input);
+    const output = asRecord(row.output);
+    const caseId = String(input.eval_case_id ?? "");
+    const evalCase = expectedCases.get(caseId);
+    if (!evalCase || reusable.has(caseId)) continue;
+    if (input.eval_suite_version !== AGI_EVAL_SUITE_VERSION) continue;
+    if (output.eval_suite_version !== AGI_EVAL_SUITE_VERSION) continue;
+    if (output.eval_case_id !== caseId || output.passed !== true) continue;
+    if (output.external_writes_executed !== false) continue;
+    if (!row.result_hash || !row.task_id) continue;
+
+    const reasons = Array.isArray(output.reasons)
+      ? output.reasons.filter((value): value is string => typeof value === "string")
+      : [];
+    reusable.set(caseId, {
+      case_id: caseId,
+      kind: evalCase.kind,
+      passed: true,
+      run_id: row.id,
+      task_id: row.task_id,
+      result_hash: row.result_hash,
+      reasons,
+      reused_case: true,
+    });
+  }
+
+  return reusable;
+}
+
 async function createAndClaimExactEvalTask(args: {
   projectId: "hocker-one";
   agiId: string;
@@ -160,38 +258,68 @@ async function createAndClaimExactEvalTask(args: {
     prompt: args.evalCase.prompt,
     expectation: args.evalCase.expectation,
   };
+  const idempotencyKey = `agi-eval:${AGI_EVAL_SUITE_VERSION}:${args.agiId}:${args.evalCase.id}`;
+  const client = db();
 
-  const { data: created, error: createError } = await db()
-    .from("agi_tasks")
-    .insert({
-      project_id: args.projectId,
-      agi_id: args.agiId,
-      title: `AGI eval ${args.evalCase.id}`,
-      details: "Controlled runtime evaluation. No external actions are available.",
-      status: "queued",
-      priority: "normal",
-      task_type: "analysis",
-      payload: { evaluation_only: true },
-      input: taskInput,
-      created_by: args.actorUserId,
-      assigned_to: args.agiId,
-      request_id: args.requestId,
-      trace_id: args.requestId,
-      requires_approval: false,
-      write_policy: "draft_only",
-      max_attempts: 1,
-      idempotency_key: `agi-eval:${AGI_EVAL_SUITE_VERSION}:${args.agiId}:${args.evalCase.id}:${args.requestId}`,
-    })
-    .select("id")
-    .single();
+  const findExisting = async (): Promise<EvalTaskRow | null> => {
+    const { data, error } = await client
+      .from("agi_tasks")
+      .select("id,status,attempt_count,max_attempts")
+      .eq("project_id", args.projectId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (error) throw new Error(`AGI_EVAL_TASK_LOOKUP_FAILED: ${error.message}`);
+    return (data as EvalTaskRow | null) ?? null;
+  };
 
-  if (createError || !created?.id) {
-    throw new Error(`AGI_EVAL_TASK_CREATE_FAILED: ${createError?.message ?? "task_id_missing"}`);
+  let task = await findExisting();
+  if (!task) {
+    const { data: created, error: createError } = await client
+      .from("agi_tasks")
+      .insert({
+        project_id: args.projectId,
+        agi_id: args.agiId,
+        title: `AGI eval ${args.evalCase.id}`,
+        details: "Controlled runtime evaluation. No external actions are available.",
+        status: "queued",
+        priority: "normal",
+        task_type: "analysis",
+        payload: { evaluation_only: true },
+        input: taskInput,
+        created_by: args.actorUserId,
+        assigned_to: args.agiId,
+        request_id: args.requestId,
+        trace_id: args.requestId,
+        requires_approval: false,
+        write_policy: "draft_only",
+        attempt_count: 0,
+        max_attempts: EVAL_TASK_MAX_ATTEMPTS,
+        idempotency_key: idempotencyKey,
+      })
+      .select("id,status,attempt_count,max_attempts")
+      .maybeSingle();
+
+    if (createError || !created?.id) {
+      task = await findExisting();
+      if (!task) {
+        throw new Error(`AGI_EVAL_TASK_CREATE_FAILED: ${createError?.message ?? "task_id_missing"}`);
+      }
+    } else {
+      task = created as EvalTaskRow;
+    }
   }
 
-  const taskId = String(created.id);
+  if (task.status === "working") throw new Error("AGI_EVAL_CASE_ALREADY_RUNNING");
+  if (task.status === "completed") {
+    throw new Error("AGI_EVAL_CASE_COMPLETED_WITHOUT_REUSABLE_EVIDENCE");
+  }
+  if (task.status !== "queued" && task.status !== "failed") {
+    throw new Error(`AGI_EVAL_TASK_STATUS_NOT_CLAIMABLE: ${task.status}`);
+  }
+
+  const previousStatus = task.status;
   const now = new Date().toISOString();
-  const { data: claimed, error: claimError } = await db()
+  const { data: claimed, error: claimError } = await client
     .from("agi_tasks")
     .update({
       status: "working",
@@ -200,12 +328,13 @@ async function createAndClaimExactEvalTask(args: {
       started_at: now,
       last_heartbeat_at: now,
       attempt_count: 1,
+      max_attempts: EVAL_TASK_MAX_ATTEMPTS,
       error: null,
       updated_at: now,
     })
-    .eq("id", taskId)
+    .eq("id", task.id)
     .eq("project_id", args.projectId)
-    .eq("status", "queued")
+    .eq("status", previousStatus)
     .select("id")
     .maybeSingle();
 
@@ -213,7 +342,7 @@ async function createAndClaimExactEvalTask(args: {
     throw new Error(`AGI_EVAL_TASK_EXACT_CLAIM_FAILED: ${claimError?.message ?? "claim_lost"}`);
   }
 
-  return taskId;
+  return String(task.id);
 }
 
 async function startVerifiedEvalRun(args: {
@@ -318,7 +447,7 @@ async function runOneEvalCase(args: {
       model,
     });
 
-    const completion = await callServerlessAgiModel({
+    const completion = await completeEvalModelWithRetry({
       profile: args.profile,
       prompt: [
         "EVALUACIÓN CONTROLADA DE HOCKER.",
@@ -386,6 +515,7 @@ async function runOneEvalCase(args: {
       task_id: taskId,
       result_hash: resultHash,
       reasons: scored.reasons,
+      reused_case: false,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "AGI_EVAL_CASE_FAILED";
@@ -408,11 +538,21 @@ export async function runAgiEvalSuite(args: {
 
   const profile = await loadEvaluationProfile(agiId);
   const requestId = randomUUID();
+  const reusableCases = await loadReusableEvalCases({
+    projectId,
+    agiId,
+    evalCases: suite.cases,
+  });
   const cases: EvalCaseResult[] = [];
 
   // Intentionally sequential: one AGI and one case at a time keeps cost, rate limits
-  // and evidence ordering bounded. There is no run-all endpoint.
-  for (const evalCase of suite.cases) {
+  // and evidence ordering bounded. Completed current-suite cases are reused.
+  for (const [index, evalCase] of suite.cases.entries()) {
+    const reused = reusableCases.get(evalCase.id);
+    if (reused) {
+      cases.push(reused);
+      continue;
+    }
     cases.push(await runOneEvalCase({
       projectId,
       agiId,
@@ -422,6 +562,7 @@ export async function runAgiEvalSuite(args: {
       requestId,
       oidcToken: args.oidc_token,
     }));
+    if (index < suite.cases.length - 1) await sleep(AGI_EVAL_INTER_CASE_DELAY_MS);
   }
 
   const casesPassed = cases.filter((item) => item.passed).length;
@@ -446,6 +587,7 @@ export async function runAgiEvalSuite(args: {
         run_id: item.run_id,
         result_hash: item.result_hash,
         reasons: item.reasons,
+        reused_case: item.reused_case,
       })),
       evaluation_only: true,
       external_writes_executed: false,

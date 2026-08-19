@@ -29,18 +29,21 @@ test("certification snapshot derives resumable runtime and supported read-only t
   assert.match(certification, /!hasVerifiedToolAssignmentEvidence/);
 });
 
-test("batch certification reuses protected endpoints sequentially", async () => {
+test("Owner certification uses one protected resumable endpoint and never fans out", async () => {
   const control = await read("src/components/agi/AgiEvalBatchControl.tsx");
+  const route = await read("src/app/api/agi/certification/run/route.ts");
+  const runner = await read("src/lib/agi-certification-runner.ts");
 
-  assert.match(control, /for \(const agiId of runtimeEvalTargets\)/);
-  assert.match(control, /fetch\("\/api\/agi\/evals\/run"/);
-  assert.match(control, /JSON\.stringify\(\{ agi_id: agiId \}\)/);
-  assert.match(control, /for \(const target of toolEvalTargets\)/);
-  assert.match(control, /fetch\("\/api\/agi\/tools\/eval"/);
-  assert.match(control, /JSON\.stringify\(\{ agi_id: target\.agi_id, tool_key: target\.tool_key \}\)/);
-  assert.doesNotMatch(control, /Promise\.all|Promise\.allSettled|run-all/);
-  assert.match(control, /mfa_required/);
-  assert.match(control, /\/auth\/mfa\?returnTo=%2Fagis/);
+  assert.match(control, /fetch\("\/api\/agi\/certification\/run"/);
+  assert.doesNotMatch(control, /fetch\("\/api\/agi\/evals\/run"|fetch\("\/api\/agi\/tools\/eval"/);
+  assert.match(control, /MAX_CERTIFICATION_STEPS/);
+  assert.match(control, /MAX_TRANSIENT_RESUMES/);
+  assert.doesNotMatch(control, /Promise\.all|Promise\.allSettled/);
+  assert.match(route, /requireOwnerAal2Api\("hocker-one"\)/);
+  assert.match(route, /runAgiCertificationStep/);
+  assert.match(runner, /runtime_eval_targets\[0\]/);
+  assert.match(runner, /tool_eval_targets\[0\]/);
+  assert.doesNotMatch(runner, /Promise\.all|Promise\.allSettled/);
 });
 
 test("Owner can explicitly open the existing AAL2 step-up flow from certification UI", async () => {
@@ -52,11 +55,11 @@ test("Owner can explicitly open the existing AAL2 step-up flow from certificatio
   assert.match(control, /TOTP ya registrado/);
 });
 
-test("batch certification is explicit about bounded calls and partial evidence", async () => {
+test("single ceremony reports bounded progress and preserves resumability", async () => {
   const control = await read("src/components/agi/AgiEvalBatchControl.tsx");
 
-  assert.match(control, /16 AGIs/);
-  assert.match(control, /48 llamadas/);
+  assert.match(control, /Una sola ceremonia Owner/);
+  assert.match(control, /runtimeEvalTargets\.length/);
   assert.match(control, /toolEvalTargets\.length/);
   assert.match(control, /runtimeCompleted/);
   assert.match(control, /runtimePassed/);
@@ -65,6 +68,7 @@ test("batch certification is explicit about bounded calls and partial evidence",
   assert.match(control, /toolPassed/);
   assert.match(control, /errors/);
   assert.match(control, /router\.refresh\(\)/);
+  assert.match(control, /sin repetir evidencia válida/);
 });
 
 test("batch certification fails closed when the server snapshot is partial", async () => {
