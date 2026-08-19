@@ -4,7 +4,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { getControls, requireProjectRole } from "../../_lib";
 import { getErrorMessage } from "@/lib/errors";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 const ShippingValueSchema = z.union([
   z.string().max(500),
