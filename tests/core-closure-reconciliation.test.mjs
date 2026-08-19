@@ -39,6 +39,9 @@ test("development ledger records current authority and supersedes stale PR snaps
   assert.match(ledger, /PR #227/);
   assert.match(ledger, /PR #228/);
   assert.match(ledger, /20260817052915/);
-  assert.match(ledger, /Railway[\s\S]*inactive/i);
+  assert.match(ledger, /Dedicated `nova\.agi` \/ Railway/i);
+  assert.match(ledger, /fallback not currently certified/i);
+  assert.match(ledger, /PENDING EVIDENCE/i);
+  assert.match(ledger, /\/health\/ready/i);
   assert.match(ledger, /Supersedes operational use of PR #215/i);
 });
