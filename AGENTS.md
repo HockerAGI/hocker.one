@@ -1,102 +1,94 @@
 # HOCKER ONE — Instrucciones operativas para Codex y agentes de ingeniería
 
-Este archivo es una guía durable del repositorio. No es una fuente de estado dinámico ni sustituye evidencia conectada.
+Guía durable del repositorio. **No es una fuente de estado dinámico.** El estado actual se recupera desde `docs/operations/INDEX.md` y el handoff activo que ese índice señale.
 
 ## 1. Jerarquía de verdad
 
-Antes de afirmar estado, usa este orden:
-
-1. producción/configuración, base de datos, logs y evidencia reproducible;
+1. producción/configuración, DB, logs y evidencia reproducible;
 2. `main`, migraciones, workflows y contratos ejecutables;
 3. ADR, runbooks, policies, tests y evidence packs aprobados;
 4. fuentes canónicas vigentes;
-5. visión, investigación y conversación histórica.
+5. visión, investigación e historia.
 
-Si dos fuentes difieren, documenta el drift y reconcilia; no elijas silenciosamente la versión conveniente.
+Si divergen, registrar drift y reconciliar. Nunca elegir silenciosamente la versión más conveniente.
 
 ## 2. Límites no negociables
 
-- No escribir directamente a `main`; usar branch + PR.
-- No fusionar mientras CI, tests, revisión de regresiones y gates aplicables no estén verdes.
-- Las 16 AGIs canónicas permanecen `allow_actions=false` salvo una autorización explícita, versionada y con alcance mínimo.
-- NOVA razona, enruta, prepara y coordina; las acciones materiales pasan por Hocker One / Owner Gate.
-- No habilitar dinero real, movimientos de fondos, KYC productivo, vigilancia, ubicación o acciones destructivas por conveniencia técnica.
-- No usar secretos, tokens, cookies, TOTP, documentos KYC, PII restringida o conversaciones privadas como memoria compartida.
-- No inventar integraciones, salud, certificación, cumplimiento ni porcentajes. La ausencia de evidencia se muestra como pendiente/no verificado.
-- Un porcentaje sólo es válido si existe un denominador explícito de gates observables y cada gate tiene evidencia trazable.
+- Branch + PR; no escribir directo a `main`.
+- No fusionar un cambio funcional sin candidate gates aplicables verdes.
+- Exact SHA importa: un Preview histórico no prueba un head nuevo.
+- 16 AGIs canónicas; `allow_actions=false` es baseline hasta decisión explícita/versionada.
+- NOVA coordina/razona; Hocker One / Owner Gate gobierna efectos materiales.
+- No fabricar integraciones, salud, porcentaje, certificación, AAL2 o evidencia.
+- No almacenar secrets, auth headers, TOTP, KYC, PII restringida o raw chats en memoria compartida.
+- No habilitar pagos reales, casino/wallet, KYC, vigilancia/ubicación o destrucción por conveniencia técnica.
+- Incertidumbre en evidencia => fail closed.
 
-## 3. Catálogo y repositorios
+## 3. Continuidad obligatoria
 
-El catálogo de producto sigue gobernado por **10 apps canónicas** y **16 AGIs canónicas**. Un repositorio nuevo no se convierte automáticamente en una app o AGI nueva.
+Al iniciar:
 
-Snapshot observado el 2026-08-15: 9 repositorios accesibles (`hocker.one`, `nova.agi`, `hocker-node-agent`, `hocker.agi`, `chido.casino`, `hocker.ads`, `chido.lab`, `chido.games`, `punto.g`). Este número es evidencia fechada, no una constante: vuelve a consultar GitHub antes de usarlo para decisiones.
+1. leer este archivo;
+2. leer `docs/operations/INDEX.md`;
+3. leer el handoff activo señalado por el índice;
+4. leer `LAST_KNOWN_STATE.md` / closure gate actual;
+5. reconsultar GitHub, Vercel, Supabase y cualquier provider mutable antes de actuar;
+6. confirmar PR, branch y exact head SHA.
 
-`punto.g`, Chido, Wallet, NEXPA, Trackhok y otros dominios sensibles mantienen aislamiento de datos. Compartir sólo hechos operativos autorizados, agregados o explícitamente aprobados.
+Al cerrar un hito material: actualizar una sola fuente de detalle y hacer que las demás apunten a ella. No copiar el mismo relato en Ledger, handoff, closure y alignment. No guardar el chat crudo.
 
-## 4. Contexto, continuidad y memoria compartida
+Context Bridge = continuidad/evidencia operacional. Memory Mirror/SYNTIA = conocimiento reutilizable revisado. Ninguno sustituye auth, Owner Gate o evidencia conectada.
 
-- **Context Bridge** (`docs/operations/CONTEXT_BRIDGE_V1.md`, `src/lib/context-bridge.ts`) es el registro durable de continuidad operativa entre ChatGPT, Codex, GitHub, Google Drive, Supabase y Vercel.
-- **Continuity Protocol** (`docs/operations/CONTINUITY_PROTOCOL.md`) define cómo recuperar una sesión, cuándo emitir checkpoints y cómo reconciliar actividad de repositorios sin depender de un chat abierto.
-- **Last Known State** (`docs/operations/LAST_KNOWN_STATE.md`) es un handoff humano de emergencia y de hitos; no reemplaza los checkpoints vivos ni debe editarse por cada evento menor.
-- **Context Pack** (`src/lib/hocker-context-pack.ts`) debe derivarse de registries/estado observable. No debe contener fases o porcentajes manuales que aparenten estado vivo.
-- **SYNTIA / Memory Mirror** conserva conocimiento reutilizable revisado; no es un volcado de chats ni un sustituto de Context Bridge.
-- Un nuevo manifiesto de Context Bridge se genera desde checkpoints actuales y sólo se activa mediante Owner + MFA AAL2. No reescribas manifiestos activos históricos.
+## 4. Arquitectura vigente como regla durable
 
-### Protocolo obligatorio al iniciar trabajo
+- Hocker One es control plane y **primary NOVA runtime path**.
+- `nova.agi` se conserva como dedicated fallback/compatibility; verificar live revision/readiness/logs/E2E antes de depender de él.
+- `hocker-node-agent` es executor local allowlisted/firmado; no recibe credenciales cloud maestras.
+- Supabase compartido no significa autorización compartida: tenant/project, grants y RLS siguen siendo boundaries.
+- MCP/provider connectors son reemplazables; adapter presente != provider ready.
+- Tool metadata/annotations son hints, no autorización. Policies + Owner Gate mandan.
 
-1. leer este `AGENTS.md`;
-2. leer `docs/operations/LAST_KNOWN_STATE.md`;
-3. consultar el manifiesto/checkpoints activos de Context Bridge si la identidad disponible lo permite;
-4. volver a consultar GitHub/Supabase/Vercel para hechos que puedan haber cambiado;
-5. revisar PRs abiertos y el SHA exacto antes de modificar código.
+## 5. Desarrollo
 
-### Protocolo obligatorio de handoff
+Para feature/bugfix:
 
-Después de un hito material —repo creado/eliminado/renombrado, nueva fase aprobada, PR abierto/cerrado, merge, deployment, migración, cambio de gate, blocker nuevo/resuelto o cierre de sesión importante— publica un checkpoint normalizado con resumen, decisiones, pendientes y referencias exactas. Nunca guardes el chat crudo.
+1. identificar outcome, riesgo y consumidor;
+2. escribir/ajustar test que falle por el problema real;
+3. demostrar RED cuando corresponda;
+4. cambio mínimo GREEN;
+5. regression tests, typecheck, lint, build y dependency/security gates aplicables;
+6. preview exact-head + logs/smoke para cambios funcionales;
+7. merge con head esperado;
+8. producción + logs + rollback evidence;
+9. handoff actualizado.
 
-Si el agente no puede publicar el checkpoint, actualiza `LAST_KNOWN_STATE.md` en la misma rama como fallback y deja explícita la falta de checkpoint. No uses GitHub commits como heartbeat periódico.
+No silenciar Supabase Advisors con policies/grants amplios; revisar objeto, consumidor e invariant. No cambiar framework/provider/model en un cierre sólo por novedad: ADR + regression eval + rollback.
 
-## 5. Arquitectura
+## 6. AGI / approvals
 
-- Hocker One es el control plane web/PWA/mobile y la única superficie de aprobación/ejecución cloud gobernada.
-- `nova.agi` es el runtime/orquestador dedicado de NOVA. No dupliques routers, memoria o registros de tools sin una migración de compatibilidad explícita.
-- `hocker-node-agent` sólo ejecuta capacidades locales firmadas/allowlisted; no recibe credenciales cloud maestras.
-- Supabase es estado persistente compartido por dominios con grants/RLS/tenant boundaries; no asumas que compartir proyecto equivale a compartir autorización.
-- Vercel Functions son efímeras; persistir estado durable en la capa autorizada correspondiente.
-- MCP/proveedores son conectores reemplazables. Autenticación, scopes, health y evidencia se verifican por proveedor; configuración no equivale a conexión.
+- Batch de certificación debe ser resumible y ejecutar sólo targets pendientes.
+- Snapshot parcial/incompleto => bloquear batch; nunca sintetizar full rerun.
+- Mantener ejecución secuencial mientras coste/timeouts/evidence boundaries dependan de ello.
+- MFA: si existe factor TOTP verificado, usar challenge/verify para alcanzar AAL2; no reenrolar otro factor por defecto.
+- Nunca insertar `agi_eval_result` / `agi_tool_eval_result` manualmente para certificar.
+- Approval/resume futuros deben probar approve, reject, retry, idempotency, timeout, abort, replay y persistencia antes de producción.
 
-## 6. Desarrollo y seguridad
+## 7. CI / Actions / Vercel FinOps
 
-Antes de implementar:
+- No crear commits dummy para polling, rate-limit retry o únicamente para provocar un provider build si existe `Redeploy`.
+- Agrupar cambios documentales relacionados en un solo commit.
+- Markdown-only puede omitir CI general cuando el workflow/path/ruleset lo permitan sin dejar un required check Pending.
+- Standard GitHub-hosted runners en repos públicos son gratuitos bajo la política vigente de GitHub; los repos privados consumen el allowance del owner/org y los larger runners son billables. Conservar especialmente los runs de repos privados.
+- No usar `[skip ci]` si puede dejar un required check Pending.
+- `concurrency.cancel-in-progress`, dependency cache y path filters son optimizaciones válidas cuando su cambio está justificado/testeado.
+- Vercel Hobby tiene límites de deployment/build; ante rate limit, distinguir provider quota de code failure y preferir reintento/redeploy del mismo candidate.
 
-1. lee `SECURITY.md` y los documentos/ADRs del dominio afectado;
-2. revisa PRs abiertos y versiones anteriores para evitar eliminar capacidades existentes;
-3. escribe o ajusta el test que demuestre el comportamiento esperado;
-4. implementa el cambio mínimo compatible;
-5. ejecuta lint, typecheck, unit/contract/integration tests y build aplicables;
-6. para cambios sensibles, revisa diff de seguridad y autorización/RLS;
-7. usa preview/staging para E2E; no uses producción como entorno de prueba;
-8. al cerrar el trabajo, deja el checkpoint/handoff de continuidad actualizado.
+## 8. UI operativa
 
-No silencies Advisors de Supabase con políticas amplias. RLS, grants, exposición GraphQL y `SECURITY DEFINER` se revisan objeto por objeto.
+Toda UI de estado debe distinguir salud/frescura, readiness, configuración, conexión verificada y evidencia histórica. No mezclar esas dimensiones en un solo badge/porcentaje.
 
-Los workflows generales de CI ignoran cambios únicamente Markdown para conservar minutos gratuitos. Si una modificación documental acompaña código, configuración, tests o migraciones, el CI sigue siendo obligatorio. Los workflows Android/emulador sólo se ejecutan por sus paths o manualmente en el candidate SHA final.
+## 9. Release
 
-## 7. Hocker One UI
+El closure gate activo vive en el documento que `docs/operations/INDEX.md` marque como current. No declarar `HOCKER Core — VERIFIED / INTEGRATION READY` hasta que cada gate nombrado tenga evidencia trazable del mismo candidate/configuración.
 
-La navegación primaria móvil es `NOVA · Pulso · Recursos · Más`; las rutas secundarias siguen siendo funciones reales y no deben eliminarse sólo por simplificar navegación. Antes de retirar un componente antiguo, comprueba si contiene controles funcionales además de presentación.
-
-Toda UI operativa debe distinguir al menos:
-- salud/frescura actual;
-- readiness o avance verificable;
-- configuración presente;
-- conexión verificada;
-- evidencia histórica.
-
-No mezclar estas dimensiones en un único badge o porcentaje.
-
-## 8. Release
-
-La definición de cierre global vive en el evidence pack de plataforma (`docs/operations/PLATFORM_CLOSURE_GATE_2026-08-14.md` mientras siga vigente). No declares Hocker One/AGIs “100%” hasta que sus gates estén respaldados por evidencia del mismo candidate SHA/configuración.
-
-Las rotaciones coordinadas de credenciales pertenecen al gate final de lanzamiento salvo incidente de seguridad que exija revocación inmediata.
+Rotaciones coordinadas de credenciales pertenecen al gate final salvo incidente que exija revocación inmediata.
