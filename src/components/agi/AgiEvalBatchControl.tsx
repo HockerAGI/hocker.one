@@ -129,7 +129,7 @@ export default function AgiEvalBatchControl({
 
     setBusy(true);
     setCeremonyComplete(false);
-    setMessage(null);
+    setMessage("Certificación iniciada. Hocker One está procesando el siguiente paso pendiente; cada suite puede tardar varios segundos. No vuelvas a pulsar el botón mientras aparezca “Certificando evidencia pendiente…”.");
     let transientResumes = 0;
     let errors = 0;
     let runtimeFailed = 0;
@@ -192,16 +192,21 @@ export default function AgiEvalBatchControl({
           errors += 1;
           if (body.step?.kind === "runtime_eval" && body.retryable !== true) runtimeFailed += 1;
           publishProgress(body);
+          const failedTarget = stepLabel(body) ?? "El siguiente paso";
           setMessage(
             body.retryable === true
               ? "El proveedor sigue limitado después de los reintentos acotados. La evidencia válida quedó guardada; vuelve a ejecutar la misma certificación para continuar desde el punto pendiente."
-              : "La certificación se detuvo por evidencia no aprobada o por un gate no evaluable automáticamente. No se considera 16/16 hasta remediar ese punto.",
+              : `${failedTarget} no aprobó la evaluación o requiere remediación. La evidencia válida anterior quedó guardada y no se considera 16/16 hasta resolver únicamente ese punto.`,
           );
           router.refresh();
           return;
         }
 
         transientResumes = 0;
+        const completedTarget = stepLabel(body);
+        if (completedTarget) {
+          setMessage(`${completedTarget} aprobado. Continuando automáticamente con el siguiente paso pendiente…`);
+        }
         const waitMs = Math.max(0, Math.min(Number(body.continue_after_ms ?? 0), 30_000));
         if (waitMs > 0) await pause(waitMs);
       }
@@ -239,6 +244,9 @@ export default function AgiEvalBatchControl({
         <p className="text-[11px] leading-5 text-slate-400">
           AAL2 usa el <strong className="font-bold text-slate-200">TOTP ya registrado</strong> en Google Authenticator. No necesitas enrolar otro factor; introduce el código vigente directamente en Hocker One.
         </p>
+        <p className="mt-2 text-[11px] leading-5 text-slate-500">
+          Si tu sesión ya está en AAL2, Hocker One volverá a <code>/agis</code> sin pedir otro código. Ese comportamiento es esperado.
+        </p>
         <Link
           href="/auth/mfa?returnTo=%2Fagis"
           className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-sky-300/20 bg-sky-300/10 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-sky-100 transition hover:bg-sky-300/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
@@ -266,7 +274,7 @@ export default function AgiEvalBatchControl({
       </button>
 
       {(busy || progress.runtimeCompleted > 0 || progress.toolCompleted > 0) ? (
-        <div className="mt-3 rounded-xl border border-white/8 bg-slate-950/45 px-3 py-2 text-xs text-slate-400" role="status">
+        <div className="mt-3 rounded-xl border border-white/8 bg-slate-950/45 px-3 py-2 text-xs text-slate-400" role="status" aria-live="polite">
           <p>Runtime: {progress.runtimeCompleted}/{progress.runtimeTotal} · {progress.runtimePassed} aprobadas · {progress.runtimeFailed} no aprobadas</p>
           <p className="mt-1">Tools: {progress.toolCompleted}/{progress.toolTotal} · {progress.toolPassed} aprobados · {progress.errors} errores acumulados</p>
           {busy && progress.currentLabel ? <p className="mt-1 text-slate-500">Último paso: {progress.currentLabel}</p> : null}
@@ -281,8 +289,8 @@ export default function AgiEvalBatchControl({
       ) : null}
 
       {message ? (
-        <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs ${allPassed ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`} role="status">
-          {allPassed ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
+        <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs ${busy ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100" : allPassed ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`} role="status" aria-live="polite">
+          {busy ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden="true" /> : allPassed ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
           <span>{message}</span>
         </div>
       ) : null}

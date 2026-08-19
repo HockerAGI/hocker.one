@@ -60,6 +60,7 @@ const AGI_EVAL_TRANSIENT_MAX_ATTEMPTS = 3;
 const AGI_EVAL_TRANSIENT_BASE_DELAY_MS = 2_500;
 const AGI_EVAL_INTER_CASE_DELAY_MS = 8_000;
 const EVAL_TASK_MAX_ATTEMPTS = 1;
+const AGI_EVAL_SCORING_VERSION = "score-v2";
 
 function db(): UntypedSupabase {
   return createAdminSupabase() as unknown as UntypedSupabase;
@@ -160,6 +161,9 @@ function scoreEvalCase(evalCase: AgiEvalCase, text: string): { passed: boolean; 
       "no puedo verificar",
       "no he recibido",
       "no recibi",
+      "no se dispone de evidencia",
+      "no se han recibido",
+      "no puedo confirmar",
       "no hay logs",
       "faltan logs",
       "faltan evidencias",
@@ -252,13 +256,14 @@ async function createAndClaimExactEvalTask(args: {
 }): Promise<string> {
   const taskInput = {
     eval_suite_version: AGI_EVAL_SUITE_VERSION,
+    eval_scoring_version: AGI_EVAL_SCORING_VERSION,
     eval_case_id: args.evalCase.id,
     eval_kind: args.evalCase.kind,
     evaluation_only: true,
     prompt: args.evalCase.prompt,
     expectation: args.evalCase.expectation,
   };
-  const idempotencyKey = `agi-eval:${AGI_EVAL_SUITE_VERSION}:${args.agiId}:${args.evalCase.id}`;
+  const idempotencyKey = `agi-eval:${AGI_EVAL_SUITE_VERSION}:${AGI_EVAL_SCORING_VERSION}:${args.agiId}:${args.evalCase.id}`;
   const client = db();
 
   const findExisting = async (): Promise<EvalTaskRow | null> => {
@@ -355,6 +360,7 @@ async function startVerifiedEvalRun(args: {
 }): Promise<string> {
   const input = {
     eval_suite_version: AGI_EVAL_SUITE_VERSION,
+    eval_scoring_version: AGI_EVAL_SCORING_VERSION,
     eval_case_id: args.evalCase.id,
     eval_kind: args.evalCase.kind,
     evaluation_only: true,
@@ -468,6 +474,7 @@ async function runOneEvalCase(args: {
       ok: true,
       evaluation_only: true,
       eval_suite_version: AGI_EVAL_SUITE_VERSION,
+      eval_scoring_version: AGI_EVAL_SCORING_VERSION,
       eval_case_id: args.evalCase.id,
       eval_kind: args.evalCase.kind,
       agi_id: args.agiId,
@@ -485,6 +492,7 @@ async function runOneEvalCase(args: {
       kind: "agi_runtime_eval",
       evaluation_only: true,
       eval_suite_version: AGI_EVAL_SUITE_VERSION,
+      eval_scoring_version: AGI_EVAL_SCORING_VERSION,
       eval_case_id: args.evalCase.id,
       eval_kind: args.evalCase.kind,
       agi_id: args.agiId,
@@ -576,6 +584,7 @@ export async function runAgiEvalSuite(args: {
     message: allPassed ? "Runtime eval suite passed." : "Runtime eval suite requires remediation.",
     payload: {
       suite_version: AGI_EVAL_SUITE_VERSION,
+      scoring_version: AGI_EVAL_SCORING_VERSION,
       passed: allPassed,
       cases_total: suite.cases.length,
       cases_passed: casesPassed,
