@@ -17,13 +17,18 @@ test("private navigation exposes six simple destinations and preserves secondary
   }
 });
 
-test("mobile dock keeps four frequent destinations plus Más instead of forcing every desktop destination", async () => {
-  const source = await read("src/components/BottomDock.tsx");
+test("mobile dock uses a compact registry with Más instead of forcing every desktop destination", async () => {
+  const [source, navigation] = await Promise.all([
+    read("src/components/BottomDock.tsx"),
+    read("src/lib/hocker-navigation.ts"),
+  ]);
 
   assert.match(source, /HOCKER_MOBILE_NAVIGATION/);
+  assert.match(source, /HOCKER_MOBILE_NAVIGATION\.map/);
   assert.match(source, /hko-bottom-dock-wrap lg:hidden/);
-  assert.match(source, />Más</);
-  assert.doesNotMatch(source, /Operación<\/span>/);
+  const mobileBlock = navigation.match(/export const HOCKER_MOBILE_NAVIGATION[\s\S]*?\];/)?.[0] ?? "";
+  assert.match(mobileBlock, /label: "Más"/);
+  assert.doesNotMatch(mobileBlock, /label: "Operación"/);
 });
 
 test("private shell removes permanent workspace noise and keeps one navigation layer per breakpoint", async () => {
@@ -34,7 +39,7 @@ test("private shell removes permanent workspace noise and keeps one navigation l
   assert.match(source, /<BottomDock \/>/);
   assert.match(source, /<CommandPalette \/>/);
   assert.doesNotMatch(source, /WorkspaceBar/);
-  assert.match(source, /--hko-mobile-dock-reserve|hko-mobile-dock-reserve/);
+  assert.match(source, /hko-mobile-dock-reserve/);
 });
 
 test("desktop topbar does not duplicate the full product logo already owned by sidebar", async () => {

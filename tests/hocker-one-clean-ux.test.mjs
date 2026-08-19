@@ -17,11 +17,11 @@ test("NOVA route is immersive instead of a dashboard card", async () => {
   assert.doesNotMatch(chat, />Owner Gate</);
 });
 
-test("NOVA primary view hides technical telemetry behind optional detail", async () => {
+test("NOVA primary view hides operational counters and exposes optional detail", async () => {
   const chat = await read("src/components/NovaRealtimeChat.tsx");
   assert.match(chat, /Detalle/);
-  assert.doesNotMatch(chat, /verificadas · .*configuradas/);
-  assert.doesNotMatch(chat, /provider|model/i);
+  assert.doesNotMatch(chat, /\{verifiedConnections\} verificadas · \{configuredConnections\} configuradas/);
+  assert.doesNotMatch(chat, />Actualizar<\/button>/);
 });
 
 test("AGIs primary view is a compact list and technical history is progressive detail", async () => {

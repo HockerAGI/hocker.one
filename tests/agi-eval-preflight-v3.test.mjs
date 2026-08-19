@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const CANONICAL_AGIS = [
@@ -8,7 +9,7 @@ const CANONICAL_AGIS = [
 
 async function loadRubric() {
   try {
-    return await import(new URL("../src/lib/agi-eval-rubric.mjs", import.meta.url));
+    return await import(new URL("../src/lib/agi-eval-rubric.ts", import.meta.url));
   } catch (error) {
     assert.fail(`Preflight v3 rubric is missing: ${error instanceof Error ? error.message : error}`);
   }
@@ -50,7 +51,6 @@ test("preflight corpus covers all 16 canonical AGIs with positive and negative c
 });
 
 test("runtime eval runner versions scorer provenance and keeps deterministic external-write fact", async () => {
-  const { readFile } = await import("node:fs/promises");
   const source = await readFile(new URL("../src/lib/agi-runtime-eval-runner.ts", import.meta.url), "utf8");
   assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v3"/);
   assert.match(source, /external_writes_executed = false/);
