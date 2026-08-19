@@ -32,9 +32,16 @@ test("Chido admin requires an authenticated Owner AAL2 session", async () => {
   assert.match(sessionGate, /owner_mfa_required/);
 });
 
-test("runtime dependencies are patched", async () => {
+test("runtime dependencies stay on patched supported lines", async () => {
   const pkg = JSON.parse(await read("package.json"));
-  assert.equal(pkg.dependencies.next, "16.2.12");
+  const nextVersion = /^(\d+)\.(\d+)\.(\d+)$/.exec(pkg.dependencies.next);
+  assert.ok(nextVersion, "Next must remain an exact semver for reproducible production builds");
+  const [, nextMajor, nextMinor, nextPatch] = nextVersion.map(Number);
+  assert.equal(nextMajor, 16, "Next major upgrades require an explicit compatibility cycle");
+  assert.ok(
+    nextMinor > 2 || (nextMinor === 2 && nextPatch >= 12),
+    `Next ${pkg.dependencies.next} is below the approved patched baseline 16.2.12`,
+  );
   assert.equal(pkg.dependencies.react, "19.2.8");
   assert.equal(pkg.dependencies.sharp, "0.35.3");
 });
