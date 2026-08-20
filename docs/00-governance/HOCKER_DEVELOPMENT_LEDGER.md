@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-19T12:56:52-07:00
+last_verified_at: 2026-08-19T22:48:46-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -397,7 +397,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - GitHub still reports `punto.g/main` `protected=false` with no required checks; this remains the primary governance risk for PUNTO·G. No rollback or protection mutation was executed by this audit.
 - Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; PR #230 remains draft/zero-review with exact-head Vercel READY unresolved. No dependency PR was merged.
 - Production HOCKER Supabase remains materially unchanged: current Security Advisor shows only the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled; validation Supabase still has `validation_settlement_marker` RLS-disabled ERROR and inherited wallet/wager SECURITY DEFINER WARNs.
-- No `main` merge was executed by this audit. No HOCKER production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+- No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ### 2026-08-17 17:48 PDT — PUNTO·G Phase 3B integrated and Neon-promoted; Phase 3C branch prepared only
 
@@ -575,3 +575,16 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Direct production AGI evidence remains incomplete: 16 canonical AGIs, 16 agents, 0 with `allow_actions=true`, 51 total runs, 12 runs since 2026-08-19 UTC across only 3 distinct AGIs, latest run `2026-08-19T09:42:04.967363Z`, 3 `agi_eval_result` rows and 0 `agi_tool_eval_result` rows. No 16/16 certification is claimed and no evidence row was manufactured or altered by this audit.
 - Open merge candidates remain gated: `hocker.agi` PR #25 still requires its own authoritative visual/review gate; TypeScript 7 PR #15 remains blocked; CHIDO dependency majors/minors and Node Agent dependency PRs have not been auto-promoted; Hocker Ads PR #18 remains an unmerged provider-neutral draft. No risky/regulated change was merged by this audit.
 - This audit executed no production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality. The only repository mutation in this cut is this append-only Ledger reconciliation branch pending normal PR/review/protection gates.
+
+### 2026-08-19 22:48 PDT — Current reconciliation override: Hocker One recovery cut + PUNTO·G Phase 5 closure
+
+This milestone is the latest operational override for mutable pointers. Historical snapshots above remain append-only evidence and must not be rewritten as if they were current.
+
+- Hocker One `main` is `434c43524bff7020dba8b42acf18fcdb9516bfc5` after merged documentation-only PR #254, following PR #253's append-preserving Ledger reconciliation. `main` remains protected with required status `Verify Hocker ONE`.
+- Direct Vercel authority for Hocker One current `main` is production deployment `dpl_FhWhUWRbQ6brc7ZPB9m13QTYD9Hd` = `READY`; a fresh six-hour runtime-error query returned no error clusters. PR #254 changes continuity documentation only and does not supersede the prior frozen functional runtime authority.
+- HOCKER Supabase production remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY`. Fresh Security Advisor output shows the existing contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled; no new RLS-disabled/no-policy critical regression was observed.
+- Direct AGI evidence is unchanged from the prior cut: 16 canonical AGIs, 16 agents, 0 with `allow_actions=true`, 51 total `agi_runs`, 12 runs since 2026-08-19 UTC across only 3 distinct AGIs, latest run `2026-08-19T09:42:04.967363Z`, 3 durable `agi_eval_result` rows and 0 `agi_tool_eval_result` rows. HOCKER is not certified 16/16; the human Owner AAL2 + complete score-v3/tool-eval evidence remains required.
+- PUNTO·G repository `main` is now `cf09c81cb533d1a3b65db16620fb5124748ba4cd`. Editable `docs/CURRENT-STATUS.md` classifies Phase 5 Trust & Safety / PWA / Admin as `TECHNICALLY CLOSED / ACTIVATION GATED` and Phase 6 Non-transactional pilot readiness as `NEXT / RELEASE GATED`.
+- Direct Neon `PUNTO.G` authority confirms Phase 5 is materialized on default `main=br-little-art-au9zcb71`: Trust & Safety case/enforcement/appeal/legal-hold objects, privileged-admin capability/assurance state and Better Auth passkey persistence exist. The current provider counts are jurisdiction policies = 0, cases = 0, enforcement actions = 0, appeals = 0, active admin capability grants = 0, admin assurance events = 0 and passkeys = 0. This is infrastructure closure without operational/public activation.
+- PUNTO·G `main` remains `protected=false` with required status checks `off`. This is a material governance risk before Phase 6/release activity, particularly because Phase 5 introduced Trust & Safety, privileged-admin and passkey contracts. This audit did not mutate branch-protection policy.
+- No merge, HOCKER production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality was executed by this audit. The only repository mutation in this cut is this append-preserving Ledger reconciliation branch, subject to normal PR/review/protection gates.
