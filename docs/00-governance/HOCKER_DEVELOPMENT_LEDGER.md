@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-19T22:48:46-07:00
+last_verified_at: 2026-08-20T03:05:00-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -487,7 +487,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - PR #231 exact head `73a7627275e61353f09b24b25c81451af9365768` now has Vercel Preview `dpl_993QDVBLA28kwhMBrkd8C7wLnGSn` = `READY`; GitHub returns no workflow for this Markdown-only head.
 - Organization PR activity after the prior cut shows no new product/runtime PR or merge. Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f`; `nova.agi/main` remains `db417f262dfcddcad8e82f6be977415d0b0f3e89`; PUNTO·G `main` remains `62e0d8cdf533864439076737cd30a3224005ebbf`.
 - PR #230 remains open, draft, mergeable and zero-review at `1ced536e40a7610a7fed291712baed87c626371a`. The latest Hocker One deployment inventory still contains no READY Preview for that exact head, so Owner/AAL2 16-AGI certification remains blocked from merge.
-- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL exposure WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
+- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the existing contract-governed GraphQL/SECURITY DEFINER WARNs, SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
 - Fresh Neon provider read confirms project `PUNTO.G` still has default `main=br-little-art-au9zcb71` ready and the same functional schema set through Phase 3D (`auth_private`, `audit`, `control_private`, `identity_private`, `marketplace`, `professional_private`, `social`). No Phase 3E schema or public/customer activation was observed. Neon project inventory currently has 10 branches, all observed branches unprotected; this does not alter the existing GitHub branch-protection debt.
 - No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
 
@@ -509,7 +509,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - PR #231 exact head `477335181ea494f30c87b74aeac2d08e22888bf7` now has Vercel Preview `dpl_Dwyw7gHS1SE6xrjSnYuQfWv75j4E` = `READY`.
 - Organization PR activity since the prior cut shows no new product/runtime PR or merge. Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; `hocker.agi/main` remains `6c8265f290410880315e5addc2b8ce843c49e13f`; PUNTO·G `main` remains `62e0d8cdf533864439076737cd30a3224005ebbf` and remains unprotected with zero required checks.
 - PR #230 remains open, draft, mergeable and unreviewed at `1ced536e40a7610a7fed291712baed87c626371a`; its exact-head Vercel READY gate remains unresolved, so Owner/AAL2 16-AGI certification is still blocked from merge.
-- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new RLS-disabled/no-policy critical regression.
+- Production Supabase remains `ACTIVE_HEALTHY`, branch `main=FUNCTIONS_DEPLOYED`; fresh Security Advisor output remains the contract-governed GraphQL exposure WARNs, existing SECURITY DEFINER RPC WARNs and Leaked Password Protection disabled, with no new critical RLS-disabled/no-policy regression.
 - Neon still exposes the single project `PUNTO.G` / `frosty-mode-96257627`; no Phase 3E resource was found and no provider mutation was executed.
 - No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action, provider activation or regulated functionality was executed by this audit.
 
@@ -588,3 +588,12 @@ This milestone is the latest operational override for mutable pointers. Historic
 - Direct Neon `PUNTO.G` authority confirms Phase 5 is materialized on default `main=br-little-art-au9zcb71`: Trust & Safety case/enforcement/appeal/legal-hold objects, privileged-admin capability/assurance state and Better Auth passkey persistence exist. The current provider counts are jurisdiction policies = 0, cases = 0, enforcement actions = 0, appeals = 0, active admin capability grants = 0, admin assurance events = 0 and passkeys = 0. This is infrastructure closure without operational/public activation.
 - PUNTO·G `main` remains `protected=false` with required status checks `off`. This is a material governance risk before Phase 6/release activity, particularly because Phase 5 introduced Trust & Safety, privileged-admin and passkey contracts. This audit did not mutate branch-protection policy.
 - No merge, HOCKER production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality was executed by this audit. The only repository mutation in this cut is this append-preserving Ledger reconciliation branch, subject to normal PR/review/protection gates.
+
+### 2026-08-20 03:05 PDT — PR #255 exact-head Preview green; PUNTO·G Phase 6 candidate remains CI-red
+
+- PR #255 prior exact head `cd64356a0d18bebbab3bedab5f76f0d0194e6c05` has Vercel Preview `dpl_xavFfpDksYbxjHuhuGS2JTiQG9UG` = `READY`; GitHub returns no workflow for this Markdown-only head.
+- Exact-head Codex review identified a continuity gap: the concrete blocked PUNTO·G Phase 6 candidate needed to be recorded in the Ledger, not only represented by generic `NEXT / RELEASE GATED` wording.
+- PUNTO·G PR #14 remains open/non-draft/mergeable at exact head `b6296150e2c2b81f13cfc3cdf5d8d544125e0c01`; GitHub Actions CI `32342459505` / #215 is `FAILURE` (`verify`). Exact failed step/log cause remains `PENDING EVIDENCE`; no failure cause is invented.
+- Therefore PR #14 is **BLOCKED / NOT PROMOTABLE** despite documentation-only scope. PUNTO·G canonical `main` remains `cf09c81cb533d1a3b65db16620fb5124748ba4cd`, Phase 5 remains `TECHNICALLY CLOSED / ACTIVATION GATED`, and Phase 6 remains `NEXT / RELEASE GATED` until a future exact-head candidate passes promotion gates.
+- Production HOCKER Supabase remains `main=FUNCTIONS_DEPLOYED`, preview `ACTIVE_HEALTHY`; fresh Security Advisor output remains the existing governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled, with no new critical RLS regression.
+- No merge, production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality was executed in this audit cut.
