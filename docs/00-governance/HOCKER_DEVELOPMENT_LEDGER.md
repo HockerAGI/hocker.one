@@ -397,7 +397,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - GitHub still reports `punto.g/main` `protected=false` with no required checks; this remains the primary governance risk for PUNTO·G. No rollback or protection mutation was executed by this audit.
 - Hocker One `main` remains `cd1f8ef1d148394955013252ac06b2add8c0f460`; PR #230 remains draft/zero-review with exact-head Vercel READY unresolved. No dependency PR was merged.
 - Production HOCKER Supabase remains materially unchanged: current Security Advisor shows only the existing contract-governed GraphQL/SECURITY DEFINER WARNs plus Leaked Password Protection disabled; validation Supabase still has `validation_settlement_marker` RLS-disabled ERROR and inherited wallet/wager SECURITY DEFINER WARNs.
-- No merge, production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
+- No `main` merge was executed by this audit. No HOCKER production DDL, RLS/grant mutation, secret change, payment action, AGI material action or regulated activation was executed by this audit.
 
 ### 2026-08-17 17:48 PDT — PUNTO·G Phase 3B integrated and Neon-promoted; Phase 3C branch prepared only
 
