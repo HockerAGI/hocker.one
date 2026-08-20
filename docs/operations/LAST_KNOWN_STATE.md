@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-19 13:32 America/Tijuana**  
+Evidence cut: **2026-08-20 00:51 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
 **Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs de esta tarjeta son evidencia histórica de cortes concretos; no son punteros live.
@@ -14,7 +14,8 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - **Framework promovido:** PR #250 exact-head `2426bc7454322d730ea656214b9c076dede17786`, merge `f5e200973de637d243b2c83e8d079ff46a8eab80`; Next `16.3.1`, CI/Android/Emulator/Preview verificados antes de merge.
 - **Saneamiento Next 16:** PR #252 exact-head `74c512b5b382e20f212e5db7c2c269e3261cd642`, merge `6905117dc5a6fd8c7925169755097f9d84ddf32f`; `/api/health/ping` y `/api/supply/orders` migrados de Edge deprecado a Node sin cambiar auth, roles, kill switch, idempotencia ni `allow_write`. CI #856 = `SUCCESS`; Preview `dpl_H1vCm8NLPNFhfCP1mkpFQ64csgUZ` = `READY`.
 - **Cierre canónico de continuidad:** PR #253 head `3714350df5263a9f9595874fcfaa554fa542e48f`, merge `269363d8b94db779277a1950c0649a33cee6b8c7`; actualizó únicamente el Ledger append-only, preservando historia previa como evidencia y separándola de la autoridad operativa actual.
-- **Producción observada post-#253:** Vercel `dpl_B5Q8J3nrnjxG8QMwpgjFswD8D8bE` = `READY`, target `production`, metadata exacta `githubCommitSha=269363d8b94db779277a1950c0649a33cee6b8c7`, alias `hockerone.vercel.app`; build completado y sin `error`/`fatal` observado en la ventana revisada.
+- **Recovery post-#253:** PR #254 fusionó únicamente esta tarjeta de recuperación y dejó `hocker.one/main=434c43524bff7020dba8b42acf18fcdb9516bfc5`; no cambió runtime ni infraestructura.
+- **Producción observada actual:** Vercel `dpl_FhWhUWRbQ6brc7ZPB9m13QTYD9Hd` = `READY`, target `production`, metadata exacta `githubCommitSha=434c43524bff7020dba8b42acf18fcdb9516bfc5`. Consulta `error`/`fatal` de las seis horas previas al corte: sin entradas. El movimiento desde #253 a #254 es documental y no sustituye la autoridad funcional de #243 + mantenimiento verificado hasta #252.
 - **Protección:** `main` de Hocker One sigue protegido y exige `Verify Hocker ONE`.
 - **Rescate de #233:** cerrado sin merge como supersedido. Dependabot no pudo rebasarlo tras edición externa; el valor útil se reconstruyó desde `main` en #250 sin arrastrar base/wrappers viejos.
 - **Continuidad semántica:** PR #249 sustituyó assertions acopladas a copy/encabezados por evidencia semántica sin debilitar SHA, CI, Preview, producción, Supabase ni Owner Gate.
@@ -22,15 +23,15 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - **Mantenimiento descartado para este ciclo:** #234 Zod 4 y #237 Capacitor Android 8.5, cerrados sin merge.
 - PR #213: cerrado sin merge como supersedido; valor útil adaptado/fusionado en #243 y arquitectura Signal/workspace vieja descartada.
 - PR #244: cerrado sin merge; compactación destructiva del Ledger append-only descartada.
-- **PRs abiertos reconsultados:** 0 en `HockerAGI/hocker.one`; 0 en `HockerAGI/nova.agi` al cierre post-#253.
-- Supabase `yvuibbcuntqpyqiuqggd`: `ACTIVE_HEALTHY`, `us-west-1`, PostgreSQL `17.6.1.063` en el último corte directo.
-- Supabase Core AGI: 16 AGIs, 16 agentes, `allow_actions=true = 0`, 3 filas históricas `agi_eval_result`, 0 filas `agi_tool_eval_result`; el Ledger más reciente registra 51 `agi_runs` totales y evidencia vigente todavía concentrada en 3 AGIs, por lo que no existe certificación 16/16.
+- **PRs abiertos reconsultados:** PR #255 en `HockerAGI/hocker.one` permanece abierto para reconciliación documental global; 0 PRs abiertos observados en `HockerAGI/nova.agi`.
+- Supabase `yvuibbcuntqpyqiuqggd`: branch `main=FUNCTIONS_DEPLOYED`, preview `ACTIVE_HEALTHY` en el corte actual.
+- Supabase Core AGI: 16 AGIs, 16 agentes, `allow_actions=true = 0`, 51 `agi_runs`, evidencia desde 2026-08-19 concentrada en 3 AGIs, 3 filas `agi_eval_result` y 0 filas `agi_tool_eval_result`; no existe certificación 16/16.
 - `score-v3` está desplegado; exige suite/scoring vigente y no convierte evidencia v1/v2 en certificación v3.
 - Certificación Owner: **PENDIENTE DE CEREMONIA HUMANA AAL2**. El cierre técnico/documental no equivale a 16/16 certificado.
 - Leaked Password Protection: `OPEN_PROVIDER_GATE`; no se simula por SQL.
 - `unused_index` de Supabase permanece INFO investigable; no autoriza `DROP INDEX` automático.
-- `nova.agi/main`: `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`, merge de PR #38; 0 PRs abiertos observados. No equivale a evidencia de Railway live.
-- Gmail fue reconsultado tras las interrupciones. Los fallos de CI de SHAs intermedios de #252 quedan como historial superado; la alerta más reciente de #253 confirmó el Preview Vercel y el aviso de límite de Codex review es un límite de revisión, no un fallo de aplicación. No se modificaron mensajes.
+- `nova.agi/main`: `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`, merge de PR #38; no equivale a evidencia de Railway live.
+- Gmail conserva alertas históricas; para estado operativo prevalecen GitHub, Vercel y Supabase reconsultados. No se modificaron mensajes.
 
 ## Next exact move
 
