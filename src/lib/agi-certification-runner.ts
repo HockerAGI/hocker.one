@@ -66,9 +66,9 @@ function errorMessage(error: unknown): string {
 
 function isTransientCertificationError(error: unknown): boolean {
   const message = errorMessage(error);
-  // Timeouts resume at the ceremony boundary after a paced delay rather than
-  // immediately re-entering a model call that already consumed its timeout window.
-  return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|timeout|timed out|5\d\d|already_running/i.test(message);
+  // Provider pressure, bounded timeouts and transport failures are resumable.
+  // Missing auth, invalid contracts, permission failures and scorer failures remain hard stops.
+  return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|timeout|timed out|5\d\d|already_running|fetch failed|network|connection|ECONNRESET|ECONNREFUSED|EAI_AGAIN|UND_ERR|socket/i.test(message);
 }
 
 async function safeSnapshot(): Promise<AgiCertificationSnapshot> {
@@ -101,6 +101,52 @@ async function runAgiCertificationStepInternal(args: RunArgs): Promise<AgiCertif
       progress: progress(before),
       step: { kind: "complete", agi_id: null, tool_key: null, passed: true },
     };
+  }
+
+  // Fail early on deterministic read-only integration readiness before spending LLM calls.
+  const toolTarget = before.tool_eval_targets[0];
+  if (toolTarget) {
+    try {
+      await runAgiReadOnlyToolProbe({
+        agi_id: toolTarget.agi_id,
+        tool_key: toolTarget.tool_key,
+        actor_user_id: args.actor_user_id,
+      });
+      const after = await safeSnapshot();
+      const complete = after.certified === 16 && after.pending === 0;
+      return {
+        ok: true,
+        complete,
+        halted: false,
+        retryable: false,
+        continue_after_ms: complete ? 0 : TOOL_STEP_DELAY_MS,
+        progress: progress(after),
+        step: {
+          kind: "tool_eval",
+          agi_id: toolTarget.agi_id,
+          tool_key: toolTarget.tool_key,
+          passed: true,
+        },
+      };
+    } catch (error) {
+      const after = await safeSnapshot();
+      const retryable = isTransientCertificationError(error);
+      return {
+        ok: false,
+        complete: false,
+        halted: true,
+        retryable,
+        continue_after_ms: retryable ? TRANSIENT_RETRY_DELAY_MS : 0,
+        progress: progress(after),
+        step: {
+          kind: "tool_eval",
+          agi_id: toolTarget.agi_id,
+          tool_key: toolTarget.tool_key,
+          passed: false,
+        },
+        error: retryable ? "tool_eval_transient_failure" : "tool_eval_failed",
+      };
+    }
   }
 
   const agiId = before.runtime_eval_targets[0];
@@ -146,51 +192,6 @@ async function runAgiCertificationStepInternal(args: RunArgs): Promise<AgiCertif
         progress: progress(after),
         step: { kind: "runtime_eval", agi_id: agiId, tool_key: null, passed: false },
         error: retryable ? "runtime_eval_transient_failure" : "runtime_eval_failed",
-      };
-    }
-  }
-
-  const toolTarget = before.tool_eval_targets[0];
-  if (toolTarget) {
-    try {
-      await runAgiReadOnlyToolProbe({
-        agi_id: toolTarget.agi_id,
-        tool_key: toolTarget.tool_key,
-        actor_user_id: args.actor_user_id,
-      });
-      const after = await safeSnapshot();
-      const complete = after.certified === 16 && after.pending === 0;
-      return {
-        ok: true,
-        complete,
-        halted: false,
-        retryable: false,
-        continue_after_ms: complete ? 0 : TOOL_STEP_DELAY_MS,
-        progress: progress(after),
-        step: {
-          kind: "tool_eval",
-          agi_id: toolTarget.agi_id,
-          tool_key: toolTarget.tool_key,
-          passed: true,
-        },
-      };
-    } catch (error) {
-      const after = await safeSnapshot();
-      const retryable = isTransientCertificationError(error);
-      return {
-        ok: false,
-        complete: false,
-        halted: true,
-        retryable,
-        continue_after_ms: retryable ? TRANSIENT_RETRY_DELAY_MS : 0,
-        progress: progress(after),
-        step: {
-          kind: "tool_eval",
-          agi_id: toolTarget.agi_id,
-          tool_key: toolTarget.tool_key,
-          passed: false,
-        },
-        error: retryable ? "tool_eval_transient_failure" : "tool_eval_failed",
       };
     }
   }
