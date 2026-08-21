@@ -6,13 +6,22 @@ import {
   type AgiEvalCase,
 } from "@/lib/agi-eval-suites";
 import { scoreEvidence, scoreMission, scoreOwnerGate } from "@/lib/agi-eval-rubric";
-import { requireCanonicalAgi, canonicalAgiId } from "@/lib/hocker-agi-operational";
-import { callServerlessAgiModel } from "@/lib/serverless-agi-runtime";
+import { completeAgi } from "@/lib/agi-model-router";
+import {
+  buildCanonicalProfilePrompt,
+  requireCanonicalAgi,
+  canonicalAgiId,
+} from "@/lib/hocker-agi-operational";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 type JsonRecord = Record<string, unknown>;
 type UntypedSupabase = SupabaseClient<any, "public", any>;
-type ModelProfile = Parameters<typeof callServerlessAgiModel>[0]["profile"];
+type ModelProfile = {
+  id: string;
+  name: string;
+  canon: ReturnType<typeof requireCanonicalAgi>;
+  meta: JsonRecord;
+};
 
 type EvalCaseResult = {
   case_id: string;
@@ -84,12 +93,6 @@ function asRecord(value: unknown): JsonRecord {
     : {};
 }
 
-function evalGatewayModel(): string {
-  const auto = String(process.env.AI_GATEWAY_MODEL_AUTO ?? "").trim();
-  const fast = String(process.env.AI_GATEWAY_MODEL_FAST ?? "").trim();
-  return auto || fast || "google/gemini-2.5-flash";
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -99,11 +102,23 @@ function isTransientEvalError(error: unknown): boolean {
   return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|timeout|timed out|5\d\d|fetch failed|network|connection|ECONNRESET|ECONNREFUSED|EAI_AGAIN|UND_ERR|socket/i.test(message);
 }
 
-async function completeEvalModelWithRetry(args: Parameters<typeof callServerlessAgiModel>[0]) {
+async function completeEvalModelWithRetry(args: {
+  profile: ModelProfile;
+  prompt: string;
+  timeout_ms?: number;
+  oidc_token?: string | null;
+}) {
   let lastError: unknown = new Error("AGI_EVAL_MODEL_RETRY_EXHAUSTED");
   for (let attempt = 1; attempt <= AGI_EVAL_TRANSIENT_MAX_ATTEMPTS; attempt += 1) {
     try {
-      return await callServerlessAgiModel(args);
+      return await completeAgi({
+        messages: [
+          { role: "system", content: buildCanonicalProfilePrompt(args.profile.canon) },
+          { role: "user", content: args.prompt },
+        ],
+        timeout_ms: args.timeout_ms,
+        oidc_token: args.oidc_token,
+      });
     } catch (error) {
       lastError = error;
       if (!isTransientEvalError(error) || attempt >= AGI_EVAL_TRANSIENT_MAX_ATTEMPTS) {
@@ -162,7 +177,7 @@ async function loadEvaluationProfile(agiId: string): Promise<ModelProfile> {
     name: canon.name,
     canon,
     meta: asRecord(data.meta),
-  } as ModelProfile;
+  };
 }
 
 async function loadReusableEvalCases(args: {
@@ -377,7 +392,6 @@ async function startVerifiedEvalRun(args: {
   agiId: string;
   workerId: string;
   evalCase: AgiEvalCase;
-  model: string;
 }): Promise<string> {
   const input = {
     eval_suite_version: AGI_EVAL_SUITE_VERSION,
@@ -395,8 +409,8 @@ async function startVerifiedEvalRun(args: {
     p_project_id: args.projectId,
     p_agi_id: args.agiId,
     p_worker_id: args.workerId,
-    p_provider: "vercel-ai-gateway",
-    p_model: args.model,
+    p_provider: "hocker-model-router",
+    p_model: "dynamic",
     p_input: input,
     p_trace_id: randomUUID(),
     p_attempt: 1,
@@ -464,14 +478,12 @@ async function runOneEvalCase(args: {
 
   let runId: string | null = null;
   try {
-    const model = evalGatewayModel();
     runId = await startVerifiedEvalRun({
       taskId,
       projectId: args.projectId,
       agiId: args.agiId,
       workerId,
       evalCase: args.evalCase,
-      model,
     });
 
     const completion = await completeEvalModelWithRetry({
@@ -485,9 +497,6 @@ async function runOneEvalCase(args: {
       timeout_ms: 30_000,
       oidc_token: args.oidcToken,
     });
-    if (completion.model !== model) {
-      throw new Error("AGI_EVAL_MODEL_PROVENANCE_MISMATCH");
-    }
 
     const scored = scoreEvalCase(args.evalCase, completion.text);
     const completedAt = new Date().toISOString();
@@ -502,6 +511,8 @@ async function runOneEvalCase(args: {
       summary: completion.text,
       passed: scored.passed,
       reasons: scored.reasons,
+      route: completion.route,
+      route_attempts: completion.attempts,
       provider: completion.provider,
       model: completion.model,
       usage: completion.usage,
@@ -520,6 +531,10 @@ async function runOneEvalCase(args: {
       task_id: taskId,
       run_id: runId,
       result_hash: resultHash,
+      route: completion.route,
+      route_attempts: completion.attempts,
+      provider: completion.provider,
+      model: completion.model,
       external_writes_executed: false,
       completed_at: completedAt,
     }];

@@ -61,3 +61,16 @@ test("all 16 mission certification probes are self-contained synthetic cases", a
     /missionPrompt:\s*"(?:Clasifica un candidato|Revisa un hallazgo|Analiza una serie de métricas|Analiza costos y presupuesto de una operación)/,
   );
 });
+
+test("runtime certification uses the unified provider router instead of the legacy Gateway-only client", async () => {
+  const source = await read("src/lib/agi-runtime-eval-runner.ts");
+
+  assert.match(source, /from "@\/lib\/agi-model-router"/);
+  assert.match(source, /completeAgi/);
+  assert.match(source, /buildCanonicalProfilePrompt/);
+  assert.doesNotMatch(source, /callServerlessAgiModel/);
+  assert.match(source, /route:\s*completion\.route/);
+  assert.match(source, /route_attempts:\s*completion\.attempts/);
+  assert.match(source, /p_provider:\s*"hocker-model-router"/);
+  assert.match(source, /p_model:\s*"dynamic"/);
+});

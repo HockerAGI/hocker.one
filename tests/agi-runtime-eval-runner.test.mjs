@@ -21,10 +21,11 @@ test("eval runner route is Owner AAL2 only, single-AGI and fail closed", async (
   assert.match(route, /Runtime evaluation failed\. Review evidence and logs\./);
 });
 
-test("runtime eval runner uses the existing AI Gateway model client and exact owned tasks", async () => {
+test("runtime eval runner uses the unified model router and exact owned tasks", async () => {
   const source = await read("src/lib/agi-runtime-eval-runner.ts");
 
-  assert.match(source, /callServerlessAgiModel/);
+  assert.match(source, /completeAgi/);
+  assert.doesNotMatch(source, /callServerlessAgiModel/);
   assert.match(source, /getAgiEvalSuite/);
   assert.match(source, /from\("agi_tasks"\)/);
   assert.match(source, /idempotencyKey = `agi-eval:/);
@@ -37,17 +38,16 @@ test("runtime eval runner uses the existing AI Gateway model client and exact ow
   assert.match(source, /fail_agi_task/);
 });
 
-test("eval runner records the same model selection order as the canonical serverless runtime", async () => {
+test("eval runner records actual unified route provenance rather than pinning a Gateway model", async () => {
   const source = await read("src/lib/agi-runtime-eval-runner.ts");
-  const runtime = await read("src/lib/serverless-agi-runtime.ts");
 
-  const sourceAuto = source.indexOf("AI_GATEWAY_MODEL_AUTO");
-  const sourceFast = source.indexOf("AI_GATEWAY_MODEL_FAST");
-  const runtimeAuto = runtime.indexOf("AI_GATEWAY_MODEL_AUTO");
-  const runtimeFast = runtime.indexOf("AI_GATEWAY_MODEL_FAST");
-  assert.ok(sourceAuto >= 0 && sourceFast > sourceAuto, "eval runner must prefer AUTO before FAST");
-  assert.ok(runtimeAuto >= 0 && runtimeFast > runtimeAuto, "canonical runtime must prefer AUTO before FAST");
-  assert.match(source, /completion\.model !== model/);
+  assert.doesNotMatch(source, /AI_GATEWAY_MODEL_AUTO|AI_GATEWAY_MODEL_FAST|evalGatewayModel/);
+  assert.match(source, /p_provider:\s*"hocker-model-router"/);
+  assert.match(source, /p_model:\s*"dynamic"/);
+  assert.match(source, /provider:\s*completion\.provider/);
+  assert.match(source, /model:\s*completion\.model/);
+  assert.match(source, /route:\s*completion\.route/);
+  assert.match(source, /route_attempts:\s*completion\.attempts/);
 });
 
 test("every eval run carries top-level suite and case provenance", async () => {
