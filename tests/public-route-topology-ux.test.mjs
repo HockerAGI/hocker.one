@@ -109,6 +109,16 @@ test("NOVA status requires verified runtime health while technical telemetry sta
   assert.match(verifiedRuntime, /status === "configured"/);
 });
 
+test("NOVA operational status keeps Hocker One primary and dedicated runtime as fallback evidence", async () => {
+  const operational = await read("src/lib/hocker-operational-state.ts");
+
+  assert.match(operational, /primaryNovaHealthy/);
+  assert.match(operational, /primaryNovaFailed/);
+  assert.match(operational, /Runtime primario Hocker One/);
+  assert.match(operational, /runtime dedicado\/fallback/i);
+  assert.match(operational, /primaryNovaHealthy\s*\?\s*"online"/);
+});
+
 test("map, Chido, Supply and memory use evidence instead of static live claims", async () => {
   const map = await read("src/components/map/EcosystemVfxNetwork.tsx");
   const pulse = await read("src/components/map/MapLivePulse.tsx");
