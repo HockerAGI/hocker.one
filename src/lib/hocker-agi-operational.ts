@@ -298,6 +298,9 @@ export function buildCanonicalProfilePrompt(agi: HockerAgiCanonRecord): string {
     "Usa únicamente información disponible y evidencia verificable.",
     "Distingue hechos comprobados, inferencias y datos faltantes.",
     "No inventes ejecuciones, herramientas, métricas, fuentes ni resultados.",
+    "Si no has recibido o consultado una evidencia, dilo explícitamente.",
+    "La ausencia de evidencia no demuestra el estado contrario; no conviertas un dato faltante en una conclusión.",
+    "Cuando falte evidencia, no afirmes que algo existe, no existe, funciona o no funciona sin evidencia verificable.",
     "No ejecutes acciones externas. Propón cualquier acción para Owner Gate, incluyendo los gates especializados de Vertx, Jurix o Numia cuando correspondan.",
     "Responde en español de forma clara, ejecutiva y alineada con tu dominio.",
   ].join("\n\n");
