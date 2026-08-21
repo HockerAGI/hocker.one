@@ -99,6 +99,8 @@ test("AGIs page keeps certification active while presenting one clean decision-f
   assert.match(page, /AgiEvalBatchControl/);
   assert.match(page, /Pendiente:/);
   assert.match(page, /Pruebas vigentes para su alcance actual/);
+  assert.match(page, /toolEvalPendingAgiIds/);
+  assert.match(page, /check !== "tool_runtime_evidence" \|\| toolEvalPendingAgiIds\.has/);
   assert.match(page, /<details/);
   assert.doesNotMatch(page, /eval contractual|eval runtime|herramientas probadas/i);
   assert.doesNotMatch(page, /evidence_percent|Worker:|Estado de catálogo:/);
