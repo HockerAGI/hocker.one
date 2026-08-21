@@ -50,3 +50,14 @@ test("browser ceremony derives its safety budget from pending work instead of fi
   assert.match(control, /toolEvalTargets\.length/);
   assert.match(control, /for \(let stepIndex = 0; stepIndex < certificationStepBudget\(/);
 });
+
+test("all 16 mission certification probes are self-contained synthetic cases", async () => {
+  const suites = await read("src/lib/agi-eval-suites.ts");
+  const selfContainedMissionPrompts = suites.match(/missionPrompt:\s*"Caso de prueba:/g) ?? [];
+
+  assert.equal(selfContainedMissionPrompts.length, 16);
+  assert.doesNotMatch(
+    suites,
+    /missionPrompt:\s*"(?:Clasifica un candidato|Revisa un hallazgo|Analiza una serie de métricas|Analiza costos y presupuesto de una operación)/,
+  );
+});
