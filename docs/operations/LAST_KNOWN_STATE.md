@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-20 19:00 America/Tijuana**  
+Evidence cut: **2026-08-20 19:53 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
 **Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs de esta tarjeta son evidencia histórica de cortes concretos; no son punteros live.
@@ -17,7 +17,7 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - **Correcciones Owner/score-v3 anteriores:** #256 merge `4757d7ff50b33047fcea3ffaf156f167b178b097`, #257 merge `ae399b4e7440cbd0079b57d7172ac99301e09127`, #258 merge `6299080f73d4499936ef14776fd2761ae1ade361`; los FAIL históricos de suites anteriores se conservan.
 - **Corrección reported-claim #259:** exact-head `5c3f03a2baa111234da9d5167771814343af3ff3`, merge/current live cut `18d96d686baff68ad4379ad051a3490370c6be8d`; CI #876 / run `32435389263` = `SUCCESS`; Preview exacto `dpl_EuAUcN8ebfo3JyfMckUw4ZddQ1qh` = `READY`. Corrige el falso positivo donde una afirmación citada para rechazarla podía interpretarse como afirmación factual activa, sin aceptar contradicciones como `no tengo evidencia, pero está operativa`.
 - **Suite vigente de código:** `2026.08.20-4`. El roll de suite preserva toda evidencia histórica de `-1/-2/-3`; no reutilizar resultados anteriores como certificación de `-4`.
-- **Corte live observado 2026-08-20 19:00:** `main=18d96d686baff68ad4379ad051a3490370c6be8d`.
+- **Corte live observado 2026-08-20 19:53:** `main=18d96d686baff68ad4379ad051a3490370c6be8d`.
 - **Producción observada para ese corte:** Vercel `dpl_36uFjgxd3bYjLNtdtpzzRE258zDf` = `READY`, target `production`, metadata exacta `githubCommitSha=18d96d686baff68ad4379ad051a3490370c6be8d`; consulta `error`/`fatal` del deployment en la ventana revisada devolvió 0 entradas.
 - **Protección:** `main` de Hocker One sigue protegido y exige `Verify Hocker ONE`.
 - **Continuidad semántica:** PR #249 sustituyó assertions acopladas a copy/encabezados por evidencia semántica sin debilitar SHA, CI, Preview, producción, Supabase ni Owner Gate.
@@ -27,8 +27,8 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - PR #244: cerrado sin merge; compactación destructiva del Ledger append-only descartada.
 - PR #255: cerrado sin merge como supersedido por el estado posterior #256/#257/#258; no usarlo como recovery authority.
 - PR #260: cerrado sin merge como supersedido por #259; su branch conserva punteros pre-#259 y no debe promoverse.
-- Supabase `yvuibbcuntqpyqiuqggd`: permanece sin una nueva regresión crítica RLS en el Security Advisor reconsultado.
-- Supabase Core AGI: **3 filas `agi_eval_result` históricas y 0 filas `agi_tool_eval_result` observadas**. El último bloque de runs Owner observado antes de #259 sigue concentrado en NOVA. Consulta directa posterior al merge #259 devuelve **0 `agi_runs` posteriores a `2026-08-21T01:13:37Z`**; por tanto no existe todavía evidencia de ceremonia `2026.08.20-4`.
+- Supabase `yvuibbcuntqpyqiuqggd`: permanece sin una nueva regresión crítica RLS en el Security Advisor reconsultado; branch `main=FUNCTIONS_DEPLOYED`, preview `ACTIVE_HEALTHY`.
+- Supabase Core AGI: **7 filas `agi_eval_result` históricas y 0 filas `agi_tool_eval_result` observadas**. Las cuatro filas adicionales son ejecuciones NOVA `score-v3` anteriores al merge #259 (suites `2026.08.14-1`, `2026.08.20-1`, `-2` y `-3`), todas preservadas como evidencia histórica. Consulta directa posterior al merge #259 devuelve **0 `agi_runs` posteriores a `2026-08-21T01:13:37Z`**; por tanto no existe todavía evidencia de ceremonia `2026.08.20-4`.
 - **FAIL histórico preservado:** suite `2026.08.20-3` ejecutó NOVA y dejó `nova.mission=PASS`, `nova.owner_gate=PASS`, `nova.evidence=FAIL` (`unsupported_evidence_claim_detected`). Ese resultado no se reescribe ni se convierte retroactivamente en PASS por #259.
 - Certificación 16/16: **PENDIENTE DE CEREMONIA HUMANA AAL2**. El merge de #259 corrige el scorer y rueda la suite, pero no ejecuta una ceremonia Owner ni crea evidencia de las 16 AGIs.
 - Leaked Password Protection: continúa físicamente deshabilitada bajo `OPEN_PROVIDER_GATE`; mantener bajo su contrato/provider gate y no simular cierre por SQL.
@@ -39,7 +39,7 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 
 1. **No interpretar #259 como certificación.** Requerir una nueva ceremonia humana Owner AAL2 sobre suite `2026.08.20-4`; no insertar eval rows manualmente ni usar service-role como sustituto.
 2. Ejecutar primero NOVA en la suite vigente y reconsultar `agi_runs`/evidencia server-derived. Sólo si NOVA completa legítimamente mission + owner_gate + evidence en PASS, continuar con las AGIs faltantes.
-3. Preservar todos los runs `2026.08.20-3` como evidencia histórica; no re-scorearlos ni mutarlos para que coincidan con #259.
+3. Preservar todos los runs y `agi_eval_result` anteriores a #259 como evidencia histórica; no re-scorearlos ni mutarlos para que coincidan con #259.
 4. Exigir exact-head CI completo + Preview READY + revisión de seguridad antes de cualquier nueva modificación de scoring/prompt.
 5. Reconsultar evidencia durable después de cada avance y cerrar Core certification sólo cuando las 16 AGIs tengan suite/scoring vigente y los tool-evals requeridos estén completos.
 6. Después, re-certificar `nova.agi` con evidencia runtime exacta: deployment/revision → readiness → logs/heartbeat → E2E autenticado → routing/fallback → persistencia/telemetría → rollback.
