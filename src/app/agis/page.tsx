@@ -37,6 +37,7 @@ function visibleState(status: OperationalStatus, certified: boolean): { label: "
 export default async function AgisPage() {
   const [snapshot, certification] = await Promise.all([getHockerOperationalSnapshot(), getAgiCertificationSnapshot()]);
   const certificationById = new Map(certification.entries.map((entry) => [entry.agi_id, entry]));
+  const toolEvalPendingAgiIds = new Set(certification.tool_eval_targets.map((target) => target.agi_id));
   const attention = snapshot.agis.filter((agi) => agi.status === "degraded" || agi.status === "offline").length;
 
   return (
@@ -66,7 +67,11 @@ export default async function AgisPage() {
         {snapshot.agis.map((agi, index) => {
           const cert = certificationById.get(certificationId(agi.key));
           const state = visibleState(agi.status, Boolean(cert?.certified_for_current_scope));
-          const pending = cert?.missing.map(missingLabel) ?? ["evidencia"];
+          const pending = cert
+            ? cert.missing
+                .filter((check) => check !== "tool_runtime_evidence" || toolEvalPendingAgiIds.has(cert.agi_id))
+                .map(missingLabel)
+            : ["evidencia"];
           return (
             <details id={`agi-${cert?.agi_id ?? certificationId(agi.key)}`} key={agi.key} className={index === 0 ? "group" : "group border-t border-white/[0.055]"}>
               <summary className="flex min-h-[72px] cursor-pointer list-none items-center gap-3 px-3 py-3 sm:px-4">
