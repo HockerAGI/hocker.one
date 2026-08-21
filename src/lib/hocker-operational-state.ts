@@ -265,14 +265,27 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
       : "No existe un worker verificable registrado para este perfil.";
 
     if (key === "nova") {
-      status = runtime.service_status.nova.status === "online"
-        ? "online"
-        : runtime.service_status.nova.status === "offline"
-          ? "offline"
-          : runtime.service_status.nova.status === "configured"
-            ? "configured"
-            : "unknown";
-      evidence = runtime.service_status.nova.detail;
+      const primaryNovaFresh = Boolean(latestRun && isFresh(lastActivityAt, AGI_RUNTIME_FRESH_MS));
+      const primaryNovaHealthy = Boolean(primaryNovaFresh && latestRun && isSuccessfulRun(latestRun.status));
+      const primaryNovaFailed = Boolean(primaryNovaFresh && latestRun && isFailedRun(latestRun.status));
+      const dedicatedNova = runtime.service_status.nova;
+
+      status = primaryNovaHealthy ? "online"
+        : primaryNovaFailed ? "degraded"
+          : dedicatedNova.status === "online" ? "online"
+            : dedicatedNova.status === "offline" ? (latestRun ? "stale" : "offline")
+              : dedicatedNova.status === "configured" ? "configured"
+                : "unknown";
+
+      if (primaryNovaHealthy) {
+        evidence = `Runtime primario Hocker One con ejecución reciente (${latestRun?.status ?? "desconocido"}); runtime dedicado/fallback: ${dedicatedNova.detail}`;
+      } else if (primaryNovaFailed) {
+        evidence = `Runtime primario Hocker One registró una ejecución fallida (${latestRun?.status ?? "desconocido"}); runtime dedicado/fallback: ${dedicatedNova.detail}`;
+      } else if (latestRun) {
+        evidence = `Runtime primario Hocker One sin ejecución reciente; runtime dedicado/fallback: ${dedicatedNova.detail}`;
+      } else {
+        evidence = `Sin ejecución verificable del runtime primario Hocker One; runtime dedicado/fallback: ${dedicatedNova.detail}`;
+      }
     } else if (latestRun && isFresh(lastActivityAt, AGI_RUNTIME_FRESH_MS)) {
       status = isFailedRun(latestRun.status) ? "degraded" : isSuccessfulRun(latestRun.status) ? "online" : "configured";
       evidence = `Ejecución reciente registrada con estado ${latestRun.status ?? "desconocido"}.`;
