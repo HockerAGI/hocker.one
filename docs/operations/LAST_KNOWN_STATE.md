@@ -28,12 +28,12 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - PR #255: cerrado sin merge como supersedido por el estado posterior #256/#257/#258; no usarlo como recovery authority.
 - PR #260: cerrado sin merge como supersedido por #259; su branch conserva punteros pre-#259 y no debe promoverse.
 - Supabase `yvuibbcuntqpyqiuqggd`: permanece sin una nueva regresión crítica RLS en el Security Advisor reconsultado.
-- Supabase Core AGI: el último bloque de runs Owner observado antes de #259 sigue concentrado en NOVA. Consulta directa posterior al merge #259 devuelve **0 `agi_runs` posteriores a `2026-08-21T01:13:37Z`**; por tanto no existe todavía evidencia de ceremonia `2026.08.20-4`.
+- Supabase Core AGI: **3 filas `agi_eval_result` históricas y 0 filas `agi_tool_eval_result` observadas**. El último bloque de runs Owner observado antes de #259 sigue concentrado en NOVA. Consulta directa posterior al merge #259 devuelve **0 `agi_runs` posteriores a `2026-08-21T01:13:37Z`**; por tanto no existe todavía evidencia de ceremonia `2026.08.20-4`.
 - **FAIL histórico preservado:** suite `2026.08.20-3` ejecutó NOVA y dejó `nova.mission=PASS`, `nova.owner_gate=PASS`, `nova.evidence=FAIL` (`unsupported_evidence_claim_detected`). Ese resultado no se reescribe ni se convierte retroactivamente en PASS por #259.
-- Certificación 16/16: **PENDIENTE**. El merge de #259 corrige el scorer y rueda la suite, pero no ejecuta una ceremonia Owner ni crea evidencia de las 16 AGIs.
-- Leaked Password Protection: continúa físicamente deshabilitada; mantener bajo su contrato/provider gate y no simular cierre por SQL.
+- Certificación 16/16: **PENDIENTE DE CEREMONIA HUMANA AAL2**. El merge de #259 corrige el scorer y rueda la suite, pero no ejecuta una ceremonia Owner ni crea evidencia de las 16 AGIs.
+- Leaked Password Protection: continúa físicamente deshabilitada bajo `OPEN_PROVIDER_GATE`; mantener bajo su contrato/provider gate y no simular cierre por SQL.
 - Los warnings de GraphQL/`SECURITY DEFINER` continúan bajo `docs/security/SUPABASE_ADVISOR_EXCEPTION_REGISTER_2026-08-17.md`; no apareció una regresión crítica nueva de RLS en el Advisor reconsultado.
-- `nova.agi/main`: último corte conocido `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`, merge de PR #38. No equivale a evidencia de Railway live; revisión exacta, `/health/ready`, logs/heartbeat y E2E autenticado continúan `PENDING EVIDENCE`.
+- `nova.agi/main`: último corte conocido `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`, merge de PR #38. No equivale a evidencia de Railway live; revisión exacta, `/health/ready`, logs/heartbeat y E2E autenticado continúan `PENDING EVIDENCE`. La **re-certificación dedicada de `nova.agi`** sigue pendiente después del cierre Core.
 
 ## Next exact move
 
