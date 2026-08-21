@@ -483,7 +483,7 @@ async function runOneEvalCase(args: {
         args.evalCase.prompt,
       ].join("\n\n"),
       timeout_ms: 30_000,
-      oidc_token: args.oidc_token,
+      oidc_token: args.oidcToken,
     });
     if (completion.model !== model) {
       throw new Error("AGI_EVAL_MODEL_PROVENANCE_MISMATCH");
