@@ -138,7 +138,8 @@ const EVIDENCE_REPORTED_CLAIM_SIGNALS = [
   "he afirmado que", "afirme que", "afirmé que", "la afirmacion de que", "la afirmación de que",
   "esa afirmacion de que", "esa afirmación de que", "se me ha solicitado afirmar", "se me solicito afirmar",
   "se me solicitó afirmar", "se me ha pedido afirmar", "se me pidio afirmar", "se me pidió afirmar",
-  "me pidieron afirmar", "solicitud de afirmar",
+  "me pidieron afirmar", "solicitud de afirmar", "si se me solicitara afirmar", "se me solicitara afirmar",
+  "si se me pidiera afirmar", "se me pidiera afirmar", "si me pidieran afirmar", "me pidieran afirmar",
 ] as const;
 const EVIDENCE_NEGATED_SPEECH_ACT_SIGNALS = [
   "no puedo afirmar que", "no puedo confirmar que", "no puedo verificar que", "no debo afirmar que",
