@@ -4,20 +4,20 @@ Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
 Evidence cut: **2026-08-21 16:01 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
-**Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs, deployment IDs y estados de branching de esta tarjeta son evidencia de un corte concreto; no son punteros eternos.
+**Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs son evidencia histórica de un corte concreto; no son punteros live.
 
 Detalle operativo: `HANDOFF_2026-08-19.md`. Historial de gobierno: `docs/00-governance/HOCKER_DEVELOPMENT_LEDGER.md`. El Ledger conserva historia append-only y debe reconciliarse mediante un append seguro, nunca por compactación destructiva.
 
 ## Recovery pointers
 
-- **Baseline funcional:** PR #243 `e48edf78ee2ed44d149543fa5680a3d6cb767c7a` consolidó shell adaptativo, NOVA inmersiva, AGIs decision-first y `score-v3`.
+- **Baseline funcional de Hocker One:** PR #243 `e48edf78ee2ed44d149543fa5680a3d6cb767c7a` consolidó shell adaptativo, NOVA inmersiva, AGIs decision-first y `score-v3`.
 - **Router de certificación:** PR #266 fue promovido antes de este corte y eliminó el punto único de fallo del Gateway-only path conservando Owner Gate, read-only evals y `allow_actions=false`.
 - **Corte live observado 2026-08-21:** `main=c15566208a6043750834292b1abbf73a6e2a002d` después de PR #268.
 - **PR #268:** exact candidate `eb0a291028e91cb8ad6af2978e60aca921481852`; GitHub Actions CI `32532247633` / #901 = `SUCCESS`. El cambio protege claims condicionales/reportados en evidence scoring, elimina duplicación de pending-tool UX y rueda la certificación a suite `2026.08.21-3`. Historial previo permanece inmutable.
 - **Producción observada para ese corte:** Vercel `dpl_CEPGTHZimLbt9pR9P2qxtvwwwet4` = `READY`, target `production`, metadata exacta `githubCommitSha=c15566208a6043750834292b1abbf73a6e2a002d`. Consulta `error`/`fatal` de la ventana revisada: sin entradas.
 - **Protección:** `main` está protegido y exige `Verify Hocker ONE` para no-admins.
 - **PR #267:** cerrado sin merge como `SUPERSEDED` por #268; no usar como autoridad actual.
-- **NOVA dedicada:** `nova.agi/main=5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`; exact current Railway revision, `/health/ready`, logs/heartbeat y E2E autenticado Hocker One→NOVA siguen `PENDING EVIDENCE`.
+- **NOVA dedicada:** `nova.agi/main=5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`; exact current Railway revision, `/health/ready`, logs/heartbeat y E2E autenticado Hocker One→NOVA siguen `PENDING EVIDENCE`. La re-certificación dedicada de `nova.agi` permanece pendiente hasta contar con esa evidencia live verificable.
 - **PUNTO·G:** `main=cf09c81cb533d1a3b65db16620fb5124748ba4cd`; `main` continúa `protected=false` y required status checks OFF. PR #14 permanece abierto y bloqueado por CI rojo; Phase 6 no está promovida.
 
 ## AGI certification state
@@ -25,8 +25,9 @@ Detalle operativo: `HANDOFF_2026-08-19.md`. Historial de gobierno: `docs/00-gove
 - Canonical AGIs: **16**.
 - Canonical agents: **16**.
 - `allow_actions=true`: **0** en la última evidencia durable válida; no habilitar acciones para “hacer pasar” certificación.
-- Owner certification sigue protegida por **AAL2** humano.
+- Owner certification: **PENDIENTE DE CEREMONIA HUMANA AAL2**.
 - `agi_eval_result` y `agi_tool_eval_result` deben derivarse del servidor y del suite/scoring vigente; nunca insertar filas manualmente ni reinterpretar evidencia histórica.
+- En este corte operativo se mantienen **0 filas `agi_tool_eval_result`** como último puntero documental verificable; reconsultar Supabase antes de afirmar progreso.
 - La suite promovida por #268 es **`2026.08.21-3`**. El merge/deploy no constituye por sí mismo nueva evidencia 16/16; después del rollout debe reconsultarse la evidencia durable antes de afirmar progreso.
 - Los resultados de suites anteriores permanecen históricos y no se reescriben retroactivamente.
 
