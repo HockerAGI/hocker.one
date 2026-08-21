@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-20 19:05 America/Tijuana**  
+Evidence cut: **2026-08-20 19:00 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
 **Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs de esta tarjeta son evidencia histórica de cortes concretos; no son punteros live.
@@ -17,7 +17,7 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - **Correcciones Owner/score-v3 anteriores:** #256 merge `4757d7ff50b33047fcea3ffaf156f167b178b097`, #257 merge `ae399b4e7440cbd0079b57d7172ac99301e09127`, #258 merge `6299080f73d4499936ef14776fd2761ae1ade361`; los FAIL históricos de suites anteriores se conservan.
 - **Corrección reported-claim #259:** exact-head `5c3f03a2baa111234da9d5167771814343af3ff3`, merge/current live cut `18d96d686baff68ad4379ad051a3490370c6be8d`; CI #876 / run `32435389263` = `SUCCESS`; Preview exacto `dpl_EuAUcN8ebfo3JyfMckUw4ZddQ1qh` = `READY`. Corrige el falso positivo donde una afirmación citada para rechazarla podía interpretarse como afirmación factual activa, sin aceptar contradicciones como `no tengo evidencia, pero está operativa`.
 - **Suite vigente de código:** `2026.08.20-4`. El roll de suite preserva toda evidencia histórica de `-1/-2/-3`; no reutilizar resultados anteriores como certificación de `-4`.
-- **Corte live observado 2026-08-20 19:05:** `main=18d96d686baff68ad4379ad051a3490370c6be8d`.
+- **Corte live observado 2026-08-20 19:00:** `main=18d96d686baff68ad4379ad051a3490370c6be8d`.
 - **Producción observada para ese corte:** Vercel `dpl_36uFjgxd3bYjLNtdtpzzRE258zDf` = `READY`, target `production`, metadata exacta `githubCommitSha=18d96d686baff68ad4379ad051a3490370c6be8d`; consulta `error`/`fatal` del deployment en la ventana revisada devolvió 0 entradas.
 - **Protección:** `main` de Hocker One sigue protegido y exige `Verify Hocker ONE`.
 - **Continuidad semántica:** PR #249 sustituyó assertions acopladas a copy/encabezados por evidencia semántica sin debilitar SHA, CI, Preview, producción, Supabase ni Owner Gate.
