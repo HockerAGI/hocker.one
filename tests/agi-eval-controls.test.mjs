@@ -30,7 +30,10 @@ test("unified certification control handles MFA step-up and preserves resumable 
 test("unified certification control is bounded and fail-closed", async () => {
   const control = await read("src/components/agi/AgiEvalBatchControl.tsx");
 
-  assert.match(control, /MAX_CERTIFICATION_STEPS = 64/);
+  assert.doesNotMatch(control, /MAX_CERTIFICATION_STEPS = 64/);
+  assert.match(control, /certificationStepBudget/);
+  assert.match(control, /CERTIFICATION_STEP_MARGIN = 12/);
+  assert.match(control, /runtimeEvalTargets\.length \* 3 \+ toolEvalTargets\.length/);
   assert.match(control, /MAX_TRANSIENT_RESUMES = 2/);
   assert.match(control, /snapshotPartial/);
   assert.match(control, /invalidCatalog/);

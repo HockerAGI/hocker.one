@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, Loader2, Play, RotateCw, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Play, RotateCw } from "lucide-react";
 import type { AgiToolEvalTarget } from "@/lib/agi-certification";
 
 type ToolEvalTarget = AgiToolEvalTarget;
@@ -22,8 +22,17 @@ type AgiEvalBatchControlProps = {
 };
 
 type BatchProgress = { runtimeCompleted: number; runtimeTotal: number; toolCompleted: number; toolTotal: number; currentLabel: string | null };
-const MAX_CERTIFICATION_STEPS = 64;
 const MAX_TRANSIENT_RESUMES = 2;
+const CERTIFICATION_STEP_MARGIN = 12;
+
+function certificationStepBudget(runtimeEvalTargets: string[], toolEvalTargets: ToolEvalTarget[]): number {
+  // score-v3 has three runtime cases per AGI. Add the exact pending tool probes,
+  // one completion response, bounded transient retries and a small fail-safe margin.
+  return Math.max(
+    1,
+    runtimeEvalTargets.length * 3 + toolEvalTargets.length + CERTIFICATION_STEP_MARGIN,
+  );
+}
 
 function redirectForAuth(status: number, body: { mfa_required?: boolean }): boolean {
   if (status === 403 && body.mfa_required === true) { window.location.assign("/auth/mfa?returnTo=%2Fagis"); return true; }
@@ -69,7 +78,7 @@ export default function AgiEvalBatchControl({ agiIds, runtimeEvalTargets, toolEv
     setBusy(true); setResumeNeeded(false); setAttentionId(null); setMessage("En proceso. Puedes dejar que Hocker One continúe; lo ya aprobado se conserva.");
     let transientResumes = 0;
     try {
-      for (let stepIndex = 0; stepIndex < MAX_CERTIFICATION_STEPS; stepIndex += 1) {
+      for (let stepIndex = 0; stepIndex < certificationStepBudget(runtimeEvalTargets, toolEvalTargets); stepIndex += 1) {
         let response: Response;
         let body: CertificationStepResponse;
         try {
