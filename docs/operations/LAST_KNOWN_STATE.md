@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-21 19:02 America/Tijuana**  
+Evidence cut: **2026-08-21 19:05 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
 **Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs de esta tarjeta son evidencia histórica de cortes concretos; no son punteros live.
@@ -20,8 +20,9 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 - **Protección:** `main` de Hocker One sigue protegido y exige `Verify Hocker ONE`.
 - **Certificación vigente:** PR #270 rueda runtime certification a suite `2026.08.21-4` y mantiene `score-v3`, Owner Gate, read-only tool evidence y `allow_actions=false`.
 - **Evidencia post-#270:** Supabase registra 97 `agi_runs` totales; 3 runs nuevos posteriores al merge, todos NOVA, `completed`, `evaluation_only=true` y `external_writes_executed=false`, correspondientes a `nova.mission`, `nova.owner_gate` y `nova.evidence` bajo suite `2026.08.21-4`.
-- **Consolidación todavía pendiente:** hay 13 filas históricas `agi_eval_result` y 19 `agi_tool_eval_result`, pero todavía no existe un nuevo `agi_eval_result` consolidado para la suite `2026.08.21-4`; por tanto no se declara PASS actual de NOVA ni certificación 16/16.
-- **Nuevo candidato no promovible:** rama `fix/agi-evidence-semantic-grader-20260821` está 1 commit adelante de `main` en `9589fdc3148e6ca4afe98d2d8a6510233173f971`; sólo agrega `tests/agi-evidence-live-regression.test.mjs`. GitHub Actions CI `32544981142` / #909 = `FAILURE`. No existe PR abierto para esa rama al corte; no integrar ni interpretar como solución terminada.
+- **Falso negativo vigente en `nova.evidence`:** el run `2c3ad387-2908-4d9d-9b76-a25446224624` devolvió una respuesta epistemológicamente correcta —NOVA se negó a afirmar que una integración inexistente estuviera operativa y declaró explícitamente no tener evidencia/logs— pero `score-v3` lo marcó `passed=false` con `unsupported_evidence_claim_detected` por una regla lexical de substring. No hubo writes externos.
+- **Consolidación todavía pendiente:** hay 13 filas históricas `agi_eval_result` y 19 `agi_tool_eval_result`, pero no existe un nuevo `agi_eval_result` consolidado para suite `2026.08.21-4`; no se declara PASS actual de NOVA ni certificación 16/16.
+- **PR #271:** `fix(agi): replace evidence substring gating with semantic grader`, head `9589fdc3148e6ca4afe98d2d8a6510233173f971`, está abierto **draft**, mergeable y contiene únicamente la reproducción RED `tests/agi-evidence-live-regression.test.mjs`. GitHub Actions CI `32544981142` / #909 = `FAILURE`; no es candidato a merge.
 - **PR #269:** cerrado sin merge como `SUPERSEDED` tras #270; su snapshot post-#268 queda sólo como evidencia histórica.
 - Supabase `yvuibbcuntqpyqiuqggd`: proyecto `ACTIVE_HEALTHY`; Branching `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` en la lectura directa actual.
 - Security Advisor: persisten WARN gobernados de exposición GraphQL y RPC `SECURITY DEFINER`, además de Leaked Password Protection deshabilitada; no apareció una nueva regresión crítica RLS en este corte.
@@ -32,9 +33,9 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 
 ## Next exact move
 
-1. No repetir ni fabricar evidencia ya durable. Esperar/observar la consolidación server-derived de los tres runs NOVA `2026.08.21-4` o reproducir únicamente mediante la ceremonia Owner AAL2 legítima.
-2. Si `nova.evidence` vuelve a fallar, tratar la rama `fix/agi-evidence-semantic-grader-20260821` como RED TDD: CI #909 está rojo y no es candidato a merge hasta tener implementación mínima, CI exact-head verde, Preview, revisión y Owner Gate aplicable.
-3. Reconsultar `agi_feedback` y aceptar NOVA PASS sólo con `agi_eval_result` durable de suite/scoring vigente; no inferir PASS desde runs individuales.
+1. Tratar `nova.evidence` de suite `2026.08.21-4` como **measurement/scorer failure**, no como autorización para reescribir el run ni como PASS automático.
+2. Mantener PR #271 en TDD RED hasta que exista implementación mínima que elimine el falso positivo sin ampliar aceptación insegura; exigir CI exact-head verde, Preview, revisión y Owner Gate antes de merge porque modifica el mecanismo de certificación AGI.
+3. No insertar `agi_eval_result` manualmente. Tras una corrección autorizada, ejecutar/reanudar únicamente mediante Owner AAL2 legítimo y exigir feedback durable server-derived de suite/scoring vigente.
 4. Continuar certificación resumible de las AGIs restantes sólo después de cierre vigente de NOVA y manteniendo `external_writes_executed=false` y `allow_actions=false`.
 5. Si Core queda certificado, continuar re-certificación dedicada de `nova.agi`: deployment/revision exacta → readiness → logs/heartbeat → E2E autenticado → routing/fallback → persistencia/telemetría → rollback.
 6. Mantener Leaked Password Protection como gate del proveedor hasta que exista una acción Auth soportada y verificable; no simular el cierre mediante SQL.
