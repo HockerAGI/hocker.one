@@ -31,6 +31,22 @@ test("semantic grader has a strict machine-readable verdict and treats candidate
   assert.match(grader, /grader_parse_failure/);
 });
 
+test("semantic grader prefers a different route but can fall back to an isolated call on the candidate route", async () => {
+  const grader = await read("src/lib/agi-evidence-semantic-grader.ts");
+  assert.match(grader, /configuredAgiRoutes/);
+  assert.match(grader, /same_route_fallback/);
+  assert.match(grader, /independence_mode/);
+  assert.match(grader, /route !== args\.candidateRoute/);
+  assert.match(grader, /cross_route_attempts/);
+});
+
+test("grader availability hardening keeps score-v4 and suite-5 because semantics are unchanged", async () => {
+  const suites = await read("src/lib/agi-eval-suites.ts");
+  const certification = await read("src/lib/agi-certification.ts");
+  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-5"/);
+  assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+});
+
 test("semantic scoring revision rolls suite and certification provenance without mutating history", async () => {
   const suites = await read("src/lib/agi-eval-suites.ts");
   const certification = await read("src/lib/agi-certification.ts");
