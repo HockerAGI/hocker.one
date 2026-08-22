@@ -4,7 +4,7 @@ import { createAdminSupabase } from "@/lib/supabase-admin";
 
 export const AGI_CERTIFICATION_VERSION = "2026.08.19-1";
 export const AGI_TOOL_EVAL_VERSION = "2026.08.14-1";
-const AGI_EVAL_SCORING_VERSION = "score-v4";
+const AGI_EVAL_SCORING_VERSION = "score-v5";
 
 type AgentRow = {
   agi_id: string;
