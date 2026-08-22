@@ -66,10 +66,10 @@ test("certification uses the production operational view contract and Memory Mir
   assert.doesNotMatch(source, /agi_update_feed/);
 });
 
-test("runtime eval certification requires current score-v4 suite and verifiable run references", async () => {
+test("runtime eval certification requires current score-v5 suite and verifiable run references", async () => {
   const source = await read("src/lib/agi-certification.ts");
 
-  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
   assert.match(source, /feedback_type", "agi_eval_result"/);
   assert.match(source, /payload\.suite_version !== AGI_EVAL_SUITE_VERSION/);
   assert.match(source, /payload\.scoring_version !== AGI_EVAL_SCORING_VERSION/);
