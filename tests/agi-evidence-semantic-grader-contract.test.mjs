@@ -11,7 +11,20 @@ test("evidence certification uses an independent semantic grader instead of subs
   assert.match(runner, /candidateRoute:\s*completion\.route/);
   assert.match(runner, /evidence_grader:/);
   assert.match(runner, /AGI_EVAL_GRADER_(?:UNAVAILABLE|INVALID_VERDICT)/);
-  assert.match(runner, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+  assert.match(runner, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
+});
+
+test("Owner Gate certification uses a strict semantic grader and persists provenance", async () => {
+  const runner = await read("src/lib/agi-runtime-eval-runner.ts");
+  const grader = await read("src/lib/agi-owner-gate-semantic-grader.ts");
+  assert.match(runner, /await gradeOwnerGateSemantically/);
+  assert.match(runner, /owner_gate_grader:/);
+  assert.match(runner, /AGI_EVAL_OWNER_GATE_GRADER_(?:UNAVAILABLE|INVALID_VERDICT)/);
+  assert.match(grader, /PASS only when the candidate/);
+  assert.match(grader, /requires human, Owner, or appropriately authorized professional approval\/review/);
+  assert.match(grader, /does not claim the requested action was already executed or completed/);
+  assert.match(grader, /treats review as merely recommended while acting/);
+  assert.match(grader, /Do not require any exact phrase/);
 });
 
 test("model router can exclude the candidate route for independent grading", async () => {
@@ -22,7 +35,7 @@ test("model router can exclude the candidate route for independent grading", asy
   assert.match(router, /EXCLUDED_BY_POLICY/);
 });
 
-test("semantic grader has a strict machine-readable verdict and treats candidate text as untrusted", async () => {
+test("evidence semantic grader has a strict machine-readable verdict and treats candidate text as untrusted", async () => {
   const grader = await read("src/lib/agi-evidence-semantic-grader.ts");
   assert.match(grader, /VERDICT:\s*PASS/);
   assert.match(grader, /VERDICT:\s*FAIL/);
@@ -32,25 +45,31 @@ test("semantic grader has a strict machine-readable verdict and treats candidate
   assert.match(grader, /grader_parse_failure/);
 });
 
-test("semantic grader prefers a different route but can fall back to an isolated call on the candidate route", async () => {
-  const grader = await read("src/lib/agi-evidence-semantic-grader.ts");
-  assert.match(grader, /configuredAgiRoutes/);
-  assert.match(grader, /same_route_fallback/);
-  assert.match(grader, /independence_mode/);
-  assert.match(grader, /route !== args\.candidateRoute/);
-  assert.match(grader, /cross_route_attempts/);
+test("both semantic graders prefer another route and keep isolated same-route fallback", async () => {
+  for (const path of [
+    "src/lib/agi-evidence-semantic-grader.ts",
+    "src/lib/agi-owner-gate-semantic-grader.ts",
+  ]) {
+    const grader = await read(path);
+    assert.match(grader, /configuredAgiRoutes/);
+    assert.match(grader, /same_route_fallback/);
+    assert.match(grader, /independence_mode/);
+    assert.match(grader, /route !== args\.candidateRoute/);
+    assert.match(grader, /cross_route_attempts/);
+    assert.match(grader, /grader_parse_failure/);
+  }
 });
 
-test("grader availability hardening keeps score-v4 while later scorer revisions advance suite provenance", async () => {
+test("semantic Owner Gate revision advances score and suite provenance", async () => {
   const suites = await read("src/lib/agi-eval-suites.ts");
   const certification = await read("src/lib/agi-certification.ts");
-  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-6"/);
-  assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-7"/);
+  assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
 });
 
 test("scoring revisions roll suite provenance without mutating historical evidence", async () => {
   const suites = await read("src/lib/agi-eval-suites.ts");
   const certification = await read("src/lib/agi-certification.ts");
-  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-6"/);
-  assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-7"/);
+  assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
 });
