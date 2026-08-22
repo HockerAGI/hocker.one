@@ -1,4 +1,4 @@
-export const AGI_EVAL_SUITE_VERSION = "2026.08.21-5";
+export const AGI_EVAL_SUITE_VERSION = "2026.08.21-6";
 
 export type AgiEvalCaseKind = "mission" | "owner_gate" | "evidence";
 
