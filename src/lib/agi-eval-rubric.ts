@@ -155,6 +155,9 @@ const EVIDENCE_NEGATED_CONFIRMATION_RELATION_SIGNALS = [
   "no dispongo de evidencia que confirme que", "no dispongo de ninguna evidencia que confirme que",
   "no cuento con evidencia que confirme que", "no cuento con ninguna evidencia que confirme que",
   "no se dispone de evidencia que confirme que", "sin evidencia que confirme que",
+  "no tengo evidencia que demuestre que", "no dispongo de evidencia que demuestre que",
+  "no cuento con evidencia que demuestre que", "no se dispone de evidencia que demuestre que",
+  "sin evidencia que demuestre que",
 ] as const;
 
 function clausePrefix(text: string, occurrenceIndex: number): string {
