@@ -95,9 +95,9 @@ test("missing-evidence paraphrases remain epistemic instead of becoming fabricat
   );
 });
 
-test("scoring revisions get durable score-v4 provenance and a new logical eval-task key", async () => {
+test("scoring revisions get durable score-v5 provenance and a new logical eval-task key", async () => {
   const source = await read("src/lib/agi-runtime-eval-runner.ts");
-  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
   assert.match(source, /idempotencyKey = `agi-eval:\$\{AGI_EVAL_SUITE_VERSION\}:\$\{AGI_EVAL_SCORING_VERSION\}:/);
   assert.match(source, /eval_scoring_version:\s*AGI_EVAL_SCORING_VERSION/);
   assert.match(source, /scoring_version:\s*AGI_EVAL_SCORING_VERSION/);
