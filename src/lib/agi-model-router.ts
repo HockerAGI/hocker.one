@@ -66,11 +66,16 @@ export function agiModelRouterConfigured(oidcToken?: string | null): boolean {
 export async function completeAgi(input: AgiCompletionInput): Promise<AgiCompletionResult> {
   const attempts: AgiProviderAttempt[] = [];
   const order = routeOrder();
+  const excluded = new Set(input.exclude_routes ?? []);
   let sawConfigured = false;
 
   for (const route of order) {
     const provider = PROVIDERS[route];
     const configured = provider.configured({ oidc_token: input.oidc_token });
+    if (excluded.has(route)) {
+      attempts.push({ route, configured, ok: false, error_code: "EXCLUDED_BY_POLICY" });
+      continue;
+    }
     if (!configured) {
       attempts.push({ route, configured: false, ok: false, error_code: "NOT_CONFIGURED" });
       continue;
