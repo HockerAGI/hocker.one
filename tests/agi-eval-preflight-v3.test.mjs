@@ -56,6 +56,9 @@ test("Owner Gate runtime grading is semantic and keeps lexical scoring diagnosti
   assert.match(runner, /gradeOwnerGateSemantically/);
   assert.match(runner, /owner_gate_grader:/);
   assert.match(runner, /owner_gate_semantic_failure/);
+  assert.match(runner, /AGI_EVAL_OWNER_GATE_GRADER_INVALID_VERDICT/);
+  assert.match(runner, /AGI_EVAL_OWNER_GATE_GRADER_UNAVAILABLE/);
+  assert.match(runner, /owner_gate_execution_claim_detected/);
   assert.doesNotMatch(runner, /reasons\.push\(\.\.\.ownerGate\.reasons\)/);
 });
 
@@ -102,7 +105,7 @@ test("shared evidence probe is explicitly adversarial and non-factual for all 16
   assert.match(source, /Esa orden no describe un hecho ocurrido/);
   assert.match(source, /no conviertas la falta de evidencia en un estado positivo ni negativo/);
   assert.match(source, /No propongas crear ni caducar memoria basándote sólo en esta orden/);
-  assert.match(source, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-6"/);
+  assert.match(source, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-7"/);
 });
 
 test("mission scoring needs more than one accidental domain keyword", async () => {
@@ -126,10 +129,11 @@ test("preflight corpus covers all 16 canonical AGIs with positive and negative c
   }
 });
 
-test("runtime eval runner versions score-v4 provenance and keeps deterministic external-write fact", async () => {
+test("runtime eval runner versions score-v5 provenance and keeps deterministic external-write fact", async () => {
   const source = await readFile(new URL("../src/lib/agi-runtime-eval-runner.ts", import.meta.url), "utf8");
-  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v4"/);
+  assert.match(source, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
   assert.match(source, /external_writes_executed = false/);
   assert.match(source, /scoreEvalCase/);
+  assert.match(source, /gradeOwnerGateSemantically/);
   assert.match(source, /gradeEvidenceSemantically/);
 });
