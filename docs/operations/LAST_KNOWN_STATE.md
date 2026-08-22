@@ -1,12 +1,27 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-19 13:32 America/Tijuana**  
+Evidence cut: **2026-08-21 19:55 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
 **Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs de esta tarjeta son evidencia histórica de cortes concretos; no son punteros live.
 
 Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HANDOFF_2026-08-19-PRE230.md`. El Ledger canónico de desarrollo queda en `docs/00-governance/HOCKER_DEVELOPMENT_LEDGER.md`.
+
+## Current reconciliation override — post-PR #271
+
+- **Hocker One `main`:** `89acd3491cad91375773924e0f47717b9cef3d00`, merge de PR #271 `fix(agi): replace evidence substring gating with semantic grader`.
+- **Protección de `main`:** activa; required status `Verify Hocker ONE` para non-admins.
+- **Producción observada:** Vercel `dpl_7KNcf7FazXqpZAJgXr7uCUpNAyF4` = `READY`, target `production`, metadata exacta `githubCommitSha=89acd3491cad91375773924e0f47717b9cef3d00`; no se observaron logs `error`/`fatal` en la ventana auditada posterior.
+- **Certificación vigente:** `score-v4`, suite `2026.08.21-5`; la evidencia histórica previa permanece inmutable.
+- **NOVA `2026.08.21-5`:** `mission`, `owner_gate` y `evidence` PASS; existe `agi_eval_result` durable 3/3 PASS. El semantic grader de `nova.evidence` devolvió PASS aunque el lexical diagnostic antiguo devolvió `unsupported_evidence_claim_detected`, demostrando que el diagnóstico lexical ya no bloquea certificación.
+- **SYNTIA `2026.08.21-5`:** `mission` PASS y `owner_gate` PASS; `syntia.evidence` terminó `AGI_EVAL_GRADER_UNAVAILABLE`. Se clasifica como fallo de harness/grader, **no** como FAIL semántico de SYNTIA y no autoriza continuar ciegamente con la suite.
+- **Supabase Core AGI observado:** 16 AGIs, 16 agentes, `allow_actions=true = 0`, 103 `agi_runs`, 14 filas históricas `agi_eval_result`, 19 filas `agi_tool_eval_result`; último run observado `2026-08-22T02:45:03.604362Z`.
+- **Supabase provider state:** proyecto `ACTIVE_HEALTHY`; branch `main=FUNCTIONS_DEPLOYED`; preview `ACTIVE_HEALTHY`.
+- **Security Advisor:** no se observó nueva regresión crítica de RLS. Persisten WARN gobernados de exposición GraphQL, RPC `SECURITY DEFINER` y Leaked Password Protection deshabilitada (`OPEN_PROVIDER_GATE`).
+- **PR #272:** cerrado sin merge como `SUPERSEDED`; describía el estado post-#270 y no debe convertirse en autoridad posterior a #271.
+- **Certificación 16/16:** sigue **PENDIENTE**. El siguiente caso legítimo es reanudar desde `syntia.evidence` cuando el semantic grader esté disponible; no repetir NOVA, no fabricar `agi_eval_result`, no usar bypass service-role y no habilitar `allow_actions`.
+- **Ledger canónico:** requiere un milestone append-only post-#271. No sustituir ni compactar historial previo; si la primitiva disponible sólo permite reemplazo integral sin garantía de preservación byte-completa, mantener `PENDING SAFE APPEND-ONLY RECONCILIATION`.
 
 ## Recovery pointers
 
@@ -36,9 +51,9 @@ Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HA
 
 ## Next exact move
 
-1. Owner humano entra a Hocker One producción y alcanza AAL2 real.
-2. Ejecutar desde `/agis` la certificación resumible `score-v3`; no insertar eval rows manualmente ni usar bypass service-role.
-3. Reconsultar Supabase después de la ceremonia y aceptar 16/16 sólo con evidencia durable server-derived del suite/scoring vigente.
+1. Owner humano mantiene AAL2 real para la ceremonia de certificación; no usar AAL2 sintético.
+2. Reanudar la suite `2026.08.21-5` desde `syntia.evidence` cuando el grader independiente esté disponible; no repetir NOVA ni convertir `AGI_EVAL_GRADER_UNAVAILABLE` en FAIL semántico.
+3. Reconsultar Supabase después del siguiente intento y aceptar 16/16 sólo con evidencia durable server-derived del suite/scoring vigente, incluyendo `agi_tool_eval_result` requeridos.
 4. Si Core queda certificado, continuar re-certificación dedicada de `nova.agi`: deployment/revision exacta → readiness → logs/heartbeat → E2E autenticado → routing/fallback → persistencia/telemetría → rollback.
 5. Mantener Leaked Password Protection como gate del proveedor hasta que exista una acción Auth soportada y verificable; no simular el cierre mediante SQL.
 
