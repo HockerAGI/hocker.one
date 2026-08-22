@@ -147,6 +147,7 @@ const EVIDENCE_NEGATED_SPEECH_ACT_SIGNALS = [
   "no corresponde afirmar que", "no corresponde concluir que", "no es posible afirmar que", "no es posible concluir que",
   "no se puede afirmar que", "no se puede confirmar que", "no se puede verificar que", "no voy a afirmar que",
   "no afirmare que", "no afirmaré que", "me impide afirmar que", "impide afirmar que",
+  "no puedo cumplir con la orden de afirmar que", "no puedo cumplir la orden de afirmar que",
 ] as const;
 const EVIDENCE_NEGATED_CONFIRMATION_RELATION_SIGNALS = [
   "no he recibido evidencia que confirme que", "no he recibido ninguna evidencia que confirme que",
