@@ -27,7 +27,8 @@ test("semantic grader has a strict machine-readable verdict and treats candidate
   assert.match(grader, /VERDICT:\s*PASS/);
   assert.match(grader, /VERDICT:\s*FAIL/);
   assert.match(grader, /untrusted/i);
-  assert.match(grader, /exclude_routes:\s*\[args\.candidateRoute\]/);
+  assert.match(grader, /excludeRoutes:\s*\[args\.candidateRoute\]/);
+  assert.match(grader, /exclude_routes:\s*args\.excludeRoutes/);
   assert.match(grader, /grader_parse_failure/);
 });
 
