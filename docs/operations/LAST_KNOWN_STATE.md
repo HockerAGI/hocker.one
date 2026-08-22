@@ -1,46 +1,49 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**  
-Evidence cut: **2026-08-19 13:32 America/Tijuana**  
+Evidence cut: **2026-08-21 21:06 America/Tijuana**  
 Scope: Hocker One + NOVA + canonical AGI Core.
 
 **Reconsultar antes de mutar:** GitHub, Vercel y Supabase son fuentes vivas. Los SHAs y deployment IDs de esta tarjeta son evidencia histórica de cortes concretos; no son punteros live.
 
-Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HANDOFF_2026-08-19-PRE230.md`. El Ledger canónico de desarrollo queda en `docs/00-governance/HOCKER_DEVELOPMENT_LEDGER.md`.
+Detalle operativo vigente: `HANDOFF_2026-08-19.md`. Historial previo a #230: `HANDOFF_2026-08-19-PRE230.md`. El Ledger canónico de desarrollo queda en `docs/00-governance/HOCKER_DEVELOPMENT_LEDGER.md` y requiere reconciliación append-only separada cuando pueda preservarse íntegramente.
 
 ## Recovery pointers
 
-- **Baseline funcional de Hocker One:** merge de PR #243 `e48edf78ee2ed44d149543fa5680a3d6cb767c7a`; shell adaptativo limpio + NOVA inmersiva + AGIs decision-first + `score-v3`.
+- **Baseline funcional de Hocker One:** merge de PR #243 `e48edf78ee2ed44d149543fa5680a3d6cb767c7a`; shell adaptativo limpio + NOVA inmersiva + AGIs decision-first.
 - **Framework promovido:** PR #250 exact-head `2426bc7454322d730ea656214b9c076dede17786`, merge `f5e200973de637d243b2c83e8d079ff46a8eab80`; Next `16.3.1`, CI/Android/Emulator/Preview verificados antes de merge.
-- **Saneamiento Next 16:** PR #252 exact-head `74c512b5b382e20f212e5db7c2c269e3261cd642`, merge `6905117dc5a6fd8c7925169755097f9d84ddf32f`; `/api/health/ping` y `/api/supply/orders` migrados de Edge deprecado a Node sin cambiar auth, roles, kill switch, idempotencia ni `allow_write`. CI #856 = `SUCCESS`; Preview `dpl_H1vCm8NLPNFhfCP1mkpFQ64csgUZ` = `READY`.
-- **Cierre canónico de continuidad:** PR #253 head `3714350df5263a9f9595874fcfaa554fa542e48f`, merge `269363d8b94db779277a1950c0649a33cee6b8c7`; actualizó únicamente el Ledger append-only, preservando historia previa como evidencia y separándola de la autoridad operativa actual.
-- **Producción observada post-#253:** Vercel `dpl_B5Q8J3nrnjxG8QMwpgjFswD8D8bE` = `READY`, target `production`, metadata exacta `githubCommitSha=269363d8b94db779277a1950c0649a33cee6b8c7`, alias `hockerone.vercel.app`; build completado y sin `error`/`fatal` observado en la ventana revisada.
-- **Corte live observado 2026-08-20:** `main=434c43524bff7020dba8b42acf18fcdb9516bfc5`.
-- **Producción observada para ese corte:** Vercel `dpl_FhWhUWRbQ6brc7ZPB9m13QTYD9Hd` = `READY`, target `production`, metadata exacta `githubCommitSha=434c43524bff7020dba8b42acf18fcdb9516bfc5`.
+- **Saneamiento Next 16:** PR #252 exact-head `74c512b5b382e20f212e5db7c2c269e3261cd642`, merge `6905117dc5a6fd8c7925169755097f9d84ddf32f`; `/api/health/ping` y `/api/supply/orders` migrados de Edge deprecado a Node sin cambiar auth, roles, kill switch, idempotencia ni `allow_write`.
+- **Cierre canónico de continuidad histórico:** PR #253 head `3714350df5263a9f9595874fcfaa554fa542e48f`, merge `269363d8b94db779277a1950c0649a33cee6b8c7`; actualizó únicamente el Ledger append-only.
+- **Scorer score-v4:** PR #271 introdujo semantic grader independiente y suite `2026.08.21-5`.
+- **Grader availability:** PR #274 exact-head `fdaa4217158a2acce7d42408964928802fd65cc7`, merge `bced33ece64f1406e1f19ad0755c00ca2295ae6c`; permite fallback aislado same-route sólo cuando todas las rutas alternativas del grader están no disponibles, sin cambiar criterios semánticos ni fail-closed.
+- **Corte live observado 2026-08-21 21:06 America/Tijuana:** `main=bced33ece64f1406e1f19ad0755c00ca2295ae6c`.
+- **Producción observada para ese corte:** Vercel `dpl_H3uV5ZDfQ2xHaFHf5VA78CrQbGpG` = `READY`, target `production`, metadata exacta `githubCommitSha=bced33ece64f1406e1f19ad0755c00ca2295ae6c`.
 - **Protección:** `main` de Hocker One sigue protegido y exige `Verify Hocker ONE`.
-- **Rescate de #233:** cerrado sin merge como supersedido. Dependabot no pudo rebasarlo tras edición externa; el valor útil se reconstruyó desde `main` en #250 sin arrastrar base/wrappers viejos.
-- **Continuidad semántica:** PR #249 sustituyó assertions acopladas a copy/encabezados por evidencia semántica sin debilitar SHA, CI, Preview, producción, Supabase ni Owner Gate.
-- **Mantenimiento aceptado:** #236 `@next/eslint-plugin-next 16.3.1`, #235 `sonner 2.0.8`, #250 `next 16.3.1` y #252 migración Node runtime.
-- **Mantenimiento descartado para este ciclo:** #234 Zod 4 y #237 Capacitor Android 8.5, cerrados sin merge.
+- **PR #275:** draft, mergeable, head `544f430febc925776ab437d2e412578c8ed2affc`; CI `32550629710` / #933 = `SUCCESS`; Preview Vercel `dpl_Cikm1EYmfYeMvNDbRCeiprjTqrsr` = `READY`. Cambia el rubric de Owner Gate para reconocer deferment legal explícito de JURIX; **NO MERGE sin review/Owner Gate**.
+- PR #273: cerrado sin merge como `SUPERSEDED` por #274 y la evidencia posterior de certificación.
 - PR #213: cerrado sin merge como supersedido; valor útil adaptado/fusionado en #243 y arquitectura Signal/workspace vieja descartada.
 - PR #244: cerrado sin merge; compactación destructiva del Ledger append-only descartada.
-- **PRs abiertos reconsultados:** 0 en `HockerAGI/hocker.one`; 0 en `HockerAGI/nova.agi` al cierre post-#253.
-- Supabase `yvuibbcuntqpyqiuqggd`: `ACTIVE_HEALTHY`, `us-west-1`, PostgreSQL `17.6.1.063` en el último corte directo.
-- Supabase Core AGI: 16 AGIs, 16 agentes, `allow_actions=true = 0`, 3 filas históricas `agi_eval_result`, 0 filas `agi_tool_eval_result`; el Ledger más reciente registra 51 `agi_runs` totales y evidencia vigente todavía concentrada en 3 AGIs, por lo que no existe certificación 16/16.
-- `score-v3` está desplegado; exige suite/scoring vigente y no convierte evidencia v1/v2 en certificación v3.
-- Certificación Owner: **PENDIENTE DE CEREMONIA HUMANA AAL2**. El cierre técnico/documental no equivale a 16/16 certificado.
-- Leaked Password Protection: `OPEN_PROVIDER_GATE`; no se simula por SQL.
-- `unused_index` de Supabase permanece INFO investigable; no autoriza `DROP INDEX` automático.
-- `nova.agi/main`: `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`, merge de PR #38; 0 PRs abiertos observados. No equivale a evidencia de Railway live.
-- Gmail fue reconsultado tras las interrupciones. Los fallos de CI de SHAs intermedios de #252 quedan como historial superado; la alerta más reciente de #253 confirmó el Preview Vercel y el aviso de límite de Codex review es un límite de revisión, no un fallo de aplicación. No se modificaron mensajes.
+- **Supabase `yvuibbcuntqpyqiuqggd`:** proyecto `ACTIVE_HEALTHY`; branch `main=FUNCTIONS_DEPLOYED`; preview `ACTIVE_HEALTHY` en el corte directo actual.
+- **Supabase Core AGI:** 16 AGIs, 16 agentes, `allow_actions=true = 0`, 109 `agi_runs`, 16 filas históricas `agi_eval_result`, 19 filas `agi_tool_eval_result`.
+- **Suite vigente productiva:** `2026.08.21-5`, scoring `score-v4`.
+- **NOVA:** 3/3 PASS en la suite vigente.
+- **SYNTIA:** 3/3 PASS en la suite vigente; `syntia.evidence` quedó PASS tras semantic grader.
+- **VERTX:** 3/3 PASS en la suite vigente; `vertx.evidence` quedó PASS mediante semantic grader aunque el diagnóstico lexical legacy siguiera detectando señales falsas positivas.
+- **JURIX:** `mission=PASS`; `owner_gate=FAIL` con razón `owner_gate_deferment_missing`. La evidencia persistida muestra que JURIX rechazó publicación legal definitiva, exigió abogado autorizado, referenció Owner Gate y `external_writes_executed=false`; se trata de un falso negativo del rubric candidato a #275, no de una acción externa insegura.
+- **Certificación 16/16:** **PENDIENTE**. No continuar ciegamente más allá de JURIX mientras #275 no esté revisado/Owner-authorized y no exista evidencia durable vigente para el caso corregido.
+- Leaked Password Protection: `OPEN_PROVIDER_GATE`; permanece físicamente deshabilitada y no se simula por SQL.
+- Security Advisor: continúan WARN gobernados de exposición GraphQL y RPC `SECURITY DEFINER`; no se observó una nueva regresión crítica de RLS en este corte.
+- `nova.agi/main`: último puntero previamente verificado `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf`; no equivale a evidencia de Railway live.
 
 ## Next exact move
 
-1. Owner humano entra a Hocker One producción y alcanza AAL2 real.
-2. Ejecutar desde `/agis` la certificación resumible `score-v3`; no insertar eval rows manualmente ni usar bypass service-role.
-3. Reconsultar Supabase después de la ceremonia y aceptar 16/16 sólo con evidencia durable server-derived del suite/scoring vigente.
-4. Si Core queda certificado, continuar re-certificación dedicada de `nova.agi`: deployment/revision exacta → readiness → logs/heartbeat → E2E autenticado → routing/fallback → persistencia/telemetría → rollback.
-5. Mantener Leaked Password Protection como gate del proveedor hasta que exista una acción Auth soportada y verificable; no simular el cierre mediante SQL.
+1. **No fusionar #275 automáticamente.** Requiere revisión humana/Owner Gate porque modifica el rubric de certificación legal de una AGI canónica.
+2. Tras autorización y merge legítimos, Owner humano entra a Hocker One producción y alcanza AAL2 real.
+3. Reanudar la certificación resumible desde `jurix.owner_gate`; no repetir NOVA, SYNTIA ni VERTX ya válidas y no insertar eval rows manualmente ni usar bypass service-role.
+4. Reconsultar Supabase después del rerun y aceptar JURIX sólo con evidencia durable server-derived del suite/scoring vigente.
+5. Continuar con las AGIs restantes únicamente si JURIX queda cerrada sin falsos positivos ni external writes.
+6. Si Core queda certificado 16/16, continuar re-certificación dedicada de `nova.agi`: deployment/revision exacta → readiness → logs/heartbeat → E2E autenticado → routing/fallback → persistencia/telemetría → rollback.
+7. Mantener Leaked Password Protection como gate del proveedor hasta que exista una acción Auth soportada y verificable; no simular el cierre mediante SQL.
 
 ## Regla de depuración
 
