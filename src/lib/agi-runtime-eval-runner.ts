@@ -6,6 +6,10 @@ import {
   type AgiEvalCase,
 } from "@/lib/agi-eval-suites";
 import { scoreEvidence, scoreMission, scoreOwnerGate } from "@/lib/agi-eval-rubric";
+import {
+  AGI_EVIDENCE_GRADER_VERSION,
+  gradeEvidenceSemantically,
+} from "@/lib/agi-evidence-semantic-grader";
 import { completeAgi } from "@/lib/agi-model-router";
 import {
   buildCanonicalProfilePrompt,
@@ -76,7 +80,7 @@ const AGI_EVAL_TRANSIENT_BASE_DELAY_MS = 2_500;
 const EVAL_TASK_MAX_ATTEMPTS = 1;
 const EVAL_STALE_AFTER_MS = 10 * 60 * 1000;
 const MAX_NEW_EVAL_CASES_PER_REQUEST = 1;
-const AGI_EVAL_SCORING_VERSION = "score-v3";
+const AGI_EVAL_SCORING_VERSION = "score-v4";
 
 function db(): UntypedSupabase {
   return createAdminSupabase() as unknown as UntypedSupabase;
@@ -151,11 +155,8 @@ function scoreEvalCase(evalCase: AgiEvalCase, text: string): { passed: boolean; 
     reasons.push(...ownerGate.reasons);
   }
 
-  if (expectation.must_admit_missing_evidence) {
-    const evidence = scoreEvidence(text);
-    reasons.push(...evidence.reasons);
-  }
-
+  // Evidence semantics are intentionally not gated here. Free-form candidate language
+  // is graded independently below; scoreEvidence remains a non-authoritative diagnostic.
   return { passed: reasons.length === 0, reasons };
 }
 
@@ -498,7 +499,42 @@ async function runOneEvalCase(args: {
       oidc_token: args.oidcToken,
     });
 
-    const scored = scoreEvalCase(args.evalCase, completion.text);
+    const deterministic = scoreEvalCase(args.evalCase, completion.text);
+    const reasons = [...deterministic.reasons];
+    let evidenceGrader: Record<string, unknown> | null = null;
+
+    if (args.evalCase.expectation.must_admit_missing_evidence) {
+      const lexicalDiagnostic = scoreEvidence(completion.text);
+      const semanticGrade = await gradeEvidenceSemantically({
+        evalPrompt: args.evalCase.prompt,
+        candidateText: completion.text,
+        candidateRoute: completion.route,
+        oidcToken: args.oidcToken,
+      });
+
+      if (!semanticGrade.ok) {
+        throw new Error(
+          semanticGrade.error_code === "grader_parse_failure"
+            ? "AGI_EVAL_GRADER_INVALID_VERDICT"
+            : "AGI_EVAL_GRADER_UNAVAILABLE",
+        );
+      }
+
+      evidenceGrader = {
+        version: AGI_EVIDENCE_GRADER_VERSION,
+        verdict: semanticGrade.verdict,
+        route: semanticGrade.route,
+        provider: semanticGrade.provider,
+        model: semanticGrade.model,
+        attempts: semanticGrade.attempts,
+        usage: semanticGrade.usage,
+        lexical_diagnostic: lexicalDiagnostic,
+      };
+
+      if (!semanticGrade.passed) reasons.push("evidence_semantic_failure");
+    }
+
+    const scored = { passed: reasons.length === 0, reasons };
     const completedAt = new Date().toISOString();
     const output = {
       ok: true,
@@ -516,6 +552,7 @@ async function runOneEvalCase(args: {
       provider: completion.provider,
       model: completion.model,
       usage: completion.usage,
+      evidence_grader: evidenceGrader,
       external_writes_executed: false,
       completed_at: completedAt,
     };
@@ -535,6 +572,7 @@ async function runOneEvalCase(args: {
       route_attempts: completion.attempts,
       provider: completion.provider,
       model: completion.model,
+      evidence_grader: evidenceGrader,
       external_writes_executed: false,
       completed_at: completedAt,
     }];
