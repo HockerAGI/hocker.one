@@ -14,6 +14,7 @@ export type AgiCompletionInput = {
   messages: AgiModelMessage[];
   timeout_ms?: number;
   oidc_token?: string | null;
+  exclude_routes?: AgiModelRoute[];
 };
 
 export type AgiUsage = {
