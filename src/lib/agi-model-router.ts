@@ -31,6 +31,8 @@ const DEFAULT_ORDER: AgiModelRoute[] = [
 
 // Fallback classes intentionally include auth, quota/balance/rate-limit, timeout and 5xx failures.
 const FALLBACK_ERROR_HINTS = /401|403|429|quota|balance|rate|timeout|5\d\d/i;
+const TRANSIENT_ATTEMPT_CODE = /429|QUOTA|RATE|TIMEOUT|HTTP_5\d\d|EMPTY_RESPONSE|(?:^|_)FAILED$/i;
+const PERSISTENT_ATTEMPT_CODE = /401|403|AUTH_FAILED|HTTP_400|BAD_REQUEST|INVALID|NOT_CONFIGURED|EXCLUDED_BY_POLICY/i;
 
 function routeOrder(): AgiModelRoute[] {
   const configured = envValue("AGI_MODEL_ROUTE_ORDER")
@@ -53,6 +55,11 @@ function errorCode(error: unknown): string {
 function fallbackEligible(error: unknown): boolean {
   if (error instanceof AgiProviderError) return error.fallback_eligible;
   return FALLBACK_ERROR_HINTS.test(error instanceof Error ? error.message : String(error));
+}
+
+function isTransientAttemptCode(code: string): boolean {
+  if (PERSISTENT_ATTEMPT_CODE.test(code)) return false;
+  return TRANSIENT_ATTEMPT_CODE.test(code);
 }
 
 export function configuredAgiRoutes(oidcToken?: string | null): AgiModelRoute[] {
@@ -98,9 +105,21 @@ export async function completeAgi(input: AgiCompletionInput): Promise<AgiComplet
     }
   }
 
+  const configuredFailures = attempts.filter((attempt) => attempt.configured && !attempt.ok);
+  const transientExhaustion = configuredFailures.some((attempt) =>
+    isTransientAttemptCode(String(attempt.error_code ?? "")),
+  );
+  const aggregateCode = transientExhaustion
+    ? "AGI_ALL_ROUTES_TEMPORARY_FAILED"
+    : "AGI_ALL_ROUTES_FAILED";
   const error = new AgiProviderError(
-    sawConfigured ? "Todas las rutas de inferencia configuradas fallaron" : "No existe una ruta de inferencia configurada",
-    { code: sawConfigured ? "AGI_ALL_ROUTES_FAILED" : "AGI_INFERENCE_NOT_CONFIGURED", fallback_eligible: false },
+    sawConfigured
+      ? `${aggregateCode}: Todas las rutas de inferencia configuradas fallaron`
+      : "No existe una ruta de inferencia configurada",
+    {
+      code: sawConfigured ? aggregateCode : "AGI_INFERENCE_NOT_CONFIGURED",
+      fallback_eligible: transientExhaustion,
+    },
   );
   Object.assign(error, { attempts });
   throw error;
