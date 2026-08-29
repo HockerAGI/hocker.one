@@ -8,9 +8,6 @@ updates:
       time: "09:00"
       timezone: America/Tijuana
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - security
 
   - package-ecosystem: github-actions
     directory: /
@@ -20,9 +17,6 @@ updates:
       time: "09:30"
       timezone: America/Tijuana
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - security
 
   - package-ecosystem: gradle
     directory: /android
@@ -32,6 +26,3 @@ updates:
       time: "10:00"
       timezone: America/Tijuana
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - android
