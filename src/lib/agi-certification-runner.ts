@@ -66,9 +66,10 @@ function errorMessage(error: unknown): string {
 
 function isTransientCertificationError(error: unknown): boolean {
   const message = errorMessage(error);
-  // Provider pressure, bounded timeouts and transport failures are resumable.
-  // Missing auth, invalid contracts, permission failures and scorer failures remain hard stops.
-  return /\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|timeout|timed out|5\d\d|already_running|fetch failed|network|connection|ECONNRESET|ECONNREFUSED|EAI_AGAIN|UND_ERR|socket/i.test(message);
+  // Provider pressure, bounded timeouts, transport failures, and unavailable
+  // semantic graders are resumable infrastructure conditions. Invalid grader
+  // verdicts, missing auth, invalid contracts, and permission failures remain hard stops.
+  return /AGI_EVAL_(?:OWNER_GATE_)?GRADER_UNAVAILABLE|\b429\b|rate[- ]?limit|free tier requests|quota|temporar|overload|timeout|timed out|5\d\d|already_running|fetch failed|network|connection|ECONNRESET|ECONNREFUSED|EAI_AGAIN|UND_ERR|socket/i.test(message);
 }
 
 async function safeSnapshot(): Promise<AgiCertificationSnapshot> {
