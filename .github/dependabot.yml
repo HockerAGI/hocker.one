@@ -8,6 +8,25 @@ updates:
       time: "09:00"
       timezone: America/Tijuana
     open-pull-requests-limit: 5
+    groups:
+      capacitor-stack:
+        applies-to: version-updates
+        patterns:
+          - "@capacitor/core"
+          - "@capacitor/android"
+          - "@capacitor/cli"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "@supabase/ssr"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "eslint"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: github-actions
     directory: /
