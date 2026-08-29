@@ -9,6 +9,15 @@ updates:
       timezone: America/Tijuana
     open-pull-requests-limit: 5
     groups:
+      next-stack:
+        applies-to: version-updates
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/eslint-plugin-next"
+        update-types:
+          - minor
+          - patch
       capacitor-stack:
         applies-to: version-updates
         patterns:
