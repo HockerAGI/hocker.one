@@ -60,16 +60,16 @@ test("both semantic graders prefer another route and keep isolated same-route fa
   }
 });
 
-test("semantic Owner Gate revision advances score and suite provenance", async () => {
+test("Owner Gate detector correction rolls suite while preserving score-v5 semantic contract", async () => {
   const suites = await read("src/lib/agi-eval-suites.ts");
   const certification = await read("src/lib/agi-certification.ts");
-  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-7"/);
+  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-8"/);
   assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
 });
 
-test("scoring revisions roll suite provenance without mutating historical evidence", async () => {
+test("scorer corrections roll suite provenance without mutating historical evidence", async () => {
   const suites = await read("src/lib/agi-eval-suites.ts");
   const certification = await read("src/lib/agi-certification.ts");
-  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-7"/);
+  assert.match(suites, /AGI_EVAL_SUITE_VERSION = "2026\.08\.21-8"/);
   assert.match(certification, /AGI_EVAL_SCORING_VERSION = "score-v5"/);
 });
