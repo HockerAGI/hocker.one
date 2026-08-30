@@ -62,7 +62,7 @@ test("backend-only Hocker One and NOVA tables get explicit deny policies without
 test("agent contract requires durable recovery and milestone handoff", async () => {
   const agents = await source("AGENTS.md");
   assert.match(agents, /docs\/operations\/INDEX\.md/);
-  assert.match(agents, /docs\/operations\/HANDOFF_2026-08-30\.md/);
+  assert.match(agents, /active handoff/i);
   assert.match(agents, /LAST_KNOWN_STATE\.md/);
   assert.match(agents, /At startup:/i);
   assert.match(agents, /At a material milestone,/i);
@@ -72,12 +72,19 @@ test("agent contract requires durable recovery and milestone handoff", async () 
 test("HOCKER cleanup rule is durable across code, docs and providers", async () => {
   const [agents, readme] = await Promise.all([source("AGENTS.md"), source("README.md")]);
   for (const contract of [
-    /useful and current → keep|útil y vigente → mantener/i,
-    /useful but stale → rebuild\/adapt|útil pero desactualizado → reconstruir\/adaptar/i,
-    /overlapping → merge|se solapa → fusionar/i,
-    /no value.*discard|sin valor.*descartar/i,
+    /useful and current → keep/i,
+    /useful but stale → rebuild\/adapt/i,
+    /overlapping → merge/i,
+    /no value for understanding, operating, recovering or auditing → discard/i,
   ]) {
     assert.match(agents, contract);
+  }
+  for (const contract of [
+    /aporta y sigue vigente → conservar/i,
+    /aporta pero quedó viejo → reconstruir\/adaptar/i,
+    /se solapa → fusionar/i,
+    /no ayuda a comprender, operar, recuperar o auditar → eliminar\/descartar/i,
+  ]) {
     assert.match(readme, contract);
   }
   assert.match(agents, /Supabase, Vercel y `nova\.agi`/i);
@@ -121,7 +128,7 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(policy, /17 8 \* \* \*/);
   assert.match(policy, /CRON_SECRET/);
   assert.match(policy, /GitHub App|webhook/i);
-  assert.match(policy, /changes\.watch/i);
+  assert.match(policy, /changes\.watch/);
   assert.match(policy, /renew|renov/i);
   assert.match(policy, /Memory Mirror/i);
   assert.match(policy, /revisad|review/i);
@@ -133,7 +140,7 @@ test("context freshness policy makes operational continuity event-driven and mem
   assert.match(protocol, /CONTEXT_FRESHNESS_POLICY\.md/);
 });
 
-test("recovery card keeps functional release, verified production and evidence pointers explicit", async () => {
+test("recovery card keeps current production and certification pointers explicit", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
   assert.match(state, /HANDOFF_2026-08-30\.md/);
@@ -142,8 +149,9 @@ test("recovery card keeps functional release, verified production and evidence p
   assert.match(state, /Core AGI certification:.*2026\.08\.21-8.*score-v5/i);
   assert.match(state, /#303.*CLOSED \/ COMPLETED/i);
   assert.match(state, /#306.*OPEN \/ P0 production-readiness master gate/i);
-  assert.match(state, /`agi_eval_result`/);
-  assert.match(state, /score-v5/);
+  assert.match(state, /allow_actions=false/);
+  assert.match(state, /Supabase project `yvuibbcuntqpyqiuqggd`/);
+  assert.match(state, /Historical evidence is preserved/i);
   assert.doesNotMatch(state, /32244656734|TS18047|progress possibly null/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
