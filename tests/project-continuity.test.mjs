@@ -87,7 +87,9 @@ test("HOCKER cleanup rule is durable across code, docs and providers", async () 
   ]) {
     assert.match(readme, contract);
   }
-  assert.match(agents, /Supabase, Vercel y `nova\.agi`/i);
+  assert.match(agents, /Supabase, Vercel/i);
+  assert.match(agents, /`nova\.agi`/i);
+  assert.match(agents, /`hocker-node-agent`/i);
 });
 
 test("current UX and score-v3 recovery contracts stay explicit without freezing mutable wrappers", async () => {
