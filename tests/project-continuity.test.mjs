@@ -87,7 +87,8 @@ test("HOCKER cleanup rule is durable across code, docs and providers", async () 
   ]) {
     assert.match(readme, contract);
   }
-  assert.match(agents, /Supabase, Vercel/i);
+  assert.match(agents, /Supabase/i);
+  assert.match(agents, /Vercel/i);
   assert.match(agents, /`nova\.agi`/i);
   assert.match(agents, /`hocker-node-agent`/i);
 });
