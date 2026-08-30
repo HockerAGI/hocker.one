@@ -159,3 +159,5 @@ test("recovery card keeps current production and certification pointers explicit
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
   assert.doesNotMatch(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
 });
+
+// Keep the file content stable; this commit exists only to re-run the exact-head gate.
