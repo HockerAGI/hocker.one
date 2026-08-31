@@ -148,17 +148,16 @@ test("recovery card keeps current production and certification pointers explicit
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
   assert.match(state, /HANDOFF_2026-08-30\.md/);
   assert.match(state, /## Current verified pointers/);
-  assert.match(state, /No production DDL\/grants\/RLS changes have been applied/i);
   assert.match(state, /Core AGI certification:.*2026\.08\.21-8.*score-v5/i);
-  assert.match(state, /#303.*CLOSED \/ COMPLETED/i);
-  assert.match(state, /#306.*OPEN \/ P0 production-readiness master gate/i);
   assert.match(state, /allow_actions=false/);
-  assert.match(state, /Supabase project `yvuibbcuntqpyqiuqggd`/);
-  assert.match(state, /Historical evidence is preserved/i);
+  assert.match(state, /## Expansion status/);
+  assert.match(state, /EXPANSION_READY = YES/);
+  assert.match(state, /PRODUCTION_READY = NOT YET CLOSED/);
+  assert.match(state, /Historical sources dated 2026-08-19 remain preserved/i);
   assert.doesNotMatch(state, /32244656734|TS18047|progress possibly null/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
   assert.doesNotMatch(state, /9dfdc688f73f6cad69c40179c1bb3a0a831bbb45/);
 });
 
-// Keep the file content stable; this commit exists only to re-run the exact-head gate.
+// Keep this file focused on durable contracts; mutable status belongs in the active handoff/recovery sources.
