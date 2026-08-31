@@ -25,6 +25,10 @@ type CapabilitiesResponse = {
   error?: string;
 };
 
+export function getVisibleNovaCapabilities(items: NovaWorkspaceCapability[]): NovaWorkspaceCapability[] {
+  return items.filter((item) => item.status === "active" || item.status === "protected");
+}
+
 function statusLabel(status: NovaWorkspaceCapability["status"]): string {
   switch (status) {
     case "active":
@@ -77,12 +81,9 @@ export default function NovaWorkspaceCapabilities() {
     if (open && capabilities.length === 0 && !loading) void loadCapabilities();
   }, [capabilities.length, loadCapabilities, loading, open]);
 
-  const actionable = useMemo(
-    () => capabilities.filter((capability) => capability.status === "active" || capability.status === "protected"),
-    [capabilities],
-  );
+  const actionable = useMemo(() => getVisibleNovaCapabilities(capabilities), [capabilities]);
   const unavailable = useMemo(
-    () => capabilities.filter((capability) => capability.status !== "active" && capability.status !== "protected"),
+    () => capabilities.filter((capability) => !getVisibleNovaCapabilities([capability]).length),
     [capabilities],
   );
 
@@ -107,32 +108,20 @@ export default function NovaWorkspaceCapabilities() {
                 <p className="text-sm font-semibold text-white">Capacidades</p>
                 <p className="text-xs text-slate-500">Sólo aparecen como acción las que están realmente disponibles.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white"
-                aria-label="Cerrar capacidades"
-              >
+              <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white" aria-label="Cerrar capacidades">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {loading ? (
-              <div className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Comprobando capacidades reales…
-              </div>
+              <div className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Comprobando capacidades reales…</div>
             ) : error ? (
               <div className="rounded-xl border border-rose-300/15 bg-rose-300/5 px-3 py-2 text-xs leading-5 text-rose-100">{error}</div>
             ) : (
               <div className="space-y-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   {actionable.map((capability) => (
-                    <button
-                      key={capability.key}
-                      type="button"
-                      onClick={() => chooseCapability(capability)}
-                      className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-left transition hover:border-sky-300/30 hover:bg-white/[0.05]"
-                    >
+                    <button key={capability.key} type="button" onClick={() => chooseCapability(capability)} className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-left transition hover:border-sky-300/30 hover:bg-white/[0.05]">
                       <span className="block text-sm font-medium text-white">{capability.label}</span>
                       <span className="mt-1 block text-[11px] text-slate-500">{statusLabel(capability.status)}</span>
                     </button>
@@ -145,8 +134,7 @@ export default function NovaWorkspaceCapabilities() {
                     <div className="space-y-1">
                       {unavailable.slice(0, 5).map((capability) => (
                         <div key={capability.key} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-xs text-slate-500">
-                          <span>{capability.label}</span>
-                          <span>{statusLabel(capability.status)}</span>
+                          <span>{capability.label}</span><span>{statusLabel(capability.status)}</span>
                         </div>
                       ))}
                     </div>
@@ -157,14 +145,7 @@ export default function NovaWorkspaceCapabilities() {
           </section>
         ) : null}
 
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.10] bg-[#07101d]/96 text-slate-300 shadow-xl backdrop-blur-xl hover:bg-white/[0.07] hover:text-white"
-          aria-expanded={open}
-          aria-label={open ? "Cerrar capacidades" : "Abrir capacidades"}
-          title="Capacidades de NOVA"
-        >
+        <button type="button" onClick={() => setOpen((value) => !value)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.10] bg-[#07101d]/96 text-slate-300 shadow-xl backdrop-blur-xl hover:bg-white/[0.07] hover:text-white" aria-expanded={open} aria-label={open ? "Cerrar capacidades" : "Abrir capacidades"} title="Capacidades de NOVA">
           {open ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
         </button>
       </div>
