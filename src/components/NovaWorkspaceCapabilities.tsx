@@ -44,6 +44,17 @@ function statusLabel(status: NovaWorkspaceCapability["status"]): string {
   }
 }
 
+function fillNovaComposer(prompt: string): boolean {
+  const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Mensaje para NOVA"]');
+  if (!textarea) return false;
+
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+  setter?.call(textarea, prompt);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  textarea.focus();
+  return true;
+}
+
 export default function NovaWorkspaceCapabilities() {
   const { projectId, ready } = useWorkspace();
   const [open, setOpen] = useState(false);
@@ -91,6 +102,7 @@ export default function NovaWorkspaceCapabilities() {
     const prompt = capability.requires_owner_gate
       ? `Quiero usar ${capability.label}. Prepara la acción y dime qué aprobación necesito.`
       : `Quiero usar ${capability.label}.`;
+    fillNovaComposer(prompt);
     window.dispatchEvent(new CustomEvent("nova-workspace-capability", { detail: { key: capability.key, prompt } }));
     setOpen(false);
   };
