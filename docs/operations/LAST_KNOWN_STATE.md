@@ -1,8 +1,8 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-08-30 03:00 UTC**
-Scope: Hocker One + NOVA + canonical AGI Core.
+Evidence cut: **2026-08-31 04:48 UTC**
+Scope: **Hocker One + NOVA + canonical AGI Core**.
 
 Live operational source: `docs/operations/HANDOFF_2026-08-30.md`.
 Current production-readiness gate: `docs/operations/PLATFORM_CLOSURE_2026-08-30.md`.
@@ -10,43 +10,72 @@ Historical sources dated 2026-08-19 remain preserved for audit and are not live 
 
 ## Current verified pointers
 
-- Hocker One `main`: `4b53c0d25cc74c6dbd0a4f030fde1768550b6977` at the start of post-certification hardening.
-- Core AGI certification: `2026.08.21-8` + `score-v5`, 16/16 AGIs, 48/48 PASS, 19 read-only tool evaluations PASS, 0 external writes.
-- `#303`: CLOSED / COMPLETED.
-- `#306`: OPEN / P0 production-readiness master gate.
+- Hocker One `main`: `6ee2daa96843df9302e4fe874b7a06cf33147569`.
+- Vercel production: `dpl_JBHvhDaCiQCtrztDQ7Zoci5AvYSV` — READY — `hockerone.vercel.app`.
+- Hocker One health: `/api/health/ping` = HTTP 200 / online.
+- Core AGI certification: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**.
+- Tool certification: **19/19 read-only PASS**; no external writes during certification.
 - All 16 AGIs remain `allow_actions=false`.
-- Owner TOTP and real AAL2 evidence are present.
-- Supabase project `yvuibbcuntqpyqiuqggd` is active/healthy in `us-west-1`, PostgreSQL 17.
+- `nova.agi/main`: `5575e671c2931a5bf6304a968aae0490d67ca9c5`.
+- `hocker-node-agent/main`: `a4af22a97dc639389a4ba5f3dc8926ec95fa84ff`.
+- Supabase project: `yvuibbcuntqpyqiuqggd`, PostgreSQL 17, `us-west-1`.
+- Supabase migration head: `20260830153247`.
+- Canon completeness view: `12.6C.1B`, 16 registry profiles, 16 runtime agents, 16 canonical memories, 16 specialized feeds, 34 enabled tool assignments.
 
-## Current Supabase security posture
+## Recent completed maintenance
 
-Security Advisor remains OPEN with contract-review findings:
-- anonymous public GraphQL surfaces: `agis_public_catalog`, `cashback_tiers`, `free_round_tiers`, `promo_offers`;
-- authenticated GraphQL discoverability warnings across operational/audit/financial/observability relations;
-- SECURITY DEFINER RPC execution warnings for public projections and own-history functions;
-- leaked-password protection disabled.
+- Supabase JS #294: merged and post-merge production smoke passed.
+- Lucide #293: merged and post-merge production smoke passed.
+- Gradle #285: merged as patch `9.7.1`.
+- Capacitor #300: merged with Core/Android/CLI aligned at `8.5.0`.
+- #287: closed as completed after coordinated Capacitor stack integration.
+- #312: closed as duplicate of the canonical Android gate #203.
 
-Direct inspection on 2026-08-30 confirmed RLS enabled and policies present on the enumerated authenticated relations. Public surfaces have documented intent. No grants or policies were changed during this inspection.
+## Supabase security posture
 
-Direct function inspection also found own-history RPCs returning seed fields; this is a hardening review item, not yet a production mutation.
+Resolved in production:
+- reviewed RPC `search_path` hardening;
+- own-history RPCs moved to `SECURITY INVOKER`;
+- explicit grants retained;
+- `agis_public_catalog` unnecessary anon/authenticated GraphQL exposure removed.
 
-## Current engineering posture
+Still open and requiring contract-based review:
+- public GraphQL: `cashback_tiers`, `free_round_tiers`, `promo_offers`;
+- authenticated GraphQL discoverability across operational/financial/audit/observability relations;
+- public `SECURITY DEFINER` execution for `get_public_leaderboard` and `get_public_recent_wins`;
+- `auth_leaked_password_protection` remains disabled.
 
-- No production DDL/grants/RLS changes have been applied during this post-certification audit.
-- Dependency maintenance remains deferred until the security/runtime gates are stable.
-- Performance `unused_index` findings remain INFO and are not deletion instructions.
-- Historical evidence is preserved.
+These findings do not by themselves prove cross-tenant leakage. Do not perform broad REVOKE/policy changes without consumer evidence, authorization tests, rollback and Advisor recheck.
 
-## Next exact move
+## Master-plan implementation audit
 
-1. Confirm the cost of a disposable Supabase validation branch before creating it; the current quoted cost is US$0.01344/hour.
-2. On the disposable branch, reproduce current grants/RLS/functions and run authorization regression tests.
-3. Validate minimal safe hardening for SECURITY DEFINER outputs/ACLs and any non-contract GraphQL grants.
-4. Re-run Security Advisor and application smoke before any production promotion.
-5. Execute the remaining Owner AAL1/AAL2 and Context Bridge gates from #166/#167.
-6. Validate NOVA fallback/recovery and Tier 0/1 restore evidence.
-7. Resume deferred dependency/mobile maintenance one isolated candidate at a time.
+### Complete at current baseline
+- Core AGI certification scope.
+- Primary AGI action boundary: `allow_actions=false` baseline.
+- Initial Supabase function hardening.
+- Hocker One production dependency maintenance for Supabase JS, Lucide, Gradle and coordinated Capacitor.
+- Stable Hocker-node-agent baseline and patch maintenance.
+- Active operations index/handoff/closure structure exists.
 
-## Non-negotiables
+### Still incomplete or not fully evidenced
+- `NovaWorkspace` decomposition is not implemented on `main`; `NovaRealtimeChat` remains monolithic.
+- Full chat capability surface (real file upload, voice, artifact viewer, connector/tool UX) is not certified complete on `main`.
+- Full frontend `OperationalState` contract is not implemented as specified; DB `v_agi_operational_state` is narrower.
+- Full responsive/accessibility/device certification matrix is not evidenced as complete.
+- Full backup/restore and measured RPO/RTO drill is not evidenced.
+- Full dedicated agentic-security eval pack and complete current evidence pack are not yet closed.
+- Owner AAL1/AAL2 negative-path + containment remains an external human gate.
+- Context Bridge AAL2 migration remains open.
+- NOVA dedicated Railway runtime remains unverified.
+- Android API 36 on final `main` remains a manual GitHub Actions gate.
+- Supabase Leaked Password Protection remains a manual Dashboard gate.
 
-No synthetic AAL2, manual eval rows, service-role certification bypass, broad policy/grant additions, production DDL before isolated validation, secret values in evidence, destructive history cleanup, or unverified external-runtime claims.
+## Expansion status
+
+**EXPANSION_READY = YES.** The baseline is suitable for adding new projects/integrations without reopening the core architecture.
+
+**PRODUCTION_READY = NOT YET CLOSED.** Remaining items are hardening/acceptance evidence, not permission to rebuild Hocker One.
+
+## Recovery rule
+
+Before any material action, re-query GitHub, Vercel, Supabase and the relevant provider. The active handoff is authoritative for current narrative; this card is intentionally compact and not a substitute for live state.
