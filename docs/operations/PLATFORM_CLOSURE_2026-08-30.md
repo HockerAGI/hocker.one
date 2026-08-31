@@ -1,61 +1,66 @@
 # HOCKER ONE — Platform closure gate — 2026-08-30
 
-Status: **ACTIVE — POST-CORE-CERTIFICATION / PRODUCTION-READINESS**
+Status: **ACTIVE — EXPANSION_READY / PRODUCTION-READINESS HARDENING**
 
-## Certified scope already complete
+## Current verified baseline
 
-- Core AGI certification: **16/16 AGIs**
-- Runtime evaluation: **48/48 PASS**
-- Suite: `2026.08.21-8`
-- Scoring: `score-v5`
-- Tool evaluation: `2026.08.14-1`, read-only, PASS
-- External writes during certification: **0**
-- `allow_actions=true`: **0/16**
+- Hocker One `main`: `6ee2daa96843df9302e4fe874b7a06cf33147569`.
+- Vercel production: `dpl_JBHvhDaCiQCtrztDQ7Zoci5AvYSV` — READY.
+- `/api/health/ping`: HTTP 200 / online.
+- Core AGI certification: **16/16 AGIs, 48/48 PASS**, `2026.08.21-8` + `score-v5`.
+- Tool certification: **19/19 read-only PASS**; `external_writes_executed=false`.
+- `allow_actions=true`: **0/16**.
+- `nova.agi/main`: `5575e671c2931a5bf6304a968aae0490d67ca9c5`.
+- `hocker-node-agent/main`: `a4af22a97dc639389a4ba5f3dc8926ec95fa84ff`.
+- Supabase migration head: `20260830153247`.
 
-## Gate status
+## Gate status — audited against the master execution plan
 
-| Gate | Status | Exit evidence |
+| Phase / gate | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Core AGI scope | CLOSED | Supabase durable evidence + #303 completed |
-| Agentic Security | OPEN | action boundary, Owner Gate, injection/tool/memory tests and containment |
-| Supabase authorization/security | OPEN | Advisor classification + grant/RLS/RPC evidence |
-| Owner AAL2 / Context Bridge | OPEN | controlled AAL1/AAL2 negative path + Context Bridge AAL2 activation |
-| NOVA runtime/fallback | OPEN | exact deployment/revision + readiness + E2E + fallback + telemetry + rollback |
-| Observability/SLO/FinOps | OPEN | logs/alerts/cost/quotas and provider reliability evidence |
-| Backup/restore/continuity | OPEN | restore drill, RPO/RTO and recovery evidence |
-| Release/dependency maintenance | DEFERRED | resume only after above gates or after explicit risk review |
+| Phase 0 — baseline/state | **CLOSED** | Current SHA/deployment/DB/NOVA/node state reconciled in active handoff. |
+| Phase 1 — AGI Core certification | **CLOSED** | 16/16, 48/48 PASS under current suite/scorer; tool evaluation 19/19 PASS; 0 external writes. |
+| Phase 1 — dedicated agentic-security pack | **OPEN** | Full fresh pack for prompt injection, memory poisoning, tool injection, privilege escalation, cross-tenant, forged approval, malicious MCP, secret exfiltration and cascading delegation is not yet evidenced as a single closed artifact. |
+| Phase 2 — NOVA Runtime/Capability Fabric | **OPEN** | Hocker One runtime is healthy, but `nova.agi` dedicated Railway runtime still requires exact-revision/readiness/E2E/fallback/telemetry/rollback evidence. |
+| Phase 3 — NOVA Workspace 2.0 | **OPEN** | `NovaRealtimeChat` remains a large monolithic client; the requested component decomposition and full capability surface are not on current `main`. |
+| Phase 4 — Hocker One UX simplification | **PARTIAL** | Core routes/components exist, but current-state audit does not prove the complete five-question Home/navigation/integrations/VFX target. |
+| Phase 5 — OperationalState / Observability / FinOps | **OPEN** | DB has `v_agi_operational_state`, but the full frontend OperationalState contract, SLO/alert/cost evidence and complete decision-oriented charts are not proven complete. |
+| Phase 6 — Responsive / Accessibility / Device certification | **OPEN** | No current exact-main evidence pack for the complete WCAG/responsive/device matrix. |
+| Phase 7 — Recovery / SRE | **OPEN** | Backup/restore, RPO/RTO and provider/DB/NOVA failure drills are not fully evidenced. |
+| Phase 8 — Final RC | **OPEN** | No final RC artifact covering all applicable gates on one frozen SHA. |
+| Phase 9 — Final production/canon closure | **OPEN** | Production is healthy, but not all closure gates above have evidence. |
+| Dependency maintenance | **PARTIAL / DEFERRED WHERE APPROPRIATE** | Supabase JS, Lucide, Gradle and Capacitor are already integrated. Remaining #290/#301/#296 should stay isolated and non-blocking unless they address current risk. |
 
-## Supabase current findings — 2026-08-30
+## Supabase security — current findings
 
 Security Advisor currently reports:
-- 4 anonymous GraphQL/public exposure warnings: `agis_public_catalog`, `cashback_tiers`, `free_round_tiers`, `promo_offers`;
-- authenticated GraphQL discoverability warnings across operational/financial/audit/observability relations;
-- 2 anonymous `SECURITY DEFINER` RPC warnings: `get_public_leaderboard`, `get_public_recent_wins`;
-- 4 authenticated `SECURITY DEFINER` RPC warnings including `get_my_crash_history`, `get_my_slot_history` and the public projections;
+- anonymous GraphQL exposure: `cashback_tiers`, `free_round_tiers`, `promo_offers`;
+- authenticated GraphQL discoverability across operational/financial/audit/observability relations;
+- public `SECURITY DEFINER` execution for `get_public_leaderboard` and `get_public_recent_wins`;
 - leaked-password protection disabled.
 
-These warnings are not equivalent to confirmed unauthorized data access. Direct production inspection confirmed RLS is enabled on the enumerated authenticated relations and found policies on them. Public catalog/tier/offer surfaces are documented as intentional public contracts. Remaining review must verify those contracts and minimize grants/outputs where possible.
+The previous `search_path` hardening findings are no longer present. `agis_public_catalog` unnecessary exposure was removed.
 
-A direct function inspection found that both own-history RPCs currently return game-fairness seed fields. Before changing them, inspect consumers; remove sensitive fields only if no approved client/verification contract requires them.
+Remaining Advisor warnings require contract review rather than blanket revocation. Existing RLS policies and real Hocker One consumers must be preserved unless replacement paths are proven.
 
-## Change-control rule
+## External/human gates
 
-No production DDL, grant, RLS, view, RPC, or Auth posture change is accepted without:
-1. isolated Supabase validation;
-2. authorization matrix tests (anon/authenticated/owner/service);
-3. Security Advisor before/after;
-4. rollback/compensation plan;
-5. exact production SHA/deployment evidence;
-6. targeted application smoke.
+- `hocker.one #166`: real Owner AAL1/AAL2 negative-path + containment smoke.
+- `hocker.one #167`: Context Bridge AAL2 activation and retirement of legacy activation path only after proof.
+- `hocker.one #200`: Leaked Password Protection must be enabled through Supabase Auth Dashboard; current connector has no supported write action.
+- `hocker.one #203`: Android API 36 manual run on final `main`.
+- `hocker.one #210`: Cloudflare provider-side MCP/Worker hardening evidence.
+- `nova.agi #31`: Railway deployment/readiness/fallback/recovery evidence.
+- `hocker.one #212`: isolated Supabase branch cannot be created on the current Hobby project; no fake branch/evidence.
 
-## Runtime rule
+User has confirmed credential rotation is complete; #181 is not being treated as an active engineering blocker unless new evidence contradicts that assertion.
 
-Provider outage, malformed model output and partial failure are evaluated as reliability conditions when the evidence is temporary; deterministic policy/security failure remains blocking. No retry may create a duplicate material action.
+## Source-branch rescue
 
-## Release rule
+Historical UX/MCP/NOVA branches may contain useful work, but they are not current truth. Relevant work must be selectively ported after diff review, current-main rebase, dependency review and exact-head verification. Do not merge large historical branches wholesale.
 
-Dependency maintenance is separated by risk domain. Security updates remain enabled; version updates may be grouped by ecosystem. Next, Capacitor, Supabase SSR/Auth, Gradle, ESLint major and PDFKit are not bundled into one release.
+## Closure rule
 
-## Definition of Ready-to-close
+The platform may be labelled **EXPANSION_READY** for development of new projects/integrations.
 
-No P0/P1 residual risk without owner/date/acceptance; Agentic Security tests green; Supabase authz/advisors reconciled; Owner AAL2/Context Bridge evidence complete; NOVA fallback/recovery proven; backup restore measured; observability/FinOps operational; exact release/rollback/continuity evidence synchronized.
+It may be labelled **PRODUCTION_READY / FINAL** only when all applicable rows in this gate table have traceable evidence and the final release/continuity artifact is synchronized with the deployed SHA.
