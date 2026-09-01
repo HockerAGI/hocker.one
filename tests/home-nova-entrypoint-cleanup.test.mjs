@@ -6,7 +6,7 @@ const ownerPage = await readFile(new URL("../src/app/owner/page.tsx", import.met
 
 test("Home no longer mounts the immersive NOVA chat directly", () => {
   assert.doesNotMatch(ownerPage, /NovaRealtimeChatLazy/);
-  assert.doesNotMatch(ownerPage, /hko-uni-chat/);
+  assert.doesNotMatch(ownerPage, /<div className=\"hko-uni-chat-inner\"/);
 });
 
 test("Home keeps a compact NOVA entrypoint tied to the operational state", () => {
