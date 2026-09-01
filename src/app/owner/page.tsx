@@ -18,8 +18,6 @@ import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
 import { getHockerLiveSummary } from "@/lib/hocker-live-summary";
 import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
 import type { AgiRuntimeSummaryLike } from "@/types/agi-runtime-summary";
-
-import NovaRealtimeChatLazy from "@/components/NovaRealtimeChatLazy";
 import OwnerUnifiedStatus from "@/components/owner/OwnerUnifiedStatus";
 import OwnerUnifiedApprovals from "@/components/owner/OwnerUnifiedApprovals";
 import OwnerUnifiedTools from "@/components/owner/OwnerUnifiedTools";
@@ -99,19 +97,33 @@ export default async function OwnerPage() {
         </div>
       </div>
 
-      <section className="hko-uni-panel hko-uni-chat">
+      <section className="hko-uni-panel">
         <div className="hko-uni-panel-head">
           <div>
-            <p className="hko-uni-panel-kicker">Canal central</p>
-            <p className="hko-uni-panel-title">Hablar con NOVA</p>
+            <p className="hko-uni-panel-kicker">NOVA</p>
+            <p className="hko-uni-panel-title">Workspace inmersivo</p>
           </div>
           <span className={`hko-status-val ${novaIsOnline ? "ok" : novaService.status === "offline" ? "err" : "warn"}`}>
             {novaIsOnline ? "Conectada" : novaService.status === "offline" ? "Sin señal" : "Sin verificar"}
           </span>
         </div>
         <div className="hko-uni-panel-body">
-          <div className="hko-uni-chat-inner">
-            <NovaRealtimeChatLazy />
+          <p className="text-sm text-slate-300">
+            La conversación completa vive en el workspace de NOVA. Inicio conserva sólo el estado operativo y la entrada contextual para evitar duplicar el chat inmersivo.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link href="/chat" className="hko-uni-quick-card inline-flex min-h-12 items-center gap-3 px-4 py-3">
+              <span className="hko-uni-quick-card-icon"><Sparkles className="h-4 w-4" /></span>
+              <span>
+                <span className="block text-sm font-bold text-white">Abrir NOVA</span>
+                <span className="block text-xs text-slate-400">Conversación, capacidades, acciones y evidencia</span>
+              </span>
+            </Link>
+            {pendingCount > 0 ? (
+              <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por revisar</span>
+            ) : (
+              <span className="hko-uni-hero-pill is-live"><span className="dot" /> Sin acciones pendientes</span>
+            )}
           </div>
         </div>
       </section>
