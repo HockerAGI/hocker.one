@@ -63,8 +63,10 @@ export function sanitizeOwnerReturnTo(value: unknown): string {
 }
 
 async function inspectOwnerSession(projectId = "hocker-one"): Promise<OwnerSessionState> {
-  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
-  const anonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "").trim();
+  const anonKey = String(
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
+  ).trim();
   if (!url || !anonKey) {
     return missingAuthEnvironment();
   }
