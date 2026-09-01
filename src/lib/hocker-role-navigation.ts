@@ -12,7 +12,7 @@ export const HOCKER_NAV_ITEMS_2C: Record<HockerShellMode, HockerNavItem[]> = {
   owner: [
     { label: "Inicio", href: "/owner/command-center", description: "Resumen ejecutivo y próxima acción." },
     { label: "NOVA", href: "/owner/nova", description: "Chat operativo central." },
-    { label: "Pendientes", href: "/owner/actions", description: "Aprobaciones y acciones listas." },
+    { label: "Acciones", href: "/owner/actions", description: "Aprobaciones, ejecuciones y estado de acciones." },
     { label: "Evidencia", href: "/owner/evidence", description: "Pruebas, cambios y resultados." },
     { label: "Ecosistema", href: "/owner/ecosystem", description: "Mapa visual de HOCKER." },
     { label: "AGIs", href: "/owner/agis", description: "Las 16 AGIs oficiales.", ownerOnly: true },
@@ -44,7 +44,7 @@ export const HOCKER_NAV_ITEMS_2C: Record<HockerShellMode, HockerNavItem[]> = {
 export const HOCKER_MOBILE_OWNER_NAV_2C = [
   { label: "Inicio", href: "/app" },
   { label: "NOVA", href: "/app/nova" },
-  { label: "Pendientes", href: "/app/pendientes" },
+  { label: "Acciones", href: "/app/pendientes" },
   { label: "Actividad", href: "/app/actividad" },
   { label: "Más", href: "/app/ecosistema" },
 ] as const;
