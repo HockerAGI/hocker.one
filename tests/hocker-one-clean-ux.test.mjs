@@ -17,6 +17,15 @@ test("NOVA route is immersive instead of a dashboard card", async () => {
   assert.doesNotMatch(chat, />Owner Gate</);
 });
 
+test("Home keeps NOVA as a compact entry point and never mounts the full realtime chat", async () => {
+  const page = await read("src/app/owner/page.tsx");
+  assert.doesNotMatch(page, /import NovaRealtimeChatLazy from/);
+  assert.doesNotMatch(page, /<NovaRealtimeChatLazy\s*\/>/);
+  assert.match(page, /href=\"\/chat\"/);
+  assert.match(page, /Workspace inmersivo/);
+  assert.match(page, /Hablar con NOVA|Abrir NOVA|NOVA/);
+});
+
 test("NOVA primary view hides operational counters and exposes optional detail", async () => {
   const chat = await read("src/components/NovaRealtimeChat.tsx");
   assert.match(chat, /Detalle/);
