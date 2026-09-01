@@ -16,6 +16,8 @@ type RuntimeAction = {
 type ApiListResponse = { ok?: boolean; actions?: RuntimeAction[]; error?: string };
 type MutateResponse = { ok?: boolean; item?: RuntimeAction; error?: string; message?: string };
 
+const OPERATIONAL_REFRESH_EVENT = "hocker:operational-refresh";
+
 function riskLabel(risk: string) {
   const labels: Record<string, string> = { low: "Bajo", medium: "Medio", high: "Alto", critical: "Crítico" };
   return labels[risk] ?? risk;
@@ -42,9 +44,14 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
   }, [projectId]);
 
   useEffect(() => {
-    const t = setTimeout(() => { void load(); }, 0);
-    const interval = setInterval(() => { void load(); }, 30000);
-    return () => { clearTimeout(t); clearInterval(interval); };
+    void load();
+    const interval = setInterval(() => { void load(); }, 30_000);
+    const onOperationalRefresh = () => { void load(); };
+    window.addEventListener(OPERATIONAL_REFRESH_EVENT, onOperationalRefresh);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(OPERATIONAL_REFRESH_EVENT, onOperationalRefresh);
+    };
   }, [load]);
 
   async function mutate(actionId: string, decision: "approve" | "reject") {
@@ -53,13 +60,13 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
       const res = await fetch("/api/agi/runtime/actions/decision", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, action_id: actionId, decision, note: "Aprobado/rechazado desde panel unificado." }),
+        body: JSON.stringify({ project_id: projectId, action_id: actionId, decision, note: "Decisión desde panel unificado." }),
       });
       const data = (await res.json()) as MutateResponse;
       if (!res.ok || data.error) throw new Error(data.error);
       await load();
     } catch {
-      /* silent — UI stays consistent */
+      /* Server policy remains authoritative; refresh will reconcile the view. */
     } finally {
       setBusyId(null);
     }
