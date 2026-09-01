@@ -8,8 +8,9 @@ export const HOCKER_PRIVATE_SESSION_GUARD_VERSION = "hocker-private-session-guar
 const PRIVATE_ROLES = new Set(["owner", "admin", "operator"]);
 
 export async function requirePrivateSession(projectId = "hocker-one") {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
+  const anon =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
 
   if (!url || !anon) {
     redirect("/login");
