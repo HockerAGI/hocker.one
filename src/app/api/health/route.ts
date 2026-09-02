@@ -44,7 +44,11 @@ function hasRealValue(value: string | undefined | null): boolean {
 function buildEnvChecks(): Omit<HealthChecks, "db"> {
   return {
     supabaseUrl: hasRealValue(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL),
-    supabaseAnon: hasRealValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseAnon: hasRealValue(
+      process.env.SUPABASE_PUBLISHABLE_KEY ??
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ),
     novaAgi: hasRealValue(process.env.NOVA_AGI_URL ?? process.env.ORCHESTRATOR_BASE_URL),
     novaKey: hasRealValue(process.env.NOVA_ORCHESTRATOR_KEY),
     commandHmac: hasRealValue(
