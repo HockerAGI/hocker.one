@@ -13,7 +13,7 @@ function createMissingClient(): BrowserSupabaseClient {
     {
       get() {
         throw new Error(
-          "Supabase no está configurado en el cliente. Revisa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY o SUPABASE_PUBLISHABLE_KEY.",
+          "Supabase no está configurado en el cliente. Revisa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY o NEXT_PUBLIC_SUPABASE_ANON_KEY.",
         );
       },
     },
@@ -23,10 +23,10 @@ function createMissingClient(): BrowserSupabaseClient {
 }
 
 function resolveBrowserSupabaseEnv(): { url: string; key: string } {
-  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "").trim();
+  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
   const key = String(
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-      process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
       "",
   ).trim();
 
