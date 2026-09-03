@@ -15,7 +15,11 @@ type RecentLog = {
 
 function createJurixClient() {
   const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
-  const supabaseKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+  const supabaseKey = String(
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+      "",
+  ).trim();
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Supabase no está configurado para JURIX.");

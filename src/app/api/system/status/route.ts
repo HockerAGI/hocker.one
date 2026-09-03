@@ -65,9 +65,14 @@ async function probe(url: string, headers?: HeadersInit): Promise<boolean> {
 
 async function checkSupabase(): Promise<Check> {
   const url = env("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL");
-  const anon = env("NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY");
+  const publicKey = env(
+    "SUPABASE_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  );
 
-  if (!url || !anon) {
+  if (!url || !publicKey) {
     return {
       active: false,
       label: "Supabase",
@@ -76,8 +81,8 @@ async function checkSupabase(): Promise<Check> {
   }
 
   const active = await probe(`${cleanUrl(url)}/rest/v1/`, {
-    apikey: anon,
-    authorization: `Bearer ${anon}`,
+    apikey: publicKey,
+    authorization: `Bearer ${publicKey}`,
   });
 
   return {
@@ -134,7 +139,7 @@ async function checkAgentByUrl(): Promise<Check | null> {
 
 async function checkAgentBySupabase(): Promise<Check> {
   const supabaseUrl = env("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
-  const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY");
   const projectId = env("HOCKER_PROJECT_ID", "NEXT_PUBLIC_HOCKER_PROJECT_ID") || "hocker-one";
   const nodeId = env("HOCKER_LOCAL_AGENT_NODE_ID", "HOCKER_NODE_AGENT_ID", "HOCKER_DEFAULT_NODE_ID", "DEFAULT_COMMAND_NODE_ID") || "hocker-node-1";
 
