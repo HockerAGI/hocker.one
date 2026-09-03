@@ -4,17 +4,16 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("commands queue guards browser Supabase configuration before opening Realtime", async () => {
+test("commands queue reads through the authenticated commands API", async () => {
   const source = await read("src/components/CommandsQueue.tsx");
-  assert.match(source, /hasBrowserSupabaseEnv\(\)/);
-  assert.match(source, /let channel: RealtimeChannel \| null = null/);
-  assert.match(source, /try \{[\s\S]*channel = sb\.channel/);
-  assert.match(source, /if \(channel\) void sb\.removeChannel\(channel\)/);
+  assert.match(source, /fetch\(`\/api\/commands\?project_id=\$\{encodeURIComponent\(projectId\)\}`/);
+  assert.match(source, /setItems\(Array\.isArray\(data\.items\)/);
+  assert.match(source, /setError\(/);
 });
 
-test("commands queue does not make Realtime publication a page-load dependency", async () => {
+test("commands queue does not depend on Supabase Realtime for page load", async () => {
   const source = await read("src/components/CommandsQueue.tsx");
-  assert.match(source, /channel = sb\.channel\(\`commands:\$\{projectId\}\`\)/);
-  assert.match(source, /setError\(/);
-  assert.match(source, /setLoading\(false\)/);
+  assert.doesNotMatch(source, /RealtimeChannel/);
+  assert.doesNotMatch(source, /\.channel\(/);
+  assert.match(source, /setInterval\(/);
 });
