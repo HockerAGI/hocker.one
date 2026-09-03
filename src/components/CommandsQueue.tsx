@@ -1,8 +1,6 @@
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import type { CommandRow, CommandStatus } from "@/lib/types";
@@ -11,6 +9,10 @@ import StatusBadge from "@/components/ui-hocker/StatusBadge";
 import { humanCommandLabel } from "@/lib/hocker-human-labels";
 
 type QueueItem = CommandRow;
+type CommandsResponse = {
+  items?: unknown[];
+  error?: string;
+};
 
 const FILTERS: Array<{ value: "all" | CommandStatus; label: string }> = [
   { value: "all", label: "Todas" },
@@ -34,7 +36,6 @@ function friendlyCommand(value: string): string {
 }
 
 export default function CommandsQueue() {
-  const sb = useMemo(() => createBrowserSupabase(), []);
   const { projectId } = useWorkspace();
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,27 +46,34 @@ export default function CommandsQueue() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: queryError } = await sb
-        .from("commands")
-        .select("id, project_id, node_id, command, payload, status, needs_approval, signature, result, error, approved_at, executed_at, started_at, finished_at, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(48);
-      if (queryError) throw queryError;
-      setItems(Array.isArray(data) ? (data as QueueItem[]).map((row) => ({ ...row, status: normalizeCommandStatus(row.status) })) : []);
+      const res = await fetch(`/api/commands?project_id=${encodeURIComponent(projectId)}`, {
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as CommandsResponse;
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo leer la cola de tareas.");
+      }
+
+      const rows = Array.isArray(data.items) ? data.items : [];
+      setItems(
+        rows.map((row) => {
+          const item = row as QueueItem;
+          return { ...item, status: normalizeCommandStatus(item.status) };
+        }),
+      );
     } catch (err: unknown) {
       setItems([]);
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [projectId, sb]);
+  }, [projectId]);
 
   useEffect(() => {
-    queueMicrotask(() => { void load(); });
-    const channel: RealtimeChannel = sb.channel(`commands:${projectId}`).on("postgres_changes", { event: "*", schema: "public", table: "commands", filter: `project_id=eq.${projectId}` }, () => void load()).subscribe();
-    return () => { void sb.removeChannel(channel); };
-  }, [load, projectId, sb]);
+    void load();
+    const intervalId = window.setInterval(() => void load(), 15_000);
+    return () => window.clearInterval(intervalId);
+  }, [load]);
 
   const filtered = filter === "all" ? items : items.filter((item) => item.status === filter);
   const stats = useMemo(() => ({
