@@ -75,7 +75,13 @@ export function toApiError(e: unknown): ApiError {
 }
 
 export async function requireProjectRole(project_id: string, allowedRoles: Role[]) {
-  const pid = normalizeProjectId(project_id);
+  let pid;
+  try {
+    pid = normalizeProjectId(project_id);
+  } catch (err: unknown) {
+    throw new ApiError(400, { error: getErrorMessage(err) });
+  }
+
   const sb = await createServerSupabase();
 
   const {
