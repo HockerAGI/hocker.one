@@ -12,7 +12,9 @@ test("browser Supabase client prefers the canonical public publishable key", asy
   assert.doesNotMatch(source, /process\.env\.SUPABASE_SECRET_KEY/);
 });
 
-test("commands task surface remains backed by the browser Supabase client", async () => {
+test("commands task surface uses the authenticated API and not a direct Realtime dependency", async () => {
   const source = await read("src/components/CommandsQueue.tsx");
-  assert.match(source, /createBrowserSupabase\(\)/);
+  assert.match(source, /fetch\(`\/api\/commands\?project_id=\$\{encodeURIComponent\(projectId\)\}`/);
+  assert.doesNotMatch(source, /createBrowserSupabase\(\)/);
+  assert.doesNotMatch(source, /\.channel\(/);
 });
