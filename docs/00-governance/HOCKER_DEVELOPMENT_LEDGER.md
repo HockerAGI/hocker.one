@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-08-19T12:56:52-07:00
+last_verified_at: 2026-09-03T20:23:00-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -26,10 +26,10 @@ These are mutable and must be re-queried before mutation:
 - Hocker One `main`: `6905117dc5a6fd8c7925169755097f9d84ddf32f` after PR #252. The immediately preceding production sequence is PR #250 (Next.js 16.3.1), PR #251 (post-Next continuity closure), and PR #252 (remaining deprecated Edge API routes migrated to Node runtime).
 - HOCKER corporate/public `hocker.agi/main`: `6c8265f290410880315e5addc2b8ce843c49e13f` after PR #23, following Precision Future vNext PR #24 at `c088bac0b009112d31ed53b5d70da8829bb327fb`. PR #25 TRIAD Web v2 remains an unmerged candidate at `30ef8f8a0bbed73e550eff63e89e6971fe723095`.
 - Canonical counts: 10 applications / 16 AGIs.
-- Connected engineering repositories: 9.
-- Connected Vercel projects: 3 (`hocker-one`, `hocker.agi`, `chido-casino`).
+- Connected engineering repositories: 9 (current connected inventory; 5-repo DOC-05 2026.08 count is historical).
+- Connected Vercel projects: 4 (`hocker-one`, `hocker.agi`, `chido-casino`, `punto-g-web`).
 - Primary Supabase project: `yvuibbcuntqpyqiuqggd`.
-- Supabase Branching: `main=FUNCTIONS_DEPLOYED`, preview project `ACTIVE_HEALTHY` at the latest read.
+- Supabase primary project: `yvuibbcuntqpyqiuqggd` ACTIVE_HEALTHY. Two additional validation projects are observed: `qjmtaxamcxqhonqwishm` ACTIVE_HEALTHY and `pswlloziztxjsjazfiiy` INACTIVE historical fixture.
 - NOVA dedicated repository `main`: `5c022c5d95197e55fb4fc0eaab1a70d53224fcbf` after PR #38. Exact current Railway revision/readiness/logs/authenticated Hocker One→NOVA E2E remain `PENDING EVIDENCE`.
 - PUNTO·G repository `main`: `88411cb307c9059e0f2d478d43e5dfeefe67f7a2`; its parent is the final validated Phase 4 code authority `56424a572dfeafc8c7c5d13c1a553a8dafd1591f`, and the current tip is a documentation-only Phase 4 closure/handoff commit. `main` remains unprotected with zero required status checks.
 - PUNTO·G Phase 3E Account & Safety remains `TECHNICALLY CLOSED / ACTIVATION GATED`. Phase 4 Requests / GIA / Chat is now `TECHNICALLY CLOSED / ACTIVATION GATED` through merged PR #12 exact functional head `56424a572dfeafc8c7c5d13c1a553a8dafd1591f`; exact-head GitHub Actions CI `32222698033` / #191 = SUCCESS. Phase 5 Trust & Safety / PWA / Admin is `NEXT — NOT STARTED`.
