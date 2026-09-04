@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bot, ChevronLeft, CircleAlert, Info, Loader2, RotateCw, Send, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import NovaHistoryPanel from "@/components/NovaHistoryPanel";
@@ -58,7 +59,9 @@ function serviceLabel(status: string): string {
 
 export default function NovaRealtimeChat() {
   const { projectId, ready } = useWorkspace();
-  const [threadId] = useState(() => generateId());
+  const searchParams = useSearchParams();
+  const requestedThreadId = searchParams.get("thread_id");
+  const [threadId] = useState(() => requestedThreadId || generateId());
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
