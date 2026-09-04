@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Bot, ChevronLeft, CircleAlert, Info, Loader2, RotateCw, Send, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
+import NovaHistoryPanel from "@/components/NovaHistoryPanel";
 import { DraftCard } from "@/components/DraftCard";
 import type { ChatActionDraft, Msg, QueueLock, RuntimeAction, RuntimeSummary } from "@/components/nova-chat-types";
 import { BLOCKING_STATUSES } from "@/components/nova-chat-types";
@@ -208,6 +209,7 @@ export default function NovaRealtimeChat() {
       <header className="z-10 border-b border-white/[0.06] bg-[#030711]/88 backdrop-blur-xl">
         <div className="mx-auto flex min-h-14 w-full max-w-[1100px] items-center gap-2 px-3 sm:px-5">
           <Link href="/owner" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-label="Volver a Inicio"><ChevronLeft className="h-5 w-5" /></Link>
+          <NovaHistoryPanel />
           <Sparkles className="h-4 w-4 text-sky-300" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">NOVA</p><p className="text-xs text-slate-500">{serviceLabel(novaStatus)}</p></div>
           {queueLock.blocking_count > 0 ? <Link href="/owner/actions" className="rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">{queueLock.blocking_count} por aprobar</Link> : null}
