@@ -5,7 +5,7 @@ Status: **ACTIVE — EXPANSION_READY / PRODUCTION-READINESS HARDENING**
 ## Current verified baseline
 
 - Hocker One `main`: `537493907dbd599709e20bd2f81f29e1a220b74b`.
-- Vercel production: `dpl_BGFxWajgGqX3mYR1ZCzEuWsH7` — READY.
+- Vercel production: `dpl_BGFxWajgGqX3mYR1ZCzEu9cvWsH7` — READY.
 - `/api/health/ping`: HTTP 200 / online.
 - Core AGI certification: **16/16 AGIs, 48/48 PASS**, `2026.08.21-8` + `score-v5`.
 - Tool certification: **19/19 read-only PASS**; `external_writes_executed=false`.
