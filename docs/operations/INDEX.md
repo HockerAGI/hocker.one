@@ -8,7 +8,7 @@ Status: **ACTIVE INDEX**
 
 | Purpose | Current source | Rule |
 | --- | --- | --- |
-| Detailed cross-session continuity | `HANDOFF_2026-08-30.md` | Source for current state, closed incidents, evidence and next gate. |
+| Detailed cross-session continuity | `HANDOFF_2026-09-03.md` | Source for current state, closed incidents, evidence and next gate. |
 | Emergency recovery card | `LAST_KNOWN_STATE.md` | Compact pointers only; re-query mutable facts before action. |
 | Current production-readiness closure | `PLATFORM_CLOSURE_2026-08-30.md` | Single gate for post-Core-certification `production_ready`. |
 | Core AGI certification evidence | GitHub issue `#303` + Supabase durable evidence | Completed scope certificate; do not reopen unless evidence/contracts change materially. |
@@ -31,6 +31,6 @@ Status: **ACTIVE INDEX**
 
 ## New-session startup
 
-`AGENTS.md` → this index → `HANDOFF_2026-08-30.md` → `LAST_KNOWN_STATE.md` → `PLATFORM_CLOSURE_2026-08-30.md` → `DOC_ALIGNMENT_2026-08-19.md` → re-query GitHub/Vercel/Supabase/providers.
+`AGENTS.md` → this index → `HANDOFF_2026-09-03.md` → `LAST_KNOWN_STATE.md` → `PLATFORM_CLOSURE_2026-08-30.md` → `DOC_ALIGNMENT_2026-08-19.md` → re-query GitHub/Vercel/Supabase/providers.
 
 Older `HANDOFF_2026-08-19.md`, `PLATFORM_CLOSURE_2026-08-19.md` and snapshots remain historical.

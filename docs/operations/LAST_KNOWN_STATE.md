@@ -1,17 +1,17 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-08-31 04:48 UTC**
+Evidence cut: **2026-09-03 21:23 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
-Live operational source: `docs/operations/HANDOFF_2026-08-30.md`.
+Live operational source: `docs/operations/HANDOFF_2026-09-03.md`.
 Current production-readiness gate: `docs/operations/PLATFORM_CLOSURE_2026-08-30.md`.
 Historical sources dated 2026-08-19 remain preserved for audit and are not live pointers.
 
 ## Current verified pointers
 
-- Hocker One `main`: `6ee2daa96843df9302e4fe874b7a06cf33147569`.
-- Vercel production: `dpl_JBHvhDaCiQCtrztDQ7Zoci5AvYSV` — READY — `hockerone.vercel.app`.
+- Hocker One `main`: `537493907dbd599709e20bd2f81f29e1a220b74b`.
+- Vercel production: `dpl_BGFxWajgGqX3mYR1ZCzEu9cvWsH7` — READY — `hockerone.vercel.app`.
 - Hocker One health: `/api/health/ping` = HTTP 200 / online.
 - Core AGI certification: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**.
 - Tool certification: **19/19 read-only PASS**; no external writes during certification.
@@ -19,7 +19,7 @@ Historical sources dated 2026-08-19 remain preserved for audit and are not live 
 - `nova.agi/main`: `5575e671c2931a5bf6304a968aae0490d67ca9c5`.
 - `hocker-node-agent/main`: `a4af22a97dc639389a4ba5f3dc8926ec95fa84ff`.
 - Supabase project: `yvuibbcuntqpyqiuqggd`, PostgreSQL 17, `us-west-1`.
-- Supabase migration head: `20260830153247`.
+- Supabase migration head: current ledger includes `20260903182025_align_queue_orphan_view_with_reconciler`; re-query the migration ledger before mutation.
 - Canon completeness view: `12.6C.1B`, 16 registry profiles, 16 runtime agents, 16 canonical memories, 16 specialized feeds, 34 enabled tool assignments.
 
 ## Recent completed maintenance
@@ -67,8 +67,8 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 - Owner AAL1/AAL2 negative-path + containment remains an external human gate.
 - Context Bridge AAL2 migration remains open.
 - NOVA dedicated Railway runtime remains unverified.
-- Android API 36 on final `main` remains a manual GitHub Actions gate.
-- Supabase Leaked Password Protection remains a manual Dashboard gate.
+- Android API 36 was manually executed successfully during the current continuation cycle; re-run only if the Android build/contract changes.
+- Supabase Leaked Password Protection remains a manual Dashboard gate and is blocked by the current Free plan.
 
 ## Expansion status
 
