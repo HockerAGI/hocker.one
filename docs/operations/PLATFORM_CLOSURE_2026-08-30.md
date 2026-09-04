@@ -4,15 +4,15 @@ Status: **ACTIVE — EXPANSION_READY / PRODUCTION-READINESS HARDENING**
 
 ## Current verified baseline
 
-- Hocker One `main`: `6ee2daa96843df9302e4fe874b7a06cf33147569`.
-- Vercel production: `dpl_JBHvhDaCiQCtrztDQ7Zoci5AvYSV` — READY.
+- Hocker One `main`: `537493907dbd599709e20bd2f81f29e1a220b74b`.
+- Vercel production: `dpl_BGFxWajgGqX3mYR1ZCzEuWsH7` — READY.
 - `/api/health/ping`: HTTP 200 / online.
 - Core AGI certification: **16/16 AGIs, 48/48 PASS**, `2026.08.21-8` + `score-v5`.
 - Tool certification: **19/19 read-only PASS**; `external_writes_executed=false`.
 - `allow_actions=true`: **0/16**.
 - `nova.agi/main`: `5575e671c2931a5bf6304a968aae0490d67ca9c5`.
 - `hocker-node-agent/main`: `a4af22a97dc639389a4ba5f3dc8926ec95fa84ff`.
-- Supabase migration head: `20260830153247`.
+- Supabase migration ledger includes `20260903182025_align_queue_orphan_view_with_reconciler`; current head must be re-queried before mutation.
 
 ## Gate status — audited against the master execution plan
 
@@ -47,8 +47,8 @@ Remaining Advisor warnings require contract review rather than blanket revocatio
 
 - `hocker.one #166`: real Owner AAL1/AAL2 negative-path + containment smoke.
 - `hocker.one #167`: Context Bridge AAL2 activation and retirement of legacy activation path only after proof.
-- `hocker.one #200`: Leaked Password Protection must be enabled through Supabase Auth Dashboard; current connector has no supported write action.
-- `hocker.one #203`: Android API 36 manual run on final `main`.
+- `hocker.one #200`: Leaked Password Protection remains provider-plan blocked on Supabase Free; keep classified as external blocker rather than engineering failure.
+- `hocker.one #203`: Android API 36 manual run completed successfully in the current continuation cycle.
 - `hocker.one #210`: Cloudflare provider-side MCP/Worker hardening evidence.
 - `nova.agi #31`: Railway deployment/readiness/fallback/recovery evidence.
 - `hocker.one #212`: isolated Supabase branch cannot be created on the current Hobby project; no fake branch/evidence.
