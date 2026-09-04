@@ -146,7 +146,7 @@ test("context freshness policy makes operational continuity event-driven and mem
 test("recovery card keeps current production and certification pointers explicit", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
-  assert.match(state, /HANDOFF_2026-08-30\.md/);
+  assert.match(state, /HANDOFF_2026-09-04\.md/);
   assert.match(state, /## Current verified pointers/);
   assert.match(state, /Core AGI certification:.*2026\.08\.21-8.*score-v5/i);
   assert.match(state, /allow_actions=false/);
