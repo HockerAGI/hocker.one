@@ -4,7 +4,7 @@ status: ACTIVE
 owner: Hocker One / Owner
 classification: INTERNAL
 created_at: 2026-08-16
-last_verified_at: 2026-09-03T20:23:00-07:00
+last_verified_at: 2026-09-05T11:30:00-07:00
 truth_order: production/configuration > main/migrations > executable contracts/tests > approved ADR/policies > canonical docs > vision/history
 update_policy: append-only milestones; mutable pointers must be re-queried before action
 ---
@@ -575,3 +575,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Direct production AGI evidence remains incomplete: 16 canonical AGIs, 16 agents, 0 with `allow_actions=true`, 51 total runs, 12 runs since 2026-08-19 UTC across only 3 distinct AGIs, latest run `2026-08-19T09:42:04.967363Z`, 3 `agi_eval_result` rows and 0 `agi_tool_eval_result` rows. No 16/16 certification is claimed and no evidence row was manufactured or altered by this audit.
 - Open merge candidates remain gated: `hocker.agi` PR #25 still requires its own authoritative visual/review gate; TypeScript 7 PR #15 remains blocked; CHIDO dependency majors/minors and Node Agent dependency PRs have not been auto-promoted; Hocker Ads PR #18 remains an unmerged provider-neutral draft. No risky/regulated change was merged by this audit.
 - This audit executed no production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality. The only repository mutation in this cut is this append-only Ledger reconciliation branch pending normal PR/review/protection gates.
+
+## 2026-09-05 — Native Tool Fabric milestone
+
+PR #342 is merged into Hocker One `main` at `7229b1fe4e3a82ab84c4aad1d0affd8fe1aab5e0` after exact-head Preview READY/SUCCESS. Native provider-neutral tool calling is now production-promoted for OpenAI, Anthropic, Gemini and Vercel AI Gateway, with Hocker One remaining the sole execution/policy boundary.
