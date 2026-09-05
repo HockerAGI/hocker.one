@@ -10,7 +10,7 @@ Historical sources dated 2026-08-19 remain preserved for audit and are not live 
 
 ## Current verified pointers
 
-- Hocker One `main`: `124a1a1592c847159f11f992fe65062449ecc97a` (active handoff published after History promotion; re-query before mutation).
+- Hocker One `main`: `d51aea8af6068da2553cf7fbeceb3c630707c3a3` (active handoff published after History promotion; re-query before mutation).
 - Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
 - Hocker One health: public smoke `/chat` = HTTP 200; authenticated private APIs return HTTP 401 without identity; production runtime errors observed in post-merge window = 0.
 - Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; this remains a durable baseline, not fresh liveness evidence.
@@ -91,3 +91,9 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 Before any material action, re-query GitHub, Vercel, Supabase and the relevant provider. The active handoff is authoritative for current narrative; this card is intentionally compact and not a substitute for live state.
 
 Latest History gate evidence: PR #335 was validated on exact HEAD via Vercel Preview `READY`; production deployment `dpl_Az6NQE4A2aK2UxbmqBz92yBEviHd` is `READY` on the same merge SHA. Public smoke: `/chat` HTTP 200; unauthenticated private history/runtime endpoints HTTP 401. No production runtime errors observed in the post-merge check.
+
+
+## Dynamic MCP provider fabric milestone — 2026-09-05
+
+- PR #351 merged to `main` as `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Preview `SUCCESS`/`READY`.
+- Dynamic MCP manifests now reuse the canonical MCP Registry and native Tool Fabric with HTTPS host allowlisting.
