@@ -10,7 +10,7 @@ import {
   type HockerIntegrationContract,
 } from "@/lib/hocker-integrations";
 import { getMcpRegistry, type McpRegistryStatus } from "@/lib/mcp/mcp-registry";
-import { isReadOnlyMcpTool, MCP_PROVIDER_IDS, type McpProviderId } from "@/lib/mcp/mcp-policy";
+import { isKnownMcpProviderId, isReadOnlyMcpTool } from "@/lib/mcp/mcp-policy";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
