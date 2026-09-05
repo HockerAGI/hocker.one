@@ -575,3 +575,7 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 - Direct production AGI evidence remains incomplete: 16 canonical AGIs, 16 agents, 0 with `allow_actions=true`, 51 total runs, 12 runs since 2026-08-19 UTC across only 3 distinct AGIs, latest run `2026-08-19T09:42:04.967363Z`, 3 `agi_eval_result` rows and 0 `agi_tool_eval_result` rows. No 16/16 certification is claimed and no evidence row was manufactured or altered by this audit.
 - Open merge candidates remain gated: `hocker.agi` PR #25 still requires its own authoritative visual/review gate; TypeScript 7 PR #15 remains blocked; CHIDO dependency majors/minors and Node Agent dependency PRs have not been auto-promoted; Hocker Ads PR #18 remains an unmerged provider-neutral draft. No risky/regulated change was merged by this audit.
 - This audit executed no production DDL, RLS/grant mutation, secret change, payment/Wallet/Casino action, AGI material action, provider activation or regulated functionality. The only repository mutation in this cut is this append-only Ledger reconciliation branch pending normal PR/review/protection gates.
+
+## 2026-09-05 — Dynamic MCP provider fabric milestone
+
+PR #351 merged at `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Preview. Dynamic MCP providers now reuse the canonical MCP Registry/native tool fabric and fail closed via HTTPS host allowlisting.
