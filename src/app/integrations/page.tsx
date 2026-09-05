@@ -10,7 +10,7 @@ import {
   type HockerIntegrationContract,
 } from "@/lib/hocker-integrations";
 import { getMcpRegistry, type McpRegistryStatus } from "@/lib/mcp/mcp-registry";
-import { isReadOnlyMcpTool, MCP_PROVIDER_IDS, type McpProviderId } from "@/lib/mcp/mcp-policy";
+import { isKnownMcpProviderId, isReadOnlyMcpTool } from "@/lib/mcp/mcp-policy";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -68,8 +68,8 @@ function moduleStatusClass(status: string): string {
   return "border-slate-300/15 bg-slate-300/[0.07] text-slate-300";
 }
 
-function isKnownProvider(value: string): value is McpProviderId {
-  return MCP_PROVIDER_IDS.includes(value as McpProviderId);
+function isKnownProvider(value: string): boolean {
+  return isKnownMcpProviderId(value);
 }
 
 function toolMode(provider: string, tool: string): "Lectura" | "Requiere aprobación" {
