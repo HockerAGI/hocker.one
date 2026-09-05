@@ -58,6 +58,7 @@ export const ollamaProvider: AgiModelProvider = {
         provider: "ollama",
         model: model(),
         text,
+        tool_calls: [],
         usage: {
           tokens_in: tokensIn,
           tokens_out: tokensOut,
