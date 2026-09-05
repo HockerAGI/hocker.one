@@ -161,3 +161,10 @@ test("recovery card keeps current production and certification pointers explicit
 });
 
 // Keep this file focused on durable contracts; mutable status belongs in the active handoff/recovery sources.
+
+
+test("live summary does not claim the dedicated NOVA runtime is live before certification", async () => {
+  const live = await source("src/lib/hocker-live-summary.ts");
+  assert.match(live, /runtime dedicado nova\\.agi permanece sin certificación live/i);
+  assert.doesNotMatch(live, /NOVA está viva y responde desde Railway/i);
+});
