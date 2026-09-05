@@ -1,16 +1,16 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-05 01:37 UTC-07:00**
+Evidence cut: **2026-09-05 01:40 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
-Live operational source: `docs/operations/HANDOFF_2026-09-04.md`.
+Live operational source: `docs/operations/HANDOFF_2026-09-05.md`.
 Current production-readiness gate: `docs/operations/PLATFORM_CLOSURE_2026-08-30.md`.
 Historical sources dated 2026-08-19 remain preserved for audit and are not live pointers.
 
 ## Current verified pointers
 
-- Hocker One `main`: `b1b8554fd7f9c7091634df6487687472a1d0e127` (History workspace merged and promoted; re-query before mutation).
+- Hocker One `main`: `2eca82b2bd39feaa2247e849402ccaf85f017e8a` (active handoff published after History promotion; re-query before mutation).
 - Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
 - Hocker One health: public smoke `/chat` = HTTP 200; authenticated private APIs return HTTP 401 without identity; production runtime errors observed in post-merge window = 0.
 - Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; this remains a durable baseline, not fresh liveness evidence.
@@ -59,7 +59,7 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 - Active operations index/handoff/closure structure exists.
 
 ### Still incomplete or not fully evidenced
-- `NovaWorkspace` decomposition is not implemented on `main`; `NovaRealtimeChat` remains monolithic.
+- `NovaWorkspace` decomposition remains partial on `main`; History is production-promoted, while Conversation/Composer/Detail/Tools/Connectors/Evidence remain partially consolidated.
 - Full chat capability surface (real file upload, voice, artifact viewer, connector/tool UX) is not certified complete on `main`.
 - Full frontend `OperationalState` contract is not implemented as specified; DB `v_agi_operational_state` is narrower.
 - Full responsive/accessibility/device certification matrix is not evidenced as complete.
