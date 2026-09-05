@@ -7,8 +7,22 @@ import {
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
+import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 
 type JsonRecord = Record<string, unknown>;
+
+type NativeToolOwnership = { owner_agi: string | null; support_agis: string[]; capability_keys: string[] };
+
+function ownershipForProvider(providerId: string): NativeToolOwnership {
+  const capabilities = getHockerCapabilitiesContract().capabilities.filter((capability) =>
+    capability.tool_keys.some((toolKey) => toolKey === providerId),
+  );
+  return {
+    owner_agi: capabilities[0]?.owner_agi ?? null,
+    support_agis: [...new Set(capabilities.flatMap((capability) => capability.support_agis))].slice(0, 12),
+    capability_keys: capabilities.map((capability) => capability.key).slice(0, 12),
+  };
+}
 
 export type AgiMcpToolCall = {
   id: string;
@@ -346,11 +360,19 @@ function nativeToolDefinitionsFromStatus(status: ReturnType<ReturnType<typeof ge
       const parameters = tool.inputSchema && typeof tool.inputSchema === "object" && !Array.isArray(tool.inputSchema)
         ? tool.inputSchema
         : { type: "object", properties: {} };
+      const ownership = ownershipForProvider(provider.id);
       definitions.push({
         name,
         qualified_name: qualifiedName,
         description: String(tool.description ?? `${qualifiedName} MCP tool`).slice(0, 900),
-        parameters,
+        parameters: {
+          ...parameters,
+          "x-hocker": {
+            owner_agi: ownership.owner_agi,
+            support_agis: ownership.support_agis,
+            capability_keys: ownership.capability_keys,
+          },
+        },
       });
     }
   }
