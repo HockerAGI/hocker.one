@@ -12,14 +12,14 @@ Historical sources dated 2026-08-19 remain preserved for audit and are not live 
 
 - Hocker One `main`: `b1b8554fd7f9c7091634df6487687472a1d0e127` (History workspace merged and promoted; re-query before mutation).
 - Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
-- Hocker One health: `/api/health/ping` = HTTP 200 / online.
-- Core AGI certification: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**.
+- Hocker One health: public smoke `/chat` = HTTP 200; authenticated private APIs return HTTP 401 without identity; production runtime errors observed in post-merge window = 0.
+- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; this remains a durable baseline, not fresh liveness evidence.
 - Tool certification: **19/19 read-only PASS**; no external writes during certification.
 - All 16 AGIs remain `allow_actions=false`.
 - `nova.agi/main`: `2e3d2f8c8c577b88678267fd02b96c37afa1f567`.
-- `hocker-node-agent/main`: `41cf21627933fbbed70638668a0031321d5e20e7`.
+- `hocker-node-agent/main`: `3fd8b8adaf6ad4bae66c432536bd955552f0f0f6`.
 - Supabase project: `yvuibbcuntqpyqiuqggd`, PostgreSQL 17, `us-west-1`.
-- Supabase migration head: current ledger includes `20260903182025_align_queue_orphan_view_with_reconciler`; re-query the migration ledger before mutation.
+- Supabase migration head: `20260903182025_align_queue_orphan_view_with_reconciler`; re-query the migration ledger before mutation.
 - Canon completeness view: `12.6C.1B`, 16 registry profiles, 16 runtime agents, 16 canonical memories, 16 specialized feeds, 34 enabled tool assignments.
 
 ## Recent completed maintenance
@@ -70,6 +70,15 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 - NOVA dedicated Railway runtime remains unverified.
 - Android API 36 was manually executed successfully during the current continuation cycle; re-run only if the Android build/contract changes.
 - Supabase Leaked Password Protection remains a manual Dashboard gate and is blocked by the current Free plan.
+
+## Current operational freshness
+
+- `agi_agents = 16`.
+- `allow_actions=true = 0`.
+- `agi_runs` in last 24h = **0**; latest recorded run = `2026-08-30T02:48:30Z`.
+- `agi_integration_checks` in last 24h = **0**; latest recorded check = `2026-08-10T06:17:05Z`.
+- `nodes` seen in last 24h = **0**; latest recorded node signal = `2026-08-18T09:52:48Z`.
+- Therefore registry presence is verified, but fresh AGI execution/node liveness is not.
 
 ## Expansion status
 
