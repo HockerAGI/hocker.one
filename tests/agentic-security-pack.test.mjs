@@ -93,3 +93,25 @@ test("automatic AGI routing selects capability owner and support AGIs without us
   assert.match(source, /delegation_required/);
   assert.match(source, /context\.decision\.owner_agi/);
 });
+
+
+test("AGI federation is bounded, project-scoped and feeds delegated learning targets", async () => {
+  const [migration, mcp, worker, task, learning] = await Promise.all([
+    read("supabase/migrations/20260905192000_bound_agi_delegation_trace.sql"),
+    read("src/lib/agi-mcp-runtime.ts"),
+    read("src/lib/unified-agi-runtime.ts"),
+    read("src/lib/serverless-agi-runtime.ts"),
+    read("src/lib/agi-learning-extractor.ts"),
+  ]);
+  assert.match(migration, /parent_run_id uuid references public\.agi_runs/i);
+  assert.match(migration, /delegation_depth between 0 and 8/i);
+  assert.match(migration, /delegation_fanout between 0 and 8/i);
+  assert.match(mcp, /hocker__agi__delegate/);
+  assert.match(mcp, /AGI_DELEGATION_PARENT_RUN_REQUIRED/);
+  assert.match(mcp, /project_id: options\.project_id/);
+  assert.match(worker, /buildAgiNativeMcpTools/);
+  assert.match(worker, /parent_run_id: runId/);
+  assert.match(worker, /extractLearningCandidate/);
+  assert.match(task, /parent_run_id\?: string/);
+  assert.match(learning, /target_agi_ids\?: string\[\]/);
+});
