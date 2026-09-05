@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import NovaWorkspaceCapabilities from "@/components/NovaWorkspaceCapabilities";
 import NovaWorkspaceTools from "@/components/NovaWorkspaceTools";
+import NovaRepositoryWorkspace from "@/components/NovaRepositoryWorkspace";
 
 // The realtime chat is the single largest client component (~1350 lines). It is
 // browser-only, so we defer it and show an instant skeleton for a fast paint.
@@ -22,6 +23,7 @@ export default function NovaRealtimeChatLazy() {
       <NovaRealtimeChat />
       <NovaWorkspaceCapabilities />
       <NovaWorkspaceTools />
+      <NovaRepositoryWorkspace />
     </div>
   );
 }
