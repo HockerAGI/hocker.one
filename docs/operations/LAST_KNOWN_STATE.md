@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-05 00:26 UTC-07:00**
+Evidence cut: **2026-09-05 01:37 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
 Live operational source: `docs/operations/HANDOFF_2026-09-04.md`.
@@ -10,7 +10,7 @@ Historical sources dated 2026-08-19 remain preserved for audit and are not live 
 
 ## Current verified pointers
 
-- Hocker One `main`: `1e94f0d1f4651b03b577ae32097bf770e36dda29` (continuity baseline; re-query before mutation).
+- Hocker One `main`: `b1b8554fd7f9c7091634df6487687472a1d0e127` (History workspace merged and promoted; re-query before mutation).
 - Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
 - Hocker One health: `/api/health/ping` = HTTP 200 / online.
 - Core AGI certification: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**.
@@ -50,6 +50,7 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 ## Master-plan implementation audit
 
 ### Complete at current baseline
+- Canonical NOVA History workspace: owner/project-scoped history API, persisted history panel and `thread_id` restoration on `/chat` (PR #335; production SHA `b1b8554fd7f9c7091634df6487687472a1d0e127`).
 - Core AGI certification scope.
 - Primary AGI action boundary: `allow_actions=false` baseline.
 - Initial Supabase function hardening.
@@ -79,3 +80,5 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 ## Recovery rule
 
 Before any material action, re-query GitHub, Vercel, Supabase and the relevant provider. The active handoff is authoritative for current narrative; this card is intentionally compact and not a substitute for live state.
+
+Latest History gate evidence: PR #335 was validated on exact HEAD via Vercel Preview `READY`; production deployment `dpl_Az6NQE4A2aK2UxbmqBz92yBEviHd` is `READY` on the same merge SHA. Public smoke: `/chat` HTTP 200; unauthenticated private history/runtime endpoints HTTP 401. No production runtime errors observed in the post-merge check.
