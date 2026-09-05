@@ -53,6 +53,9 @@ At a material milestone, update one current source of detail and point other sou
 - `hocker-node-agent` is local allowlisted/signed execution; it does not receive master cloud credentials.
 - Shared Supabase does not mean shared authorization: project/tenant, grants and RLS remain boundaries.
 - MCP/provider connectors are replaceable; an adapter being present does not mean provider readiness.
+- Native tools must originate from the canonical MCP/Capability Fabric; no second registry.
+- AGI-to-AGI delegation must remain project-scoped, parent-run linked and bounded by depth/fan-out.
+- AGI learning must reuse the canonical SYNTIA Learning Extractor/Memory Mirror path.
 - Tool metadata/annotations are hints, not authorization. Policies + Owner Gate decide.
 
 ## 6. Development and verification
