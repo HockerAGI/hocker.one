@@ -5,6 +5,35 @@ export type AgiModelRoute =
   | "anthropic-direct"
   | "ollama";
 
+export type AgiNativeTool = {
+  /** Wire-safe function name exposed to the model. */
+  name: string;
+  /** Original Hocker-qualified tool name, e.g. github.get_repo. */
+  qualified_name: string;
+  description?: string;
+  parameters: Record<string, unknown>;
+  metadata?: {
+    owner_agi?: string | null;
+    support_agis?: string[];
+    capability_keys?: string[];
+  };
+};
+
+export type AgiToolCall = {
+  id: string;
+  name: string;
+  qualified_name: string;
+  args: Record<string, unknown>;
+};
+
+export type AgiToolResult = {
+  id: string;
+  name: string;
+  qualified_name: string;
+  result: unknown;
+  ok: boolean;
+};
+
 export type AgiModelMessage = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -15,6 +44,12 @@ export type AgiCompletionInput = {
   timeout_ms?: number;
   oidc_token?: string | null;
   exclude_routes?: AgiModelRoute[];
+  /** Native function tools selected by Hocker's Capability Fabric. */
+  tools?: AgiNativeTool[];
+  /** Native tool calls emitted by the previous model turn. */
+  tool_calls?: AgiToolCall[];
+  /** Results produced by Hocker's tool executor for the previous turn. */
+  tool_results?: AgiToolResult[];
 };
 
 export type AgiUsage = {
@@ -38,6 +73,7 @@ export type AgiCompletionResult = {
   text: string;
   usage: AgiUsage;
   attempts: AgiProviderAttempt[];
+  tool_calls: AgiToolCall[];
 };
 
 export type AgiProviderResult = Omit<AgiCompletionResult, "attempts">;

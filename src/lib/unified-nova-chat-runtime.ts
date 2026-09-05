@@ -10,9 +10,11 @@ import { completeAgi, configuredAgiRoutes } from "@/lib/agi-model-router";
 import {
   buildAgiMcpPromptBlock,
   buildAgiMcpResultBlock,
+  buildAgiNativeMcpTools,
   collectAgiMcpDeferredActions,
   executeAgiMcpToolCalls,
   parseAgiMcpEnvelope,
+  toLegacyAgiMcpToolCalls,
   type AgiMcpToolResult,
 } from "@/lib/agi-mcp-runtime";
 import {
@@ -22,7 +24,7 @@ import {
 } from "@/lib/agi-session-store";
 import { extractLearningCandidate } from "@/lib/agi-learning-extractor";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import type { AgiCompletionResult, AgiModelMessage } from "@/lib/agi-model-providers/types";
+import type { AgiCompletionResult, AgiModelMessage, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -148,6 +150,8 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   const routes = configuredAgiRoutes(params.oidc_token);
   if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
+  const nativeMcpTools = await buildAgiNativeMcpTools(params.message);
+
   const [context, mcpPrompt] = await Promise.all([
     buildAgiInferenceContext({
       agi_id: "nova",
@@ -179,20 +183,35 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     messages: baseMessages,
     timeout_ms: 40_000,
     oidc_token: params.oidc_token,
+    tools: nativeMcpTools,
   });
-  const envelope = parseAgiMcpEnvelope(first.text);
-  const toolResults = envelope.tool_calls.length
-    ? await executeAgiMcpToolCalls(envelope.tool_calls, {
+
+  const legacyEnvelope = parseAgiMcpEnvelope(first.text);
+  const nativeCalls = first.tool_calls ?? [];
+  const resolvedCalls = nativeCalls.length > 0 ? toLegacyAgiMcpToolCalls(nativeCalls) : legacyEnvelope.tool_calls;
+  const toolResults = resolvedCalls.length
+    ? await executeAgiMcpToolCalls(resolvedCalls, {
         allow_actions: Boolean(params.allow_actions),
       })
     : [];
+
+  const nativeToolResults: AgiToolResult[] = toolResults.map((item) => {
+    const native = nativeCalls.find((call) => call.id === item.id);
+    return {
+      id: item.id,
+      name: native?.name ?? item.name.replace(".", "__"),
+      qualified_name: item.name,
+      result: item.result,
+      ok: item.executed,
+    };
+  });
 
   const executedReads = toolResults.filter((item) => item.executed);
   let finalCompletion = first;
   let finalReply = publicReplyFromToolEnvelope({
     raw_text: first.text,
-    reply: envelope.reply,
-    tool_call_count: envelope.tool_calls.length,
+    reply: first.tool_calls.length ? first.text : legacyEnvelope.reply,
+    tool_call_count: resolvedCalls.length,
     phase: "initial",
   });
 
@@ -210,7 +229,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       ...baseMessages,
       {
         role: "assistant",
-        content: envelope.reply || "Voy a consultar las herramientas disponibles.",
+        content: first.text || legacyEnvelope.reply || "Voy a consultar las herramientas disponibles.",
       },
       { role: "user", content: buildAgiMcpResultBlock(toolResults) },
     ];
@@ -218,6 +237,9 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       messages: followUpMessages,
       timeout_ms: 40_000,
       oidc_token: params.oidc_token,
+      tools: nativeMcpTools,
+      tool_calls: nativeCalls,
+      tool_results: nativeToolResults,
     });
     const followUpEnvelope = parseAgiMcpEnvelope(finalCompletion.text);
     finalReply = publicReplyFromToolEnvelope({

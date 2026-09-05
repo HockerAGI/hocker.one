@@ -6,15 +6,43 @@ import {
   type AgiCompletionInput,
   type AgiModelProvider,
   type AgiProviderResult,
+  type AgiNativeTool,
+  type AgiToolCall,
 } from "@/lib/agi-model-providers/types";
 
 type GatewayResponse = {
-  choices?: Array<{ message?: { content?: string } }>;
+  choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ id?: string; type?: string; function?: { name?: string; arguments?: string } }> } }>;
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   error?: { message?: string };
 };
 
 type Credential = { source: "oidc" | "api_key"; token: string };
+
+
+
+function wireTools(tools: AgiNativeTool[] | undefined): Array<Record<string, unknown>> | undefined {
+  if (!tools?.length) return undefined;
+  return tools.slice(0, 32).map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    },
+  }));
+}
+
+function parseToolCalls(payload: GatewayResponse, tools: AgiNativeTool[] | undefined): AgiToolCall[] {
+  const byName = new Map((tools ?? []).map((tool) => [tool.name, tool]));
+  return (payload.choices?.[0]?.message?.tool_calls ?? []).slice(0, 8).flatMap((call) => {
+    const name = String(call.function?.name ?? "");
+    const tool = byName.get(name);
+    if (!tool) return [];
+    let args: Record<string, unknown> = {};
+    try { args = JSON.parse(call.function?.arguments ?? "{}") as Record<string, unknown>; } catch { return []; }
+    return [{ id: String(call.id ?? `call_${Date.now()}`), name: tool.name, qualified_name: tool.qualified_name, args }];
+  });
+}
 
 function credentials(runtimeOidc?: string | null): Credential[] {
   const oidc = String(runtimeOidc ?? "").trim() || envValue("VERCEL_OIDC_TOKEN");
@@ -56,9 +84,27 @@ export const vercelGatewayProvider: AgiModelProvider = {
           signal: controller.signal,
           body: JSON.stringify({
             model: model(),
-            messages: input.messages,
+            messages: [
+              ...input.messages,
+              ...(input.tool_calls?.length ? [{
+                role: "assistant",
+                content: null,
+                tool_calls: input.tool_calls.map((call) => ({
+                  id: call.id,
+                  type: "function",
+                  function: { name: call.name, arguments: JSON.stringify(call.args) },
+                })),
+              }] : []),
+              ...(input.tool_results ?? []).map((result) => ({
+                role: "tool",
+                tool_call_id: result.id,
+                content: JSON.stringify(result.result),
+              })),
+            ],
             temperature: 0.2,
             max_tokens: 4096,
+            tools: wireTools(input.tools),
+            tool_choice: input.tools?.length ? "auto" : undefined,
             stream: false,
           }),
         });
@@ -76,8 +122,9 @@ export const vercelGatewayProvider: AgiModelProvider = {
             fallback_eligible: authRejected || response.status === 429 || response.status >= 500,
           });
         }
+        const toolCalls = parseToolCalls(payload, input.tools);
         const text = String(payload.choices?.[0]?.message?.content ?? "").trim();
-        if (!text) {
+        if (!text && toolCalls.length === 0) {
           throw new AgiProviderError("AI Gateway devolvió respuesta vacía", {
             code: "GATEWAY_EMPTY_RESPONSE",
             fallback_eligible: true,
@@ -88,6 +135,7 @@ export const vercelGatewayProvider: AgiModelProvider = {
           provider: "vercel-ai-gateway",
           model: model(),
           text,
+          tool_calls: toolCalls,
           usage: {
             tokens_in: payload.usage?.prompt_tokens ?? null,
             tokens_out: payload.usage?.completion_tokens ?? null,
