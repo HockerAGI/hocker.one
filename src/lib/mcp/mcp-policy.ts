@@ -1,9 +1,15 @@
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
 
 export const MCP_PROVIDER_IDS = ["supabase", "vercel", "github", "openai", "base44"] as const;
-export type McpProviderId = (typeof MCP_PROVIDER_IDS)[number];
+export type McpProviderId = string;
+export type BuiltinMcpProviderId = (typeof MCP_PROVIDER_IDS)[number];
 
 const PROVIDERS = new Set<string>(MCP_PROVIDER_IDS);
+const DYNAMIC_PROVIDER_ID = /^[a-z0-9][a-z0-9_-]{1,48}$/i;
+export function isKnownMcpProviderId(provider: string): boolean {
+  const clean = String(provider ?? "").trim().toLowerCase();
+  return PROVIDERS.has(clean) || DYNAMIC_PROVIDER_ID.test(clean);
+}
 const SENSITIVE_KEY = /(authorization|cookie|password|passwd|secret|token|api[_-]?key|private[_-]?key)/i;
 const SAFE_TOOL_NAME = /^[a-z0-9_.:-]+$/i;
 const SAFE_REPOSITORY_PART = /^[a-z0-9_.-]+$/i;
@@ -248,7 +254,7 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
 
 export function isReadOnlyMcpTool(provider: McpProviderId, tool: string): boolean {
   const clean = String(tool || "").trim();
-  return READ_ONLY_TOOLS[provider].some((pattern) => pattern.test(clean));
+  return READ_ONLY_TOOLS[provider as BuiltinMcpProviderId]?.some((pattern) => pattern.test(clean)) ?? /^(get_|list_|read_|search_|inspect_|describe_|status|ping|health|metadata)/i.test(clean);
 }
 
 export function assertMcpReadToolPolicy(
@@ -286,7 +292,7 @@ export function validateDeferredMcpDraft(raw: unknown): ValidatedMcpDraft {
   const target = String(draft.execution_target ?? "");
   const args = asRecord(draft.args);
 
-  if (!PROVIDERS.has(provider)) throw new Error("Proveedor MCP no permitido.");
+  if (!isKnownMcpProviderId(provider)) throw new Error("Proveedor MCP no permitido.");
   if (!tool || tool.length > 160 || !SAFE_TOOL_NAME.test(tool)) throw new Error("Herramienta MCP inválida.");
   if (actionType !== "mcp.execute" || toolKey !== "mcp") throw new Error("Borrador MCP con contrato inválido.");
   if (!requiresApproval || target !== "hocker.one.owner-gate") throw new Error("Borrador MCP fuera del Owner Gate.");
