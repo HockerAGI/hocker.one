@@ -61,6 +61,7 @@ export async function extractLearningCandidate(input: {
   user_message: string;
   assistant_message: string;
   trace_id?: string | null;
+  target_agi_ids?: string[];
 }): Promise<LearningCandidate | null> {
   const candidate = buildCandidate(input);
   const learning_processed_at = new Date().toISOString();
@@ -85,8 +86,8 @@ export async function extractLearningCandidate(input: {
       learning_summary: candidate.summary,
       learning_category: candidate.category,
       evidence: { source_refs: candidate.source_refs },
-      suggested_targets: [input.agi_id],
-      applies_to_agi_ids: [input.agi_id],
+      suggested_targets: (input.target_agi_ids ?? [input.agi_id]).slice(0, 12),
+      applies_to_agi_ids: (input.target_agi_ids ?? [input.agi_id]).slice(0, 12),
       confidence_score: candidate.confidence,
       freshness_score: 5,
       source_type: "agi_observation",
