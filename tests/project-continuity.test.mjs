@@ -93,7 +93,7 @@ test("HOCKER cleanup rule is durable across code, docs and providers", async () 
   assert.match(agents, /`hocker-node-agent`/i);
 });
 
-test("current UX and score-v3 recovery contracts stay explicit without freezing mutable wrappers", async () => {
+test("current UX and score-v5 recovery contracts stay explicit without freezing mutable wrappers", async () => {
   const [readme, handoff, closure] = await Promise.all([
     source("README.md"),
     source("docs/operations/HANDOFF_2026-08-19.md"),
@@ -102,7 +102,7 @@ test("current UX and score-v3 recovery contracts stay explicit without freezing 
 
   assert.match(readme, /`\/chat`/);
   assert.match(readme, /`\/agis`/);
-  assert.match(readme, /score-v3/);
+  assert.match(readme, /score-v5/);
   assert.match(readme, /npm ci/);
   assert.match(readme, /npm run typecheck/);
 
@@ -117,7 +117,7 @@ test("current UX and score-v3 recovery contracts stay explicit without freezing 
 
   assert.match(closure, /OPEN_PROVIDER_GATE/);
   assert.match(closure, /Owner AAL2 ceremony/);
-  assert.match(closure, /score-v3/);
+  assert.match(closure, /score-v5/);
 });
 
 test("context freshness policy makes operational continuity event-driven and memory review-only", async () => {
