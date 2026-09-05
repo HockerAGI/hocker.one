@@ -13,6 +13,7 @@ import {
   toLegacyAgiMcpToolCalls
 } from "@/lib/agi-mcp-runtime";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { extractLearningCandidate } from "@/lib/agi-learning-extractor";
 import {
   createServerlessAgiTask,
   recoverStaleServerlessAgiTasks,
@@ -314,6 +315,28 @@ export async function runUnifiedAgiWorkerOnce(params: {
       throw new Error(
         `AGI_ATOMIC_COMPLETE_FAILED: ${completeError?.message ?? "lock_or_run_not_owned"}`,
       );
+    }
+
+    const delegatedTargets = Array.isArray(task.payload?.context) && false
+      ? []
+      : Array.isArray((task.payload?.context as JsonRecord | undefined)?.target_agi_ids)
+        ? ((task.payload?.context as JsonRecord).target_agi_ids as unknown[]).filter((id): id is string => typeof id === "string").slice(0, 12)
+        : [];
+    try {
+      await extractLearningCandidate({
+        project_id: task.project_id,
+        session_id: task.id,
+        agi_id: profile.id,
+        user_message: task.details ?? task.title,
+        assistant_message: finalCompletion.text,
+        trace_id: runId,
+        target_agi_ids: delegatedTargets,
+      });
+    } catch (learningError) {
+      evidence.push({
+        kind: "syntia_learning_proposal_error",
+        message: safeError(learningError),
+      });
     }
 
     return {
