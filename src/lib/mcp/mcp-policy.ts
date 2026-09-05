@@ -1,7 +1,7 @@
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
 
 export const MCP_PROVIDER_IDS = ["supabase", "vercel", "github", "openai", "base44"] as const;
-export type McpProviderId = (typeof MCP_PROVIDER_IDS)[number];
+export type McpProviderId = string;
 
 const PROVIDERS = new Set<string>(MCP_PROVIDER_IDS);
 const SENSITIVE_KEY = /(authorization|cookie|password|passwd|secret|token|api[_-]?key|private[_-]?key)/i;
