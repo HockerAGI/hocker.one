@@ -19,10 +19,10 @@ No se deben reintroducir menús técnicos permanentes, tarjetas duplicadas o con
 
 ## Certificación AGI
 
-La versión de scoring vigente en código es **`score-v3`**. La certificación sólo puede derivarse de evidencia del suite/scoring vigente y referencias de ejecución verificables.
+La versión de scoring vigente en código es **`score-v5`**. La certificación sólo puede derivarse de evidencia del suite/scoring vigente y referencias de ejecución verificables.
 
 - evidencia `score-v1` / `score-v2` = histórica;
-- evidencia histórica no se reescribe ni se promociona silenciosamente a `score-v3`;
+- evidencia histórica no se reescribe ni se promociona silenciosamente a `score-v5`;
 - snapshot parcial = fail closed;
 - ceremonia Owner requiere AAL2 real;
 - no insertar filas de eval manualmente;
