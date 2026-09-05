@@ -317,11 +317,10 @@ export async function runUnifiedAgiWorkerOnce(params: {
       );
     }
 
-    const delegatedTargets = Array.isArray(task.payload?.context) && false
-      ? []
-      : Array.isArray((task.payload?.context as JsonRecord | undefined)?.target_agi_ids)
-        ? ((task.payload?.context as JsonRecord).target_agi_ids as unknown[]).filter((id): id is string => typeof id === "string").slice(0, 12)
-        : [];
+    const taskContext = task.payload?.context as JsonRecord | undefined;
+    const delegatedTargets = Array.isArray(taskContext?.target_agi_ids)
+      ? (taskContext.target_agi_ids as unknown[]).filter((id): id is string => typeof id === "string").slice(0, 12)
+      : [];
     try {
       await extractLearningCandidate({
         project_id: task.project_id,
