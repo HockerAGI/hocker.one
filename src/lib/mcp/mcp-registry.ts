@@ -7,7 +7,7 @@
  * available tools and execute operations across providers.
  */
 
-import { McpClient, type McpProviderState, type McpTool } from "./mcp-client";
+import { McpClient, type McpProviderState, type McpTool, type McpTransport } from "./mcp-client";
 import {
   McpSupabaseConnector,
   createSupabaseMcpConnector,
@@ -212,7 +212,6 @@ type ProviderEntry = {
     | McpOpenAIConnector
     | McpBase44Connector
     | McpClient
-    | McpBase44Connector
     | null;
   configured: boolean;
   client: McpClient | null;
@@ -226,6 +225,10 @@ type DynamicMcpManifest = {
   transport?: McpTransport;
   enabled?: boolean;
 };
+
+function allowedDynamicMcpHosts(): Set<string> {
+  return new Set(String(process.env.HOCKER_MCP_ALLOWED_HOSTS ?? "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean));
+}
 
 function dynamicMcpManifests(): DynamicMcpManifest[] {
   const raw = String(process.env.HOCKER_MCP_PROVIDERS_JSON ?? "").trim();
@@ -244,6 +247,10 @@ function dynamicMcpManifests(): DynamicMcpManifest[] {
       if (!/^[a-z0-9][a-z0-9_-]{1,48}$/.test(id)) throw new Error(`Invalid dynamic MCP id: ${id}`);
       const parsedUrl = new URL(url);
       if (!["https:", "http:"].includes(parsedUrl.protocol)) throw new Error(`Invalid MCP URL protocol for ${id}`);
+      const allowedHosts = allowedDynamicMcpHosts();
+      if (parsedUrl.protocol !== "https:" || !allowedHosts.has(parsedUrl.hostname.toLowerCase())) {
+        throw new Error(`Dynamic MCP host not allowlisted: ${parsedUrl.hostname}`);
+      }
       return {
         id,
         name,
