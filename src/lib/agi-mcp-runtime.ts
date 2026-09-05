@@ -365,14 +365,8 @@ function nativeToolDefinitionsFromStatus(status: ReturnType<ReturnType<typeof ge
         name,
         qualified_name: qualifiedName,
         description: String(tool.description ?? `${qualifiedName} MCP tool`).slice(0, 900),
-        parameters: {
-          ...parameters,
-          "x-hocker": {
-            owner_agi: ownership.owner_agi,
-            support_agis: ownership.support_agis,
-            capability_keys: ownership.capability_keys,
-          },
-        },
+        parameters,
+        metadata: ownership,
       });
     }
   }
