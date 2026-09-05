@@ -9,6 +9,8 @@ Hocker One es el **control plane privado y gobernado** del ecosistema HOCKER. Ce
 - **AGIs:** `/agis` muestra estado y decisión primero; una sola acción Owner coordina la certificación resumible. La evidencia técnica vive en detalle progresivo.
 - **Persistencia:** Supabase mantiene Auth, estado durable, ejecuciones, feedback, evidencia y contratos RLS/RPC. Compartir proyecto no elimina boundaries de rol/proyecto.
 - **Owner Gate:** acciones materiales, relajación de safeguards y certificación crítica permanecen protegidas. `allow_actions=false` es el baseline de las 16 AGIs.
+- **Native Tool Fabric:** el MCP Registry se convierte en herramientas nativas del modelo; NOVA descubre capacidades por contexto sin exigir selección manual.
+- **AGI federation:** la delegación interna usa la cola AGI canónica y conserva trazabilidad; SYNTIA reutiliza el Learning Extractor/Memory Mirror para aprendizaje selectivo.
 - **Proveedores:** Gateway, modelos y conectores son reemplazables; provider/model son telemetría, no identidad pública ni autorización.
 
 ## Navegación privada
