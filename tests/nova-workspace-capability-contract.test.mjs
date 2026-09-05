@@ -68,3 +68,18 @@ test("NOVA workspace mounts the guarded GitHub repository workspace", async () =
   assert.match(route, /isGitHubReadOperation/);
   assert.match(route, /enqueueAgiAction/);
 });
+
+
+test("NOVA workspace mounts the canonical task operations console", async () => {
+  const [lazy, tasks, workerRoute] = await Promise.all([
+    readFile(new URL("../src/components/NovaRealtimeChatLazy.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/NovaWorkspaceTasks.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/api/agi/workers/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(lazy, /NovaWorkspaceTasks/);
+  assert.match(tasks, /VerifiableWorkersConsole/);
+  assert.match(tasks, /Cola AGI canónica/);
+  assert.match(workerRoute, /createServerlessAgiTask/);
+  assert.match(workerRoute, /runUnifiedAgiWorkerOnce/);
+  assert.match(workerRoute, /recoverStaleServerlessAgiTasks/);
+});
