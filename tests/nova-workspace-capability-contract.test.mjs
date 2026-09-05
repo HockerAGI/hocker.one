@@ -38,3 +38,17 @@ test("NOVA chat keeps ordinary streaming action execution disabled by default", 
     "normal NOVA streaming must keep action execution disabled by default",
   );
 });
+
+
+test("NOVA workspace mounts the canonical MCP tools panel without a second registry", async () => {
+  const [lazy, toolsPanel, route] = await Promise.all([
+    readFile(new URL("../src/components/NovaRealtimeChatLazy.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/NovaWorkspaceTools.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/api/mcp/status/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(lazy, /NovaWorkspaceTools/);
+  assert.match(toolsPanel, /fetch\("\/api\/mcp\/status"/);
+  assert.match(toolsPanel, /MCP Registry/);
+  assert.match(toolsPanel, /Owner Gate/);
+  assert.match(route, /requireOwnerOrInternal/);
+});
