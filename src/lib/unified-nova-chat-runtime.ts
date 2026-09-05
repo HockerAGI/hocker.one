@@ -191,7 +191,10 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   const resolvedCalls = nativeCalls.length > 0 ? toLegacyAgiMcpToolCalls(nativeCalls) : legacyEnvelope.tool_calls;
   const toolResults = resolvedCalls.length
     ? await executeAgiMcpToolCalls(resolvedCalls, {
+        project_id: params.project_id,
         allow_actions: Boolean(params.allow_actions),
+        parent_run_id: null,
+        source_agi_id: "nova",
       })
     : [];
 
