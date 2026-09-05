@@ -200,7 +200,7 @@ export type McpRegistryStatus = {
   tools: Record<string, McpTool[]>;
 };
 
-export const MCP_REGISTRY_VERSION = "hocker-mcp-registry-v1.0.0";
+export const MCP_REGISTRY_VERSION = "hocker-mcp-registry-v1.1.0";
 
 type ProviderEntry = {
   id: string;
@@ -211,10 +211,64 @@ type ProviderEntry = {
     | McpGitHubConnector
     | McpOpenAIConnector
     | McpBase44Connector
+    | McpClient
+    | McpBase44Connector
     | null;
   configured: boolean;
   client: McpClient | null;
 };
+
+type DynamicMcpManifest = {
+  id: string;
+  name: string;
+  url: string;
+  auth_env?: Record<string, string>;
+  transport?: McpTransport;
+  enabled?: boolean;
+};
+
+function dynamicMcpManifests(): DynamicMcpManifest[] {
+  const raw = String(process.env.HOCKER_MCP_PROVIDERS_JSON ?? "").trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) throw new Error("HOCKER_MCP_PROVIDERS_JSON must be an array");
+    return parsed.slice(0, 32).map((entry) => {
+      const item = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+      const id = String(item.id ?? "").trim().toLowerCase();
+      const name = String(item.name ?? id).trim();
+      const url = String(item.url ?? "").trim();
+      const authEnv = item.auth_env && typeof item.auth_env === "object" && !Array.isArray(item.auth_env)
+        ? Object.fromEntries(Object.entries(item.auth_env as Record<string, unknown>).map(([header, env]) => [header, String(env)]))
+        : {};
+      if (!/^[a-z0-9][a-z0-9_-]{1,48}$/.test(id)) throw new Error(`Invalid dynamic MCP id: ${id}`);
+      const parsedUrl = new URL(url);
+      if (!["https:", "http:"].includes(parsedUrl.protocol)) throw new Error(`Invalid MCP URL protocol for ${id}`);
+      return {
+        id,
+        name,
+        url,
+        auth_env: authEnv,
+        transport: item.transport === "sse" ? "sse" : "http",
+        enabled: item.enabled !== false,
+      };
+    });
+  } catch (error) {
+    log.error("MCP dynamic provider manifest invalid", {
+      route: "mcp-registry",
+      detail: error instanceof Error ? error.message : "invalid_manifest",
+    });
+    return [];
+  }
+}
+
+function dynamicAuthHeaders(manifest: DynamicMcpManifest): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(manifest.auth_env ?? {})
+      .map(([header, envName]) => [header, String(process.env[envName] ?? "").trim()])
+      .filter(([, value]) => Boolean(value)),
+  );
+}
 
 class McpRegistrySingleton {
   private providers: Map<string, ProviderEntry> = new Map();
@@ -300,6 +354,31 @@ class McpRegistrySingleton {
       configured: openaiConfigured,
       client: null,
     });
+
+    // Dynamic custom MCP providers. These are server-side manifests only.
+    // New providers are connected through the same McpClient/registry and default
+    // to protected execution policy until a provider/tool is explicitly classified.
+    for (const manifest of dynamicMcpManifests()) {
+      const authHeaders = dynamicAuthHeaders(manifest);
+      const configured = manifest.enabled !== false && Boolean(manifest.url);
+      this.providers.set(manifest.id, {
+        id: manifest.id,
+        type: "custom",
+        connector: configured
+          ? new McpClient({
+              id: manifest.id,
+              name: manifest.name,
+              type: "custom",
+              url: manifest.url,
+              authHeaders,
+              transport: manifest.transport,
+              enabled: true,
+            })
+          : null,
+        configured,
+        client: null,
+      });
+    }
 
     // Base44
     const base44Configured = isBase44McpConfigured();
@@ -562,7 +641,8 @@ export function isAnyMcpConfigured(): boolean {
     isVercelMcpConfigured() ||
     isGitHubMcpConfigured() ||
     isOpenAIMcpConfigured() ||
-    isBase44McpConfigured()
+    isBase44McpConfigured() ||
+    dynamicMcpManifests().length > 0
   );
 }
 
@@ -590,6 +670,10 @@ export function getMcpConfigurationSummary(): Record<string, { configured: boole
     base44: {
       configured: isBase44McpConfigured(),
       required: ["BASE44_API_KEY"],
+    },
+    custom: {
+      configured: dynamicMcpManifests().length > 0,
+      required: ["HOCKER_MCP_PROVIDERS_JSON"],
     },
   };
 }
