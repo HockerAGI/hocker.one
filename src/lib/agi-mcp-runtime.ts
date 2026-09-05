@@ -6,6 +6,7 @@ import {
   type McpProviderId,
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -38,6 +39,7 @@ const MAX_TOOL_CALLS = 8;
 const MAX_TOOL_ARGS_BYTES = 16 * 1024;
 const MAX_TOOL_RESULT_BYTES = 24 * 1024;
 const SAFE_TOOL = /^[a-z0-9_.:-]+$/i;
+const SAFE_NATIVE_TOOL = /^[a-zA-Z0-9_-]{1,64}$/;
 const SENSITIVE_KEY = /(authorization|cookie|password|passwd|secret|token|api[_-]?key|private[_-]?key)/i;
 const PROVIDERS = new Set<string>(MCP_PROVIDER_IDS);
 
@@ -326,4 +328,78 @@ export function buildAgiMcpResultBlock(results: AgiMcpToolResult[]): string {
     bounded,
     "Responde ahora de forma natural usando sólo estos datos. No inventes valores faltantes. Si una acción requiere Owner Gate, dilo sin afirmar que ya se ejecutó.",
   ].join("\n\n");
+}
+
+
+function nativeToolName(provider: string, tool: string): string {
+  const raw = `hocker__${provider}__${tool}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+  return raw.slice(0, 64);
+}
+
+function nativeToolDefinitionsFromStatus(status: ReturnType<ReturnType<typeof getMcpRegistry>["getStatus"]>): AgiNativeTool[] {
+  const definitions: AgiNativeTool[] = [];
+  for (const provider of status.providers.filter((item) => item.connected)) {
+    for (const tool of status.tools[provider.id] ?? []) {
+      const qualifiedName = `${provider.id}.${tool.name}`;
+      const name = nativeToolName(provider.id, tool.name);
+      if (!SAFE_NATIVE_TOOL.test(name)) continue;
+      const parameters = tool.inputSchema && typeof tool.inputSchema === "object" && !Array.isArray(tool.inputSchema)
+        ? tool.inputSchema
+        : { type: "object", properties: {} };
+      definitions.push({
+        name,
+        qualified_name: qualifiedName,
+        description: String(tool.description ?? `${qualifiedName} MCP tool`).slice(0, 900),
+        parameters,
+      });
+    }
+  }
+  return definitions.slice(0, 96);
+}
+
+export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeTool[]> {
+  const registry = await ensureRegistry();
+  const status = registry.getStatus();
+  const all = nativeToolDefinitionsFromStatus(status);
+  const clean = String(query ?? "").trim().toLowerCase();
+  if (!clean) return all;
+
+  const words = clean.split(/\\s+/).filter(Boolean).slice(0, 6);
+  return all.filter((tool) => {
+    const haystack = `${tool.qualified_name} ${tool.name} ${tool.description ?? ""}`.toLowerCase();
+    return words.some((word) => haystack.includes(word));
+  }).slice(0, 32);
+}
+
+export function resolveNativeMcpTool(name: string): { provider: McpProviderId; tool: string; qualified_name: string } | null {
+  const match = String(name ?? "").match(/^hocker__([^_]+)__([a-z0-9_.:-]+)$/i);
+  if (!match) return null;
+  const provider = match[1].toLowerCase();
+  const tool = match[2];
+  if (!PROVIDERS.has(provider) || !tool) return null;
+  return {
+    provider: provider as McpProviderId,
+    tool,
+    qualified_name: `${provider}.${tool}`,
+  };
+}
+
+export function toLegacyAgiMcpToolCalls(toolCalls: AgiToolCall[]): AgiMcpToolCall[] {
+  return toolCalls.map((call) => ({
+    id: call.id,
+    provider: call.qualified_name.split(".")[0] as McpProviderId,
+    tool: call.qualified_name.split(".").slice(1).join("."),
+    qualified_name: call.qualified_name,
+    args: call.args,
+  }));
+}
+
+export function nativeResultsToLegacy(results: AgiToolResult[]): AgiMcpToolResult[] {
+  return results.map((item) => ({
+    id: item.id,
+    name: item.qualified_name,
+    executed: item.ok,
+    needs_approval: false,
+    result: item.ok ? { ok: true, data: item.result } : { ok: false, error: "NATIVE_TOOL_EXECUTION_FAILED" },
+  }));
 }
