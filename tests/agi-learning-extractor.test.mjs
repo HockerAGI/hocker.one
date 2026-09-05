@@ -21,3 +21,11 @@ test("sensitive or trivial chat is not promoted to shared memory", async () => {
   assert.match(source, /secret|sensitive|pii/i);
   assert.match(source, /return null/);
 });
+
+
+test("learning extractor can preserve target AGIs for IA-to-IA delegation", async () => {
+  const source = await read("src/lib/agi-learning-extractor.ts");
+  assert.match(source, /target_agi_ids\?: string\[\]/);
+  assert.match(source, /suggested_targets: \(input\.target_agi_ids \?\? \[input\.agi_id\]\)/);
+  assert.match(source, /applies_to_agi_ids: \(input\.target_agi_ids \?\? \[input\.agi_id\]\)/);
+});
