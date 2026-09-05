@@ -6,6 +6,7 @@ import {
   type McpProviderId,
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import { createServerlessAgiTask } from "@/lib/serverless-agi-runtime";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 
@@ -52,6 +53,8 @@ export type AgiMcpEnvelope = {
 const MAX_TOOL_CALLS = 8;
 const MAX_TOOL_ARGS_BYTES = 16 * 1024;
 const MAX_TOOL_RESULT_BYTES = 24 * 1024;
+const MAX_DELEGATION_DEPTH = 8;
+const MAX_DELEGATION_FANOUT = 8;
 const SAFE_TOOL = /^[a-z0-9_.:-]+$/i;
 const SAFE_NATIVE_TOOL = /^[a-zA-Z0-9_-]{1,64}$/;
 const SENSITIVE_KEY = /(authorization|cookie|password|passwd|secret|token|api[_-]?key|private[_-]?key)/i;
@@ -242,13 +245,67 @@ export async function buildAgiMcpPromptBlock(): Promise<string> {
 
 export async function executeAgiMcpToolCalls(
   calls: AgiMcpToolCall[],
-  options: { allow_actions: boolean },
+  options: { allow_actions: boolean; parent_run_id?: string | null; source_agi_id?: string | null },
 ): Promise<AgiMcpToolResult[]> {
   const registry = await ensureRegistry();
   const status = registry.getStatus();
   const results: AgiMcpToolResult[] = [];
 
   for (const call of calls.slice(0, MAX_TOOL_CALLS)) {
+    if (call.provider === "agi" && call.tool === "delegate") {
+      const target = String(call.args.agi_id ?? "").trim();
+      const subject = String(call.args.subject ?? "").trim();
+      const body = String(call.args.body ?? "").trim();
+      const intent = String(call.args.intent ?? "analysis").trim() || "analysis";
+      const priority = String(call.args.priority ?? "normal").trim() || "normal";
+      const writePolicy = String(call.args.write_policy ?? "read_only").trim();
+      const parentRunId = String(options.parent_run_id ?? "").trim() || null;
+      const currentDepth = Number(call.args.delegation_depth ?? 0);
+      const fanout = Number(call.args.delegation_fanout ?? 0);
+      if (!parentRunId) {
+        results.push({ id: call.id, name: call.qualified_name, executed: false, needs_approval: false, result: { ok: false, error: "AGI_DELEGATION_PARENT_RUN_REQUIRED" } });
+        continue;
+      }
+      if (!target || !subject || !body) {
+        results.push({ id: call.id, name: call.qualified_name, executed: false, needs_approval: false, result: { ok: false, error: "AGI_DELEGATION_FIELDS_REQUIRED" } });
+        continue;
+      }
+      if (currentDepth >= MAX_DELEGATION_DEPTH || fanout >= MAX_DELEGATION_FANOUT) {
+        results.push({ id: call.id, name: call.qualified_name, executed: false, needs_approval: false, result: { ok: false, error: "AGI_DELEGATION_LIMIT_REACHED" } });
+        continue;
+      }
+      if (!["read_only", "owner_gate"].includes(writePolicy)) {
+        results.push({ id: call.id, name: call.qualified_name, executed: false, needs_approval: false, result: { ok: false, error: "AGI_DELEGATION_POLICY_INVALID" } });
+        continue;
+      }
+      try {
+        const delegated = await createServerlessAgiTask({
+          project_id: "hocker-one",
+          to_agi: target,
+          subject,
+          body,
+          intent,
+          priority,
+          write_policy: writePolicy,
+          context: {
+            ...(asRecord(call.args.context)),
+            parent_run_id: parentRunId,
+            source_agi_id: options.source_agi_id ?? "nova",
+            target_agi_ids: Array.isArray(call.args.target_agi_ids) ? call.args.target_agi_ids.slice(0, 12) : [target],
+            delegation_depth: currentDepth + 1,
+            delegation_fanout: fanout + 1,
+          },
+          parent_run_id: parentRunId,
+          delegation_depth: currentDepth + 1,
+          delegation_fanout: fanout + 1,
+        });
+        results.push({ id: call.id, name: call.qualified_name, executed: true, needs_approval: writePolicy === "owner_gate", result: { ok: true, data: delegated } });
+      } catch (error) {
+        results.push({ id: call.id, name: call.qualified_name, executed: false, needs_approval: false, result: { ok: false, error: error instanceof Error ? error.message : "AGI_DELEGATION_FAILED" } });
+      }
+      continue;
+    }
+
     const providerState = status.providers.find((item) => item.id === call.provider);
     const toolExists = (status.tools[call.provider] ?? []).some((tool) => tool.name === call.tool);
     if (!providerState?.configured || !providerState.connected || !toolExists) {
@@ -370,6 +427,27 @@ function nativeToolDefinitionsFromStatus(status: ReturnType<ReturnType<typeof ge
       });
     }
   }
+  definitions.unshift({
+    name: "hocker__agi__delegate",
+    qualified_name: "agi.delegate",
+    description: "Delegar una tarea de análisis a una AGI especialista de HOCKER. La delegación es interna, trazable y está limitada por profundidad/fan-out.",
+    parameters: {
+      type: "object",
+      properties: {
+        agi_id: { type: "string", description: "ID canónico de la AGI destino." },
+        subject: { type: "string", description: "Título breve de la tarea." },
+        body: { type: "string", description: "Instrucciones y contexto de la tarea." },
+        intent: { type: "string", description: "Intención operacional." },
+        priority: { type: "string", enum: ["low", "normal", "high", "critical"] },
+        write_policy: { type: "string", enum: ["read_only", "owner_gate"] },
+        context: { type: "object", description: "Contexto mínimo necesario para resolver la tarea." },
+        target_agi_ids: { type: "array", items: { type: "string" }, description: "AGIs que pueden beneficiarse del aprendizaje resultante." },
+      },
+      required: ["agi_id", "subject", "body", "intent", "priority", "write_policy"],
+      additionalProperties: false,
+    },
+    metadata: { owner_agi: "nova", support_agis: [], capability_keys: ["automatic_agi_router"] },
+  });
   return definitions.slice(0, 96);
 }
 
