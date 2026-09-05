@@ -263,7 +263,7 @@ export async function getHockerLiveSummary(): Promise<HockerLiveSummary> {
   const findings = [
     "Hocker ONE producción está validado en Vercel.",
     "Las rutas privadas permanecen protegidas.",
-    "NOVA está viva y responde desde Railway.",
+    "La ruta primaria de NOVA vive en Hocker ONE; el runtime dedicado nova.agi permanece sin certificación live hasta aportar health/readiness/heartbeat/E2E/fallback/rollback.",
     agent.state === "activo"
       ? "El agente físico respondió recientemente."
       : "El agente físico no tiene señal reciente; revisar si está encendido.",
