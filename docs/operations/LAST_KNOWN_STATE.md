@@ -1,16 +1,16 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-05 01:40 UTC-07:00**
+Evidence cut: **2026-09-05 11:30 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
-Live operational source: `docs/operations/HANDOFF_2026-09-05.md`.
+Live operational source: `docs/operations/HANDOFF_2026-09-05-R2.md`.
 Current production-readiness gate: `docs/operations/PLATFORM_CLOSURE_2026-08-30.md`.
 Historical sources dated 2026-08-19 remain preserved for audit and are not live pointers.
 
 ## Current verified pointers
 
-- Hocker One `main`: `2eca82b2bd39feaa2247e849402ccaf85f017e8a` (active handoff published after History promotion; re-query before mutation).
+- Hocker One `main`: `7229b1fe4e3a82ab84c4aad1d0affd8fe1aab5e0` (Native Tool Fabric merged and production-verified; re-query before mutation).
 - Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
 - Hocker One health: public smoke `/chat` = HTTP 200; authenticated private APIs return HTTP 401 without identity; production runtime errors observed in post-merge window = 0.
 - Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; this remains a durable baseline, not fresh liveness evidence.
@@ -59,7 +59,7 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 - Active operations index/handoff/closure structure exists.
 
 ### Still incomplete or not fully evidenced
-- `NovaWorkspace` decomposition remains partial on `main`; History is production-promoted, while Conversation/Composer/Detail/Tools/Connectors/Evidence remain partially consolidated.
+- `NovaWorkspace` decomposition remains partial on `main`; History, native Tools and Repository Workspace are production-promoted, while Conversation/Composer/Detail/Connectors/AGI/Evidence remain partially consolidated.
 - Full chat capability surface (real file upload, voice, artifact viewer, connector/tool UX) is not certified complete on `main`.
 - Full frontend `OperationalState` contract is not implemented as specified; DB `v_agi_operational_state` is narrower.
 - Full responsive/accessibility/device certification matrix is not evidenced as complete.
@@ -79,6 +79,12 @@ These findings do not by themselves prove cross-tenant leakage. Do not perform b
 - `agi_integration_checks` in last 24h = **0**; latest recorded check = `2026-08-10T06:17:05Z`.
 - `nodes` seen in last 24h = **0**; latest recorded node signal = `2026-08-18T09:52:48Z`.
 - Therefore registry presence is verified, but fresh AGI execution/node liveness is not.
+
+## Native Tool / federation status
+
+- Native Tool Fabric: merged at `7229b1fe...` and production-verified.
+- Dynamic MCP provider registration: PR #343 pending Preview; not production authority yet.
+- AGI-to-AGI bounded delegation + SYNTIA target propagation: PR #344 pending Preview; not production authority yet.
 
 ## Expansion status
 
