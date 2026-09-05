@@ -10,8 +10,7 @@ import { completeAgi, configuredAgiRoutes } from "@/lib/agi-model-router";
 import {
   buildAgiNativeMcpTools,
   executeAgiMcpToolCalls,
-  toLegacyAgiMcpToolCalls,
-  type AgiMcpToolResult,
+  toLegacyAgiMcpToolCalls
 } from "@/lib/agi-mcp-runtime";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
