@@ -110,6 +110,33 @@ export default function NovaRealtimeChat() {
     const timer = window.setInterval(() => void loadRuntime(), 30_000);
     return () => window.clearInterval(timer);
   }, [loadRuntime]);
+
+  useEffect(() => {
+    if (!ready || !requestedThreadId) return;
+    let active = true;
+    void fetch("/api/nova/history?project_id=" + encodeURIComponent(projectId) + "&thread_id=" + encodeURIComponent(requestedThreadId) + "&messages=60", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.ok === false) throw new Error(body.error ?? "No se pudo restaurar la conversación.");
+        if (!active || !Array.isArray(body.messages)) return;
+        const restored: Msg[] = body.messages.map((item: unknown, index: number) => {
+          const value = item as { id?: unknown; role?: unknown; content?: unknown; created_at?: unknown };
+          return {
+            id: String(value.id ?? requestedThreadId + "-" + index),
+            role: value.role === "user" ? "user" : value.role === "assistant" || value.role === "nova" ? "nova" : "system",
+            content: typeof value.content === "string" ? value.content : "",
+            createdAt: typeof value.created_at === "string" ? Date.parse(value.created_at) : Date.now(),
+            streaming: false,
+            actions: [],
+          };
+        }).filter((item) => item.content.trim());
+        setMessages(restored);
+      })
+      .catch((value) => {
+        if (active) setError(value instanceof Error ? value.message : "No se pudo restaurar la conversación.");
+      });
+    return () => { active = false; };
+  }, [projectId, ready, requestedThreadId]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, sending]);
   useEffect(() => () => abortRef.current?.abort(), []);
 
