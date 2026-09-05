@@ -22,8 +22,10 @@ test("NOVA workspace exposes real history without introducing a second persisten
 
 test("NOVA chat restores an existing thread_id instead of generating a new conversation", async () => {
   const chat = await read("src/components/NovaRealtimeChat.tsx");
+  const history = await read("src/components/NovaHistoryPanel.tsx");
   assert.match(chat, /useSearchParams/);
   assert.match(chat, /thread_id/);
   assert.match(chat, /api\/nova\/history/);
+  assert.match(history, /api\/nova\/history/);
   assert.match(chat, /recent_messages|messages/);
 });
