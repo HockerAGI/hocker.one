@@ -83,3 +83,13 @@ test("agentic security pack aligns with the canonical distinction between catalo
   assert.match(nodes, /last_seen_at/);
   assert.match(nodes, /stale/);
 });
+
+
+test("automatic AGI routing selects capability owner and support AGIs without user selection", async () => {
+  const source = await read("src/lib/hocker-tool-router.ts");
+  assert.match(source, /buildAutomaticAgiDelegationPlan/);
+  assert.match(source, /primary_agi/);
+  assert.match(source, /support_agis/);
+  assert.match(source, /delegation_required/);
+  assert.match(source, /context\.decision\.owner_agi/);
+});

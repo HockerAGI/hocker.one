@@ -236,3 +236,45 @@ export function buildNovaUpstreamRuntimeContext(
     capability_decision: capabilitiesContext.decision,
   };
 }
+
+
+export type HockerAgiDelegationPlan = {
+  capability_keys: string[];
+  primary_agi: string;
+  support_agis: string[];
+  delegation_required: boolean;
+  reason: string;
+};
+
+export function buildAutomaticAgiDelegationPlan(
+  message: string,
+  project_id = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one",
+): HockerAgiDelegationPlan {
+  const context = buildNovaChatCapabilitiesContext(message, project_id);
+  const uniqueOwners = Array.from(new Set([
+    context.decision.owner_agi,
+    ...context.decision.support_agis,
+    ...context.relevant_capabilities.map((item) => item.owner_agi),
+    ...context.relevant_capabilities.flatMap((item) => item.support_agis),
+  ].filter(Boolean)));
+
+  const primary = context.decision.owner_agi || "nova";
+  const support = uniqueOwners.filter((agi) => agi !== primary).slice(0, 4);
+  const complex =
+    context.relevant_capabilities.length > 1 ||
+    support.length > 0 ||
+    context.decision.capability_key === "deep_research";
+
+  return {
+    capability_keys: [
+      context.decision.capability_key,
+      ...context.relevant_capabilities.map((item) => item.key),
+    ].filter((key, index, all) => all.indexOf(key) === index).slice(0, 8),
+    primary_agi: primary,
+    support_agis: support,
+    delegation_required: complex && primary !== "nova",
+    reason: complex
+      ? "NOVA puede delegar automáticamente a la AGI propietaria y sumar AGIs de soporte por capability."
+      : "La solicitud puede resolverse directamente por NOVA con el contexto y tools disponibles.",
+  };
+}
