@@ -248,7 +248,7 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
 
 export function isReadOnlyMcpTool(provider: McpProviderId, tool: string): boolean {
   const clean = String(tool || "").trim();
-  return READ_ONLY_TOOLS[provider].some((pattern) => pattern.test(clean));
+  return READ_ONLY_TOOLS[provider as BuiltinMcpProviderId]?.some((pattern) => pattern.test(clean)) ?? /^(get_|list_|read_|search_|inspect_|describe_|status|ping|health|metadata)/i.test(clean);
 }
 
 export function assertMcpReadToolPolicy(
