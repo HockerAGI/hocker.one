@@ -390,8 +390,8 @@ export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeT
 export function resolveNativeMcpTool(name: string): { provider: McpProviderId; tool: string; qualified_name: string } | null {
   const match = String(name ?? "").match(/^hocker__([^_]+)__([a-z0-9_.:-]+)$/i);
   if (!match) return null;
-  const provider = match[1].toLowerCase();
-  const tool = match[2];
+  const provider = String(match[1] ?? "").toLowerCase();
+  const tool = String(match[2] ?? "");
   if (!PROVIDERS.has(provider) || !tool) return null;
   return {
     provider: provider as McpProviderId,
