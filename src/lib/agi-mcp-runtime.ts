@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   MCP_PROVIDER_IDS,
   assertMcpReadToolPolicy,
+  isKnownMcpProviderId,
   isReadOnlyMcpTool,
   type McpProviderId,
 } from "@/lib/mcp/mcp-policy";
@@ -128,7 +129,7 @@ function normalizeToolCall(raw: unknown): AgiMcpToolCall | null {
 
   const provider = qualified.slice(0, separator).toLowerCase();
   const tool = qualified.slice(separator + 1);
-  if (!PROVIDERS.has(provider) || !tool || !SAFE_TOOL.test(tool)) return null;
+  if (!isKnownMcpProviderId(provider) || !tool || !SAFE_TOOL.test(tool)) return null;
 
   const rawArgs = item.args ?? item.arguments ?? item.input ?? {};
   const args = asRecord(rawArgs);
