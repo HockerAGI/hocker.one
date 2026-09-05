@@ -83,3 +83,22 @@ test("agentic security pack aligns with the canonical distinction between catalo
   assert.match(nodes, /last_seen_at/);
   assert.match(nodes, /stale/);
 });
+
+
+test("AGI-to-AGI delegation is bounded, linked to a parent run, and uses the canonical task queue", async () => {
+  const [migration, runtime, serverless] = await Promise.all([
+    read("supabase/migrations/20260905192000_bound_agi_delegation_trace.sql"),
+    read("src/lib/agi-mcp-runtime.ts"),
+    read("src/lib/serverless-agi-runtime.ts"),
+  ]);
+  assert.match(migration, /parent_run_id uuid references public\.agi_runs/i);
+  assert.match(migration, /delegation_depth.*between 0 and 8/i);
+  assert.match(migration, /delegation_fanout.*between 0 and 8/i);
+  assert.match(runtime, /hocker__agi__delegate/);
+  assert.match(runtime, /AGI_DELEGATION_PARENT_RUN_REQUIRED/);
+  assert.match(runtime, /MAX_DELEGATION_DEPTH = 8/);
+  assert.match(runtime, /MAX_DELEGATION_FANOUT = 8/);
+  assert.match(runtime, /parent_run_id: parentRunId/);
+  assert.match(serverless, /parent_run_id\?: string/);
+  assert.match(serverless, /delegation_depth\?: number/);
+});
