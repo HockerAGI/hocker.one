@@ -8,7 +8,7 @@ Status: **ACTIVE INDEX**
 
 | Purpose | Current source | Rule |
 | --- | --- | --- |
-| Detailed cross-session continuity | `HANDOFF_2026-09-03.md` | Source for current state, closed incidents, evidence and next gate. |
+| Detailed cross-session continuity | `HANDOFF_2026-09-05-R2.md` | Source for current state, closed incidents, evidence and next gate. |
 | Emergency recovery card | `LAST_KNOWN_STATE.md` | Compact pointers only; re-query mutable facts before action. |
 | Current production-readiness closure | `PLATFORM_CLOSURE_2026-08-30.md` | Single gate for post-Core-certification `production_ready`. |
 | Core AGI certification evidence | GitHub issue `#303` + Supabase durable evidence | Completed scope certificate; do not reopen unless evidence/contracts change materially. |
