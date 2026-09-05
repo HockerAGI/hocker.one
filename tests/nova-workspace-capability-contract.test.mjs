@@ -52,3 +52,19 @@ test("NOVA workspace mounts the canonical MCP tools panel without a second regis
   assert.match(toolsPanel, /Owner Gate/);
   assert.match(route, /requireOwnerOrInternal/);
 });
+
+
+test("NOVA workspace mounts the guarded GitHub repository workspace", async () => {
+  const [lazy, workspace, route] = await Promise.all([
+    readFile(new URL("../src/components/NovaRealtimeChatLazy.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/NovaRepositoryWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/api/agi/runtime/github/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(lazy, /NovaRepositoryWorkspace/);
+  assert.match(workspace, /\/api\/agi\/runtime\/github/);
+  assert.match(workspace, /Lectura real desde GitHub/);
+  assert.match(workspace, /Escritura: Owner Gate/);
+  assert.match(route, /requireProjectRole/);
+  assert.match(route, /isGitHubReadOperation/);
+  assert.match(route, /enqueueAgiAction/);
+});
