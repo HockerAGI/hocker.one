@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-05 01:40 UTC-07:00**
+Evidence cut: **2026-09-05 12:30 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
 Live operational source: `docs/operations/HANDOFF_2026-09-05.md`.
@@ -10,7 +10,7 @@ Historical sources dated 2026-08-19 remain preserved for audit and are not live 
 
 ## Current verified pointers
 
-- Hocker One `main`: `2eca82b2bd39feaa2247e849402ccaf85f017e8a` (active handoff published after History promotion; re-query before mutation).
+- Hocker One `main`: `124a1a1592c847159f11f992fe65062449ecc97a` (active handoff published after History promotion; re-query before mutation).
 - Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
 - Hocker One health: public smoke `/chat` = HTTP 200; authenticated private APIs return HTTP 401 without identity; production runtime errors observed in post-merge window = 0.
 - Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; this remains a durable baseline, not fresh liveness evidence.
