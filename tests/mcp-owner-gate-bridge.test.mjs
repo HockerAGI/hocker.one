@@ -59,3 +59,14 @@ test("dynamic MCP providers are governed by an HTTPS host allowlist", async () =
   assert.match(source, /new McpClient/);
   assert.match(source, /type: "custom"/);
 });
+
+
+test("native MCP parser accepts governed dynamic provider ids while policy remains fail-closed", async () => {
+  const [policy, runtime] = await Promise.all([
+    read("src/lib/mcp/mcp-policy.ts"),
+    read("src/lib/agi-mcp-runtime.ts"),
+  ]);
+  assert.match(policy, /DYNAMIC_PROVIDER_ID/);
+  assert.match(policy, /Dynamic MCP tools are read-only only/);
+  assert.match(runtime, /isKnownMcpProviderId/);
+});
