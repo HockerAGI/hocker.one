@@ -245,7 +245,7 @@ export async function buildAgiMcpPromptBlock(): Promise<string> {
 
 export async function executeAgiMcpToolCalls(
   calls: AgiMcpToolCall[],
-  options: { allow_actions: boolean; parent_run_id?: string | null; source_agi_id?: string | null },
+  options: { project_id: string; allow_actions: boolean; parent_run_id?: string | null; source_agi_id?: string | null },
 ): Promise<AgiMcpToolResult[]> {
   const registry = await ensureRegistry();
   const status = registry.getStatus();
@@ -280,7 +280,7 @@ export async function executeAgiMcpToolCalls(
       }
       try {
         const delegated = await createServerlessAgiTask({
-          project_id: "hocker-one",
+          project_id: options.project_id,
           to_agi: target,
           subject,
           body,
