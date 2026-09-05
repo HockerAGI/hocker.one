@@ -68,3 +68,25 @@ test("NOVA workspace mounts the guarded GitHub repository workspace", async () =
   assert.match(route, /isGitHubReadOperation/);
   assert.match(route, /enqueueAgiAction/);
 });
+
+
+test("native tool fabric is provider-neutral and wired into unified NOVA runtime", async () => {
+  const [types, runtime, openai, anthropic, gemini, gateway] = await Promise.all([
+    readFile(new URL("../src/lib/agi-model-providers/types.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/unified-nova-chat-runtime.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/agi-model-providers/openai.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/agi-model-providers/anthropic.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/agi-model-providers/gemini.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/agi-model-providers/vercel-gateway.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(types, /AgiNativeTool/);
+  assert.match(types, /AgiToolCall/);
+  assert.match(types, /tools\?: AgiNativeTool\[\]/);
+  assert.match(runtime, /buildAgiNativeMcpTools/);
+  assert.match(runtime, /tools: nativeMcpTools/);
+  assert.match(runtime, /first\.tool_calls/);
+  assert.match(openai, /type: "function"/);
+  assert.match(anthropic, /input_schema/);
+  assert.match(gemini, /functionDeclarations/);
+  assert.match(gateway, /tool_calls/);
+});
