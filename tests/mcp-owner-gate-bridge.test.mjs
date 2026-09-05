@@ -49,3 +49,13 @@ test("CI remains read-only and cannot patch its own source", async () => {
   await assert.rejects(read(".github/workflows/apply-hocker-mcp-owner-gate-bridge.yml"));
   await assert.rejects(read(".github/workflows/repair-hocker-mcp-owner-gate-bridge.yml"));
 });
+
+
+test("dynamic MCP providers are governed by an HTTPS host allowlist", async () => {
+  const source = await read("src/lib/mcp/mcp-registry.ts");
+  assert.match(source, /HOCKER_MCP_PROVIDERS_JSON/);
+  assert.match(source, /HOCKER_MCP_ALLOWED_HOSTS/);
+  assert.match(source, /parsedUrl\.protocol !== "https:"/);
+  assert.match(source, /new McpClient/);
+  assert.match(source, /type: "custom"/);
+});
