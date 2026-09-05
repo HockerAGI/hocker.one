@@ -12,6 +12,11 @@ export type AgiNativeTool = {
   qualified_name: string;
   description?: string;
   parameters: Record<string, unknown>;
+  metadata?: {
+    owner_agi?: string | null;
+    support_agis?: string[];
+    capability_keys?: string[];
+  };
 };
 
 export type AgiToolCall = {
