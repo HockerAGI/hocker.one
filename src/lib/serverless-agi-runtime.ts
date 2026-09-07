@@ -509,9 +509,17 @@ export async function createServerlessAgiTask(params: {
   context: JsonRecord;
   idempotency_key?: string;
   created_by?: string | null;
+  parent_run_id?: string | null;
+  delegation_depth?: number;
+  delegation_fanout?: number;
 }): Promise<JsonRecord> {
   const profile = await loadProfile(params.to_agi);
   const client = db();
+  const parentRunId = String(params.parent_run_id ?? "").trim() || null;
+  const delegationDepth = Math.max(0, Math.min(8, Number(params.delegation_depth ?? 0)));
+  const delegationFanout = Math.max(0, Math.min(8, Number(params.delegation_fanout ?? 0)));
+  if (delegationDepth > 0 && !parentRunId) throw new Error("AGI_PARENT_RUN_REQUIRED");
+  if (delegationDepth >= 8) throw new Error("AGI_DELEGATION_DEPTH_LIMIT");
 
   if (params.idempotency_key) {
     const { data: existing, error } = await client
@@ -557,6 +565,9 @@ export async function createServerlessAgiTask(params: {
       attempt_count: 0,
       max_attempts: 3,
       idempotency_key: params.idempotency_key ?? randomUUID(),
+      parent_run_id: parentRunId,
+      delegation_depth: delegationDepth,
+      delegation_fanout: delegationFanout,
     })
     .select("id,project_id,agi_id,title,status,priority,write_policy,idempotency_key,created_at")
     .single();
