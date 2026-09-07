@@ -7,6 +7,8 @@ import {
   requireCanonicalAgi,
 } from "@/lib/hocker-agi-operational";
 import { completeAgi, configuredAgiRoutes } from "@/lib/agi-model-router";
+import { buildAgiNativeMcpTools, executeAgiMcpToolCalls, toLegacyAgiMcpToolCalls } from "@/lib/agi-mcp-runtime";
+import { extractLearningCandidate } from "@/lib/agi-learning-extractor";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
   createServerlessAgiTask,
@@ -204,6 +206,15 @@ export async function runUnifiedAgiWorkerOnce(params: {
       payload: task.payload,
     });
 
+    runId = await startVerifiedRun({
+      task,
+      profile,
+      worker_id: workerId,
+      provider: "hocker-model-router",
+      model: "auto",
+    });
+
+    const nativeTools = await buildAgiNativeMcpTools(task.title);
     const completion = await completeAgi({
       messages: [
         { role: "system", content: buildCanonicalProfilePrompt(profile.canon) },
@@ -211,15 +222,39 @@ export async function runUnifiedAgiWorkerOnce(params: {
       ],
       timeout_ms: 42_000,
       oidc_token: params.oidc_token,
+      tools: nativeTools,
     });
 
-    runId = await startVerifiedRun({
-      task,
-      profile,
-      worker_id: workerId,
-      provider: completion.provider,
-      model: completion.model,
-    });
+    const nativeCalls = completion.tool_calls ?? [];
+    const toolResults = nativeCalls.length
+      ? await executeAgiMcpToolCalls(toLegacyAgiMcpToolCalls(nativeCalls), {
+          project_id: task.project_id,
+          allow_actions: false,
+          parent_run_id: runId,
+          source_agi_id: profile.id,
+        })
+      : [];
+    const nativeToolResults = toolResults.map((item) => ({
+      id: item.id,
+      name: nativeCalls.find((call) => call.id === item.id)?.name ?? item.name.replace(".", "__"),
+      qualified_name: item.name,
+      result: item.result,
+      ok: item.executed,
+    }));
+    const finalCompletion = nativeCalls.length
+      ? await completeAgi({
+          messages: [
+            { role: "system", content: buildCanonicalProfilePrompt(profile.canon) },
+            { role: "user", content: taskPrompt(task) },
+            { role: "assistant", content: completion.text || "Se solicitaron herramientas HOCKER." },
+          ],
+          timeout_ms: 42_000,
+          oidc_token: params.oidc_token,
+          tools: nativeTools,
+          tool_calls: nativeCalls,
+          tool_results: nativeToolResults,
+        })
+      : completion;
 
     const completedAt = new Date().toISOString();
     const output: JsonRecord = {
@@ -231,12 +266,12 @@ export async function runUnifiedAgiWorkerOnce(params: {
       agi_level: profile.canon.level,
       agi_domain: profile.canon.domain,
       task_id: task.id,
-      summary: completion.text,
-      provider: completion.provider,
-      model: completion.model,
-      route: completion.route,
-      usage: completion.usage,
-      route_attempts: completion.attempts,
+      summary: finalCompletion.text,
+      provider: finalCompletion.provider,
+      model: finalCompletion.model,
+      route: finalCompletion.route,
+      usage: finalCompletion.usage,
+      route_attempts: finalCompletion.attempts,
       requested_by: params.requested_by ?? null,
       completed_at: completedAt,
       external_writes_executed: false,
@@ -247,10 +282,10 @@ export async function runUnifiedAgiWorkerOnce(params: {
       {
         kind: "verified_model_completion",
         canon_version: HOCKER_AGI_CANON_VERSION,
-        provider: completion.provider,
-        model: completion.model,
-        route: completion.route,
-        route_attempts: completion.attempts,
+        provider: finalCompletion.provider,
+        model: finalCompletion.model,
+        route: finalCompletion.route,
+        route_attempts: finalCompletion.attempts,
         worker_id: workerId,
         task_id: task.id,
         agi_id: profile.id,
@@ -277,6 +312,24 @@ export async function runUnifiedAgiWorkerOnce(params: {
       );
     }
 
+    const taskContext = task.payload?.context as JsonRecord | undefined;
+    const delegatedTargets = Array.isArray(taskContext?.target_agi_ids)
+      ? (taskContext.target_agi_ids as unknown[]).filter((id): id is string => typeof id === "string").slice(0, 12)
+      : [];
+    try {
+      await extractLearningCandidate({
+        project_id: task.project_id,
+        session_id: task.id,
+        agi_id: profile.id,
+        user_message: task.details ?? task.title,
+        assistant_message: finalCompletion.text,
+        trace_id: runId,
+        target_agi_ids: delegatedTargets,
+      });
+    } catch (learningError) {
+      evidence.push({ kind: "syntia_learning_proposal_error", message: safeError(learningError) });
+    }
+
     return {
       ok: true,
       processed: true,
@@ -289,9 +342,9 @@ export async function runUnifiedAgiWorkerOnce(params: {
         result_hash: resultHash,
       },
       run_id: runId,
-      provider: completion.provider,
-      model: completion.model,
-      route: completion.route,
+      provider: finalCompletion.provider,
+      model: finalCompletion.model,
+      route: finalCompletion.route,
       evidence,
     };
   } catch (error) {
