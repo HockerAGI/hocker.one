@@ -94,3 +94,5 @@ Never silence Supabase Advisors with broad grants/policies. `unused_index` is IN
 ## 9. Release
 
 The active closure gate is the current source referenced by `docs/operations/INDEX.md`. Do not declare `production_ready` until every named gate has traceable evidence from the same applicable candidate/configuration.
+
+- Dynamic MCP providers must flow through the canonical registry, HTTPS host allowlist and existing execution policy; no provider may bypass Hocker security gates.
