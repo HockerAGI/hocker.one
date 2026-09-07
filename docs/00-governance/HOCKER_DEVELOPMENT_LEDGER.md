@@ -579,3 +579,8 @@ Network permission never replaces Hocker One MCP policy or Owner Gate. Provider 
 ## 2026-09-05 — Dynamic MCP provider fabric milestone
 
 PR #351 merged at `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Preview. Dynamic MCP providers now reuse the canonical MCP Registry/native tool fabric and fail closed via HTTPS host allowlisting.
+
+
+## 2026-09-07 — AGI federation milestone
+
+PR #360 merged at `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview validation. The canonical task/run path now supports bounded internal AGI delegation and delegated learning target propagation through SYNTIA.

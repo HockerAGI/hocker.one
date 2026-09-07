@@ -96,3 +96,5 @@ Never silence Supabase Advisors with broad grants/policies. `unused_index` is IN
 The active closure gate is the current source referenced by `docs/operations/INDEX.md`. Do not declare `production_ready` until every named gate has traceable evidence from the same applicable candidate/configuration.
 
 - Dynamic MCP providers must flow through the canonical registry, HTTPS host allowlist and existing execution policy; no provider may bypass Hocker security gates.
+
+- AGI federation must use canonical `agi_tasks`/`agi_runs`, `parent_run_id`, bounded delegation depth/fanout and the existing SYNTIA learning path.

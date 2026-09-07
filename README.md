@@ -78,3 +78,5 @@ La jerarquía de verdad es: **producción/configuración y evidencia conectada >
 ## Regla de depuración
 
 Todo elemento existente se clasifica así: aporta y sigue vigente → conservar; aporta pero quedó viejo → reconstruir/adaptar; se solapa → fusionar; no ayuda a comprender, operar, recuperar o auditar → eliminar/descartar.
+
+- **AGI federation:** las AGIs pueden delegarse tareas de forma trazable y acotada; los resultados pasan por el pipeline canónico de aprendizaje de SYNTIA.
