@@ -1,7 +1,7 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-05 12:30 UTC-07:00**
+Evidence cut: **2026-09-07 13:15 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
 Live operational source: `docs/operations/HANDOFF_2026-09-05.md`.
@@ -97,3 +97,9 @@ Latest History gate evidence: PR #335 was validated on exact HEAD via Vercel Pre
 
 - PR #351 merged to `main` as `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Preview `SUCCESS`/`READY`.
 - Dynamic MCP manifests now reuse the canonical MCP Registry and native Tool Fabric with HTTPS host allowlisting.
+
+
+## AGI federation milestone — 2026-09-07
+
+- PR #360 merged to `main` as `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview READY/SUCCESS.
+- Canonical IA↔IA delegation now records parent-run lineage, bounded depth/fan-out and feeds delegated results into the existing SYNTIA learning extractor.
