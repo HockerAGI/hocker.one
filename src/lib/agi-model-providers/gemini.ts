@@ -44,11 +44,13 @@ function parseToolCalls(payload: GeminiResponse, tools: AgiNativeTool[] | undefi
 function extractWebCitations(payload: GeminiResponse): AgiWebCitation[] {
   const grounding = (payload.candidates?.[0] as any)?.groundingMetadata;
   const chunks = Array.isArray(grounding?.groundingChunks) ? grounding.groundingChunks : [];
-  return chunks.flatMap((chunk: any) => {
+  return chunks.flatMap((chunk: any): AgiWebCitation[] => {
     const web = chunk?.web;
     if (!web || typeof web.uri !== "string") return [];
     return [{ url: web.uri, title: typeof web.title === "string" ? web.title : undefined, provider: "gemini" as const }];
-  }).filter((item,index,self)=>self.findIndex((x)=>x.url===item.url)===index).slice(0,100);
+  }).filter((item: AgiWebCitation, index: number, self: AgiWebCitation[]) =>
+    self.findIndex((x: AgiWebCitation) => x.url === item.url) === index
+  ).slice(0,100);
 }
 
 function apiKey(): string {
