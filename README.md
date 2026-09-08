@@ -80,3 +80,5 @@ La jerarquía de verdad es: **producción/configuración y evidencia conectada >
 Todo elemento existente se clasifica así: aporta y sigue vigente → conservar; aporta pero quedó viejo → reconstruir/adaptar; se solapa → fusionar; no ayuda a comprender, operar, recuperar o auditar → eliminar/descartar.
 
 - **AGI federation:** las AGIs pueden delegarse tareas de forma trazable y acotada; los resultados pasan por el pipeline canónico de aprendizaje de SYNTIA.
+
+- **Native Web Research:** NOVA habilita búsqueda web nativa de forma automática para intents de investigación; las citas se normalizan al contrato Hocker.
