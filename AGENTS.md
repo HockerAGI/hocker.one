@@ -98,3 +98,5 @@ The active closure gate is the current source referenced by `docs/operations/IND
 - Dynamic MCP providers must flow through the canonical registry, HTTPS host allowlist and existing execution policy; no provider may bypass Hocker security gates.
 
 - AGI federation must use canonical `agi_tasks`/`agi_runs`, `parent_run_id`, bounded delegation depth/fanout and the existing SYNTIA learning path.
+
+- Web research must use provider-native search through the canonical model router; do not add a second search provider unless a concrete capability gap justifies it. Preserve source citations and fail closed when no web-capable provider is configured.
