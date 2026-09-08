@@ -136,6 +136,7 @@ export const vercelGatewayProvider: AgiModelProvider = {
           model: model(),
           text,
           tool_calls: toolCalls,
+          web_citations: [],
           usage: {
             tokens_in: payload.usage?.prompt_tokens ?? null,
             tokens_out: payload.usage?.completion_tokens ?? null,
