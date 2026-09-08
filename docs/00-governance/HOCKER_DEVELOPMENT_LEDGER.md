@@ -584,3 +584,8 @@ PR #351 merged at `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Pr
 ## 2026-09-07 — AGI federation milestone
 
 PR #360 merged at `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview validation. The canonical task/run path now supports bounded internal AGI delegation and delegated learning target propagation through SYNTIA.
+
+
+## 2026-09-08 — Unified NOVA stream milestone
+
+PR #365 merged at `2ab17d56468ba47ca980f138b3679bcc99367f30` after exact-head Preview validation. Unified NOVA streaming is now the primary path and preserves Web Research citations; dedicated NOVA remains fallback-only.
