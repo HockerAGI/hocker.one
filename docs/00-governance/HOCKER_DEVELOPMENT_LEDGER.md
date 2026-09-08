@@ -584,3 +584,8 @@ PR #351 merged at `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Pr
 ## 2026-09-07 — AGI federation milestone
 
 PR #360 merged at `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview validation. The canonical task/run path now supports bounded internal AGI delegation and delegated learning target propagation through SYNTIA.
+
+
+## 2026-09-08 — Native Web Research milestone
+
+PR #362 merged at `1c1b8503cdae5b493bcdcd0258d6b3a81eb34674` after exact-head Preview validation. Provider-native web grounding is now part of the unified NOVA research path with normalized citation output.
