@@ -140,3 +140,13 @@ test("web research is provider-native, automatic for research intents, and citat
   assert.match(gemini, /extractWebCitations/);
   assert.match(anthropic, /extractWebCitations/);
 });
+
+
+test("streaming NOVA uses the unified runtime before dedicated fallback and preserves citations", async () => {
+  const source = await read("src/app/api/nova/chat/stream/route.ts");
+  assert.match(source, /requireProjectRole/);
+  assert.match(source, /runToolEnabledUnifiedNovaChat/);
+  assert.match(source, /hocker-one-unified-final-sse/);
+  assert.match(source, /citations: Array\.isArray\(local\.citations\)/);
+  assert.match(source, /if \(!baseUrl \|\| !key\)/);
+});
