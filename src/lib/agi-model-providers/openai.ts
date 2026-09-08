@@ -8,6 +8,7 @@ import {
   type AgiToolCall,
   type AgiToolResult,
   type AgiNativeTool,
+  type AgiWebCitation,
 } from "@/lib/agi-model-providers/types";
 
 type OpenAIResponse = {
@@ -55,6 +56,36 @@ function parseToolCalls(payload: OpenAIResponse, tools: AgiNativeTool[] | undefi
       args,
     }];
   });
+}
+
+
+function wireWebSearch(input: AgiCompletionInput): Record<string, unknown> | null {
+  if (!input.web_search) return null;
+  const tool: Record<string, unknown> = { type: "web_search" };
+  if (input.web_allowed_domains?.length) tool.filters = { allowed_domains: input.web_allowed_domains.slice(0, 100) };
+  else if (input.web_blocked_domains?.length) tool.filters = { blocked_domains: input.web_blocked_domains.slice(0, 100) };
+  return tool;
+}
+
+function extractWebCitations(payload: OpenAIResponse): AgiWebCitation[] {
+  const out: AgiWebCitation[] = [];
+  for (const item of payload.output ?? []) {
+    for (const part of item.content ?? []) {
+      const annotations = (part as any).annotations;
+      if (!Array.isArray(annotations)) continue;
+      for (const annotation of annotations) {
+        if (annotation?.type !== "url_citation" || typeof annotation.url !== "string") continue;
+        out.push({
+          url: annotation.url,
+          title: typeof annotation.title === "string" ? annotation.title : undefined,
+          start_index: typeof annotation.start_index === "number" ? annotation.start_index : undefined,
+          end_index: typeof annotation.end_index === "number" ? annotation.end_index : undefined,
+          provider: "openai",
+        });
+      }
+    }
+  }
+  return out.filter((item,index,self)=>self.findIndex((x)=>x.url===item.url&&x.start_index===item.start_index&&x.end_index===item.end_index)===index).slice(0,100);
 }
 
 function apiKey(): string {
@@ -114,7 +145,11 @@ export const openaiDirectProvider: AgiModelProvider = {
               output: JSON.stringify(result.result),
             })),
           ],
-          tools: wireTools(input.tools),
+          tools: [
+            ...(wireTools(input.tools) ?? []),
+            ...(wireWebSearch(input) ? [wireWebSearch(input)!] : []),
+          ],
+
           store: false,
         }),
       });
@@ -127,6 +162,7 @@ export const openaiDirectProvider: AgiModelProvider = {
         });
       }
       const toolCalls = parseToolCalls(payload, input.tools);
+      const webCitations = extractWebCitations(payload);
       const text = extractText(payload);
       if (!text && toolCalls.length === 0) throw new AgiProviderError("OpenAI devolvió respuesta vacía", { code: "OPENAI_EMPTY_RESPONSE" });
       return {
@@ -135,6 +171,7 @@ export const openaiDirectProvider: AgiModelProvider = {
         model: model(),
         text,
         tool_calls: toolCalls,
+        web_citations: webCitations,
         usage: {
           tokens_in: payload.usage?.input_tokens ?? null,
           tokens_out: payload.usage?.output_tokens ?? null,

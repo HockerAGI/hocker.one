@@ -150,6 +150,10 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   const routes = configuredAgiRoutes(params.oidc_token);
   if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
+  const webSearchRequired = params.message.trim().length > 0 && (
+    specialist.id === "curvewind"
+    || /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|actual|reciente|hoy|latest|research|auditoría|auditoria)\b/i.test(params.message)
+  );
   const nativeMcpTools = await buildAgiNativeMcpTools(params.message);
 
   const [context, mcpPrompt] = await Promise.all([
@@ -184,6 +188,8 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     timeout_ms: 40_000,
     oidc_token: params.oidc_token,
     tools: nativeMcpTools,
+    web_search: webSearchRequired,
+    web_max_uses: webSearchRequired ? 8 : undefined,
   });
 
   const legacyEnvelope = parseAgiMcpEnvelope(first.text);
@@ -243,6 +249,8 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       tools: nativeMcpTools,
       tool_calls: nativeCalls,
       tool_results: nativeToolResults,
+      web_search: webSearchRequired,
+      web_max_uses: webSearchRequired ? 8 : undefined,
     });
     const followUpEnvelope = parseAgiMcpEnvelope(finalCompletion.text);
     finalReply = publicReplyFromToolEnvelope({
@@ -281,6 +289,11 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       verified_execution: true,
       owner_gate_only: true,
       mcp: mcpSummary(toolResults),
+      web: {
+        enabled: webSearchRequired,
+        citations: finalCompletion.web_citations,
+        provider: finalCompletion.web_citations.length > 0 ? finalCompletion.web_citations[0]?.provider ?? null : null,
+      },
     },
   });
 
@@ -326,9 +339,14 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     trace_id: traceId,
     provider: finalCompletion.provider,
     model: finalCompletion.model,
+    citations: finalCompletion.web_citations,
     meta: {
       runtime: "hocker-one-unified",
       provider_independent: true,
+      web_search: {
+        enabled: webSearchRequired,
+        citations_count: finalCompletion.web_citations.length,
+      },
       configured_routes: routes,
       internal_specialist_agi: specialist.id,
       route: finalCompletion.route,

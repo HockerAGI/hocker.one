@@ -72,7 +72,9 @@ export function agiModelRouterConfigured(oidcToken?: string | null): boolean {
 
 export async function completeAgi(input: AgiCompletionInput): Promise<AgiCompletionResult> {
   const attempts: AgiProviderAttempt[] = [];
-  const order = routeOrder();
+  const order = input.web_search
+    ? routeOrder().filter((route) => route === "openai-direct" || route === "gemini-direct" || route === "anthropic-direct")
+    : routeOrder();
   const excluded = new Set(input.exclude_routes ?? []);
   let sawConfigured = false;
 

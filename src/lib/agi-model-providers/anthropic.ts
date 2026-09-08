@@ -7,6 +7,7 @@ import {
   type AgiProviderResult,
   type AgiNativeTool,
   type AgiToolCall,
+  type AgiWebCitation,
 } from "@/lib/agi-model-providers/types";
 
 type AnthropicResponse = {
@@ -33,6 +34,22 @@ function parseToolCalls(payload: AnthropicResponse, tools: AgiNativeTool[] | und
     if (!tool || !block.id) return [];
     return [{ id: block.id, name: tool.name, qualified_name: tool.qualified_name, args: block.input ?? {} }];
   });
+}
+
+
+function wireWebSearch(input: AgiCompletionInput): Record<string, unknown> | null {
+  if (!input.web_search) return null;
+  const tool: Record<string, unknown> = { type: "web_search_20260318", name: "web_search", max_uses: Math.max(1, Math.min(input.web_max_uses ?? 6, 20)) };
+  if (input.web_allowed_domains?.length) tool.allowed_domains = input.web_allowed_domains.slice(0, 100);
+  else if (input.web_blocked_domains?.length) tool.blocked_domains = input.web_blocked_domains.slice(0, 100);
+  return tool;
+}
+function extractWebCitations(payload: AnthropicResponse): AgiWebCitation[] {
+  return (payload.content ?? []).filter((block: any) => block.type === "text" && Array.isArray(block.citations))
+    .flatMap((block: any) => block.citations)
+    .filter((citation: any) => typeof citation?.url === "string")
+    .map((citation: any) => ({ url: citation.url, title: typeof citation.title === "string" ? citation.title : undefined, cited_text: typeof citation.cited_text === "string" ? citation.cited_text : undefined, provider: "anthropic" as const }))
+    .filter((item,index,self)=>self.findIndex((x)=>x.url===item.url)===index).slice(0,100);
 }
 
 function apiKey(): string {
@@ -92,7 +109,10 @@ export const anthropicDirectProvider: AgiModelProvider = {
               })),
             }] : []),
           ],
-          tools: wireTools(input.tools),
+          tools: [
+            ...(wireTools(input.tools) ?? []),
+            ...(wireWebSearch(input) ? [wireWebSearch(input)!] : []),
+          ],
         }),
       });
       const payload = (await response.json().catch(() => ({}))) as AnthropicResponse;
@@ -104,6 +124,7 @@ export const anthropicDirectProvider: AgiModelProvider = {
         });
       }
       const toolCalls = parseToolCalls(payload, input.tools);
+      const webCitations = extractWebCitations(payload);
       const text = (payload.content ?? [])
         .filter((block) => block.type === "text" && typeof block.text === "string")
         .map((block) => block.text?.trim() ?? "")
@@ -119,6 +140,7 @@ export const anthropicDirectProvider: AgiModelProvider = {
         model: model(),
         text,
         tool_calls: toolCalls,
+        web_citations: webCitations,
         usage: {
           tokens_in: tokensIn,
           tokens_out: tokensOut,

@@ -59,6 +59,7 @@ export const ollamaProvider: AgiModelProvider = {
         model: model(),
         text,
         tool_calls: [],
+        web_citations: [],
         usage: {
           tokens_in: tokensIn,
           tokens_out: tokensOut,

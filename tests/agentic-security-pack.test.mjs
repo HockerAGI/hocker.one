@@ -114,3 +114,29 @@ test("AGI federation uses bounded canonical tasks and SYNTIA target propagation"
   assert.match(task, /parent_run_id\?: string/);
   assert.match(learning, /target_agi_ids\?: string\[\]/);
 });
+
+
+test("web research is provider-native, automatic for research intents, and citation-bearing", async () => {
+  const [types, router, nova, openai, gemini, anthropic] = await Promise.all([
+    read("src/lib/agi-model-providers/types.ts"),
+    read("src/lib/agi-model-router.ts"),
+    read("src/lib/unified-nova-chat-runtime.ts"),
+    read("src/lib/agi-model-providers/openai.ts"),
+    read("src/lib/agi-model-providers/gemini.ts"),
+    read("src/lib/agi-model-providers/anthropic.ts"),
+  ]);
+  assert.match(types, /web_search\?: boolean/);
+  assert.match(types, /AgiWebCitation/);
+  assert.match(router, /routeOrder\(\)\.filter/);
+  assert.match(router, /openai-direct/);
+  assert.match(router, /gemini-direct/);
+  assert.match(router, /anthropic-direct/);
+  assert.match(nova, /webSearchRequired/);
+  assert.match(nova, /web_search: webSearchRequired/);
+  assert.match(openai, /type: "web_search"/);
+  assert.match(gemini, /google_search/);
+  assert.match(anthropic, /web_search_20260318/);
+  assert.match(openai, /extractWebCitations/);
+  assert.match(gemini, /extractWebCitations/);
+  assert.match(anthropic, /extractWebCitations/);
+});
