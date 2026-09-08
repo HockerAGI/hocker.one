@@ -7,6 +7,7 @@ import {
   type AgiProviderResult,
   type AgiNativeTool,
   type AgiToolCall,
+  type AgiWebCitation,
 } from "@/lib/agi-model-providers/types";
 
 type GeminiPart = { text?: string; functionCall?: { name?: string; args?: Record<string, unknown> }; functionResponse?: { name?: string; response?: unknown } };
@@ -37,6 +38,17 @@ function parseToolCalls(payload: GeminiResponse, tools: AgiNativeTool[] | undefi
     if (!tool) return [];
     return [{ id: `call_${Date.now()}_${Math.random().toString(36).slice(2,8)}`, name: tool.name, qualified_name: tool.qualified_name, args: call.args ?? {} }];
   });
+}
+
+
+function extractWebCitations(payload: GeminiResponse): AgiWebCitation[] {
+  const grounding = (payload.candidates?.[0] as any)?.groundingMetadata;
+  const chunks = Array.isArray(grounding?.groundingChunks) ? grounding.groundingChunks : [];
+  return chunks.flatMap((chunk: any) => {
+    const web = chunk?.web;
+    if (!web || typeof web.uri !== "string") return [];
+    return [{ url: web.uri, title: typeof web.title === "string" ? web.title : undefined, provider: "gemini" as const }];
+  }).filter((item,index,self)=>self.findIndex((x)=>x.url===item.url)===index).slice(0,100);
 }
 
 function apiKey(): string {
@@ -87,7 +99,10 @@ export const geminiDirectProvider: AgiModelProvider = {
             systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
             contents,
             generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
-            tools: wireTools(input.tools),
+            tools: [
+              ...(wireTools(input.tools) ?? []),
+              ...(input.web_search ? [{ google_search: {} }] : []),
+            ],
           }),
         },
       );
@@ -100,6 +115,7 @@ export const geminiDirectProvider: AgiModelProvider = {
         });
       }
       const toolCalls = parseToolCalls(payload, input.tools);
+      const webCitations = extractWebCitations(payload);
       const text = (payload.candidates?.[0]?.content?.parts ?? [])
         .map((part) => part.text?.trim() ?? "")
         .filter(Boolean)
@@ -112,6 +128,7 @@ export const geminiDirectProvider: AgiModelProvider = {
         model: model(),
         text,
         tool_calls: toolCalls,
+        web_citations: webCitations,
         usage: {
           tokens_in: payload.usageMetadata?.promptTokenCount ?? null,
           tokens_out: payload.usageMetadata?.candidatesTokenCount ?? null,
