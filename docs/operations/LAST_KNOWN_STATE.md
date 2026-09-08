@@ -103,3 +103,10 @@ Latest History gate evidence: PR #335 was validated on exact HEAD via Vercel Pre
 
 - PR #360 merged to `main` as `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview READY/SUCCESS.
 - Canonical IA↔IA delegation now records parent-run lineage, bounded depth/fan-out and feeds delegated results into the existing SYNTIA learning extractor.
+
+
+## Native Web Research milestone — 2026-09-08
+
+- PR #362 merged at `1c1b8503cdae5b493bcdcd0258d6b3a81eb34674` after exact-head Preview `READY/SUCCESS`.
+- Research intents now activate provider-native web grounding on OpenAI, Gemini and Anthropic routes; citations are normalized into the Hocker runtime/HTTP contract.
+- No second web-search provider or persistence layer was introduced.
