@@ -39,6 +39,15 @@ export type AgiModelMessage = {
   content: string;
 };
 
+export type AgiWebCitation = {
+  url: string;
+  title?: string;
+  cited_text?: string;
+  start_index?: number;
+  end_index?: number;
+  provider: "openai" | "gemini" | "anthropic";
+};
+
 export type AgiCompletionInput = {
   messages: AgiModelMessage[];
   timeout_ms?: number;
@@ -50,6 +59,14 @@ export type AgiCompletionInput = {
   tool_calls?: AgiToolCall[];
   /** Results produced by Hocker's tool executor for the previous turn. */
   tool_results?: AgiToolResult[];
+  /** Enable provider-native public web search when the capability requires fresh web evidence. */
+  web_search?: boolean;
+  /** Optional domain allowlist for provider-native search. */
+  web_allowed_domains?: string[];
+  /** Optional domain blocklist for provider-native search. */
+  web_blocked_domains?: string[];
+  /** Maximum provider-native search uses where the provider supports it. */
+  web_max_uses?: number;
 };
 
 export type AgiUsage = {
@@ -74,6 +91,7 @@ export type AgiCompletionResult = {
   usage: AgiUsage;
   attempts: AgiProviderAttempt[];
   tool_calls: AgiToolCall[];
+  web_citations: AgiWebCitation[];
 };
 
 export type AgiProviderResult = Omit<AgiCompletionResult, "attempts">;
