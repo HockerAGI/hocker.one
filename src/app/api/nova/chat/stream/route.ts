@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
+import { requireProjectRole } from "@/app/api/_lib";
+import { runToolEnabledUnifiedNovaChat } from "@/lib/unified-nova-chat-runtime";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
@@ -110,25 +112,22 @@ export async function POST(req: Request): Promise<Response> {
   const baseUrl = getNovaBaseUrl();
   const key = getNovaKey();
 
-  if (!baseUrl || !key) {
-    return new Response(
-      new ReadableStream({
-        start(controller) {
-          controller.enqueue(sse("error", { ok: false, error: "NOVA no está configurada en producción." }));
-          controller.enqueue(sse("done", { ok: false }));
-          controller.close();
-        },
-      }),
-      { status: 500, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store" } },
-    );
-  }
-
   const parsed = StreamChatSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return new Response(JSON.stringify({ ok: false, error: "Payload inválido para Hablar con NOVA.", issues: parsed.error.flatten() }), { status: 400 });
   }
 
-  const queueLock = await getAgiQueueLock(parsed.data.project_id);
+  let chatCtx;
+  try {
+    chatCtx = await requireProjectRole(parsed.data.project_id, ["owner", "admin", "operator", "viewer"]);
+  } catch (error) {
+    return new Response(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : "No autorizado." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  }
+
+  const queueLock = await getAgiQueueLock(chatCtx.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
 
   // API-03: Use the request's AbortSignal to detect client disconnect
@@ -164,6 +163,38 @@ export async function POST(req: Request): Promise<Response> {
             transport: "local_capabilities_contract",
           }));
           controller.enqueue(sse("done", { ok: true }));
+          return;
+        }
+
+        try {
+          const local = await runToolEnabledUnifiedNovaChat({
+            project_id: chatCtx.project_id,
+            thread_id: parsed.data.thread_id,
+            message: parsed.data.message,
+            user_id: chatCtx.user.id,
+            user_email: chatCtx.user.email ?? null,
+            context_data: parsed.data.context_data,
+            allow_actions: false,
+            oidc_token: req.headers.get("x-vercel-oidc-token"),
+          });
+          controller.enqueue(sse("message", {
+            ok: true,
+            type: "final",
+            content: String(local.reply ?? ""),
+            citations: Array.isArray(local.citations) ? local.citations : [],
+            actions: [],
+            meta: { ...(local.meta ?? {}), ...productionGateContext },
+            transport: "hocker-one-unified-final-sse",
+          }));
+          controller.enqueue(sse("done", { ok: true }));
+          return;
+        } catch {
+          // Compatibility fallback below.
+        }
+
+        if (!baseUrl || !key) {
+          controller.enqueue(sse("error", { ok: false, error: "NOVA no pudo completar la solicitud con las rutas disponibles." }));
+          controller.enqueue(sse("done", { ok: false }));
           return;
         }
 
