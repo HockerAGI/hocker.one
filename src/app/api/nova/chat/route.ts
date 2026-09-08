@@ -43,6 +43,14 @@ type NovaChatResponse = {
   agi_id?: string;
   actions?: unknown[];
   trace_id?: string | null;
+  citations?: Array<{
+    url: string;
+    title?: string;
+    cited_text?: string;
+    start_index?: number;
+    end_index?: number;
+    provider: string;
+  }>;
   meta?: Record<string, unknown>;
   error?: string;
 };
@@ -86,6 +94,7 @@ function sanitizeNovaPayload(
     agi_id: payload.agi_id,
     actions: localActionDraft ? [localActionDraft] : [],
     trace_id: payload.trace_id ?? null,
+    citations: payload.citations ?? [],
     meta: {
       reason: payload.meta?.reason,
       agi_registry: payload.meta?.agi_registry,
@@ -102,6 +111,10 @@ function sanitizeNovaPayload(
       },
       context_data: payload.meta?.context_data ?? {},
       chat_action_draft: localActionDraft,
+      web: {
+        citations: Array.isArray(payload.citations) ? payload.citations.length : 0,
+        grounded: Array.isArray(payload.citations) && payload.citations.length > 0,
+      },
       ...injectedMeta,
     },
   };
