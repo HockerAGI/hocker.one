@@ -1,111 +1,70 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-07 13:15 UTC-07:00**
+Evidence cut: **2026-09-13 16:41 UTC-07:00**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
 Live operational source: `docs/operations/HANDOFF_2026-09-05.md`.
 Current production-readiness gate: `docs/operations/PLATFORM_CLOSURE_2026-08-30.md`.
-Historical sources dated 2026-08-19 remain preserved for audit and are not live pointers.
+Historical sources remain preserved for audit and are not live pointers.
 
 ## Current verified pointers
 
-- Hocker One `main`: `d51aea8af6068da2553cf7fbeceb3c630707c3a3` (active handoff published after History promotion; re-query before mutation).
-- Vercel production pointer: re-query before mutation; historical deployment IDs are not live evidence.
-- Hocker One health: public smoke `/chat` = HTTP 200; authenticated private APIs return HTTP 401 without identity; production runtime errors observed in post-merge window = 0.
-- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; this remains a durable baseline, not fresh liveness evidence.
-- Tool certification: **19/19 read-only PASS**; no external writes during certification.
-- All 16 AGIs remain `allow_actions=false`.
-- `nova.agi/main`: `2e3d2f8c8c577b88678267fd02b96c37afa1f567`.
-- `hocker-node-agent/main`: `3fd8b8adaf6ad4bae66c432536bd955552f0f0f6`.
-- Supabase project: `yvuibbcuntqpyqiuqggd`, PostgreSQL 17, `us-west-1`.
-- Supabase migration head: `20260903182025_align_queue_orphan_view_with_reconciler`; re-query the migration ledger before mutation.
-- Canon completeness view: `12.6C.1B`, 16 registry profiles, 16 runtime agents, 16 canonical memories, 16 specialized feeds, 34 enabled tool assignments.
+- Hocker One `main`: `0994e6df5cba44c2929605a21f01eac595a721d5`.
+- Latest merged product milestone: Operating Loop v1 — first contracts slice; PR #368 merged as `0994e6df5cba44c2929605a21f01eac595a721d5`.
+- Unified NOVA streaming: PR #365 merged as `2ab17d56468ba47ca980f138b3679bcc99367f30`.
+- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, **16/16 AGIs, 48/48 PASS**; durable baseline, not fresh liveness evidence.
+- Tool certification baseline: **19/19 read-only PASS**; no external writes during certification.
+- All 16 AGIs remain `allow_actions=false` unless current evidence explicitly proves otherwise.
+- `nova.agi/main`: re-query before mutation.
+- `hocker-node-agent/main`: re-query before mutation.
+- Supabase production: re-query project and migration head before mutation.
 
 ## Recent completed maintenance
 
-- Supabase JS #294: merged and post-merge production smoke passed.
-- Lucide #293: merged and post-merge production smoke passed.
-- Gradle #285: merged as patch `9.7.1`.
-- Capacitor #300: merged with Core/Android/CLI aligned at `8.5.0`.
-- #287: closed as completed after coordinated Capacitor stack integration.
-- #312: closed as duplicate of the canonical Android gate #203.
+- Canonical NOVA History workspace promoted.
+- Native MCP Tool Fabric promoted.
+- Automatic AGI routing promoted.
+- Governed Dynamic MCP provider fabric promoted.
+- Bounded IA↔IA delegation and SYNTIA learning propagation promoted.
+- Unified NOVA streaming promoted; dedicated `nova.agi` remains compatibility fallback unless independently certified.
+- Operating Loop v1 contract slice promoted: Work Session states/transitions, ResearchRecord, ExecutionCandidate, ApprovalEnvelope, WorkSessionEnvelope and deterministic candidate hashing.
 
-## Supabase security posture
+## Current architectural posture
 
-Resolved in production:
-- reviewed RPC `search_path` hardening;
-- own-history RPCs moved to `SECURITY INVOKER`;
-- explicit grants retained;
-- `agis_public_catalog` unnecessary anon/authenticated GraphQL exposure removed.
+- NOVA remains the orchestrator; AGIs remain specialized identities.
+- Capability/Tool routing must use the canonical Hocker Fabric; do not create a second registry, memory store, action queue or runtime router.
+- Native tools are model-facing contracts; Hocker One remains the execution/policy/evidence boundary.
+- Dynamic MCP providers require governed manifests, HTTPS host allowlisting and existing execution policy.
+- IA↔IA delegation uses the canonical task/run path with parent lineage and bounded depth/fan-out.
+- SYNTIA learning uses the existing Learning Extractor/Memory Mirror path.
+- Streaming chat must enter the unified Hocker runtime before the dedicated compatibility fallback.
+- Operating Loop is an orchestration envelope over existing stores and controls; it must not duplicate them.
 
-Still open and requiring contract-based review:
-- public GraphQL: `cashback_tiers`, `free_round_tiers`, `promo_offers`;
-- authenticated GraphQL discoverability across operational/financial/audit/observability relations;
-- public `SECURITY DEFINER` execution for `get_public_leaderboard` and `get_public_recent_wins`;
-- `auth_leaked_password_protection` remains disabled.
+## Still incomplete or not fully evidenced
 
-These findings do not by themselves prove cross-tenant leakage. Do not perform broad REVOKE/policy changes without consumer evidence, authorization tests, rollback and Advisor recheck.
-
-## Master-plan implementation audit
-
-### Complete at current baseline
-- Canonical NOVA History workspace: owner/project-scoped history API, persisted history panel and `thread_id` restoration on `/chat` (PR #335; production SHA `b1b8554fd7f9c7091634df6487687472a1d0e127`).
-- Core AGI certification scope.
-- Primary AGI action boundary: `allow_actions=false` baseline.
-- Initial Supabase function hardening.
-- Hocker One production dependency maintenance for Supabase JS, Lucide, Gradle and coordinated Capacitor.
-- Stable Hocker-node-agent baseline and patch maintenance.
-- Active operations index/handoff/closure structure exists.
-
-### Still incomplete or not fully evidenced
-- `NovaWorkspace` decomposition remains partial on `main`; History is production-promoted, while Conversation/Composer/Detail/Tools/Connectors/Evidence remain partially consolidated.
-- Full chat capability surface (real file upload, voice, artifact viewer, connector/tool UX) is not certified complete on `main`.
-- Full frontend `OperationalState` contract is not implemented as specified; DB `v_agi_operational_state` is narrower.
-- Full responsive/accessibility/device certification matrix is not evidenced as complete.
-- Full backup/restore and measured RPO/RTO drill is not evidenced.
-- Full dedicated agentic-security eval pack and complete current evidence pack are not yet closed.
-- Owner AAL1/AAL2 negative-path + containment remains an external human gate.
-- Context Bridge AAL2 migration remains open.
-- NOVA dedicated Railway runtime remains unverified.
-- Android API 36 was manually executed successfully during the current continuation cycle; re-run only if the Android build/contract changes.
-- Supabase Leaked Password Protection remains a manual Dashboard gate and is blocked by the current Free plan.
+- Work Session persistence/store, executable Research Gate wrapper, deterministic Candidate builder and scoped Approval Envelope execution are planned next slices; only the first contracts slice is currently implemented.
+- NovaWorkspace full decomposition and UX consolidation is partial.
+- Full file/artifact/voice/tool/connector UX is not certified complete.
+- Browser/computer-use and terminal/code-execution capability parity is not yet implemented as a certified Hocker-native surface.
+- Deep Research beyond provider-native web grounding remains partial.
+- Fresh 16/16 AGI runtime certification is not evidenced by current activity.
+- Dedicated `nova.agi` physical runtime certification is not evidenced.
+- Node Agent physical heartbeat is not evidenced.
+- Owner AAL1/AAL2 human ceremony/negative-path evidence remains external.
+- Backup/restore and measured RPO/RTO drill remain incomplete.
+- Supabase leaked-password protection remains an external/provider-plan gate.
 
 ## Current operational freshness
 
-- `agi_agents = 16`.
-- `allow_actions=true = 0`.
-- `agi_runs` in last 24h = **0**; latest recorded run = `2026-08-30T02:48:30Z`.
-- `agi_integration_checks` in last 24h = **0**; latest recorded check = `2026-08-10T06:17:05Z`.
-- `nodes` seen in last 24h = **0**; latest recorded node signal = `2026-08-18T09:52:48Z`.
-- Therefore registry presence is verified, but fresh AGI execution/node liveness is not.
+Do not represent registry presence as liveness. Re-query `agi_runs`, integration checks and node signals before claiming current AGI/runtime availability.
 
-## Expansion status
+## Operating Loop v1
 
-**EXPANSION_READY = YES.** The baseline is suitable for adding new projects/integrations without reopening the core architecture.
-
-**PRODUCTION_READY = NOT YET CLOSED.** Remaining items are hardening/acceptance evidence, not permission to rebuild Hocker One.
+- Design/specification exists in PR #367: `docs/superpowers/specs/2026-09-10-hocker-operating-loop-v1-design.md`.
+- PR #368 implemented only the contract slice and was validated on exact HEAD with Vercel READY/GitHub SUCCESS before merge.
+- The next slice must start from current `main` and first verify whether any store/research/approval implementation already exists.
 
 ## Recovery rule
 
-Before any material action, re-query GitHub, Vercel, Supabase and the relevant provider. The active handoff is authoritative for current narrative; this card is intentionally compact and not a substitute for live state.
-
-Latest History gate evidence: PR #335 was validated on exact HEAD via Vercel Preview `READY`; production deployment `dpl_Az6NQE4A2aK2UxbmqBz92yBEviHd` is `READY` on the same merge SHA. Public smoke: `/chat` HTTP 200; unauthenticated private history/runtime endpoints HTTP 401. No production runtime errors observed in the post-merge check.
-
-
-## Dynamic MCP provider fabric milestone — 2026-09-05
-
-- PR #351 merged to `main` as `d51aea8af6068da2553cf7fbeceb3c630707c3a3` after exact-head Preview `SUCCESS`/`READY`.
-- Dynamic MCP manifests now reuse the canonical MCP Registry and native Tool Fabric with HTTPS host allowlisting.
-
-
-## AGI federation milestone — 2026-09-07
-
-- PR #360 merged to `main` as `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview READY/SUCCESS.
-- Canonical IA↔IA delegation now records parent-run lineage, bounded depth/fan-out and feeds delegated results into the existing SYNTIA learning extractor.
-
-
-## Unified NOVA stream milestone — 2026-09-08
-
-- PR #365 merged at `2ab17d56468ba47ca980f138b3679bcc99367f30` after exact-head Preview READY/SUCCESS.
-- `/api/nova/chat/stream` now authenticates project access and uses the unified Hocker runtime before the dedicated compatibility fallback. Web citations remain available on the stream event contract.
+Before any material action, re-query GitHub, Vercel, Supabase and the relevant provider. Code/configuration/evidence outrank historical narrative.
