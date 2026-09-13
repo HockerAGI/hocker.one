@@ -31,6 +31,10 @@ Status: **ACTIVE INDEX**
 
 ## New-session startup
 
-`AGENTS.md` → this index → `HANDOFF_2026-09-03.md` → `LAST_KNOWN_STATE.md` → `PLATFORM_CLOSURE_2026-08-30.md` → `DOC_ALIGNMENT_2026-08-19.md` → re-query GitHub/Vercel/Supabase/providers.
+`AGENTS.md` → this index → `HANDOFF_2026-09-05-R2.md` → `LAST_KNOWN_STATE.md` → `PLATFORM_CLOSURE_2026-08-30.md` → `DOC_ALIGNMENT_2026-08-19.md` → re-query GitHub/Vercel/Supabase/providers.
 
-Older `HANDOFF_2026-08-19.md`, `PLATFORM_CLOSURE_2026-08-19.md` and snapshots remain historical.
+## Current milestone
+
+The latest code milestone is the first Hocker Operating Loop contract slice (PR #368, main `0994e6df5cba44c2929605a21f01eac595a721d5`). It adds orchestration contracts only; persistence/executable orchestration remains a subsequent gated slice.
+
+Older dated handoffs and closure snapshots remain historical evidence.
