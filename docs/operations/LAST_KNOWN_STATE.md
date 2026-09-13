@@ -103,3 +103,9 @@ Latest History gate evidence: PR #335 was validated on exact HEAD via Vercel Pre
 
 - PR #360 merged to `main` as `26ce89372f70c4378d73ce6ff5bfa347803c1cfb` after exact-head Preview READY/SUCCESS.
 - Canonical IA↔IA delegation now records parent-run lineage, bounded depth/fan-out and feeds delegated results into the existing SYNTIA learning extractor.
+
+
+## Unified NOVA stream milestone — 2026-09-08
+
+- PR #365 merged at `2ab17d56468ba47ca980f138b3679bcc99367f30` after exact-head Preview READY/SUCCESS.
+- `/api/nova/chat/stream` now authenticates project access and uses the unified Hocker runtime before the dedicated compatibility fallback. Web citations remain available on the stream event contract.
