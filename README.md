@@ -9,6 +9,10 @@ Hocker One es el **control plane privado y gobernado** del ecosistema HOCKER. Ce
 - **AGIs:** `/agis` muestra estado y decisión primero; una sola acción Owner coordina la certificación resumible. La evidencia técnica vive en detalle progresivo.
 - **Persistencia:** Supabase mantiene Auth, estado durable, ejecuciones, feedback, evidencia y contratos RLS/RPC. Compartir proyecto no elimina boundaries de rol/proyecto.
 - **Owner Gate:** acciones materiales, relajación de safeguards y certificación crítica permanecen protegidas. `allow_actions=false` es el baseline de las 16 AGIs.
+- **Native Tool Fabric:** las capacidades MCP llegan al modelo como native function tools; NOVA descubre herramientas y AGIs por capability/contexto sin selección manual ordinaria.
+- **AGI federation:** NOVA puede delegar a AGIs especialistas mediante la cola canónica de tareas/runs, con lineage y límites; SYNTIA reutiliza el Learning Extractor/Memory Mirror para conocimiento selectivo.
+- **Dynamic MCP:** futuros providers pueden entrar por manifest gobernado y HTTPS allowlist sin crear otro registry.
+- **Operating Loop:** Work Session, Research, Candidate y Approval son una envoltura de orquestación sobre stores/gates existentes; no crean una segunda autoridad.
 - **Proveedores:** Gateway, modelos y conectores son reemplazables; provider/model son telemetría, no identidad pública ni autorización.
 
 ## Navegación privada
@@ -68,7 +72,7 @@ Orden recomendado para recuperar contexto:
 
 1. `AGENTS.md`
 2. `docs/operations/INDEX.md`
-3. `docs/operations/HANDOFF_2026-08-19.md`
+3. `docs/operations/HANDOFF_2026-09-05-R2.md`
 4. `docs/operations/LAST_KNOWN_STATE.md`
 5. `docs/operations/PLATFORM_CLOSURE_2026-08-19.md`
 6. reconsultar GitHub, Vercel y Supabase antes de mutar.
@@ -79,4 +83,6 @@ La jerarquía de verdad es: **producción/configuración y evidencia conectada >
 
 Todo elemento existente se clasifica así: aporta y sigue vigente → conservar; aporta pero quedó viejo → reconstruir/adaptar; se solapa → fusionar; no ayuda a comprender, operar, recuperar o auditar → eliminar/descartar.
 
-- **AGI federation:** las AGIs pueden delegarse tareas de forma trazable y acotada; los resultados pasan por el pipeline canónico de aprendizaje de SYNTIA.
+## Operating Loop v1
+
+El primer slice contractual está integrado en `main`: Work Session state machine, ResearchRecord, ExecutionCandidate, ApprovalEnvelope, WorkSessionEnvelope y hashing determinista. Los siguientes slices deben reutilizar la infraestructura existente y validar primero que no exista ya una implementación equivalente.
