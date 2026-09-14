@@ -96,7 +96,9 @@ Never silence Supabase Advisors with broad grants/policies. `unused_index` is IN
 The active closure gate is the current source referenced by `docs/operations/INDEX.md`. Do not declare `production_ready` until every named gate has traceable evidence from the same applicable candidate/configuration.
 
 - Dynamic MCP providers must flow through the canonical registry, HTTPS host allowlist and existing execution policy; no provider may bypass Hocker security gates.
-
 - AGI federation must use canonical `agi_tasks`/`agi_runs`, `parent_run_id`, bounded delegation depth/fanout and the existing SYNTIA learning path.
-
 - NOVA streaming must route through the unified Hocker runtime first; dedicated `nova.agi` remains compatibility fallback only.
+- Operating Loop contracts are orchestration metadata only; they must reference existing thread/session/task/run/action/evidence records and must not create a second memory, queue, MCP registry, approval system or runtime router.
+- Research records must preserve source URL, consulted timestamp, version/revision when available, scope, relevance, impact and risk notes before material execution.
+- Candidate/approval hashes must bind the exact execution state; changed repo SHA, migration head, runtime revision, scope or expiry invalidates the approval path.
+- Operating Loop implementation slices must start with an audit of existing Hocker capabilities and stores; never create a parallel orchestration system when an existing queue, registry, memory, action or runtime boundary already covers the need.
