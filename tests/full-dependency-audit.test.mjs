@@ -42,9 +42,12 @@ test("postcss vulnerable releases are overridden", async () => {
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
 
-  assert.equal(manifest.devDependencies?.postcss, "8.5.23");
-  assert.equal(manifest.overrides?.postcss, "8.5.23");
-  assert.equal(lockfile.packages?.["node_modules/postcss"]?.version, "8.5.23");
+  assert.equal(manifest.devDependencies?.postcss, "8.5.28");
+  assert.equal(manifest.overrides?.postcss, "8.5.28");
+  assert.ok(
+    atLeast(lockfile.packages?.["node_modules/postcss"]?.version, "8.5.28"),
+    `node_modules/postcss must use postcss >= 8.5.28; found ${lockfile.packages?.["node_modules/postcss"]?.version}`,
+  );
 });
 
 test("js-yaml legacy line is pinned to the CVE-2026-59870 patched release", async () => {
