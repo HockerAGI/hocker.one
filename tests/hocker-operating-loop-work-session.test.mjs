@@ -40,7 +40,7 @@ test("work-session idempotency and invalid-transition contracts remain explicit"
   const sql = await read("supabase/migrations/20260913170000_hocker_operating_loop_work_sessions.sql");
 
   assert.match(store, /idempotency_key/);
-  assert.match(store, /WORK_SESSION_CONFLICT/);
+  assert.match(store, /WORK_SESSION_TRANSITION_FAILED/);
   assert.match(sql, /unique \(project_id, idempotency_key\)/);
   assert.match(sql, /INVALID_WORK_SESSION_TRANSITION:/);
   assert.match(sql, /WORK_SESSION_NOT_FOUND/);
