@@ -104,6 +104,13 @@ const REMOTE_PRODUCTION_VERSIONS = [
   "20260816220145",
   "20260817003451",
   "20260817013714",
+  "20260817021859",
+  "20260817052915",
+  "20260830151252",
+  "20260830153247",
+  "20260901063237",
+  "20260902225257",
+  "20260903182025",
 ];
 
 test("Hocker One contains every production Supabase migration version exactly once", async () => {
