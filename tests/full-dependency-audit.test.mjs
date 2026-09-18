@@ -51,12 +51,12 @@ test("js-yaml legacy line is pinned to the CVE-2026-59870 patched release", asyn
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
 
-  assert.equal(manifest.overrides?.["js-yaml"], "4.3.1");
+  assert.equal(manifest.overrides?.["js-yaml"], "4.3.2");
 
   for (const [path, metadata] of Object.entries(lockfile.packages ?? {})) {
     if (!path.endsWith("node_modules/js-yaml")) continue;
     const version = metadata?.version;
-    assert.ok(atLeast(version, "4.3.1"), `${path} must use js-yaml >= 4.3.1; found ${version}`);
+    assert.ok(atLeast(version, "4.3.2"), `${path} must use js-yaml >= 4.3.2; found ${version}`);
   }
 });
 
@@ -82,4 +82,21 @@ test("CI audits production and development dependencies", async () => {
   assert.match(workflow, /name: Full dependency audit/);
   assert.match(workflow, /npm audit --audit-level=high/);
   assert.doesNotMatch(workflow, /npm audit --omit=dev/);
+});
+
+
+test("known high/moderate audit floors are pinned across the lockfile", async () => {
+  const manifest = await readJson("package.json");
+  const lockfile = await readJson("package-lock.json");
+
+  assert.equal(manifest.dependencies?.sharp, "0.35.4");
+  assert.equal(manifest.overrides?.sharp, "0.35.4");
+  assert.equal(manifest.overrides?.["@xmldom/xmldom"], "0.9.12");
+  assert.equal(manifest.overrides?.["js-yaml"], "4.3.2");
+  assert.equal(manifest.overrides?.uuid, "11.1.1");
+
+  assert.ok(atLeast(lockfile.packages?.["node_modules/sharp"]?.version, "0.35.4"));
+  assert.ok(atLeast(lockfile.packages?.["node_modules/@xmldom/xmldom"]?.version, "0.9.12"));
+  assert.ok(atLeast(lockfile.packages?.["node_modules/js-yaml"]?.version, "4.3.2"));
+  assert.ok(atLeast(lockfile.packages?.["node_modules/uuid"]?.version, "11.1.1"));
 });
