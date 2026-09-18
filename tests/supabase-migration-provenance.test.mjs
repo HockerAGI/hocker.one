@@ -48,3 +48,21 @@ test("unresolved production migration versions remain explicitly quarantined", a
     assert.match(register, new RegExp(version));
   }
 });
+
+
+test("unavailable production versions are tracked by comment-only placeholders", async () => {
+  const placeholders = [
+    ["20260830153247_revoke_dead_public_agi_catalog_view_grants.sql", "20260830153247"],
+    ["20260902225257_rollback_operational_event_fabric.sql", "20260902225257"],
+  ];
+
+  for (const [filename, version] of placeholders) {
+    const source = await readFile(
+      new URL(`../supabase/migrations/${filename}`, import.meta.url),
+      "utf8",
+    );
+    assert.match(source, new RegExp(`Production ledger version: ${version}`));
+    assert.match(source, /Historical SQL source was externally applied and is unavailable/i);
+    assert.doesNotMatch(source, /\b(create|alter|drop|grant|revoke|insert|update|delete)\b/i);
+  }
+});
