@@ -25,8 +25,8 @@ Production DDL was **not** executed during this reconciliation.
 
 | Production version | Production name | Current evidence | Status |
 |---|---|---|---|
-| 20260830153247 | revoke_dead_public_agi_catalog_view_grants | Production ledger + current catalog grants show the intended effective state; no authoritative original SQL artifact located in accessible Hocker One Git history | **UNRESOLVED — do not reconstruct** |
-| 20260902225257 | rollback_operational_event_fabric | PR #324 documents the pre-merge production rollback; current production has no operational event fabric objects/publication entry; original rollback SQL not located | **UNRESOLVED — do not reconstruct** |
+| 20260830153247 | revoke_dead_public_agi_catalog_view_grants | Comment-only repository placeholder records the production version; effective production state is separately verified; no authoritative original SQL artifact located in accessible Hocker One Git history | **SOURCE UNAVAILABLE — placeholder only** |
+| 20260902225257 | rollback_operational_event_fabric | Comment-only repository placeholder records the production version; current production has no operational event-fabric objects/publication entry; original rollback SQL not located | **SOURCE UNAVAILABLE — placeholder only** |
 
 Effective database state cannot prove the historical migration text. These two records are therefore quarantined as externally applied historical changes until an authoritative source artifact is recovered.
 
@@ -34,7 +34,7 @@ Effective database state cannot prove the historical migration text. These two r
 
 The repository test suite treats the verified/recoverable production migrations as required repository provenance.
 
-The two unresolved versions are tracked separately and must remain absent from guessed/reconstructed repository SQL. A future authoritative artifact must be tied to its production version before the strict all-ledger contract is expanded.
+The two unavailable versions are tracked as comment-only placeholders and must remain SQL-free until an authoritative historical source is recovered. A future authoritative artifact must be tied to its production version before the strict all-ledger contract is expanded.
 
 ## Operational rule
 
