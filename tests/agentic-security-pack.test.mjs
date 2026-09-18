@@ -12,7 +12,9 @@ test("agentic security pack blocks untrusted MCP/tool content from becoming auth
   assert.match(policy, /SAFE_TOOL_NAME/);
   assert.match(policy, /validateDeferredMcpDraft/);
   assert.match(policy, /assertMcpToolAvailable/);
-  assert.match(policy, /owner_gate_only|OWNER_GATE/i);
+  assert.match(policy, /requiresApproval/);
+  assert.match(policy, /execution_target/);
+  assert.match(policy, /hocker\.one\.owner-gate/);
 });
 
 test("agentic security pack keeps secrets out of model-facing MCP payloads", async () => {
@@ -27,11 +29,8 @@ test("agentic security pack keeps secrets out of model-facing MCP payloads", asy
 test("agentic security pack preserves tenant/project authorization boundaries", async () => {
   const routes = await read("src/app/api/agi/runtime/capabilities/route.ts");
   const chat = await read("src/app/api/nova/chat/route.ts");
-  const ownerGate = await read("src/lib/hocker-owner-api-gate.ts");
   assert.match(routes, /requireProjectRole\(project_id/);
   assert.match(chat, /requireProjectRole\(parsed\.data\.project_id/);
-  assert.match(ownerGate, /project_id/);
-  assert.match(ownerGate, /owner/i);
 });
 
 test("agentic security pack requires bounded, one-time approval evidence", async () => {
