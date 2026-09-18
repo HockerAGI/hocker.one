@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const migrationPath = "supabase/migrations/20260817021859_project_members_owner_admin_write_hardening.sql";
+const migrationPath = "supabase/migrations/20260817021859_project_members_owner_admin_write_hardening_20260816.sql";
 
 test("project membership writes require owner/admin and never operator", async () => {
   const sql = await read(migrationPath);
