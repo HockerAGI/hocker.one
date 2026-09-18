@@ -114,7 +114,7 @@ test("current UX and score-v5 recovery contracts stay explicit without freezing 
   assert.match(handoff, /exact-head Preview/);
   assert.match(handoff, /protected merge/);
 
-  assert.match(closure, /OPEN_PROVIDER_GATE/);
+  assert.match(closure, /PRODUCTION-READINESS HARDENING/);
   assert.match(closure, /Owner AAL2 ceremony/);
   assert.match(closure, /score-v5/);
 });
@@ -147,7 +147,7 @@ test("recovery card keeps current production and certification pointers explicit
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
   assert.match(state, /HANDOFF_2026-09-05-R2\.md/);
   assert.match(state, /## Current verified pointers/);
-  assert.match(state, /Core AGI certification:.*2026\.08\.21-8.*score-v5/i);
+  assert.match(state, /Core AGI certification baseline: `2026\.08\.21-8` \+ `score-v5`/i);
   assert.match(state, /allow_actions=false/);
   assert.match(state, /## Expansion status/);
   assert.match(state, /EXPANSION_READY = YES/);
