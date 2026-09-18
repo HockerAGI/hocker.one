@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("queue orphan view matches the executable reconciliation definition", async () => {
   const source = await read(
-    "supabase/migrations/20260904120000_align_queue_orphan_view_with_reconciler.sql",
+    "supabase/migrations/20260903182025_align_queue_orphan_view_with_reconciler.sql",
   );
 
   assert.match(source, /q\.status\s*=\s*'executed'/i);
