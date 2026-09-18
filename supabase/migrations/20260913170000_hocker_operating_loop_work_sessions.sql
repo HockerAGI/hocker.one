@@ -161,6 +161,10 @@ declare
   v_updated public.hocker_work_sessions;
   v_next_version integer;
 begin
+  if p_actor_user_id is distinct from auth.uid() then
+    raise exception 'WORK_SESSION_ACTOR_MISMATCH';
+  end if;
+
   select * into v_current
   from public.hocker_work_sessions
   where project_id = p_project_id
