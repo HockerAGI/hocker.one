@@ -56,7 +56,7 @@ test("work-session events preserve monotonic state transition sequence", async (
 
 test("work-session RPCs bind actor identity to the authenticated caller", async () => {
   const sql = await read("supabase/migrations/20260913170000_hocker_operating_loop_work_sessions.sql");
-  assert.match(sql, /p_created_by\\s+is distinct from\\s+auth\\.uid\\(\\)/);
-  assert.match(sql, /p_actor_user_id\\s+is distinct from\\s+auth\\.uid\\(\\)/);
+  assert.match(sql, /p_created_by\s+is distinct from\s+auth\.uid\(\)/);
+  assert.match(sql, /p_actor_user_id\s+is distinct from\s+auth\.uid\(\)/);
   assert.match(sql, /WORK_SESSION_ACTOR_MISMATCH/);
 });
