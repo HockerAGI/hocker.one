@@ -123,7 +123,7 @@ test("Hocker One migration ledger matches production version/name multiplicity e
 
   const actual = new Map();
   for (const name of names) {
-    const match = name.match(/^(\\d+)_([^/]+)\\.sql$/);
+    const match = name.match(/^(\d+)_([^/]+)\.sql$/);
     if (!match) continue;
     const [, version, migrationName] = match;
     actual.set(version, [...(actual.get(version) ?? []), migrationName].sort());
