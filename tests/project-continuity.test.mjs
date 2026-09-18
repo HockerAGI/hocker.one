@@ -106,14 +106,13 @@ test("current UX and score-v5 recovery contracts stay explicit without freezing 
   assert.match(readme, /npm ci/);
   assert.match(readme, /npm run typecheck/);
 
-  assert.match(handoff, /release funcional promovido por PR #243/i);
-  assert.match(handoff, /candidate final(?:\s+#243)?[^`\n]*`[0-9a-f]{40}`/i);
-  assert.match(handoff, /CI candidate[^\n]*SUCCESS/i);
-  assert.match(handoff, /Preview exacto[^\n]*READY/i);
-  assert.match(handoff, /merge funcional(?:\s+#243)?[^`\n]*`[0-9a-f]{40}`/i);
-  assert.match(handoff, /producción funcional(?: inicial)?[^\n]*READY/i);
-  assert.match(handoff, /Regla autoestable/i);
-  assert.match(handoff, /PR #213[\s\S]*Cerrado|Cerrado[\s\S]*PR #213/i);
+  assert.match(handoff, /Known durable baseline/i);
+  assert.match(handoff, /2026\.08\.21-8/);
+  assert.match(handoff, /score-v5/);
+  assert.match(handoff, /Release rule/);
+  assert.match(handoff, /exact-head CI/);
+  assert.match(handoff, /exact-head Preview/);
+  assert.match(handoff, /protected merge/);
 
   assert.match(closure, /OPEN_PROVIDER_GATE/);
   assert.match(closure, /Owner AAL2 ceremony/);
@@ -146,7 +145,7 @@ test("context freshness policy makes operational continuity event-driven and mem
 test("recovery card keeps current production and certification pointers explicit", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
-  assert.match(state, /HANDOFF_2026-09-04\.md/);
+  assert.match(state, /HANDOFF_2026-09-05-R2\.md/);
   assert.match(state, /## Current verified pointers/);
   assert.match(state, /Core AGI certification:.*2026\.08\.21-8.*score-v5/i);
   assert.match(state, /allow_actions=false/);
@@ -165,6 +164,6 @@ test("recovery card keeps current production and certification pointers explicit
 
 test("live summary does not claim the dedicated NOVA runtime is live before certification", async () => {
   const live = await source("src/lib/hocker-live-summary.ts");
-  assert.match(live, /runtime dedicado nova\\.agi permanece sin certificación live/i);
+  assert.match(live, /runtime dedicado nova\.agi permanece sin certificación live/i);
   assert.doesNotMatch(live, /NOVA está viva y responde desde Railway/i);
 });
