@@ -96,6 +96,10 @@ declare
   v_row public.hocker_work_sessions;
   v_existing public.hocker_work_sessions;
 begin
+  if p_created_by is distinct from auth.uid() then
+    raise exception 'WORK_SESSION_ACTOR_MISMATCH';
+  end if;
+
   if p_idempotency_key is not null then
     select * into v_existing
     from public.hocker_work_sessions
