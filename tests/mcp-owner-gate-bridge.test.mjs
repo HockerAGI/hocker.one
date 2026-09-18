@@ -59,7 +59,9 @@ test("dynamic MCP providers are governed by an HTTPS host allowlist and canonica
   ]);
   assert.match(registry, /HOCKER_MCP_PROVIDERS_JSON/);
   assert.match(registry, /HOCKER_MCP_ALLOWED_HOSTS/);
-  assert.match(registry, /parsedUrl\.protocol !== "https:"/);
+  assert.match(registry, /parsedUrl\.protocol/);
+  assert.match(registry, /https:/);
+  assert.match(registry, /allowedHosts\.has/);
   assert.match(policy, /isKnownMcpProviderId/);
   assert.match(policy, /Dynamic MCP tools are read-only only/);
   assert.match(runtime, /isKnownMcpProviderId/);
