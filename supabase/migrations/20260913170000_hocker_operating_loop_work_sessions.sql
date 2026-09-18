@@ -65,7 +65,15 @@ create policy "hocker_work_sessions_update_operator"
   with check (public.is_project_operator(project_id));
 create policy "hocker_work_sessions_delete_owner"
   on public.hocker_work_sessions for delete to authenticated
-  using (public.is_project_owner(project_id));
+  using (
+    exists (
+      select 1
+      from public.project_members pm
+      where pm.project_id = public.hocker_work_sessions.project_id
+        and pm.user_id = auth.uid()
+        and lower(pm.role) = 'owner'
+    )
+  );
 
 create policy "hocker_work_session_events_select_member"
   on public.hocker_work_session_events for select to authenticated
