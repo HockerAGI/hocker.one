@@ -93,31 +93,30 @@ test("HOCKER cleanup rule is durable across code, docs and providers", async () 
   assert.match(agents, /`hocker-node-agent`/i);
 });
 
-test("current UX and score-v3 recovery contracts stay explicit without freezing mutable wrappers", async () => {
+test("current UX and score-v5 recovery contracts stay explicit without freezing mutable wrappers", async () => {
   const [readme, handoff, closure] = await Promise.all([
     source("README.md"),
-    source("docs/operations/HANDOFF_2026-08-19.md"),
-    source("docs/operations/PLATFORM_CLOSURE_2026-08-19.md"),
+    source("docs/operations/HANDOFF_2026-09-05-R2.md"),
+    source("docs/operations/PLATFORM_CLOSURE_2026-08-30.md"),
   ]);
 
   assert.match(readme, /`\/chat`/);
   assert.match(readme, /`\/agis`/);
-  assert.match(readme, /score-v3/);
+  assert.match(readme, /score-v5/);
   assert.match(readme, /npm ci/);
   assert.match(readme, /npm run typecheck/);
 
-  assert.match(handoff, /release funcional promovido por PR #243/i);
-  assert.match(handoff, /candidate final(?:\s+#243)?[^`\n]*`[0-9a-f]{40}`/i);
-  assert.match(handoff, /CI candidate[^\n]*SUCCESS/i);
-  assert.match(handoff, /Preview exacto[^\n]*READY/i);
-  assert.match(handoff, /merge funcional(?:\s+#243)?[^`\n]*`[0-9a-f]{40}`/i);
-  assert.match(handoff, /producción funcional(?: inicial)?[^\n]*READY/i);
-  assert.match(handoff, /Regla autoestable/i);
-  assert.match(handoff, /PR #213[\s\S]*Cerrado|Cerrado[\s\S]*PR #213/i);
+  assert.match(handoff, /Known durable baseline/i);
+  assert.match(handoff, /2026\.08\.21-8/);
+  assert.match(handoff, /score-v5/);
+  assert.match(handoff, /Release rule/);
+  assert.match(handoff, /exact-head CI/);
+  assert.match(handoff, /exact-head Preview/);
+  assert.match(handoff, /protected merge/);
 
-  assert.match(closure, /OPEN_PROVIDER_GATE/);
-  assert.match(closure, /Owner AAL2 ceremony/);
-  assert.match(closure, /score-v3/);
+  assert.match(closure, /PRODUCTION-READINESS HARDENING/);
+  assert.match(closure, /Owner AAL1\/AAL2/);
+  assert.match(closure, /score-v5/);
 });
 
 test("context freshness policy makes operational continuity event-driven and memory review-only", async () => {
@@ -146,14 +145,13 @@ test("context freshness policy makes operational continuity event-driven and mem
 test("recovery card keeps current production and certification pointers explicit", async () => {
   const state = await source("docs/operations/LAST_KNOWN_STATE.md");
   assert.match(state, /REQUERY MUTABLE FACTS BEFORE ACTION/);
-  assert.match(state, /HANDOFF_2026-09-04\.md/);
+  assert.match(state, /HANDOFF_2026-09-05-R2\.md/);
   assert.match(state, /## Current verified pointers/);
-  assert.match(state, /Core AGI certification:.*2026\.08\.21-8.*score-v5/i);
+  assert.match(state, /Core AGI certification baseline: `2026\.08\.21-8` \+ `score-v5`/i);
   assert.match(state, /allow_actions=false/);
-  assert.match(state, /## Expansion status/);
-  assert.match(state, /EXPANSION_READY = YES/);
-  assert.match(state, /PRODUCTION_READY = NOT YET CLOSED/);
-  assert.match(state, /Historical sources dated 2026-08-19 remain preserved/i);
+  assert.match(state, /## Current architecture/);
+  assert.match(state, /Release rule/);
+  assert.match(state, /Historical sources remain preserved for audit/i);
   assert.doesNotMatch(state, /32244656734|TS18047|progress possibly null/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
@@ -165,6 +163,6 @@ test("recovery card keeps current production and certification pointers explicit
 
 test("live summary does not claim the dedicated NOVA runtime is live before certification", async () => {
   const live = await source("src/lib/hocker-live-summary.ts");
-  assert.match(live, /runtime dedicado nova\\.agi permanece sin certificación live/i);
+  assert.match(live, /runtime dedicado nova\.agi permanece sin certificación live/i);
   assert.doesNotMatch(live, /NOVA está viva y responde desde Railway/i);
 });

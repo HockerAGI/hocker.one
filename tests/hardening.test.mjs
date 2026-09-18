@@ -43,5 +43,5 @@ test("runtime dependencies stay on patched supported lines", async () => {
     `Next ${pkg.dependencies.next} is below the approved patched baseline 16.2.12`,
   );
   assert.equal(pkg.dependencies.react, "19.2.8");
-  assert.equal(pkg.dependencies.sharp, "0.35.3");
+  assert.equal(pkg.dependencies.sharp, "0.35.4");
 });
