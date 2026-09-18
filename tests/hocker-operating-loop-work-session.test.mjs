@@ -12,7 +12,7 @@ test("work-session persistence references existing Hocker authorities", async ()
   assert.match(sql, /references public\.agi_action_queue\(id\)/);
   assert.match(sql, /public\.is_project_member/);
   assert.match(sql, /public\.is_project_operator/);
-  assert.match(sql, /public\.is_project_owner/);
+  assert.match(sql, /lower\(pm\.role\) = 'owner'/);
   assert.match(sql, /enable row level security/);
 });
 
