@@ -21,6 +21,8 @@ Production DDL was **not** executed during this reconciliation.
 | 20260901063237 | operational_event_fabric | `20260901063237_operational_event_fabric.sql` | `652a42f8d3a556d69a8e3be9d2815bd5ec6944c8` / `fcd9f6ecae8652b8e01b8c4366cabfd988164876` | Exact SQL recovered; filename normalized to production version |
 | 20260903182025 | align_queue_orphan_view_with_reconciler | `20260903182025_align_queue_orphan_view_with_reconciler.sql` | `bbcadad7e3f31b74c4eb69c85506b548ca4920cb` / `aa5212d42911de6b4f87ab03907e6a891e0860bf` | Exact SQL recovered; filename normalized to production version |
 
+| 20260918081119 | 20260913170000_hocker_operating_loop_work_sessions | `20260918081119_20260913170000_hocker_operating_loop_work_sessions.sql` | `8e1f78ae70cde0835e485b08101ace57d6448604` + production apply `success` | Work Session SQL validated on staging and applied once to production; effective ledger version normalized to the production-generated timestamp |
+
 ## Unresolved production history
 
 | Production version | Production name | Current evidence | Status |

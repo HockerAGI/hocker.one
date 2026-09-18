@@ -17,7 +17,7 @@ Already applied successfully:
 - `20260226_0002_alignment`
 - `20260518_140722_agi_runtime_core`
 - validation support helper
-- `20260913170000_hocker_operating_loop_work_sessions`
+- production ledger version `20260918081119`, migration name `20260913170000_hocker_operating_loop_work_sessions`
 
 SQL verification confirmed:
 - existing `projects`, `agi_runs`, `agi_tasks`, `agi_action_queue`;
