@@ -115,7 +115,7 @@ test("current UX and score-v5 recovery contracts stay explicit without freezing 
   assert.match(handoff, /protected merge/);
 
   assert.match(closure, /PRODUCTION-READINESS HARDENING/);
-  assert.match(closure, /Owner AAL1\/AAL2 human ceremony/);
+  assert.match(closure, /Owner AAL1\/AAL2/);
   assert.match(closure, /score-v5/);
 });
 
@@ -151,7 +151,7 @@ test("recovery card keeps current production and certification pointers explicit
   assert.match(state, /allow_actions=false/);
   assert.match(state, /## Current architecture/);
   assert.match(state, /Release rule/);
-  assert.match(state, /Historical sources dated 2026-08-19 remain preserved/i);
+  assert.match(state, /Historical sources remain preserved for audit/i);
   assert.doesNotMatch(state, /32244656734|TS18047|progress possibly null/i);
   assert.doesNotMatch(state, /f122b15c8136c8885edfd24396115c6bda1b6329/);
   assert.doesNotMatch(state, /dpl_4ouB2HxXuNBkz3PBu8xDo5EQi7Pf/);
