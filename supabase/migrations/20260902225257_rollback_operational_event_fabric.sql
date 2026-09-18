@@ -1,0 +1,7 @@
+-- HOCKER migration provenance placeholder.
+-- Production ledger version: 20260902225257
+-- Name: rollback_operational_event_fabric
+-- Historical SQL source was externally applied and is unavailable in accessible Git history.
+-- DO NOT reconstruct or infer the original DDL here.
+-- This file is intentionally comment-only so the repository tracks the applied version
+-- without claiming that the historical SQL has been recovered.
