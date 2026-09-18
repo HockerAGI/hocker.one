@@ -28,10 +28,10 @@ test("NOVA ordinary chat uses the unified runtime before the dedicated compatibi
 test("unified worker evidence records the provider and route that actually answered", async () => {
   const runtime = await read("src/lib/unified-agi-runtime.ts");
   assert.match(runtime, /kind: "verified_model_completion"/);
-  assert.match(runtime, /provider: completion\.provider/);
-  assert.match(runtime, /model: completion\.model/);
-  assert.match(runtime, /route: completion\.route/);
-  assert.match(runtime, /route_attempts: completion\.attempts/);
+  assert.match(runtime, /provider: finalCompletion\.provider/);
+  assert.match(runtime, /model: finalCompletion\.model/);
+  assert.match(runtime, /route: finalCompletion\.route/);
+  assert.match(runtime, /route_attempts: finalCompletion\.attempts/);
   assert.match(runtime, /worker_id: workerId/);
   assert.match(runtime, /input_sha256: inputHash/);
   assert.match(runtime, /output_sha256: resultHash/);
@@ -127,9 +127,9 @@ test("verified run startup and completion remain service-only atomic contracts",
   const startMigration = await read("supabase/migrations/20260803004413_start_serverless_agi_execution.sql");
   const completeMigration = await read("supabase/migrations/20260803003709_atomic_serverless_agi_completion.sql");
 
-  const completionPosition = runtime.indexOf("const completion = await completeAgi");
   const runStartPosition = runtime.indexOf("runId = await startVerifiedRun");
-  assert.ok(completionPosition >= 0 && runStartPosition > completionPosition);
+  const completionPosition = runtime.indexOf("const completion = await completeAgi");
+  assert.ok(runStartPosition >= 0 && completionPosition > runStartPosition);
   assert.match(runtime, /complete_serverless_agi_execution/);
   assert.doesNotMatch(runtime, /from\("agi_runs"\)\s*\.insert/);
   assert.match(startMigration, /VERIFIED_WORKER_ID_REQUIRED/);
