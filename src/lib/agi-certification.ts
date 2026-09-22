@@ -137,6 +137,7 @@ function hasVerifiedRuntimeEval(
     latest?.feedback_type !== "agi_eval_result"
     || payload.suite_version !== AGI_EVAL_SUITE_VERSION
     || payload.scoring_version !== AGI_EVAL_SCORING_VERSION
+    || payload.certification_version !== AGI_CERTIFICATION_VERSION
     || payload.passed !== true
     || Number(payload.cases_total) !== suite.cases.length
     || Number(payload.cases_passed) !== suite.cases.length
