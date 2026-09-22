@@ -162,9 +162,11 @@ function hasVerifiedRuntimeEval(
     const input = asRecord(run.input);
     const output = asRecord(run.output);
     if (!input || !output) return false;
-    return input.eval_suite_version === AGI_EVAL_SUITE_VERSION
+    return input.certification_version === AGI_CERTIFICATION_VERSION
+      && input.eval_suite_version === AGI_EVAL_SUITE_VERSION
       && input.eval_scoring_version === AGI_EVAL_SCORING_VERSION
       && input.eval_case_id === evalCase.id
+      && output.certification_version === AGI_CERTIFICATION_VERSION
       && output.eval_suite_version === AGI_EVAL_SUITE_VERSION
       && output.eval_scoring_version === AGI_EVAL_SCORING_VERSION
       && output.eval_case_id === evalCase.id
