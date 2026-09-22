@@ -11,7 +11,7 @@ Status: **ACTIVE INDEX**
 | Detailed cross-session continuity | `HANDOFF_2026-09-05-R2.md` | Source for current state, closed incidents, evidence and next gate. |
 | Emergency recovery card | `LAST_KNOWN_STATE.md` | Compact pointers only; re-query mutable facts before action. |
 | Current production-readiness closure | `PLATFORM_CLOSURE_2026-08-30.md` | Single gate for post-Core-certification `production_ready`. |
-| Core AGI certification evidence | GitHub issue `#303` + Supabase durable evidence | Completed scope certificate; do not reopen unless evidence/contracts change materially. |
+| Core AGI certification evidence | GitHub issue `#303` + Supabase durable evidence | Completed historical scope certificate; fresh recertification must be rerun before a current certification claim. |
 | Canon/document drift | `DOC_ALIGNMENT_2026-08-19.md` | Historical alignment reference until a newer reconciliation is created. |
 | Context Bridge architecture | `CONTEXT_BRIDGE_V1.md` | Shared context architecture/security contract. |
 | Context freshness | `CONTEXT_FRESHNESS_POLICY.md` | Checkpoint/manifest freshness semantics. |
@@ -35,6 +35,8 @@ Status: **ACTIVE INDEX**
 
 ## Current milestone
 
-The latest code milestone is the first Hocker Operating Loop contract slice (PR #368, main `0994e6df5cba44c2929605a21f01eac595a721d5`). It adds orchestration contracts only; persistence/executable orchestration remains a subsequent gated slice.
+The latest merged Hocker One milestone is **Operating Loop v1 persistence reconciliation (PR #382)** on main `b9df00dc7f74c3c4dec3c6c5778cab959a6d2fbe`.
+
+The current phase remains **Core certification revalidation + production-readiness hardening**. No current certification claim may rely only on the August evidence package.
 
 Older dated handoffs and closure snapshots remain historical evidence.
