@@ -131,7 +131,7 @@ const CAPABILITY_DEFINITIONS: HockerCapabilityDefinition[] = [
     can_generate: true,
     can_execute_now: true,
     user_visible: true,
-    current_limit: "NOVA Railway opera con Gemini. Hocker ONE no ejecuta Gemini directo. OpenAI/Anthropic dependen de llave/crédito.",
+    current_limit: "NOVA usa el runtime unificado de Hocker ONE. El runtime dedicado es sólo fallback candidato y permanece sin certificación hasta contar con evidencia de salud, E2E y rollback.",
     next_step: "Registrar salud real por proveedor sin mostrarlo como selector manual.",
   },
   {
