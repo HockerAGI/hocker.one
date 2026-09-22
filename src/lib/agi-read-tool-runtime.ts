@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { AGI_TOOL_EVAL_VERSION } from "@/lib/agi-certification";
+import { AGI_CERTIFICATION_VERSION, AGI_TOOL_EVAL_VERSION } from "@/lib/agi-certification";
 import { executeGitHubReadOperation } from "@/lib/github-runtime-executor";
 import { canonicalAgiId } from "@/lib/hocker-agi-operational";
 import { createAdminSupabase } from "@/lib/supabase-admin";
@@ -137,6 +137,7 @@ export async function runAgiReadOnlyToolProbe(input: {
     ? await probeSupabase(projectId, agiId)
     : await probeGitHub();
   const evidenceHash = sha256({
+    certification_version: AGI_CERTIFICATION_VERSION,
     project_id: projectId,
     agi_id: agiId,
     tool_key: toolKey,
@@ -145,9 +146,10 @@ export async function runAgiReadOnlyToolProbe(input: {
     summary,
     external_writes_executed: false,
   });
-  const evidence_ref = `agi-tool-eval:${AGI_TOOL_EVAL_VERSION}:${agiId}:${toolKey}:${evidenceHash}`;
+  const evidence_ref = `agi-tool-eval:${AGI_CERTIFICATION_VERSION}:${AGI_TOOL_EVAL_VERSION}:${agiId}:${toolKey}:${evidenceHash}`;
 
   const payload = {
+    certification_version: AGI_CERTIFICATION_VERSION,
     tool_eval_version: AGI_TOOL_EVAL_VERSION,
     tool_key: toolKey,
     passed: true,

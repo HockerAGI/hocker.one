@@ -6,6 +6,7 @@ import {
   type AgiEvalCase,
 } from "@/lib/agi-eval-suites";
 import { scoreEvidence, scoreMission, scoreOwnerGate } from "@/lib/agi-eval-rubric";
+import { AGI_CERTIFICATION_VERSION } from "@/lib/agi-certification";
 import {
   AGI_EVIDENCE_GRADER_VERSION,
   gradeEvidenceSemantically,
@@ -208,6 +209,8 @@ async function loadReusableEvalCases(args: {
     if (output.eval_suite_version !== AGI_EVAL_SUITE_VERSION) continue;
     if (input.eval_scoring_version !== AGI_EVAL_SCORING_VERSION) continue;
     if (output.eval_scoring_version !== AGI_EVAL_SCORING_VERSION) continue;
+    if (input.certification_version !== AGI_CERTIFICATION_VERSION) continue;
+    if (output.certification_version !== AGI_CERTIFICATION_VERSION) continue;
     if (output.eval_case_id !== caseId || output.passed !== true) continue;
     if (output.external_writes_executed !== false) continue;
     if (!row.result_hash || !row.task_id) continue;
@@ -286,6 +289,7 @@ async function createAndClaimExactEvalTask(args: {
   workerId: string;
 }): Promise<string> {
   const taskInput = {
+    certification_version: AGI_CERTIFICATION_VERSION,
     eval_suite_version: AGI_EVAL_SUITE_VERSION,
     eval_scoring_version: AGI_EVAL_SCORING_VERSION,
     eval_case_id: args.evalCase.id,
@@ -294,7 +298,7 @@ async function createAndClaimExactEvalTask(args: {
     prompt: args.evalCase.prompt,
     expectation: args.evalCase.expectation,
   };
-  const idempotencyKey = `agi-eval:${AGI_EVAL_SUITE_VERSION}:${AGI_EVAL_SCORING_VERSION}:${args.agiId}:${args.evalCase.id}`;
+  const idempotencyKey = `agi-eval:${AGI_CERTIFICATION_VERSION}:${AGI_EVAL_SUITE_VERSION}:${AGI_EVAL_SCORING_VERSION}:${args.agiId}:${args.evalCase.id}`;
   const client = db();
   const taskSelect = "id,status,attempt_count,max_attempts,lock_owner,locked_at,last_heartbeat_at,payload";
 
@@ -394,6 +398,7 @@ async function startVerifiedEvalRun(args: {
   evalCase: AgiEvalCase;
 }): Promise<string> {
   const input = {
+    certification_version: AGI_CERTIFICATION_VERSION,
     eval_suite_version: AGI_EVAL_SUITE_VERSION,
     eval_scoring_version: AGI_EVAL_SCORING_VERSION,
     eval_case_id: args.evalCase.id,
@@ -579,6 +584,7 @@ async function runOneEvalCase(args: {
     const output = {
       ok: true,
       evaluation_only: true,
+      certification_version: AGI_CERTIFICATION_VERSION,
       eval_suite_version: AGI_EVAL_SUITE_VERSION,
       eval_scoring_version: AGI_EVAL_SCORING_VERSION,
       eval_case_id: args.evalCase.id,
@@ -601,6 +607,7 @@ async function runOneEvalCase(args: {
     const evidence = [{
       kind: "agi_runtime_eval",
       evaluation_only: true,
+      certification_version: AGI_CERTIFICATION_VERSION,
       eval_suite_version: AGI_EVAL_SUITE_VERSION,
       eval_scoring_version: AGI_EVAL_SCORING_VERSION,
       eval_case_id: args.evalCase.id,
@@ -703,6 +710,7 @@ export async function runAgiEvalSuite(args: {
       feedback_type: "agi_eval_result",
       message: allPassed ? "Runtime eval suite passed." : "Runtime eval suite requires remediation.",
       payload: {
+        certification_version: AGI_CERTIFICATION_VERSION,
         suite_version: AGI_EVAL_SUITE_VERSION,
         scoring_version: AGI_EVAL_SCORING_VERSION,
         passed: allPassed,
