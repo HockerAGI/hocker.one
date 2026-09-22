@@ -53,7 +53,7 @@ const CORE_ITEMS: OperationsCatalogItem[] = [
     ownerAgis: ["NOVA", "Syntia", "Vertx"],
     capabilities: ["Provider fallback", "MCP read", "Action drafts", "Memoria"],
     repository: "HockerAGI/nova.agi",
-    runtime: "Fastify · Node 22 · local/Railway",
+    runtime: "Fastify · Node 22 · Hocker ONE / fallback dedicado",
     approval: "owner_gate",
     internalTruth: "Servicio agentic verificable; no se presenta como conciencia o AGI demostrada.",
   },
