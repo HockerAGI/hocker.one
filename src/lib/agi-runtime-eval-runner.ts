@@ -290,7 +290,6 @@ async function createAndClaimExactEvalTask(args: {
 }): Promise<string> {
   const taskInput = {
     certification_version: AGI_CERTIFICATION_VERSION,
-    certification_version: AGI_CERTIFICATION_VERSION,
     eval_suite_version: AGI_EVAL_SUITE_VERSION,
     eval_scoring_version: AGI_EVAL_SCORING_VERSION,
     eval_case_id: args.evalCase.id,
