@@ -455,16 +455,16 @@ export async function collectHockerGlobalHealth(args?: { emitEvent?: boolean }):
 
     novaHealth
       ? checkUrl({
-          id: "nova-railway",
-          label: "NOVA / Railway",
+          id: "nova-dedicated-fallback",
+          label: "NOVA / Fallback dedicado",
           category: "agi",
           url: novaHealth,
           critical: true,
           source: "nova.agi.health",
         })
       : Promise.resolve({
-          id: "nova-railway",
-          label: "NOVA / Railway",
+          id: "nova-dedicated-fallback",
+          label: "NOVA / Fallback dedicado",
           category: "agi",
           status: "unknown",
           ok: false,
