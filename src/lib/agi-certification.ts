@@ -2,7 +2,7 @@ import { AGI_EVAL_SUITE_VERSION, getAgiEvalSuite } from "@/lib/agi-eval-suites";
 import { HOCKER_AGI_CANON } from "@/lib/hocker-agi-canon";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
-export const AGI_CERTIFICATION_VERSION = "2026.08.19-1";
+export const AGI_CERTIFICATION_VERSION = "2026.09.22-1";
 export const AGI_TOOL_EVAL_VERSION = "2026.08.14-1";
 const AGI_EVAL_SCORING_VERSION = "score-v5";
 
@@ -188,6 +188,7 @@ function hasVerifiedToolAssignmentEvidence(
 
   return latest?.feedback_type === "agi_tool_eval_result"
     && payload.tool_eval_version === AGI_TOOL_EVAL_VERSION
+    && payload.certification_version === AGI_CERTIFICATION_VERSION
     && payload.tool_key === assignment.tool_key
     && payload.passed === true
     && payload.mode === "read_only"
