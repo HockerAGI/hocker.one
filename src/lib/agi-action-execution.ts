@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";
+import {
+  createVercelProject,
+  getVercelRuntimeToken,
+} from "@/lib/vercel-runtime-executor";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -679,12 +683,104 @@ async function executeCreatePr(payload: JsonRecord) {
   };
 }
 
+async function executeApprovedVercelProject(item: AgiActionQueueRow, actorId: string): Promise<AgiActionQueueRow> {
+  if (item.tool_key !== "vercel" || item.action_type !== "vercel.create_project") {
+    throw new Error("Acción Vercel no válida para este worker.");
+  }
+  if (!item.requires_approval) {
+    throw new Error("La acción Vercel debe requerir aprobación Owner.");
+  }
+  if (!getVercelRuntimeToken()) {
+    throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
+  }
+
+  const payload = asRecord(item.payload);
+  const dependencyId = stringValue(payload.depends_on_action_id);
+  if (dependencyId) {
+    const dependency = await getQueueItem(item.project_id, dependencyId);
+    if (!["executed", "completed"].includes(String(dependency.status))) {
+      throw new Error("Vercel bloqueado: el repositorio GitHub previo no está ejecutado.");
+    }
+
+    const result = asRecord(dependency.execution_result);
+    const nested = asRecord(result.result);
+    const createdRepository = stringValue(nested.repository);
+    const requestedRepository = stringValue(payload.repository);
+    if (createdRepository && requestedRepository && createdRepository !== requestedRepository) {
+      throw new Error("Vercel bloqueado: el repositorio creado no coincide con el solicitado.");
+    }
+  }
+
+  const claimed = await claimApprovedQueueItem({
+    project_id: item.project_id,
+    action_id: item.id,
+    actor_id: actorId,
+    item,
+  });
+
+  try {
+    const result = await createVercelProject({
+      project_name: stringValue(payload.project_name),
+      repository: stringValue(payload.repository),
+      framework: stringValue(payload.framework) || undefined,
+      root_directory: stringValue(payload.root_directory) || undefined,
+      install_command: stringValue(payload.install_command) || undefined,
+      team_id: stringValue(payload.team_id) || undefined,
+    });
+
+    return patchQueueItem(claimed.id, {
+      status: "executed",
+      executed_by: actorId,
+      executed_at: new Date().toISOString(),
+      locked_at: null,
+      lock_owner: null,
+      last_error: null,
+      execution_error: null,
+      rollback_plan: {
+        type: "vercel.manual_project_cleanup",
+        safe: false,
+        note: "No se ejecuta borrado automático del proyecto Vercel.",
+      },
+      execution_result: {
+        ok: true,
+        worker: "vercel_approved_execution_worker_1.0",
+        idempotency_key: claimed.idempotency_key ?? null,
+        result,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Falla desconocida al crear proyecto Vercel.";
+
+    await patchQueueItem(claimed.id, {
+      status: "execution_failed",
+      executed_by: actorId,
+      executed_at: new Date().toISOString(),
+      locked_at: null,
+      lock_owner: null,
+      last_error: message,
+      execution_error: message,
+      execution_result: {
+        ok: false,
+        worker: "vercel_approved_execution_worker_1.0",
+        idempotency_key: claimed.idempotency_key ?? null,
+      },
+    });
+
+    throw error;
+  }
+}
+
 export async function executeApprovedAgiAction(params: { project_id: string; action_id: string; actor_id: string }): Promise<AgiActionQueueRow> {
   const pending = await getQueueItem(params.project_id, params.action_id);
 
   if (pending.status !== "approved") throw new Error(`Acción no aprobada. Estado actual: ${pending.status}`);
+  if (pending.tool_key === "vercel") {
+    return executeApprovedVercelProject(pending, params.actor_id);
+  }
   if (pending.tool_key !== "github" || !pending.action_type.startsWith("github.")) {
-    throw new Error("Worker actual solo ejecuta acciones GitHub aprobadas.");
+    throw new Error("Worker actual solo ejecuta acciones GitHub o Vercel aprobadas.");
   }
 
   await assertGuidedGithubExecutionOrder(params.project_id, pending);
