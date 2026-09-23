@@ -97,6 +97,25 @@ const FINAL_BUTTONS = ["Ver resumen", "Enviar a producción", "No enviar", "Desh
 
 const CAPABILITY_DEFINITIONS: HockerCapabilityDefinition[] = [
   {
+    key: "application_delivery",
+    label: "Crear nuevas apps / proyectos",
+    category: "code",
+    owner_agi: "nova",
+    support_agis: ["hostia", "vertx", "jurix"],
+    app_key: "hocker-one",
+    tool_keys: ["github", "vercel", "supabase"],
+    base_status: "partial",
+    mode: "owner_gate",
+    requires_owner_gate: true,
+    can_read: true,
+    can_write: true,
+    can_generate: true,
+    can_execute_now: false,
+    user_visible: true,
+    current_limit: "NOVA puede diseñar y materializar el plan. GitHub puede crear repositorios privados; Vercel puede crear proyectos cuando la credencial de plataforma está verificada. Las AGIs no reciben permisos globales de acción.",
+    next_step: "Crear repositorio privado → vincular Vercel → preparar código → validar CI/Preview → registrar la app y sus AGIs en el control plane.",
+  },
+  {
     key: "nova_native_chat",
     label: "Chat nativo NOVA",
     category: "core",
