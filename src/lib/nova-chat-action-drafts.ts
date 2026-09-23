@@ -10,6 +10,7 @@ type QueueLockLike = {
 };
 
 type DraftScope =
+  | "application_delivery"
   | "github_code"
   | "supabase_data"
   | "vercel_cloud"
@@ -40,6 +41,13 @@ function hasAny(message: string, patterns: RegExp[]): boolean {
 }
 
 function detectScope(message: string): DraftScope {
+  if (hasAny(message, [
+    /crear (una )?(nueva )?(app|aplicaci[oó]n|plataforma|proyecto)/i,
+    /nueva (app|aplicaci[oó]n|web|plataforma)/i,
+    /nuevo (repo|repositorio|proyecto)/i,
+    /bootstrap/i,
+    /provisionar (una )?(app|proyecto)/i,
+  ])) return "application_delivery";
   if (hasAny(message, [/chido/i, /kyc/i, /retiro/i, /dep[oó]sito/i, /wallet/i, /apuesta/i, /pago/i, /casino/i])) return "chido_sensitive";
   if (hasAny(message, [/github/i, /\brepo\b/i, /repositorio/i, /c[oó]digo/i, /\bbranch\b/i, /\brama\b/i, /\bpr\b/i, /pull request/i, /commit/i, /archivo/i, /\.tsx\b/i, /\.ts\b/i, /componente/i, /endpoint/i])) return "github_code";
   if (hasAny(message, [/supabase/i, /base de datos/i, /\bdb\b/i, /tabla/i, /memoria/i, /registro/i])) return "supabase_data";
@@ -135,7 +143,7 @@ export function detectNovaChatActionDraft(message: string, queueLock?: QueueLock
       requested: true,
       scope,
       can_enqueue: false,
-      tool_key: scope === "github_code" ? "github" : null,
+      tool_key: scope === "application_delivery" ? "github" : scope === "github_code" ? "github" : null,
       owner_agi: scope === "github_code" ? "hostia" : "nova",
       risk_level: "medium",
       reason: queueLock?.reason || "Queue Lock activo: hay trabajo pendiente.",
@@ -155,6 +163,20 @@ export function detectNovaChatActionDraft(message: string, queueLock?: QueueLock
       reason: "Operación sensible de Chido bloqueada.",
       current_limit: "KYC, depósitos, retiros, wallet, pagos y apuestas no se ejecutan desde chat.",
       next_step: "Usar gates legales/financieros específicos antes de cualquier executor.",
+    };
+  }
+
+  if (scope === "application_delivery") {
+    return {
+      requested: true,
+      scope,
+      can_enqueue: true,
+      tool_key: "github",
+      owner_agi: "hostia",
+      risk_level: "high",
+      reason: "Solicitud de nueva aplicación detectada. NOVA puede materializar la cadena GitHub → Vercel bajo Owner Gate.",
+      current_limit: "Se crea repositorio privado y proyecto Vercel en cola segura; el código y el despliegue quedan sujetos a la cadena de aprobación.",
+      next_step: "Materializar create_repository y vercel.create_project; después preparar código/CI/Preview.",
     };
   }
 
