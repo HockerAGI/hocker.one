@@ -8,6 +8,7 @@ import {
   canonicalAgentRows,
 } from "@/lib/hocker-agi-operational";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { verifyVercelConnection } from "@/lib/vercel-runtime-executor";
 
 export type RuntimeToolStatusKind =
   | "configured"
@@ -617,6 +618,7 @@ export async function syncAgiRuntimeCatalog(
     const gatewayHealthy =
       gatewayChecks?.[0]?.status === "healthy" &&
       gatewayChecks?.[0]?.configured === true;
+    const vercelHealthy = await verifyVercelConnection();
     const effectiveTools = tools.map((tool) =>
       tool.tool_key === "ai_gateway" && gatewayHealthy
         ? {
@@ -626,7 +628,15 @@ export async function syncAgiRuntimeCatalog(
             status_hint: "Inferencia real verificada y registrada en agi_integration_checks.",
             execution_enabled: true,
           }
-        : tool,
+        : tool.tool_key === "vercel" && vercelHealthy
+          ? {
+              ...tool,
+              status: "connected" as const,
+              status_label: "Conectado" as const,
+              status_hint: "API de Vercel verificada mediante lectura autenticada del runtime.",
+              execution_enabled: true,
+            }
+          : tool,
     );
     const agents = canonicalAgentRows(project_id, now);
     const canonRows = HOCKER_AGI_CANON.map((agi) => ({
