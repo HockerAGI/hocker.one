@@ -7,6 +7,10 @@ import {
   executeValidatedMcpDraft,
   validateDeferredMcpDraft,
 } from "@/lib/mcp/mcp-policy";
+import {
+  createVercelProject,
+  getVercelRuntimeToken,
+} from "@/lib/vercel-runtime-executor";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 
 type JsonRecord = Record<string, unknown>;
@@ -190,6 +194,110 @@ async function executeApprovedMcpAction(
   }
 }
 
+
+
+async function executeApprovedVercelAction(
+  params: ExecuteParams,
+  pending: AgiActionQueueRow,
+): Promise<AgiActionQueueRow> {
+  if (pending.status !== "approved") {
+    throw new Error(`Acción no aprobada. Estado actual: ${pending.status}`);
+  }
+  if (pending.tool_key !== "vercel" || pending.action_type !== "vercel.create_project") {
+    throw new Error("La acción no pertenece al trabajador Vercel aprobado.");
+  }
+  if (pending.requires_approval !== true) {
+    throw new Error("Acción Vercel sin contrato explícito de aprobación.");
+  }
+  if (!getVercelRuntimeToken()) {
+    throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
+  }
+
+  const now = new Date().toISOString();
+  const db = createAdminSupabase();
+  const { data: claimed, error: claimError } = await db
+    .from("agi_action_queue")
+    .update({
+      status: "executing",
+      executed_by: params.actor_id,
+      locked_at: now,
+      lock_owner: `hocker-one:vercel:${params.actor_id}:${randomUUID()}`,
+      attempt_count: numberValue(pending.attempt_count, 0) + 1,
+      last_error: null,
+      updated_at: now,
+    })
+    .eq("project_id", params.project_id)
+    .eq("id", params.action_id)
+    .eq("status", "approved")
+    .is("locked_at", null)
+    .select("*")
+    .maybeSingle<AgiActionQueueRow>();
+
+  if (claimError) throw new Error(claimError.message);
+  if (!claimed) throw new Error("No se pudo reclamar lock de ejecución Vercel.");
+
+  try {
+    const payload = asRecord(claimed.payload);
+    const result = await createVercelProject({
+      project_name: payload.project_name,
+      repository: payload.repository,
+      framework: payload.framework,
+      root_directory: payload.root_directory,
+      install_command: payload.install_command,
+      team_id: payload.team_id,
+    });
+    const executedAt = new Date().toISOString();
+    const { data, error } = await db
+      .from("agi_action_queue")
+      .update({
+        status: "executed",
+        executed_by: params.actor_id,
+        executed_at: executedAt,
+        locked_at: null,
+        lock_owner: null,
+        execution_error: null,
+        last_error: null,
+        rollback_plan: {
+          strategy: "manual_project_detach_or_delete",
+          safe: false,
+          note: "No existe borrado automático de proyectos Vercel.",
+        },
+        execution_result: {
+          ok: true,
+          worker: "vercel_approved_execution_worker_1.0",
+          operation: "vercel.create_project",
+          idempotency_key: claimed.idempotency_key ?? null,
+          result,
+        },
+        updated_at: executedAt,
+      })
+      .eq("project_id", params.project_id)
+      .eq("id", claimed.id)
+      .select("*")
+      .single<AgiActionQueueRow>();
+    if (error || !data) throw new Error(error?.message ?? "No se pudo persistir resultado Vercel.");
+    return data;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falla desconocida al crear proyecto Vercel.";
+    await db
+      .from("agi_action_queue")
+      .update({
+        status: "execution_failed",
+        executed_by: params.actor_id,
+        executed_at: new Date().toISOString(),
+        locked_at: null,
+        lock_owner: null,
+        last_error: message,
+        execution_error: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("project_id", params.project_id)
+      .eq("id", claimed.id);
+    throw error;
+  }
+}
+
+
 export async function executeApprovedAgiActionUniversal(
   params: ExecuteParams,
 ): Promise<AgiActionQueueRow> {
@@ -203,6 +311,10 @@ export async function executeApprovedAgiActionUniversal(
 
   if (hasMcpTool && hasMcpAction) {
     return executeApprovedMcpAction(params, pending);
+  }
+
+  if (pending.tool_key === "vercel") {
+    return executeApprovedVercelAction(params, pending);
   }
 
   return executeApprovedAgiAction(params);
