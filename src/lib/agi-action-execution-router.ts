@@ -213,6 +213,38 @@ async function executeApprovedVercelAction(
     throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
   }
 
+  const payloadPreview = asRecord(pending.payload);
+  const dependencyActionId = String(payloadPreview.depends_on_action_id ?? "").trim();
+  if (dependencyActionId) {
+    const { data: dependency, error: dependencyError } = await createAdminSupabase()
+      .from("agi_action_queue")
+      .select("id,status,execution_result")
+      .eq("project_id", params.project_id)
+      .eq("id", dependencyActionId)
+      .maybeSingle();
+    if (dependencyError) throw new Error(dependencyError.message);
+    if (!dependency || !["executed", "completed"].includes(String(dependency.status))) {
+      throw new Error("Vercel está bloqueado: la acción GitHub previa aún no está ejecutada.");
+    }
+
+    const dependencyResult =
+      dependency.execution_result &&
+      typeof dependency.execution_result === "object" &&
+      "result" in dependency.execution_result
+        ? (dependency.execution_result as Record<string, unknown>).result
+        : null;
+    const createdRepository =
+      dependencyResult &&
+      typeof dependencyResult === "object" &&
+      "repository" in dependencyResult
+        ? String((dependencyResult as Record<string, unknown>).repository ?? "")
+        : "";
+    const requestedRepository = String(payloadPreview.repository ?? "").trim();
+    if (requestedRepository && createdRepository && requestedRepository !== createdRepository) {
+      throw new Error("Vercel está bloqueado: el repositorio creado no coincide con el objetivo solicitado.");
+    }
+  }
+
   const now = new Date().toISOString();
   const db = createAdminSupabase();
   const { data: claimed, error: claimError } = await db
