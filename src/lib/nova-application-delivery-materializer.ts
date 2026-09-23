@@ -1,6 +1,6 @@
 import { enqueueAgiAction } from "@/lib/agi-runtime-core";
 import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
-import { hasVercelRuntimeToken } from "@/lib/vercel-runtime-executor";
+import { hasVercelRuntimeToken, verifyVercelConnection } from "@/lib/vercel-runtime-executor";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
 
 export const NOVA_APPLICATION_DELIVERY_VERSION = "12.8A-1";
@@ -108,7 +108,11 @@ export async function materializeNovaApplicationDeliveryFromChat(params: {
 
   const blockers: string[] = [];
   if (!hasGitHubRuntimeToken()) blockers.push("GitHub: falta token de runtime.");
-  if (!hasVercelRuntimeToken()) blockers.push("Vercel: falta VERCEL_TOKEN de runtime.");
+  if (!hasVercelRuntimeToken()) {
+    blockers.push("Vercel: falta VERCEL_TOKEN de runtime.");
+  } else if (!(await verifyVercelConnection())) {
+    blockers.push("Vercel: el token existe o está configurado, pero la lectura autenticada no fue verificada.");
+  }
 
   if (blockers.length > 0) {
     return {
