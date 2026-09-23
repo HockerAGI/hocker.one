@@ -6,6 +6,7 @@ export type GitHubRuntimeReadOperation =
   | "audit_paths";
 
 export type GitHubRuntimeWriteOperation =
+  | "create_repository"
   | "create_branch"
   | "upsert_file"
   | "create_pr";
@@ -31,6 +32,10 @@ export type GitHubRuntimeInput = {
   message?: string;
   content?: string;
   expected_sha?: string;
+  name?: string;
+  description?: string;
+  private?: boolean;
+  visibility?: "private" | "internal" | "public";
 };
 
 type GitHubRepo = {
@@ -93,11 +98,29 @@ export function hasGitHubRuntimeToken(): boolean {
 }
 
 export function isGitHubWriteOperation(operation: string): operation is GitHubRuntimeWriteOperation {
-  return ["create_branch", "upsert_file", "create_pr"].includes(operation);
+  return ["create_repository", "create_branch", "upsert_file", "create_pr"].includes(operation);
 }
 
 export function isGitHubReadOperation(operation: string): operation is GitHubRuntimeReadOperation {
   return ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"].includes(operation);
+}
+
+
+function safeRepositoryName(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) throw new Error("Falta name para crear repositorio.");
+  if (raw.length > 100) throw new Error("Nombre de repositorio demasiado largo.");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(raw)) {
+    throw new Error("Nombre de repositorio no permitido.");
+  }
+  return raw;
+}
+
+function ensureHockerOrganization(owner: string): void {
+  const allowedOwner = envValue("HOCKER_GITHUB_ORG") || "HockerAGI";
+  if (owner !== allowedOwner) {
+    throw new Error(`Organización GitHub no permitida: ${owner}`);
+  }
 }
 
 function defaultRepository(): string {
@@ -176,6 +199,40 @@ function trimContent(content: string): { content: string; truncated: boolean; by
   const bytes = Buffer.byteLength(content, "utf8");
   if (bytes <= max) return { content, truncated: false, bytes };
   return { content: content.slice(0, max), truncated: true, bytes };
+}
+
+
+async function createRepository(input: GitHubRuntimeInput) {
+  const owner = String(input.owner ?? (defaultRepository().split("/")[0] || "HockerAGI")).trim();
+  ensureHockerOrganization(owner);
+  const name = safeRepositoryName(input.name ?? input.repo);
+  const token = getGitHubRuntimeToken();
+  if (!token) throw new Error("GitHub no configurado: falta token real.");
+
+  const body = {
+    name,
+    description: String(input.description ?? "").trim().slice(0, 500),
+    private: input.private !== false,
+    visibility: input.visibility ?? "private",
+    has_issues: true,
+    has_projects: true,
+    has_wiki: false,
+    auto_init: false,
+  };
+
+  const response = await githubRequest<Record<string, unknown>>(
+    `/orgs/${encodeSegment(owner)}/repos`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+
+  return {
+    operation: "create_repository",
+    repository: String(response.full_name ?? `${owner}/${name}`),
+    created: true,
+    private: Boolean(response.private),
+    default_branch: response.default_branch ?? "main",
+    html_url: response.html_url ?? null,
+  };
 }
 
 async function getRepo(input: GitHubRuntimeInput) {
@@ -385,7 +442,14 @@ function buildRollbackPlan(operation: GitHubRuntimeWriteOperation, path: string 
 }
 
 export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation, input: GitHubRuntimeInput) {
-  const { fullName } = parseRepository(input);
+  const rawRepository = input.repository || (input.owner && input.repo ? `${input.owner}/${input.repo}` : defaultRepository());
+  const { fullName } = operation === "create_repository"
+    ? { fullName: rawRepository }
+    : parseRepository(input);
+  if (operation === "create_repository") {
+    const owner = String(input.owner ?? rawRepository.split("/")[0] ?? "HockerAGI");
+    ensureHockerOrganization(owner);
+  }
   const base = safeRef(input.base || input.base_branch || input.ref || "main", "main");
   const defaultBranch = `nova/${operation}-${Date.now()}`;
   const targetBranch = safeBranchName(input.branch || input.target_branch || input.head || defaultBranch, defaultBranch);
@@ -396,7 +460,13 @@ export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation
   let message = safeOptionalText(input.message);
   const stats = contentStats(input.content);
 
-  if (operation === "upsert_file") {
+  if (operation === "create_repository") {
+    try {
+      safeRepositoryName(input.name ?? input.repo);
+    } catch {
+      missing_fields.push("name");
+    }
+  } else if (operation === "upsert_file") {
     try {
       path = safePath(input.path);
     } catch {
@@ -412,29 +482,37 @@ export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation
     title = title || "NOVA proposed change";
   }
 
-  if (operation === "create_branch" && !message) {
+  if (operation === "create_repository" && !message) {
+    message = `Create repository ${safeOptionalText(input.name || input.repo)}`;
+  } else if (operation === "create_branch" && !message) {
     message = `Create ${targetBranch}`;
   }
 
   const steps =
-    operation === "create_branch"
+    operation === "create_repository"
       ? [
-          "Validar repositorio y rama base.",
-          "Crear rama nueva desde base solo después de aprobación owner.",
-          "Registrar resultado en auditoría.",
+          "Validar organización HockerAGI y nombre de repositorio.",
+          "Crear repositorio privado por defecto sólo después de aprobación owner.",
+          "Registrar URL, visibilidad y SHA/estado resultante en auditoría.",
         ]
-      : operation === "upsert_file"
+      : operation === "create_branch"
         ? [
-            "Validar path seguro y tamaño de contenido.",
-            "Leer SHA previo si el archivo existe.",
-            "Aplicar cambio únicamente en rama no-main aprobada.",
-            "Registrar diff, SHA previo y SHA nuevo en auditoría.",
+            "Validar repositorio y rama base.",
+            "Crear rama nueva desde base solo después de aprobación owner.",
+            "Registrar resultado en auditoría.",
           ]
-        : [
-            "Validar head/base antes de abrir PR.",
-            "Crear PR draft o listo según política owner.",
-            "Adjuntar resumen, rollback y evidencia de validación.",
-          ];
+        : operation === "upsert_file"
+          ? [
+              "Validar path seguro y tamaño de contenido.",
+              "Leer SHA previo si el archivo existe.",
+              "Aplicar cambio únicamente en rama no-main aprobada.",
+              "Registrar diff, SHA previo y SHA nuevo en auditoría.",
+            ]
+          : [
+              "Validar head/base antes de abrir PR.",
+              "Crear PR draft o listo según política owner.",
+              "Adjuntar resumen, rollback y evidencia de validación.",
+            ];
 
   return {
     valid: missing_fields.length === 0,
@@ -496,7 +574,7 @@ export function getGitHubExecutorStatus() {
     accepted_env: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"],
     default_repository: defaultRepository(),
     read_operations: ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"],
-    write_operations_guarded: ["create_branch", "upsert_file", "create_pr"],
+    write_operations_guarded: ["create_repository", "create_branch", "upsert_file", "create_pr"],
     safety: {
       read_operations_execute_now: true,
       write_operations_execute_now: false,
