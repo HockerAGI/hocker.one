@@ -133,7 +133,10 @@ function parseRepository(payload: JsonRecord): { owner: string; repo: string; fu
   if (!owner || !repo) throw new Error("Repositorio inválido. Usa formato owner/repo.");
 
   const fullName = `${owner}/${repo}`;
-  if (!allowedRepositories().has(fullName)) {
+  const allowedOrg = envValue("HOCKER_GITHUB_ORG") || "HockerAGI";
+  const exactAllowed = allowedRepositories().has(fullName);
+  const orgAllowed = owner === allowedOrg;
+  if (!exactAllowed && !orgAllowed) {
     throw new Error(`Repositorio no permitido para ejecución AGI: ${fullName}`);
   }
 
