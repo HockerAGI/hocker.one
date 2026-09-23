@@ -55,3 +55,12 @@ test("application delivery never stores provider secret values in the queue", as
   assert.doesNotMatch(materializer, /token.*payload/i);
   assert.match(route, /no_secret_values: true/);
 });
+
+
+test("Chido-sensitive requests cannot be reclassified as application delivery", async () => {
+  const source = await read("src/lib/nova-chat-action-drafts.ts");
+  const chidoIndex = source.indexOf('if (hasAny(message, [/chido/i');
+  const appIndex = source.indexOf('return "application_delivery";');
+  assert.ok(chidoIndex >= 0);
+  assert.ok(appIndex > chidoIndex);
+});
