@@ -127,6 +127,17 @@ async function vercelRequest<T>(
   return payload as T;
 }
 
+
+export async function verifyVercelConnection(): Promise<boolean> {
+  if (!hasVercelRuntimeToken()) return false;
+  try {
+    await vercelRequest("/v2/user");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getVercelProject(input: VercelRuntimeInput) {
   const id = String(input.project_id ?? envValue("VERCEL_PROJECT_ID")).trim();
   if (!id) throw new Error("Falta project_id.");
