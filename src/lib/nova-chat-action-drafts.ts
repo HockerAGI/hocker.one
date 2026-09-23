@@ -41,6 +41,7 @@ function hasAny(message: string, patterns: RegExp[]): boolean {
 }
 
 function detectScope(message: string): DraftScope {
+  if (hasAny(message, [/chido/i, /kyc/i, /retiro/i, /dep[oó]sito/i, /wallet/i, /apuesta/i, /pago/i, /casino/i])) return "chido_sensitive";
   if (hasAny(message, [
     /crear (una )?(nueva )?(app|aplicaci[oó]n|plataforma|proyecto)/i,
     /nueva (app|aplicaci[oó]n|web|plataforma)/i,
@@ -48,7 +49,6 @@ function detectScope(message: string): DraftScope {
     /bootstrap/i,
     /provisionar (una )?(app|proyecto)/i,
   ])) return "application_delivery";
-  if (hasAny(message, [/chido/i, /kyc/i, /retiro/i, /dep[oó]sito/i, /wallet/i, /apuesta/i, /pago/i, /casino/i])) return "chido_sensitive";
   if (hasAny(message, [/github/i, /\brepo\b/i, /repositorio/i, /c[oó]digo/i, /\bbranch\b/i, /\brama\b/i, /\bpr\b/i, /pull request/i, /commit/i, /archivo/i, /\.tsx\b/i, /\.ts\b/i, /componente/i, /endpoint/i])) return "github_code";
   if (hasAny(message, [/supabase/i, /base de datos/i, /\bdb\b/i, /tabla/i, /memoria/i, /registro/i])) return "supabase_data";
   if (hasAny(message, [/vercel/i, /deploy/i, /despliegue/i, /producci[oó]n/i, /dominio/i])) return "vercel_cloud";
