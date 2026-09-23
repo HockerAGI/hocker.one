@@ -44,6 +44,15 @@ type GitHubPutContentResponse = {
   content?: { name?: string; path?: string; sha?: string; html_url?: string };
   commit?: { sha?: string; html_url?: string };
 };
+type GitHubRepoResponse = {
+  id?: number;
+  full_name?: string;
+  private?: boolean;
+  visibility?: string | null;
+  default_branch?: string | null;
+  html_url?: string | null;
+};
+
 type GitHubPullResponse = {
   number: number;
   state: string;
@@ -180,6 +189,15 @@ function buildLockOwner(actorId: string): string {
 }
 
 function buildRollbackPlan(item: AgiActionQueueRow, result: JsonRecord): JsonRecord {
+  if (item.action_type === "github.create_repository") {
+    return {
+      type: "github.delete_repository_manual_review",
+      safe: false,
+      repository: result.repository ?? null,
+      note: "No se permite borrado automático del repositorio. Verificar que esté vacío y sin consumidores antes de eliminarlo manualmente.",
+    };
+  }
+
   if (item.action_type === "github.create_branch") {
     return {
       type: "github.delete_branch_if_created",
@@ -679,7 +697,9 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
     const payload = asRecord(item.payload);
     const operation = item.action_type.replace(/^github\./, "");
     const result =
-      operation === "create_branch"
+      operation === "create_repository"
+        ? await executeCreateRepository(payload)
+        : operation === "create_branch"
         ? await executeCreateBranch(payload)
         : operation === "upsert_file"
           ? await executeUpsertFile(payload)
