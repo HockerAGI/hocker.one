@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type VercelRuntimeReadOperation =
   | "get_project"
   | "list_deployments"
@@ -15,12 +13,18 @@ export type VercelRuntimeInput = {
   project_id?: string;
   project_name?: string;
   repository?: string;
-  repository_url?: string;
   framework?: string;
   root_directory?: string;
   install_command?: string;
   team_id?: string;
   deployment_id?: string;
+};
+
+type VercelApiErrorPayload = {
+  error?: {
+    message?: string;
+  };
+  message?: string;
 };
 
 function envValue(key: string): string {
@@ -35,103 +39,91 @@ export function hasVercelRuntimeToken(): boolean {
   return getVercelRuntimeToken().length > 0;
 }
 
-export function isVercelWriteOperation(operation: string): operation is VercelRuntimeWriteOperation {
+export function isVercelWriteOperation(
+  operation: string,
+): operation is VercelRuntimeWriteOperation {
   return operation === "create_project";
 }
 
-export function isVercelReadOperation(operation: string): operation is VercelRuntimeReadOperation {
-  return ["get_project", "list_deployments", "get_deployment_logs"].includes(operation);
+export function isVercelReadOperation(
+  operation: string,
+): operation is VercelRuntimeReadOperation {
+  return (
+    operation === "get_project" ||
+    operation === "list_deployments" ||
+    operation === "get_deployment_logs"
+  );
 }
 
-function teamId(input?: string): string {
-  return String(input ?? envValue("VERCEL_TEAM_ID")).trim();
-}
-
-function safeProjectName(value: unknown): string {
-  const raw = String(value ?? "").trim();
-  if (!raw) throw new Error("Falta project_name.");
-  if (raw.length > 100) throw new Error("project_name demasiado largo.");
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/.test(raw)) {
+function requireProjectName(value: unknown): string {
+  const name = String(value ?? "").trim();
+  if (!name) throw new Error("Falta project_name.");
+  if (name.length > 100) throw new Error("project_name demasiado largo.");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(name)) {
     throw new Error("project_name contiene caracteres no permitidos.");
   }
-  return raw;
+  return name;
 }
 
-function safeRepository(value: unknown): string {
-  const raw = String(value ?? "").trim();
-  if (!raw) throw new Error("Falta repository.");
-  const match = raw.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
-  if (!match) throw new Error("repository debe tener formato owner/repo.");
-  if (match[1] !== "HockerAGI") {
-    throw new Error("El executor Vercel sólo puede enlazar repos del namespace HockerAGI.");
+function requireHockerRepository(value: unknown): string {
+  const repository = String(value ?? "").trim();
+  if (!repository) throw new Error("Falta repository.");
+  if (!/^HockerAGI\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    throw new Error("repository debe pertenecer a HockerAGI y tener formato owner/repo.");
   }
-  return raw;
+  return repository;
 }
 
-function apiQuery(params: Record<string, string | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value) search.set(key, value);
-  }
-  const encoded = search.toString();
-  return encoded ? `?${encoded}` : "";
+function buildPath(path: string, teamId: string): string {
+  return teamId
+    ? `${path}?${new URLSearchParams({ teamId }).toString()}`
+    : path;
 }
 
 async function vercelRequest<T>(
   path: string,
-  init: RequestInit = {},
+  token: string,
+  method = "GET",
+  body?: string,
 ): Promise<T> {
-  const token = getVercelRuntimeToken();
-  if (!token) {
-    throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
-  }
-
   const response = await fetch(`https://api.vercel.com${path}`, {
-    ...init,
+    method,
     cache: "no-store",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
+      ...(body ? { "Content-Type": "application/json" } : {}),
     },
+    ...(body ? { body } : {}),
   });
 
   const text = await response.text();
   let payload: unknown = null;
+
   try {
     payload = text ? JSON.parse(text) : null;
   } catch {
-    payload = { raw: text.slice(0, 800) };
+    payload = { message: text.slice(0, 800) };
   }
 
   if (!response.ok) {
+    const details = payload as VercelApiErrorPayload;
     const message =
-      payload &&
-      typeof payload === "object" &&
-      "error" in payload &&
-      typeof (payload as { error?: unknown }).error === "object" &&
-      (payload as { error?: { message?: unknown } }).error?.message
-        ? String((payload as { error: { message: unknown } }).error.message)
-        : payload &&
-            typeof payload === "object" &&
-            "message" in payload
-          ? String((payload as { message?: unknown }).message)
-          : `Vercel HTTP ${response.status}`;
-    const error = new Error(message);
-    (error as Error & { status?: number; payload?: unknown }).status = response.status;
-    (error as Error & { status?: number; payload?: unknown }).payload = payload;
-    throw error;
+      details.error?.message ||
+      details.message ||
+      `Vercel HTTP ${response.status}`;
+    throw new Error(message);
   }
 
   return payload as T;
 }
 
-
 export async function verifyVercelConnection(): Promise<boolean> {
-  if (!hasVercelRuntimeToken()) return false;
+  const token = getVercelRuntimeToken();
+  if (!token) return false;
+
   try {
-    await vercelRequest("/v2/user");
+    await vercelRequest("/v2/user", token);
     return true;
   } catch {
     return false;
@@ -139,61 +131,85 @@ export async function verifyVercelConnection(): Promise<boolean> {
 }
 
 export async function getVercelProject(input: VercelRuntimeInput) {
-  const id = String(input.project_id ?? envValue("VERCEL_PROJECT_ID")).trim();
-  if (!id) throw new Error("Falta project_id.");
-  return vercelRequest(`/v9/projects/${encodeURIComponent(id)}${apiQuery({ teamId: teamId(input.team_id) })}`);
-}
+  const token = getVercelRuntimeToken();
+  if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
 
-export async function listVercelDeployments(input: VercelRuntimeInput) {
   const projectId = String(input.project_id ?? envValue("VERCEL_PROJECT_ID")).trim();
   if (!projectId) throw new Error("Falta project_id.");
+
   return vercelRequest(
-    `/v6/deployments${apiQuery({ projectId, teamId: teamId(input.team_id), limit: "20" })}`,
+    buildPath(`/v9/projects/${encodeURIComponent(projectId)}`, envValue("VERCEL_TEAM_ID")),
+    token,
   );
 }
 
+export async function listVercelDeployments(input: VercelRuntimeInput) {
+  const token = getVercelRuntimeToken();
+  if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
+
+  const projectId = String(input.project_id ?? envValue("VERCEL_PROJECT_ID")).trim();
+  if (!projectId) throw new Error("Falta project_id.");
+
+  const query = new URLSearchParams({
+    projectId,
+    limit: "20",
+  });
+  const teamId = envValue("VERCEL_TEAM_ID");
+  if (teamId) query.set("teamId", teamId);
+
+  return vercelRequest(`/v6/deployments?${query.toString()}`, token);
+}
+
 export async function getVercelDeploymentLogs(input: VercelRuntimeInput) {
+  const token = getVercelRuntimeToken();
+  if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
+
   const deploymentId = String(input.deployment_id ?? "").trim();
   if (!deploymentId) throw new Error("Falta deployment_id.");
+
   return vercelRequest(
-    `/v1/deployments/${encodeURIComponent(deploymentId)}/events${apiQuery({ teamId: teamId(input.team_id) })}`,
+    buildPath(
+      `/v1/deployments/${encodeURIComponent(deploymentId)}/events`,
+      envValue("VERCEL_TEAM_ID"),
+    ),
+    token,
   );
 }
 
 export async function createVercelProject(input: VercelRuntimeInput) {
-  const name = safeProjectName(input.project_name);
-  const repository = safeRepository(input.repository ?? "");
-  const team = teamId(input.team_id);
+  const token = getVercelRuntimeToken();
+  if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
 
-  const body: Record<string, unknown> = {
+  const name = requireProjectName(input.project_name);
+  const repository = requireHockerRepository(input.repository);
+  const teamId = envValue("VERCEL_TEAM_ID");
+
+  const payload = {
     name,
     gitRepository: {
       type: "github",
       repo: repository,
     },
+    ...(input.framework ? { framework: input.framework } : {}),
+    ...(input.root_directory ? { rootDirectory: input.root_directory } : {}),
+    ...(input.install_command ? { installCommand: input.install_command } : {}),
   };
 
-  if (input.framework) body.framework = String(input.framework).trim();
-  if (input.root_directory) body.rootDirectory = String(input.root_directory).trim();
-  if (input.install_command) body.installCommand = String(input.install_command).trim();
-
-  const payload = await vercelRequest<Record<string, unknown>>(
-    `/v11/projects${apiQuery({ teamId: team })}`,
-    {
-      method: "POST",
-      body: JSON.stringify(body),
-    },
+  const result = await vercelRequest<Record<string, unknown>>(
+    buildPath("/v11/projects", teamId),
+    token,
+    "POST",
+    JSON.stringify(payload),
   );
 
   return {
     ok: true,
     operation: "create_project",
+    created: true,
     project_name: name,
     repository,
-    team_id: team || null,
-    created: true,
-    result_hash: createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
-    result: payload,
+    team_id: teamId || null,
+    result,
   };
 }
 
@@ -208,8 +224,6 @@ export async function executeVercelReadOperation(
       return listVercelDeployments(input);
     case "get_deployment_logs":
       return getVercelDeploymentLogs(input);
-    default:
-      throw new Error("Operación Vercel no soportada.");
   }
 }
 
@@ -217,29 +231,30 @@ export function createVercelWriteGatePlan(
   operation: VercelRuntimeWriteOperation,
   input: VercelRuntimeInput,
 ) {
-  const missing_fields: string[] = [];
+  const required_fields: string[] = [];
 
   if (operation === "create_project") {
     try {
-      safeProjectName(input.project_name);
+      requireProjectName(input.project_name);
     } catch {
-      missing_fields.push("project_name");
+      required_fields.push("project_name");
     }
+
     try {
-      safeRepository(input.repository ?? "");
+      requireHockerRepository(input.repository);
     } catch {
-      missing_fields.push("repository");
+      required_fields.push("repository");
     }
   }
 
   return {
-    valid: missing_fields.length === 0,
-    mode: "owner_gate",
+    valid: required_fields.length === 0,
+    mode: "owner_gate" as const,
     operation,
-    repository: input.repository ?? null,
     project_name: input.project_name ?? null,
-    risk_level: "high",
-    required_fields: missing_fields,
+    repository: input.repository ?? null,
+    risk_level: "high" as const,
+    required_fields,
     dry_run: true,
     execute_now: false,
     owner_gate_required: true,
@@ -247,15 +262,21 @@ export function createVercelWriteGatePlan(
     rollback_plan: {
       strategy: "manual_project_detach_or_delete",
       safe: false,
-      note: "No se ejecuta borrado automático de proyectos Vercel. Revisión manual requerida para rollback.",
+      note: "No se ejecuta borrado automático de proyectos Vercel.",
     },
     audit_chain: {
       required: true,
-      records: ["agi_action_queue", "vercel_operation", "owner_decision", "execution_result"],
+      records: [
+        "agi_action_queue",
+        "vercel_operation",
+        "owner_decision",
+        "execution_result",
+      ],
     },
-    next_step: missing_fields.length
-      ? `Completar campos requeridos: ${missing_fields.join(", ")}.`
-      : "Enviar a cola segura. Ejecutar sólo después de aprobación Owner.",
+    next_step:
+      required_fields.length > 0
+        ? `Completar campos requeridos: ${required_fields.join(", ")}.`
+        : "Enviar a cola segura. Ejecutar sólo después de aprobación Owner.",
   };
 }
 
@@ -265,7 +286,11 @@ export function getVercelExecutorStatus() {
     provider: "Vercel",
     token_present: hasVercelRuntimeToken(),
     accepted_env: ["VERCEL_TOKEN"],
-    read_operations: ["get_project", "list_deployments", "get_deployment_logs"],
+    read_operations: [
+      "get_project",
+      "list_deployments",
+      "get_deployment_logs",
+    ],
     write_operations_guarded: ["create_project"],
     safety: {
       read_operations_execute_now: true,
