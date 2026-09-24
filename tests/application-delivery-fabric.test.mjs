@@ -65,3 +65,20 @@ test("Chido-sensitive requests cannot be reclassified as application delivery", 
   assert.ok(chidoIndex >= 0);
   assert.ok(appIndex > chidoIndex);
 });
+
+test("existing apps use NOVA inspection plus SHA-guarded GitHub mutations", async () => {
+  const route = await read("src/app/api/nova/chat/route.ts");
+  const policy = await read("src/lib/mcp/mcp-policy.ts");
+  const drafts = await read("src/lib/nova-chat-action-drafts.ts");
+  const capabilities = await read("src/lib/hocker-capabilities-contract.ts");
+
+  assert.match(route, /draftPreview\.scope === "application_delivery"/);
+  assert.match(route, /inspect the live repository before proposing any mutation/i);
+  assert.doesNotMatch(route, /materializeNovaGitHubActionsFromChat/);
+  assert.match(policy, /isAllowedGithubRepository/);
+  assert.match(policy, /update_file.*create_or_update_file/);
+  assert.match(policy, /expectedSha/);
+  assert.match(drafts, /Leer el repositorio real/);
+  assert.match(drafts, /obtener SHA de los archivos afectados/);
+  assert.match(capabilities, /Crear, desarrollar y mantener apps \/ proyectos/);
+});
