@@ -9,14 +9,15 @@ test("Vercel is a real governed executor, not a fake AI Gateway label", async ()
   const executor = await read("src/lib/vercel-runtime-executor.ts");
   const route = await read("src/app/api/agi/runtime/vercel/route.ts");
   const router = await read("src/lib/agi-action-execution-router.ts");
+  const worker = await read("src/lib/agi-action-execution.ts");
 
   assert.match(runtime, /tool_key: "vercel"/);
   assert.match(runtime, /implementation_status: "executor_ready"/);
   assert.match(executor, /POST.*\/v11\/projects/);
   assert.match(executor, /VERCEL_TOKEN/);
   assert.match(route, /vercel\.create_project/);
-  assert.match(router, /pending\.tool_key === "vercel"/);
-  assert.match(router, /depends_on_action_id/);
+  assert.match(worker, /pending\.tool_key === "vercel"/);
+  assert.match(worker, /depends_on_action_id/);
 });
 
 test("new repositories are private by default and restricted to HockerAGI", async () => {
