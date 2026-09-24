@@ -94,5 +94,5 @@ test("GitHub MCP lifecycle mutations are dependency-ordered", async () => {
   assert.match(router, /assertMcpDependencyComplete/);
   assert.match(router, /dependencia previa no está completada/);
   assert.match(policy, /"create_or_update_file"/);
-  assert.match(policy, /get_file_contents/);
+  assert.match(policy, /github: \[\/\^\(list_\|get_\|read_\|search_\)/);
 });
