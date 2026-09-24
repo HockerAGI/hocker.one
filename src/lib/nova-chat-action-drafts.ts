@@ -75,7 +75,7 @@ export function getNovaChatActionDraftPublicContext() {
       no_fake_integrations: true,
     },
     supported_now: {
-      github_code: "Crea borrador seguro en cola. La ejecución real sigue por Owner Gate.",
+      github_code: "Para apps/repos existentes, NOVA puede leer el repositorio real, analizar el cambio y preparar mutaciones GitHub reales bajo Owner Gate. Las actualizaciones de archivos existentes usan SHA observado para evitar sobrescrituras concurrentes.",
     },
     prepare_only_now: [
       "supabase_data",
@@ -87,7 +87,7 @@ export function getNovaChatActionDraftPublicContext() {
     blocked_now: [
       "chido_sensitive",
     ],
-    next_step: "12.7J-2 debe materializar borradores GitHub en acciones concretas create_branch/upsert_file/create_pr cuando haya plan completo.",
+    next_step: "El ciclo real para apps existentes es: inspeccionar → analizar → crear branch → modificar/corregir/integrar → validar CI/Preview → PR → merge protegido → deploy exact-SHA.",
   };
 }
 
@@ -189,8 +189,8 @@ export function detectNovaChatActionDraft(message: string, queueLock?: QueueLock
       owner_agi: "hostia",
       risk_level: "medium",
       reason: "Solicitud de repo/código detectada. GitHub es el primer executor real protegido.",
-      current_limit: "12.7J-1 crea borrador seguro. No ejecuta branch, archivo ni PR todavía desde chat.",
-      next_step: "Materializar el borrador en acciones GitHub concretas con Owner Gate.",
+      current_limit: "La escritura no sale directamente de inferencia: NOVA inspecciona primero y Hocker One convierte las mutaciones propuestas en acciones Owner-Gated.",
+      next_step: "Leer el repositorio real, obtener SHA de los archivos afectados y preparar create_branch/upsert_file/create_pr bajo Owner Gate.",
     };
   }
 
