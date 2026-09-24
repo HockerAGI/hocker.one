@@ -82,3 +82,17 @@ test("existing apps use NOVA inspection plus SHA-guarded GitHub mutations", asyn
   assert.match(drafts, /obtener SHA de los archivos afectados/);
   assert.match(capabilities, /Crear, desarrollar y mantener apps \/ proyectos/);
 });
+
+test("GitHub MCP lifecycle mutations are dependency-ordered", async () => {
+  const materializer = await read("src/lib/nova-mcp-action-materializer.ts");
+  const router = await read("src/lib/agi-action-execution-router.ts");
+  const policy = await read("src/lib/mcp/mcp-policy.ts");
+
+  assert.match(materializer, /previousGithubLifecycleActionId/);
+  assert.match(materializer, /depends_on_action_id/);
+  assert.match(materializer, /create_branch.*create_or_update_file.*create_pull_request.*merge_pull_request/s);
+  assert.match(router, /assertMcpDependencyComplete/);
+  assert.match(router, /dependencia previa no está completada/);
+  assert.match(policy, /"create_or_update_file"/);
+  assert.match(policy, /get_file_contents/);
+});
