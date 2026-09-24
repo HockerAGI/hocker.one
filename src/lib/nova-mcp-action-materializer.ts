@@ -42,7 +42,7 @@ function riskFor(draft: ValidatedMcpDraft): "medium" | "high" {
 }
 
 function isGithubLifecycleMutation(tool: string): boolean {
-  return new Set(["create_branch", "create_or_update_file", "create_pull_request", "merge_pull_request"]).has(tool);
+  return new Set(["create_branch", "create_or_update_file", "create_pull_request"]).has(tool);
 }
 
 export async function materializeNovaMcpActionsFromUpstream(params: {
