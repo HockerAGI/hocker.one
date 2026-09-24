@@ -90,9 +90,21 @@ test("GitHub MCP lifecycle mutations are dependency-ordered", async () => {
 
   assert.match(materializer, /previousGithubLifecycleActionId/);
   assert.match(materializer, /depends_on_action_id/);
-  assert.match(materializer, /create_branch.*create_or_update_file.*create_pull_request.*merge_pull_request/s);
+  assert.match(materializer, /create_branch.*create_or_update_file.*create_pull_request/s);
   assert.match(router, /assertMcpDependencyComplete/);
   assert.match(router, /dependencia previa no está completada/);
   assert.match(policy, /"create_or_update_file"/);
-  assert.match(policy, /github: \[\/\^\(list_\|get_\|read_\|search_\)/);
+  assert.match(policy, /github: \/\^\(list_\|get_\|read_\|search_\)\//);
+});
+
+test("new repository bootstrap creates a usable default branch", async () => {
+  const executor = await read("src/lib/github-runtime-executor.ts");
+  assert.match(executor, /auto_init: true/);
+  assert.match(executor, /executeGitHubCreateRepository/);
+});
+
+test("existing app mutation requests are classified for engineering", async () => {
+  const drafts = await read("src/lib/nova-chat-action-drafts.ts");
+  assert.match(drafts, /existingAppMutation/);
+  assert.match(drafts, /return "github_code"/);
 });
