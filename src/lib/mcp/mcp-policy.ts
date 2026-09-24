@@ -247,10 +247,10 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
       "branch",
     );
 
-    if (tool === "update_file") {
+    if (["update_file", "create_or_update_file"].includes(tool)) {
       const expectedSha = String(args.sha ?? args.expected_sha ?? "").trim();
       if (!expectedSha) {
-        throw new Error("Actualizar un archivo existente requiere SHA observado (sha/expected_sha).");
+        throw new Error("Modificar un archivo existente requiere SHA observado (sha/expected_sha).");
       }
     }
   }
