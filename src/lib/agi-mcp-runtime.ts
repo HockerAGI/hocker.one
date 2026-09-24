@@ -238,6 +238,7 @@ export async function buildAgiMcpPromptBlock(): Promise<string> {
     "Usa herramientas para consultar estado real cuando corresponda. Nunca inventes una lectura que pueda verificarse.",
     "Para invocarlas responde con un JSON válido: {\"reply\":\"mensaje natural\",\"tool_calls\":[{\"name\":\"provider.tool\",\"args\":{...}}]}",
     "Máximo 8 tool_calls. READ puede ejecutarse automáticamente. OWNER_GATE nunca se ejecuta aquí: sólo prepara un borrador para aprobación en Hocker One.",
+    "Para modificar un archivo existente primero usa GitHub get_file_contents y conserva su sha; después usa update_file/create_or_update_file con ese SHA. Usa create_file para archivos nuevos. Nunca sobrescribas un archivo existente sin SHA observado.",
     ...lines,
     "No incluyas credenciales, tokens, passwords, cookies ni secretos en argumentos.",
     "═══ END HOCKER MCP TOOLS ═══",
