@@ -470,9 +470,26 @@ export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeT
     "create_pull_request",
   ];
 
-  const preferred = preferredEngineeringTools
-    .map((name) => all.find((tool) => tool.qualified_name === `github.${name}`))
-    .filter((tool): tool is AgiNativeTool => Boolean(tool));
+  const preferredVercelDiagnostics = [
+    "get_project",
+    "list_deployments",
+    "get_deployment",
+    "get_deployment_build_logs",
+    "get_runtime_logs",
+  ];
+
+  const preferredSupabaseDiagnostics = [
+    "list_tables",
+    "get_table_schema",
+    "list_functions",
+    "get_logs",
+  ];
+
+  const preferred = [
+    ...preferredEngineeringTools.map((name) => all.find((tool) => tool.qualified_name === `github.${name}`)),
+    ...preferredVercelDiagnostics.map((name) => all.find((tool) => tool.qualified_name === `vercel.${name}`)),
+    ...preferredSupabaseDiagnostics.map((name) => all.find((tool) => tool.qualified_name === `supabase.${name}`)),
+  ].filter((tool): tool is AgiNativeTool => Boolean(tool));
 
   const deduped = new Map<string, AgiNativeTool>();
   for (const tool of [...preferred, ...matching]) {
