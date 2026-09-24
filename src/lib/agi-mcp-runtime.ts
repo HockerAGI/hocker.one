@@ -443,11 +443,43 @@ export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeT
   const clean = String(query ?? "").trim().toLowerCase();
   if (!clean) return all;
 
-  const words = clean.split(/\\s+/).filter(Boolean).slice(0, 6);
-  return all.filter((tool) => {
+  const words = clean.split(/\s+/).filter(Boolean).slice(0, 8);
+  const engineeringIntent =
+    /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(clean);
+
+  const matching = all.filter((tool) => {
     const haystack = `${tool.qualified_name} ${tool.name} ${tool.description ?? ""}`.toLowerCase();
     return words.some((word) => haystack.includes(word));
-  }).slice(0, 32);
+  });
+
+  if (!engineeringIntent) return matching.slice(0, 32);
+
+  const preferredEngineeringTools = [
+    "get_repository",
+    "get_file_contents",
+    "search_code",
+    "list_branches",
+    "list_pull_requests",
+    "get_pull_request",
+    "get_workflow_run",
+    "list_workflows",
+    "get_workflow_runs",
+    "create_branch",
+    "create_or_update_file",
+    "update_file",
+    "create_pull_request",
+  ];
+
+  const preferred = preferredEngineeringTools
+    .map((name) => all.find((tool) => tool.qualified_name === `github.${name}`))
+    .filter((tool): tool is AgiNativeTool => Boolean(tool));
+
+  const deduped = new Map<string, AgiNativeTool>();
+  for (const tool of [...preferred, ...matching]) {
+    if (!deduped.has(tool.qualified_name)) deduped.set(tool.qualified_name, tool);
+  }
+
+  return [...deduped.values()].slice(0, 40);
 }
 
 export function resolveNativeMcpTool(name: string): { provider: McpProviderId; tool: string; qualified_name: string } | null {
