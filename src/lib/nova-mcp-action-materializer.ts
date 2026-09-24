@@ -41,6 +41,10 @@ function riskFor(draft: ValidatedMcpDraft): "medium" | "high" {
   return "medium";
 }
 
+function isGithubLifecycleMutation(tool: string): boolean {
+  return new Set(["create_branch", "create_or_update_file", "create_pull_request", "merge_pull_request"]).has(tool);
+}
+
 export async function materializeNovaMcpActionsFromUpstream(params: {
   project_id: string;
   created_by: string;
@@ -54,6 +58,8 @@ export async function materializeNovaMcpActionsFromUpstream(params: {
   const rawDrafts = extractDrafts(params.upstream_meta);
   const actions: MaterializedMcpAction[] = [];
   const rejected: Array<{ reason: string }> = [];
+
+  let previousGithubLifecycleActionId: string | null = null;
 
   for (const raw of rawDrafts) {
     try {
@@ -81,11 +87,15 @@ export async function materializeNovaMcpActionsFromUpstream(params: {
           source: "nova_mcp_owner_gate_bridge",
           trace_id: params.trace_id ?? null,
           request_preview: compact(params.original_message),
+          depends_on_action_id: draft.provider === "github" && isGithubLifecycleMutation(draft.tool)
+            ? previousGithubLifecycleActionId
+            : null,
           safety: {
             executed_now: false,
             validated_again_by_hocker_one: true,
             owner_gate_required: true,
             secrets_rejected: true,
+            lifecycle_ordered: draft.provider === "github" && isGithubLifecycleMutation(draft.tool),
           },
         },
         risk_level: risk,
@@ -95,6 +105,9 @@ export async function materializeNovaMcpActionsFromUpstream(params: {
       });
 
       const record = row as JsonRecord;
+      if (draft.provider === "github" && isGithubLifecycleMutation(draft.tool) && typeof record.id === "string") {
+        previousGithubLifecycleActionId = record.id;
+      }
       actions.push({
         id: typeof record.id === "string" ? record.id : null,
         status: String(record.status ?? "needs_approval"),
