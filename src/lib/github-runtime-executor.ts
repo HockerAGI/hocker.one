@@ -202,6 +202,10 @@ function trimContent(content: string): { content: string; truncated: boolean; by
 }
 
 
+export async function executeGitHubCreateRepository(input: GitHubRuntimeInput) {
+  return createRepository(input);
+}
+
 async function createRepository(input: GitHubRuntimeInput) {
   const owner = String(input.owner ?? (defaultRepository().split("/")[0] || "HockerAGI")).trim();
   ensureHockerOrganization(owner);
@@ -217,7 +221,7 @@ async function createRepository(input: GitHubRuntimeInput) {
     has_issues: true,
     has_projects: true,
     has_wiki: false,
-    auto_init: false,
+    auto_init: true,
   };
 
   const response = await githubRequest<Record<string, unknown>>(
