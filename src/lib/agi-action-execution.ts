@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";
+import {
+  executeGitHubCreateRepository,
+  getGitHubRuntimeToken,
+} from "@/lib/github-runtime-executor";
 import {
   createVercelProject,
   getVercelRuntimeToken,
@@ -797,7 +800,13 @@ export async function executeApprovedAgiAction(params: { project_id: string; act
     const operation = item.action_type.replace(/^github\./, "");
     const result =
       operation === "create_repository"
-        ? await executeCreateRepository(payload)
+        ? await executeGitHubCreateRepository({
+            owner: stringValue(payload.owner, "HockerAGI"),
+            name: stringValue(payload.name ?? payload.repo),
+            description: stringValue(payload.description),
+            private: payload.private !== false,
+            visibility: stringValue(payload.visibility, "private") as "private" | "internal" | "public",
+          })
         : operation === "create_branch"
         ? await executeCreateBranch(payload)
         : operation === "upsert_file"
