@@ -23,6 +23,7 @@ const ROUTES: Array<{ key: string; patterns: RegExp[]; reason: string }> = [
   { key: "document_generation", reason: "La solicitud pide documento, PDF, contrato, ficha o reporte.", patterns: [/documento|pdf|docx|reporte|ficha|contrato|manual/i] },
   { key: "presentation_generation", reason: "La solicitud pide presentación o slides.", patterns: [/presentaci[oó]n|slides|pptx|deck|diapositivas/i] },
   { key: "file_import_analysis", reason: "La solicitud pide importar o analizar archivos.", patterns: [/archivo|subir|importar|csv|zip|excel|xlsx|doc|pdf/i] },
+  { key: "application_delivery", reason: "La solicitud pide crear una nueva app, proyecto, repo o pipeline de entrega.", patterns: [/crear (una )?(nueva )?(app|aplicaci[oó]n|proyecto)|nueva (app|aplicaci[oó]n|plataforma|web)|nuevo (repo|repositorio|proyecto)|bootstrap|provisionar|montar (una )?app|crear y desplegar/i] },
   { key: "repo_code_github", reason: "La solicitud involucra repositorios, código, GitHub, PR o deploy.", patterns: [/repo|repositorio|github|c[oó]digo|commit|branch|rama|pull request|pr|deploy|build|typecheck/i] },
   { key: "deep_research", reason: "La solicitud pide investigación, comparación o análisis profundo.", patterns: [/investiga|investigaci[oó]n|compara|benchmark|fuentes|citas|topolog[ií]a|auditor[ií]a/i] },
   { key: "supabase_memory_data", reason: "La solicitud trata datos, Supabase, memoria o Syntia.", patterns: [/supabase|datos|tabla|memoria|syntia|sql|base de datos/i] },
@@ -99,6 +100,7 @@ export function buildNovaChatCapabilitiesContext(
     "automatic_agi_router",
     "queue_lock_owner_gate",
     "repo_code_github",
+    "application_delivery",
     "chido_monitoring",
     "chido_sensitive_ops",
   ]);

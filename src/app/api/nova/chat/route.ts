@@ -4,7 +4,7 @@ import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 import { requireProjectRole, toApiError } from "@/app/api/_lib";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
-import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
+import { materializeNovaApplicationDeliveryFromChat } from "@/lib/nova-application-delivery-materializer";
 import { materializeNovaMcpActionsFromUpstream } from "@/lib/nova-mcp-action-materializer";
 import {
   buildNovaCapabilitiesReply,
@@ -162,12 +162,18 @@ export async function POST(req: Request): Promise<Response> {
     try {
       const actionCtx = await requireProjectRole(chatCtx.project_id, ["owner", "admin", "operator"]);
       upstreamActionActorId = actionCtx.user.id;
-      localActionDraft = await materializeNovaGitHubActionsFromChat({
-        project_id: actionCtx.project_id,
-        message: parsed.data.message,
-        queue_lock: queueLock,
-        created_by: actionCtx.user.id,
-      }) as Record<string, unknown> | null;
+
+      // New-app bootstrap keeps its deterministic GitHub -> Vercel chain.
+      // Existing-app engineering stays in NOVA real MCP flow so NOVA can
+      // inspect the live repository before proposing any mutation.
+      if (draftPreview.scope === "application_delivery") {
+        localActionDraft = (await materializeNovaApplicationDeliveryFromChat({
+          project_id: actionCtx.project_id,
+          message: parsed.data.message,
+          queue_lock: queueLock,
+          created_by: actionCtx.user.id,
+        })) as Record<string, unknown> | null;
+      }
     } catch (error) {
       const apiError = toApiError(error);
       return NextResponse.json(apiError.payload, { status: apiError.status });
