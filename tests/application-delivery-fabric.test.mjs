@@ -123,7 +123,8 @@ test("engineering tool loop is bounded and fits the chat execution window", asyn
   assert.match(runtime, /MAX_MCP_FOLLOW_UPS = 2/);
   assert.match(runtime, /INITIAL_MCP_TIMEOUT_MS = 28_000/);
   assert.match(runtime, /FOLLOW_UP_MCP_TIMEOUT_MS = 12_000/);
-  assert.match(runtime, /for \(let followUp = 0; followUp <= MAX_MCP_FOLLOW_UPS/);
+  assert.match(runtime, /const maxFollowUps = engineeringTask \? MAX_MCP_FOLLOW_UPS : 1/);
+  assert.match(runtime, /for \(let followUp = 0; followUp <= maxFollowUps/);
 });
 
 test("all GitHub file lifecycle mutations remain ordered before PR creation", async () => {
