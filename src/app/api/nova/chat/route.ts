@@ -158,14 +158,17 @@ export async function POST(req: Request): Promise<Response> {
     queue_lock: queueLock,
   });
 
+  const routeThroughEngineeringRuntime =
+    draftPreview?.scope === "github_code";
+
   if (draftPreview && parsed.data.allow_actions) {
     try {
       const actionCtx = await requireProjectRole(chatCtx.project_id, ["owner", "admin", "operator"]);
       upstreamActionActorId = actionCtx.user.id;
 
       // New-app bootstrap keeps its deterministic GitHub -> Vercel chain.
-      // Existing-app engineering stays in NOVA real MCP flow so NOVA can
-      // inspect the live repository before proposing any mutation.
+      // Existing-app engineering always reaches the real NOVA tool loop so
+      // read-only inspection can happen before any mutation is proposed.
       if (draftPreview.scope === "application_delivery") {
         localActionDraft = (await materializeNovaApplicationDeliveryFromChat({
           project_id: actionCtx.project_id,
@@ -178,7 +181,10 @@ export async function POST(req: Request): Promise<Response> {
       const apiError = toApiError(error);
       return NextResponse.json(apiError.payload, { status: apiError.status });
     }
-  } else if (draftPreview) {
+  } else if (draftPreview && !routeThroughEngineeringRuntime) {
+    // Non-engineering action requests stay in the safe local draft path.
+    // Engineering requests must still execute READ-only MCP inspection even
+    // when allow_actions=false; writes remain blocked until Owner Gate.
     localActionDraft = draftPreview as Record<string, unknown>;
   }
 
