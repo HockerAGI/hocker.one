@@ -44,7 +44,8 @@ test("application delivery remains queued and Owner-Gated", async () => {
   assert.match(materializer, /depends_on_action_id/);
   assert.match(materializer, /requires_approval: true/);
   assert.match(materializer, /executed: false/);
-  assert.match(router, /Vercel está bloqueado: la acción GitHub previa aún no está ejecutada/);
+  assert.match(router, /assertMcpDependencyComplete/);
+  assert.match(router, /executeApprovedMcpAction/);
   assert.match(chat, /materializeNovaApplicationDeliveryFromChat/);
 });
 
@@ -107,4 +108,25 @@ test("existing app mutation requests are classified for engineering", async () =
   const drafts = await read("src/lib/nova-chat-action-drafts.ts");
   assert.match(drafts, /existingAppMutation/);
   assert.match(drafts, /return "github_code"/);
+});
+
+
+test("existing-app engineering reaches real inspection even when chat writes are disabled", async () => {
+  const route = await read("src/app/api/nova/chat/route.ts");
+  assert.match(route, /routeThroughEngineeringRuntime/);
+  assert.match(route, /draftPreview && !routeThroughEngineeringRuntime/);
+  assert.match(route, /Existing-app engineering always reaches the real NOVA tool loop/);
+});
+
+test("engineering tool loop is bounded and fits the chat execution window", async () => {
+  const runtime = await read("src/lib/unified-nova-chat-runtime.ts");
+  assert.match(runtime, /MAX_MCP_FOLLOW_UPS = 2/);
+  assert.match(runtime, /INITIAL_MCP_TIMEOUT_MS = 28_000/);
+  assert.match(runtime, /FOLLOW_UP_MCP_TIMEOUT_MS = 12_000/);
+  assert.match(runtime, /for \(let followUp = 0; followUp <= MAX_MCP_FOLLOW_UPS/);
+});
+
+test("all GitHub file lifecycle mutations remain ordered before PR creation", async () => {
+  const materializer = await read("src/lib/nova-mcp-action-materializer.ts");
+  assert.match(materializer, /create_branch.*create_or_update_file.*create_file.*update_file.*create_pull_request/s);
 });
