@@ -75,6 +75,10 @@ function combinedAttempts(...completions: AgiCompletionResult[]): JsonRecord[] {
   );
 }
 
+const MAX_MCP_FOLLOW_UPS = 2;
+const INITIAL_MCP_TIMEOUT_MS = 28_000;
+const FOLLOW_UP_MCP_TIMEOUT_MS = 12_000;
+
 function mcpSummary(results: AgiMcpToolResult[]) {
   return {
     parsed: results.length,
@@ -183,84 +187,101 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     ...context.messages,
   ];
 
+  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(params.message);
+
   const first = await completeAgi({
     messages: baseMessages,
-    timeout_ms: 40_000,
+    timeout_ms: engineeringTask ? INITIAL_MCP_TIMEOUT_MS : 40_000,
     oidc_token: params.oidc_token,
     tools: nativeMcpTools,
     web_search: webSearchRequired,
     web_max_uses: webSearchRequired ? 8 : undefined,
   });
 
-  const legacyEnvelope = parseAgiMcpEnvelope(first.text);
-  const nativeCalls = first.tool_calls ?? [];
-  const resolvedCalls = nativeCalls.length > 0 ? toLegacyAgiMcpToolCalls(nativeCalls) : legacyEnvelope.tool_calls;
-  const toolResults = resolvedCalls.length
-    ? await executeAgiMcpToolCalls(resolvedCalls, {
-        project_id: params.project_id,
-        allow_actions: Boolean(params.allow_actions),
-        parent_run_id: null,
-        source_agi_id: "nova",
-      })
-    : [];
-
-  const nativeToolResults: AgiToolResult[] = toolResults.map((item) => {
-    const native = nativeCalls.find((call) => call.id === item.id);
-    return {
-      id: item.id,
-      name: native?.name ?? item.name.replace(".", "__"),
-      qualified_name: item.name,
-      result: item.result,
-      ok: item.executed,
-    };
-  });
-
-  const executedReads = toolResults.filter((item) => item.executed);
+  let currentCompletion = first;
+  let currentEnvelope = parseAgiMcpEnvelope(first.text);
+  let currentNativeCalls = first.tool_calls ?? [];
   let finalCompletion = first;
   let finalReply = publicReplyFromToolEnvelope({
     raw_text: first.text,
-    reply: first.tool_calls.length ? first.text : legacyEnvelope.reply,
-    tool_call_count: resolvedCalls.length,
+    reply: first.tool_calls.length ? first.text : currentEnvelope.reply,
+    tool_call_count: currentNativeCalls.length || currentEnvelope.tool_calls.length,
     phase: "initial",
   });
+  const allToolResults: AgiMcpToolResult[] = [];
 
-  if (executedReads.length > 0) {
+  for (let followUp = 0; followUp <= MAX_MCP_FOLLOW_UPS; followUp += 1) {
+    const resolvedCalls = currentNativeCalls.length > 0
+      ? toLegacyAgiMcpToolCalls(currentNativeCalls)
+      : currentEnvelope.tool_calls;
+
+    const roundResults = resolvedCalls.length
+      ? await executeAgiMcpToolCalls(resolvedCalls, {
+          project_id: params.project_id,
+          allow_actions: Boolean(params.allow_actions),
+          parent_run_id: null,
+          source_agi_id: "nova",
+        })
+      : [];
+
+    allToolResults.push(...roundResults);
+    finalReply = publicReplyFromToolEnvelope({
+      raw_text: currentCompletion.text,
+      reply: currentCompletion.tool_calls?.length ? currentCompletion.text : currentEnvelope.reply,
+      tool_call_count: resolvedCalls.length,
+      phase: followUp === 0 ? "initial" : "post-tool",
+    });
+
+    const executedReads = roundResults.some((item) => item.executed);
+    const hasMoreRounds = executedReads && resolvedCalls.length > 0 && followUp < MAX_MCP_FOLLOW_UPS;
+    if (!hasMoreRounds) break;
+
     await recordIntermediateUsage({
       project_id: params.project_id,
       thread_id: threadId,
-      completion: first,
+      completion: currentCompletion,
       trace_id: traceId,
-      phase: "mcp-planning",
+      phase: "mcp-planning-" + String(followUp + 1),
       session_id: session.session_id,
+    });
+
+    const nativeToolResults: AgiToolResult[] = roundResults.map((item) => {
+      const native = currentNativeCalls.find((call) => call.id === item.id);
+      return {
+        id: item.id,
+        name: native?.name ?? item.name.replace(".", "__"),
+        qualified_name: item.name,
+        result: item.result,
+        ok: item.executed,
+      };
     });
 
     const followUpMessages: AgiModelMessage[] = [
       ...baseMessages,
       {
         role: "assistant",
-        content: first.text || legacyEnvelope.reply || "Voy a consultar las herramientas disponibles.",
+        content: currentCompletion.text || currentEnvelope.reply || "Voy a consultar las herramientas disponibles.",
       },
-      { role: "user", content: buildAgiMcpResultBlock(toolResults) },
+      { role: "user", content: buildAgiMcpResultBlock(roundResults) },
     ];
+
     finalCompletion = await completeAgi({
       messages: followUpMessages,
-      timeout_ms: 40_000,
+      timeout_ms: FOLLOW_UP_MCP_TIMEOUT_MS,
       oidc_token: params.oidc_token,
       tools: nativeMcpTools,
-      tool_calls: nativeCalls,
+      tool_calls: currentNativeCalls,
       tool_results: nativeToolResults,
       web_search: webSearchRequired,
       web_max_uses: webSearchRequired ? 8 : undefined,
     });
-    const followUpEnvelope = parseAgiMcpEnvelope(finalCompletion.text);
-    finalReply = publicReplyFromToolEnvelope({
-      raw_text: finalCompletion.text,
-      reply: followUpEnvelope.reply,
-      tool_call_count: followUpEnvelope.tool_calls.length,
-      phase: "post-tool",
-    });
+
+    currentCompletion = finalCompletion;
+    currentEnvelope = parseAgiMcpEnvelope(finalCompletion.text);
+    currentNativeCalls = finalCompletion.tool_calls ?? [];
   }
 
+  const toolResults = allToolResults;
   if (!finalReply) {
     finalReply = toolResults.some((item) => item.needs_approval)
       ? "Preparé la solicitud para revisión mediante Owner Gate. No ejecuté ninguna acción."
