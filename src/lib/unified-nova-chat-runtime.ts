@@ -198,6 +198,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     web_max_uses: webSearchRequired ? 8 : undefined,
   });
 
+  const maxFollowUps = engineeringTask ? MAX_MCP_FOLLOW_UPS : 1;
   let currentCompletion = first;
   let currentEnvelope = parseAgiMcpEnvelope(first.text);
   let currentNativeCalls = first.tool_calls ?? [];
@@ -210,7 +211,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   });
   const allToolResults: AgiMcpToolResult[] = [];
 
-  for (let followUp = 0; followUp <= MAX_MCP_FOLLOW_UPS; followUp += 1) {
+  for (let followUp = 0; followUp <= maxFollowUps; followUp += 1) {
     const resolvedCalls = currentNativeCalls.length > 0
       ? toLegacyAgiMcpToolCalls(currentNativeCalls)
       : currentEnvelope.tool_calls;
@@ -233,7 +234,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     });
 
     const executedReads = roundResults.some((item) => item.executed);
-    const hasMoreRounds = executedReads && resolvedCalls.length > 0 && followUp < MAX_MCP_FOLLOW_UPS;
+    const hasMoreRounds = executedReads && resolvedCalls.length > 0 && followUp < maxFollowUps;
     if (!hasMoreRounds) break;
 
     await recordIntermediateUsage({
