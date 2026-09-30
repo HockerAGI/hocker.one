@@ -121,6 +121,14 @@ function allowedGithubRepositories(): Set<string> {
       .map((item) => item.toLowerCase()),
   );
 }
+function isAllowedGithubRepository(repository: string): boolean {
+  const normalized = String(repository ?? "").trim().toLowerCase();
+  if (allowedGithubRepositories().has(normalized)) return true;
+
+  const [owner] = normalized.split("/");
+  const allowedOwner = String(process.env.HOCKER_GITHUB_ORG ?? "HockerAGI").trim().toLowerCase();
+  return Boolean(owner) && owner === allowedOwner;
+}
 
 function githubRepository(args: Record<string, unknown>): string {
   const explicit = String(
@@ -228,8 +236,8 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
   }
 
   const repository = githubRepository(args);
-  if (!allowedGithubRepositories().has(repository.toLowerCase())) {
-    throw new Error(`Repositorio GitHub fuera de allowlist: ${repository}`);
+  if (!isAllowedGithubRepository(repository)) {
+    throw new Error(`Repositorio GitHub fuera de allowlist/namespace Hocker: ${repository}`);
   }
 
   if (GITHUB_FILE_TOOLS.has(tool)) {
@@ -238,6 +246,13 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
       args.branch ?? args.branch_name ?? args.target_branch ?? args.head_branch,
       "branch",
     );
+
+    if (["update_file", "create_or_update_file"].includes(tool)) {
+      const expectedSha = String(args.sha ?? args.expected_sha ?? "").trim();
+      if (!expectedSha) {
+        throw new Error("Modificar un archivo existente requiere SHA observado (sha/expected_sha).");
+      }
+    }
   }
 
   if (tool === "create_branch" || tool === "repo.create_branch") {
@@ -275,8 +290,8 @@ export function assertMcpReadToolPolicy(
 
   if (provider === "github") {
     const repository = githubReadRepository(args);
-    if (!allowedGithubRepositories().has(repository.toLowerCase())) {
-      throw new Error(`Repositorio GitHub fuera de allowlist de lectura: ${repository}`);
+    if (!isAllowedGithubRepository(repository)) {
+      throw new Error(`Repositorio GitHub fuera de allowlist/namespace Hocker para lectura: ${repository}`);
     }
     assertSafeGitHubReadPath(args.path);
   }

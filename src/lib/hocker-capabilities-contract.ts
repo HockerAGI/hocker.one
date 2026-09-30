@@ -97,6 +97,25 @@ const FINAL_BUTTONS = ["Ver resumen", "Enviar a producción", "No enviar", "Desh
 
 const CAPABILITY_DEFINITIONS: HockerCapabilityDefinition[] = [
   {
+    key: "application_delivery",
+    label: "Crear, desarrollar y mantener apps / proyectos",
+    category: "code",
+    owner_agi: "nova",
+    support_agis: ["hostia", "vertx", "jurix"],
+    app_key: "hocker-one",
+    tool_keys: ["github", "vercel", "supabase"],
+    base_status: "partial",
+    mode: "owner_gate",
+    requires_owner_gate: true,
+    can_read: true,
+    can_write: true,
+    can_generate: true,
+    can_execute_now: false,
+    user_visible: true,
+    current_limit: "NOVA puede inspeccionar repositorios, analizar cambios y proponer código para apps nuevas o existentes. GitHub/Vercel/Supabase siguen sujetos a Owner Gate y las AGIs no reciben permisos globales de acción.",
+    next_step: "Crear o seleccionar repo → inspeccionar estado real → crear branch → modificar/corregir/integrar → validar CI/Preview → PR → merge protegido → deploy exact-SHA → reconciliar control plane.",
+  },
+  {
     key: "nova_native_chat",
     label: "Chat nativo NOVA",
     category: "core",
