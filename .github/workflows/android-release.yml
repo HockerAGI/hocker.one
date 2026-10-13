@@ -91,7 +91,7 @@ jobs:
         run: bash .github/scripts/android-build-verify.sh
 
       - name: Upload verification-only APK and AAB
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: hocker-one-not-for-production-${{ env.ANDROID_VERSION_NAME }}
           path: |
@@ -172,7 +172,7 @@ jobs:
         run: bash .github/scripts/android-build-verify.sh
 
       - name: Upload production-signed APK and AAB
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: hocker-one-production-${{ env.ANDROID_VERSION_NAME }}
           path: |
