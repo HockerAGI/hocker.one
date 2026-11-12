@@ -29,14 +29,14 @@ const COMMAND_NAMES = [
 export const commandSchema = z.object({
   command: z.enum(COMMAND_NAMES),
   node_id: z.string().min(3).max(50),
-  payload: z.record(z.unknown()).default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
 });
 
 export const eventSchema = z.object({
   type: z.string().min(2).max(100),
   message: z.string().min(1).max(500),
   level: z.enum(["info", "warn", "error"]).default("info"),
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const orderItemSchema = z.object({
