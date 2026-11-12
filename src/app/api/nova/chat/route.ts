@@ -29,7 +29,7 @@ const ChatSchema = z.object({
   allow_actions: z.boolean().default(false),
   user_id: z.string().nullable().optional(),
   user_email: z.string().email().nullable().optional(),
-  context_data: z.record(z.unknown()).optional(),
+  context_data: z.record(z.string(), z.unknown()).optional(),
 });
 
 type NovaChatResponse = {
