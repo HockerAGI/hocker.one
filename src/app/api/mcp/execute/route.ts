@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 const ExecuteSchema = z.object({
   provider: z.enum(MCP_PROVIDER_IDS),
   tool: z.string().min(1).max(160),
-  args: z.record(z.unknown()).optional(),
+  args: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(req: NextRequest) {
