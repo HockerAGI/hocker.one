@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
 import {
   executeGitHubCreateRepository,
   getGitHubRuntimeToken,
@@ -140,6 +141,7 @@ function parseRepository(payload: JsonRecord): { owner: string; repo: string; fu
   if (!owner || !repo) throw new Error("Repositorio inválido. Usa formato owner/repo.");
 
   const fullName = `${owner}/${repo}`;
+  assertGithubRepositoryWriteAuthorized(fullName);
   const allowedOrg = envValue("HOCKER_GITHUB_ORG") || "HockerAGI";
   const exactAllowed = allowedRepositories().has(fullName);
   const orgAllowed = owner === allowedOrg;

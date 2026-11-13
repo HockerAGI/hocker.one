@@ -1,4 +1,5 @@
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
 
 export const MCP_PROVIDER_IDS = ["supabase", "vercel", "github", "openai", "base44"] as const;
 export type McpProviderId = string;
@@ -236,6 +237,7 @@ function assertGitHubMutationPolicy(tool: string, args: Record<string, unknown>)
   }
 
   const repository = githubRepository(args);
+  assertGithubRepositoryWriteAuthorized(repository);
   if (!isAllowedGithubRepository(repository)) {
     throw new Error(`Repositorio GitHub fuera de allowlist/namespace Hocker: ${repository}`);
   }
