@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { reconcileProjectContinuity } from "@/lib/project-continuity";
+import { getNovaZeroCreditSnapshot } from "@/lib/nova-zero-credit-snapshot";
 import { sanitizePublicError } from "@/lib/sanitize-error";
 
 export const dynamic = "force-dynamic";
@@ -40,9 +41,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await reconcileProjectContinuity();
+    const observation = getNovaZeroCreditSnapshot()
+      .then((snapshot) => ({ ok: true as const, snapshot }))
+      .catch(() => ({ ok: false as const, reason: "NOVA_ZERO_CREDIT_OBSERVATION_UNAVAILABLE" }));
+    const [result, zeroCreditObservation] = await Promise.all([
+      reconcileProjectContinuity(), observation,
+    ]);
     return NextResponse.json({
       ...result,
+      zero_credit_observation: zeroCreditObservation,
       trace_id: traceId,
       reconciled: true,
       manifest_activated: false,
