@@ -105,6 +105,31 @@ function publicReplyFromToolEnvelope(input: {
   return safeText(input.raw_text);
 }
 
+/**
+ * One authoritative routing decision used by execution and both API fallback
+ * guards. Never infer "free-only" from a smaller subset of these conditions.
+ */
+export function decideNovaChatRoutes(input: {
+  project_id: string;
+  message: string;
+  allow_actions?: boolean;
+  tools_requested?: string[];
+}): { webSearchRequired: boolean; engineeringTask: boolean; freeOnlyChat: boolean } {
+  const specialistId = routeChatProfile(input.message);
+  const webSearchRequired = input.message.trim().length > 0 && (
+    specialistId === "curvewind"
+    || /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|actual|reciente|hoy|latest|research|auditoría|auditoria)\b/i.test(input.message)
+  );
+  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(input.message);
+  const freeOnlyChat = !engineeringTask && !webSearchRequired && specialistId !== "curvewind" &&
+    novaChatFreeOnlyRequest({
+      project_id: input.project_id, message: input.message,
+      allow_actions: input.allow_actions,
+      tools_requested: Boolean(input.tools_requested?.length),
+    });
+  return { webSearchRequired, engineeringTask, freeOnlyChat };
+}
+
 export async function runToolEnabledUnifiedNovaChat(params: {
   project_id: string;
   thread_id?: string | null;
@@ -153,13 +178,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     },
   });
 
-  const webSearchRequired = params.message.trim().length > 0 && (
-    specialist.id === "curvewind"
-    || /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|actual|reciente|hoy|latest|research|auditoría|auditoria)\b/i.test(params.message)
-  );
-  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(params.message);
-  const freeOnlyChat = !engineeringTask && !webSearchRequired && specialist.id !== "curvewind" &&
-    novaChatFreeOnlyRequest({ project_id: params.project_id, message: params.message, allow_actions: params.allow_actions, tools_requested: Boolean(params.tools_requested?.length) });
+  const { webSearchRequired, engineeringTask, freeOnlyChat } = decideNovaChatRoutes(params);
   const routes = configuredAgiRoutes(params.oidc_token, { free_only: freeOnlyChat });
   if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
