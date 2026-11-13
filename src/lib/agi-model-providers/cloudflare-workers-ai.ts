@@ -61,6 +61,10 @@ export const cloudflareWorkersAiProvider: AgiModelProvider = {
           body: JSON.stringify({
             model: CF_FREE_MODEL, messages, temperature: 0.3,
             max_tokens: CF_MAX_OUTPUT_TOKENS, stream: false,
+            // This reasoning-capable model can otherwise exhaust a small free-tier
+            // response budget on internal reasoning and return content: null.
+            // Confirmed against the native Workers AI endpoint with a text response.
+            chat_template_kwargs: { enable_thinking: false },
           }),
         },
       );

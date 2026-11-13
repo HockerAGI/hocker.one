@@ -51,7 +51,7 @@ function readableError(value: unknown): string {
 
 function serviceLabel(status: string): string {
   if (status === "online") return "Listo";
-  if (status === "offline") return "Sin conexión";
+  if (status === "offline") return "Runtime dedicado sin señal";
   if (status === "configured") return "Pendiente";
   return "Comprobando";
 }
@@ -275,7 +275,7 @@ export default function NovaRealtimeChat() {
 
       <footer className="border-t border-white/[0.05] bg-[#030711]/94 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-xl sm:px-5">
         <div className="mx-auto flex w-full max-w-[860px] items-end gap-2 rounded-[22px] border border-white/[0.10] bg-white/[0.04] p-2.5 focus-within:border-sky-300/30">
-          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder={novaStatus === "offline" ? "NOVA está sin conexión" : "Escribe a NOVA…"} className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base text-white outline-none placeholder:text-slate-600" aria-label="Mensaje para NOVA" />
+          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Escribe a NOVA…" className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base text-white outline-none placeholder:text-slate-600" aria-label="Mensaje para NOVA" />
           <button type="button" onClick={() => void send()} disabled={!canSend} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-300 text-slate-950 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Enviar">{sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}</button>
         </div>
       </footer>
