@@ -45,5 +45,7 @@ test("native model call is bounded, request logs off, one attempt, no paid model
   assert.match(provider,/fallback_eligible: false/);
   assert.match(provider,/tool_calls: \[\]/);
   assert.match(provider,/CF_MAX_INPUT_CHARS/);
+  assert.match(provider,/chat_template_kwargs: \{ enable_thinking: false \}/);
+  assert.match(provider,/CLOUDFLARE_EMPTY_RESPONSE/);
   assert.doesNotMatch(provider,/executeAgiMcpToolCalls|\/api\/chat|\.rpc\(|\.insert\(/);
 });
