@@ -29,10 +29,20 @@ export function novaChatFreeOnlyRequest(input: {
   project_id: string;
   message: string;
   allow_actions?: boolean;
+  tools_requested?: boolean;
 }): boolean {
   if (process.env.NOVA_CHAT_FREE_ONLY !== "true") return false;
-  if (input.project_id !== "hocker-one" || input.allow_actions) return false;
+  if (input.project_id !== "hocker-one" || input.allow_actions || input.tools_requested) return false;
   const message = String(input.message ?? "").trim();
-  if (!message) return false;
-  return !/\b(investig|investiga|research|latest|benchmark|compara|fuentes|citas|auditor|hoy|reciente|actual|app|aplicaci[oó]n|repo|repositorio|c[oó]digo|codigo|bug|issue|fix|corrige|modifica|actualiza|implementa|integra|despliega|deploy|servidor|herramienta|tool|github|vercel|supabase|api|mcp|workflow|automatiza|apuesta|casino|pron[oó]stico)\b/i.test(message);
+  if (!message || message.length > 500) return false;
+
+  // Opt IN only for self-contained conversational phrasing. Unknown intents
+  // remain on their existing governed provider/tool-capable route.
+  const conversational = /^(hola\b|buen[oa]s?\b|saludos\b|responde\b|explica\b|define\b|cu[eé]ntame\b|cuentame\b|qu[eé] es\b|que es\b|c[oó]mo est[aá]s\b|dime\b|escribe\b|redacta\b|resume\b|gracias\b)/i.test(message);
+  if (!conversational) return false;
+
+  // Deny tool, freshness, financial, engineering or account-state intent,
+  // even when phrased as "responde..." or "dime...".
+  const toolIntent = /\b(base44|apps?|aplicaci[oó]n|lista|listar|listado|list\b|lists\b|consulta|consultar|buscar|busca|fetch|obt[eé]n|obtener|muestra|mostrar|verifica|verificar|check|archivo|file|repositor|repo|repositorio|pull|issue|github|git|vercel|supabase|openai|mcp|tool|herramienta|api|servidor|server|deploy|despliegue|dominio|dns|cron|logs?|registro|workflow|automatiza|automatizar|c[oó]digo|codigo|programa|programar|bug|corrige|modifica|actualiza|implementa|integra|investig|fuentes|citas|research|compara|hoy|reciente|actual|realtime|estado|status|memoria|correo|email|calendario|crm|pagos?|casino|apuesta|pron[oó]stico)\b/i.test(message);
+  return !toolIntent;
 }
