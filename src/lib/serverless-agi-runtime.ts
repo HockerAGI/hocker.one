@@ -1,3 +1,4 @@
+import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
 import { createHash, randomUUID } from "node:crypto";
 import { HOCKER_AGI_CANON_VERSION, type HockerAgiCanonRecord } from "@/lib/hocker-agi-canon";
 import {
@@ -150,6 +151,7 @@ function profilePrompt(profile: AgiProfile): string {
 }
 
 export function serverlessGatewayConfigured(oidcToken?: string | null): boolean {
+  if (cloudflareZeroCreditMode()) return false;
   return gatewayCredentials(oidcToken).length > 0;
 }
 
@@ -159,6 +161,7 @@ export async function callServerlessAgiModel(args: {
   timeout_ms?: number;
   oidc_token?: string | null;
 }): Promise<ModelCompletion> {
+  if (cloudflareZeroCreditMode()) throw new Error("ZERO_CREDIT_SERVERLESS_GATEWAY_DISABLED");
   const credentials = gatewayCredentials(args.oidc_token);
   if (!credentials.length) throw new Error("AI_GATEWAY_AUTH_NOT_CONFIGURED");
 
@@ -318,6 +321,8 @@ export async function runServerlessAgiWorkerOnce(params: {
   requested_by?: string | null;
   oidc_token?: string | null;
 }): Promise<JsonRecord> {
+  // Never claim a task that would need an unapproved paid model.
+  if (cloudflareZeroCreditMode()) return { ok: false, processed: false, reason: "ZERO_CREDIT_SERVERLESS_WORKER_PAUSED" };
   const workerId = `hocker-one-serverless:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
 

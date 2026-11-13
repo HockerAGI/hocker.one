@@ -1,3 +1,4 @@
+import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -401,6 +402,17 @@ export async function POST(req: Request): Promise<Response> {
       detail: localError instanceof Error ? localError.message.slice(0, 240) : "unknown",
       request_trace_id: requestTraceId,
     });
+  }
+
+  // In explicit Free-only mode, NEVER fall back to the dedicated runtime:
+  // its provider plan and token spending controls have not been certified.
+  if (cloudflareZeroCreditMode()) {
+    return NextResponse.json({
+      ok: false, error: "NOVA Free-only inference was unavailable; no paid fallback executed.",
+      meta: { ...injectedMeta, runtime_primary: "hocker-one-unified",
+        dedicated_fallback_used: false, cloudflare_free_only: true,
+        request_trace_id: requestTraceId },
+    }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 
   if (!baseUrl || !key) {
