@@ -43,6 +43,6 @@ export function novaChatFreeOnlyRequest(input: {
 
   // Deny tool, freshness, financial, engineering or account-state intent,
   // even when phrased as "responde..." or "dime...".
-  const toolIntent = /\b(base44|apps?|aplicaci[oó]n|lista|listar|listado|list\b|lists\b|consulta|consultar|buscar|busca|fetch|obt[eé]n|obtener|muestra|mostrar|verifica|verificar|check|archivo|file|repositor|repo|repositorio|pull|issue|github|git|vercel|supabase|openai|mcp|tool|herramienta|api|servidor|server|deploy|despliegue|dominio|dns|cron|logs?|registro|workflow|automatiza|automatizar|c[oó]digo|codigo|programa|programar|bug|corrige|modifica|actualiza|implementa|integra|investig|fuentes|citas|research|compara|hoy|reciente|actual|realtime|estado|status|memoria|correo|email|calendario|crm|pagos?|casino|apuesta|pron[oó]stico)\b/i.test(message);
+  const toolIntent = /\b(base44|apps?|aplicaci[oó]n|lista|listar|listado|list\b|lists\b|consulta|consultar|buscar|busca|fetch|obt[eé]n|obtener|muestra|mostrar|verifica|verificar|check|archivo|file|repositor|repo|repositorio|pull|issue|github|git|vercel|supabase|openai|mcp|tool|herramienta|api|servidor|server|deploy|despliegue|dominio|dns|cron|logs?|registro|workflow|automatiza|automatizar|c[oó]digo|codigo|programa|programar|bug|error|benchmark|corrige|modifica|actualiza|implementa|integra|investig|fuentes|citas|research|compara|hoy|reciente|actual|realtime|estado|status|memoria|correo|email|calendario|crm|pagos?|casino|apuesta|pron[oó]stico)\b/i.test(message);
   return !toolIntent;
 }
