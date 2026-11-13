@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, ChevronLeft, CircleAlert, Info, Loader2, RotateCw, Send, Sparkles } from "lucide-react";
+import { Bot, ChevronLeft, CircleAlert, Cpu, Info, Loader2, RotateCw, Send, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { DraftCard } from "@/components/DraftCard";
 import type { ChatActionDraft, Msg, QueueLock, RuntimeAction, RuntimeSummary } from "@/components/nova-chat-types";
@@ -240,6 +240,7 @@ export default function NovaRealtimeChat() {
           <Link href="/owner" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-label="Volver a Inicio"><ChevronLeft className="h-5 w-5" /></Link>
           <Sparkles className="h-4 w-4 text-sky-300" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">NOVA</p><p className="text-xs text-slate-500">{serviceLabel(novaStatus)}</p></div>
+          <Link href="/chat/local" className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-sky-300/20 px-2.5 text-xs font-medium text-sky-200 hover:bg-sky-300/10" title="Preflight WebGPU sin créditos ni ejecución"><Cpu className="h-4 w-4" /><span className="hidden sm:inline">Local</span></Link>
           {queueLock.blocking_count > 0 ? <Link href="/owner/actions" className="rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">{queueLock.blocking_count} por aprobar</Link> : null}
           <button type="button" onClick={() => setShowDetail((value) => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-medium text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-expanded={showDetail}><Info className="h-4 w-4" />Detalle</button>
         </div>
