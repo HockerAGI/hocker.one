@@ -15,7 +15,7 @@ const CreateProductSchema = z.object({
   currency: z.string().max(3).default("MXN"),
   stock: z.number().int().nonnegative().max(10000000).default(0),
   active: z.boolean().default(true),
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET(req: Request): Promise<Response> {

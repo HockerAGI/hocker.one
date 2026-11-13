@@ -28,7 +28,7 @@ export const ChidoApprovalRequestSchema = z.object({
 export const ChidoApprovalDecisionSchema = z.object({
   approval_request_id: z.string().min(1, "Falta approval_request_id."),
   decision: z.enum(["approved", "rejected"], {
-    errorMap: () => ({ message: "decision debe ser approved o rejected." }),
+    error: () => "decision debe ser approved o rejected.",
   }),
   guardian_agi: z.string().min(1, "Falta guardian_agi."),
   reason: z.string().optional().default(""),

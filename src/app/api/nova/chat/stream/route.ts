@@ -16,7 +16,7 @@ const StreamChatSchema = z.object({
   mode: z.enum(["auto", "fast", "pro"]).default("auto"),
   allow_actions: z.boolean().default(false),
   tools_requested: z.array(z.string()).default([]),
-  context_data: z.record(z.unknown()).optional(),
+  context_data: z.record(z.string(), z.unknown()).optional(),
 });
 
 type NovaChatResponse = {

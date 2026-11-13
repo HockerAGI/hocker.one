@@ -24,7 +24,7 @@ const ActionSchema = z.object({
   tool_key: z.string().min(1).nullable().optional(),
   action_type: z.string().min(1),
   title: z.string().min(1),
-  payload: z.record(z.unknown()).default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
   risk_level: z.enum(["low", "medium", "high", "critical"]).default("medium"),
   dry_run: z.boolean().default(true),
   requires_approval: z.boolean().default(true),
