@@ -68,14 +68,17 @@ test("scoped chat cannot change AGI provider defaults or enable model tools", as
   assert.match(runtime, /free_only: freeOnlyChat/);
   assert.match(provider, /input.tools\?\.length/);
   assert.match(runtime, /scoped_cloudflare_free_only: freeOnlyChat/);
-  assert.match(runtime, /tools_requested: Boolean\(params.tools_requested\?\.length\)/);
+  assert.match(runtime, /export function decideNovaChatRoutes/);
+  assert.match(runtime, /const engineeringTask =/);
+  assert.match(runtime, /const webSearchRequired =/);
+  assert.match(runtime, /tools_requested: Boolean\(input.tools_requested\?\.length\)/);
 });
 
 test("both NOVA API variants fail closed for simple scoped-free chat", async () => {
   const direct = await read("src/app/api/nova/chat/route.ts");
   const stream = await read("src/app/api/nova/chat/stream/route.ts");
   for (const src of [direct, stream]) {
-    assert.match(src,/cloudflareZeroCreditMode\(\) \|\| novaChatFreeOnlyRequest/);
+    assert.match(src,/cloudflareZeroCreditMode\(\) \|\| decideNovaChatRoutes/);
     assert.match(src,/no paid fallback executed/);
     assert.match(src,/requireProjectRole/);
   }
@@ -91,12 +94,12 @@ test("explicit zero-credit mode cannot fall back to Vercel, Gemini, Anthropic or
 
 test("streaming chat cannot fall back to uncertified dedicated runtime in strict free-only mode", async () => {
   const stream = await read("src/app/api/nova/chat/stream/route.ts");
-  const gate = stream.indexOf("if (cloudflareZeroCreditMode() || novaChatFreeOnlyRequest(");
+  const gate = stream.indexOf("if (cloudflareZeroCreditMode() || decideNovaChatRoutes(");
   const fallback = stream.indexOf("const upstream = await fetch(");
   const local = stream.indexOf("await runToolEnabledUnifiedNovaChat(");
   assert.ok(local >= 0 && gate > local && fallback > gate, "strict gate must follow local inference and precede fallback");
   assert.match(stream.slice(gate, fallback), /no paid fallback executed/);
-  assert.match(stream.slice(gate, fallback), /allow_actions: false, tools_requested: parsed.data.tools_requested.length > 0/);
+  assert.match(stream.slice(gate, fallback), /allow_actions: false, tools_requested: parsed.data.tools_requested/);
   assert.match(stream.slice(gate, fallback), /sse\("done", \{ ok: false \}\)/);
   assert.match(stream, /allow_actions: false/);
 });
