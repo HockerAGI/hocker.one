@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 // Full production snapshot from supabase_migrations.schema_migrations.
@@ -142,4 +143,17 @@ test("Hocker One migration ledger matches production version/name multiplicity e
     [...expected.entries()].sort(),
     "local Supabase migration ledger must match production version/name multiplicity exactly",
   );
+});
+
+
+test("recovered production migration SQL matches exact recorded source hashes", async () => {
+  const expected = [
+    ["20260830153247_revoke_dead_public_agi_catalog_view_grants.sql", "239eb9922cc9d7c9be1934de8ffc06a9"],
+    ["20260902225257_rollback_operational_event_fabric.sql", "eb6f12fe9c6b8be8065994e12646b007"],
+  ];
+  for (const [filename, productionMd5] of expected) {
+    const sql = await readFile(new URL(`../supabase/migrations/${filename}`, import.meta.url), "utf8");
+    const actualMd5 = createHash("md5").update(sql).digest("hex");
+    assert.equal(actualMd5, productionMd5, `${filename} must match the original Supabase production statements[1]`);
+  }
 });
