@@ -26,7 +26,7 @@ export const cloudflareWorkersAiProvider: AgiModelProvider = {
         code: "CLOUDFLARE_FREE_GATE_CLOSED", fallback_eligible: false,
       });
     }
-    if (input.web_search || input.tool_calls?.length || input.tool_results?.length) {
+    if (input.web_search || input.tools?.length || input.tool_calls?.length || input.tool_results?.length) {
       throw new AgiProviderError("Cloudflare tools/web search not certified", {
         code: "CLOUDFLARE_UNCERTIFIED_CAPABILITY", fallback_eligible: false,
       });
