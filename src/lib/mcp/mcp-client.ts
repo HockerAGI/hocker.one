@@ -73,6 +73,60 @@ const CLIENT_INFO = {
   version: "1.0.0",
 } as const;
 
+/**
+ * Streamable HTTP may answer a JSON-RPC request as an SSE event sequence
+ * rather than JSON. Accept only a bounded JSON-RPC reply with the matching id.
+ */
+async function readMcpResponse(response: Response, requestId: string): Promise<McpResponse> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("text/event-stream")) {
+    const parsed = (await response.json()) as McpResponse;
+    if (!parsed || parsed.jsonrpc !== "2.0" || String(parsed.id) !== requestId) {
+      throw new Error("MCP_RESPONSE_ID_MISMATCH");
+    }
+    return parsed;
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("MCP_SSE_RESPONSE_MISSING_STREAM");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      totalBytes += next.value.byteLength;
+      if (totalBytes > 1_048_576) throw new Error("MCP_SSE_RESPONSE_TOO_LARGE");
+      buffer += decoder.decode(next.value, { stream: true });
+      // RFC-compatible streamable HTTP can leave the SSE connection open.
+      // Return the matching JSON-RPC reply immediately; do not await EOF.
+      buffer = buffer.replace(/\r\n/g, "\n");
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = frame.split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trimStart()).join("\n").trim();
+        if (data && data !== "[DONE]") {
+          try {
+            const event = JSON.parse(data) as McpResponse;
+            if (event?.jsonrpc === "2.0" && String(event.id) === requestId) return event;
+          } catch {
+            // Keepalive/non-JSON events are not tool results.
+          }
+        }
+        boundary = buffer.indexOf("\n\n");
+      }
+    }
+  } finally {
+    // Release the stream even when server keeps the event channel alive.
+    await reader.cancel().catch(() => {});
+  }
+  throw new Error("MCP_SSE_RESPONSE_ID_MISSING");
+}
+
 class McpModernNegotiationFallbackError extends Error {
   constructor(message: string) {
     super(message);
@@ -212,7 +266,7 @@ export class McpClient {
         this.state.status = "error";
         this.state.lastError = `HTTP ${response.status}: ${errorText.slice(0, 200)}`;
 
-        if (allowModernFallback && response.status === 400) {
+        if (allowModernFallback && [400, 404, 405, 406, 415].includes(response.status)) {
           throw new McpModernNegotiationFallbackError(
             `MCP ${this.config.id} does not accept the modern protocol probe`,
           );
@@ -221,7 +275,7 @@ export class McpClient {
         throw new Error(`MCP ${this.config.id} returned HTTP ${response.status}`);
       }
 
-      const mcpResponse = (await response.json()) as McpResponse;
+      const mcpResponse = await readMcpResponse(response, mcpRequest.id);
 
       if (mcpResponse.error) {
         this.state.status = "error";

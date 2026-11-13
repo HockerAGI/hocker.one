@@ -10,8 +10,8 @@ import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
 
 export type VercelMcpConfig = {
-  /** Vercel API token */
-  vercelToken: string;
+  /** OAuth resource access token issued for https://mcp.vercel.com, NOT a Vercel REST API token. */
+  oauthAccessToken: string;
   /** Vercel team ID (optional) */
   teamId?: string;
   /** Vercel project ID (optional) */
@@ -20,7 +20,15 @@ export type VercelMcpConfig = {
   mcpServerUrl?: string;
 };
 
-const VERCEL_API_BASE = "https://api.vercel.com";
+const VERCEL_OFFICIAL_MCP_URL = "https://mcp.vercel.com";
+
+function trustedVercelMcpUrl(urlString?: string): string {
+  const url = new URL(urlString || VERCEL_OFFICIAL_MCP_URL);
+  if (url.origin !== VERCEL_OFFICIAL_MCP_URL || url.username || url.password || url.search || url.hash) {
+    throw new Error("VERCEL_MCP_URL_NOT_TRUSTED");
+  }
+  return url.toString();
+}
 
 export class McpVercelConnector {
   private client: McpClient;
@@ -30,7 +38,7 @@ export class McpVercelConnector {
   constructor(config: VercelMcpConfig) {
     this.config = config;
 
-    const mcpUrl = config.mcpServerUrl ?? `${VERCEL_API_BASE}/v1/mcp`;
+    const mcpUrl = trustedVercelMcpUrl(config.mcpServerUrl);
 
     const providerConfig: McpProviderConfig = {
       id: "vercel",
@@ -38,12 +46,12 @@ export class McpVercelConnector {
       type: "vercel",
       url: mcpUrl,
       authHeaders: {
-        Authorization: `Bearer ${config.vercelToken}`,
+        Authorization: `Bearer ${config.oauthAccessToken}`,
         ...(config.teamId ? { "X-Vercel-Team-Id": config.teamId } : {}),
       },
       transport: "http",
       timeoutMs: 30_000,
-      enabled: Boolean(config.vercelToken),
+      enabled: Boolean(config.oauthAccessToken),
     };
 
     this.client = new McpClient(providerConfig);
@@ -209,7 +217,7 @@ export class McpVercelConnector {
  */
 export function createVercelMcpConnector(): McpVercelConnector {
   return new McpVercelConnector({
-    vercelToken: process.env.VERCEL_TOKEN ?? "",
+    oauthAccessToken: process.env.VERCEL_MCP_OAUTH_TOKEN ?? "",
     teamId: process.env.VERCEL_TEAM_ID,
     projectId: process.env.VERCEL_PROJECT_ID,
     mcpServerUrl: process.env.VERCEL_MCP_URL,
@@ -217,5 +225,13 @@ export function createVercelMcpConnector(): McpVercelConnector {
 }
 
 export function isVercelMcpConfigured(): boolean {
-  return Boolean(process.env.VERCEL_TOKEN);
+  // REST tokens are not OAuth access tokens for the Vercel MCP resource server.
+  if (!process.env.VERCEL_MCP_OAUTH_TOKEN) return false;
+  try {
+    trustedVercelMcpUrl(process.env.VERCEL_MCP_URL);
+    return true;
+  } catch {
+    // Never take other MCP providers down for a bad Vercel OAuth endpoint.
+    return false;
+  }
 }

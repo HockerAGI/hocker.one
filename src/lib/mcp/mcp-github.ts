@@ -20,7 +20,22 @@ export type GitHubMcpConfig = {
   mcpServerUrl?: string;
 };
 
-const GITHUB_MCP_DEFAULT_URL = "https://api.github.com/mcp";
+// GitHub remote MCP official read-only path. Never use api.github.com/mcp:
+// it is the REST API host and currently returns 404 for MCP requests.
+const GITHUB_MCP_DEFAULT_URL = "https://api.githubcopilot.com/mcp/readonly";
+
+function trustedReadOnlyGithubMcpUrl(input?: string): string {
+  if (!input) return GITHUB_MCP_DEFAULT_URL;
+  // A caller-supplied MCP URL must not receive GITHUB_TOKEN unless it is the
+  // GitHub-owned HTTPS origin and the server-side read-only toolset.
+  const url = new URL(input);
+  const validPath = /^\/mcp\/(?:readonly|x\/[a-z0-9_-]+\/readonly)\/?$/i.test(url.pathname);
+  if (url.origin !== "https://api.githubcopilot.com" || !validPath ||
+      url.username || url.password || url.search || url.hash) {
+    throw new Error("GITHUB_MCP_URL_NOT_TRUSTED_READ_ONLY");
+  }
+  return url.toString();
+}
 
 export class McpGitHubConnector {
   private client: McpClient;
@@ -30,7 +45,7 @@ export class McpGitHubConnector {
   constructor(config: GitHubMcpConfig) {
     this.config = config;
 
-    const mcpUrl = config.mcpServerUrl ?? GITHUB_MCP_DEFAULT_URL;
+    const mcpUrl = trustedReadOnlyGithubMcpUrl(config.mcpServerUrl);
 
     const providerConfig: McpProviderConfig = {
       id: "github",
@@ -39,7 +54,7 @@ export class McpGitHubConnector {
       url: mcpUrl,
       authHeaders: {
         Authorization: `Bearer ${config.githubToken}`,
-        Accept: "application/vnd.github.v3+json",
+        "X-MCP-Readonly": "true",
       },
       transport: "http",
       timeoutMs: 30_000,
@@ -312,5 +327,13 @@ export function createGitHubMcpConnector(): McpGitHubConnector {
 }
 
 export function isGitHubMcpConfigured(): boolean {
-  return Boolean(process.env.GITHUB_TOKEN);
+  if (!process.env.GITHUB_TOKEN) return false;
+  try {
+    trustedReadOnlyGithubMcpUrl(process.env.GITHUB_MCP_URL);
+    return true;
+  } catch {
+    // Fail this provider closed without aborting registration of Supabase,
+    // Vercel or other independently configured MCP providers.
+    return false;
+  }
 }
