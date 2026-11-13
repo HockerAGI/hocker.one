@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { isHockerAgiId } from "@/lib/hocker-agi-canon";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { submitSyntiaMemoryProposal } from "@/lib/syntia-memory-write-gate";
-import { classifyKnownWorkerFailure, FAILURE_DEFINITIONS, NOVA_FAILURE_CLASSIFIER_VERSION, type FailureCategory } from "@/lib/nova-failure-catalog";
+import { classifyKnownWorkerFailure, FAILURE_DEFINITIONS, NOVA_FAILURE_CLASSIFIER_VERSION, selectNewLearningGroups, type FailureCategory } from "@/lib/nova-failure-catalog";
 
 const PROJECT_ID = "hocker-one";
 const WINDOW_HOURS = 24;
@@ -72,17 +72,47 @@ export async function processVerifiedFailureLearning() {
   const recurring = [...groups.values()].filter((g) => g.task_ids.size >= 2)
     .sort((a, b) => b.task_ids.size - a.task_ids.size ||
       a.agi_id.localeCompare(b.agi_id) || a.category.localeCompare(b.category));
-  let proposed = 0;
-  let deduplicated = 0;
-  let blocked = 0;
-  const inspectedGroups = Math.min(recurring.length, MAX_GROUPS_PER_TICK);
-
-  for (const group of recurring.slice(0, MAX_GROUPS_PER_TICK)) {
-    if (proposed >= MAX_CREATED_PER_TICK) break;
-    const rule = FAILURE_DEFINITIONS[group.category];
-    const sourceHash = createHash("sha256")
+  const annotated = recurring.map((group) => ({
+    group,
+    source_hash: createHash("sha256")
       .update([PROJECT_ID, group.agi_id, group.category, NOVA_FAILURE_CLASSIFIER_VERSION].join("|"))
-      .digest("hex");
+      .digest("hex"),
+  }));
+
+  // Read BOTH live proposals and active mirror entries before prioritizing work.
+  // A previously reviewed class must not starve a different new class.
+  const existingHashes = new Set<string>();
+  if (annotated.length) {
+    const hashes = annotated.map((item) => item.source_hash);
+    const sb = createAdminSupabase();
+    const [proposalsR, mirrorR] = await Promise.all([
+      sb.from("agi_learning_events").select("source_hash").eq("project_id", PROJECT_ID)
+        .in("status", ["pending_review", "approved"]).in("source_hash", hashes)
+        .limit(MAX_SCANNED),
+      sb.from("agi_memory_mirror").select("source_hash").eq("project_id", PROJECT_ID)
+        .eq("active", true).in("source_hash", hashes).limit(MAX_SCANNED),
+    ]);
+    if (proposalsR.error || mirrorR.error || !proposalsR.data || !mirrorR.data) {
+      throw new Error("NOVA_LEARNING_DEDUPLICATION_READ_FAILED");
+    }
+    for (const row of [...proposalsR.data, ...mirrorR.data]) {
+      if (typeof row.source_hash === "string") existingHashes.add(row.source_hash);
+    }
+  }
+
+  const fresh = selectNewLearningGroups(annotated, existingHashes, MAX_GROUPS_PER_TICK);
+  const eligibleCount = annotated.length - annotated.filter((g) => existingHashes.has(g.source_hash)).length;
+  let proposed = 0;
+  let deduplicated = annotated.length - eligibleCount;
+  let blocked = 0;
+  let inspectedGroups = 0;
+
+  for (const item of fresh) {
+    if (proposed >= MAX_CREATED_PER_TICK) break;
+    inspectedGroups += 1;
+    const group = item.group;
+    const rule = FAILURE_DEFINITIONS[group.category];
+    const sourceHash = item.source_hash;
 
     // Evidence is only UUID references and counts. Never persist the raw error,
     // user prompts, task input/output, tokens or untrusted instructions.
@@ -137,7 +167,7 @@ export async function processVerifiedFailureLearning() {
     analyzed: data.length,
     recurring_categories: recurring.length,
     inspected_groups: inspectedGroups,
-    deferred_categories: Math.max(0, recurring.length - inspectedGroups),
+    deferred_categories: Math.max(0, eligibleCount - inspectedGroups),
     proposed,
     deduplicated,
     blocked,

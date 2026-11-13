@@ -59,3 +59,26 @@ test("daily cron authenticates before learning and retains existing continuity b
   assert.match(code, /manifest_activated: false/);
   assert.match(code, /external_mutations: false/);
 });
+
+test("existing live proposals do not starve a fifth new failure class", () => {
+  const script = [
+    "import { selectNewLearningGroups } from './src/lib/nova-failure-catalog.ts';",
+    "const groups = ['a','b','c','d','e'].map((source_hash) => ({ source_hash }));",
+    "console.log(JSON.stringify(selectNewLearningGroups(groups, new Set(['a','b','c','d']), 4).map((x) => x.source_hash)));",
+  ].join("\n");
+  const run = spawnSync(process.execPath,
+    ["--experimental-strip-types", "--input-type=module", "--eval", script],
+    { cwd: new URL("../", import.meta.url), encoding: "utf8", timeout: 10_000 });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(JSON.parse(run.stdout.trim()), ["e"]);
+});
+
+test("deduplication reads both live learning proposals and active memory before capping new groups", async () => {
+  const code = await read("src/lib/nova-deterministic-learning.ts");
+  assert.match(code, /from\("agi_learning_events"\)/);
+  assert.match(code, /from\("agi_memory_mirror"\)/);
+  assert.match(code, /NOVA_LEARNING_DEDUPLICATION_READ_FAILED/);
+  assert.ok(code.indexOf("const fresh = selectNewLearningGroups") <
+    code.indexOf("for (const item of fresh)"));
+  assert.match(code, /deferred_categories: Math.max\(0, eligibleCount - inspectedGroups\)/);
+});

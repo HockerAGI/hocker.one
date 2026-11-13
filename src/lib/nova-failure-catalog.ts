@@ -50,3 +50,11 @@ export function classifyKnownWorkerFailure(raw: unknown): FailureCategory | null
   if (/^Free tier requests on this model are rate-limited\./i.test(error)) return "model_rate_limited";
   return null;
 }
+
+/** Eliminate previously published/pending candidates before applying bounded work caps. */
+export function selectNewLearningGroups<T extends { source_hash: string }>(
+  groups: readonly T[], existingHashes: ReadonlySet<string>, limit: number,
+): T[] {
+  return groups.filter((group) => !existingHashes.has(group.source_hash))
+    .slice(0, Math.max(0, limit));
+}
