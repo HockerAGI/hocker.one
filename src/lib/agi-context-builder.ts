@@ -1,11 +1,13 @@
 import { buildCanonicalProfilePrompt, requireCanonicalAgi } from "@/lib/hocker-agi-operational";
 import { loadAgiConversationContext } from "@/lib/agi-session-store";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { resolveApprovedMemoryIds } from "@/lib/agi-memory-approval-read";
+import type { MirrorPolicyRow } from "@/lib/agi-memory-policy";
 
 type JsonRecord = Record<string, unknown>;
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-type MemoryRow = {
+type MemoryRow = MirrorPolicyRow & {
   id: string;
   title: string;
   summary: string;
@@ -47,22 +49,28 @@ async function loadMemoryItems(input: {
   const now = new Date().toISOString();
   const { data, error } = await createAdminSupabase()
     .from("agi_memory_mirror")
-    .select("id,title,summary,target_agi_ids,client_id,memory_payload,confidence_score,freshness_score,source_hash,canonical_memory_key,valid_from,expires_at")
+    .select("id,project_id,active,safety_status,approved_by_nova,approved_by_syntia,approved_by_vertx,approved_by_jurix,learning_event_id,source_type,source_name,title,summary,target_agi_ids,client_id,memory_payload,confidence_score,freshness_score,source_hash,canonical_memory_key,valid_from,expires_at")
     .eq("project_id", input.project_id)
     .eq("active", true)
     .eq("safety_status", "safe")
+    .eq("approved_by_nova", true)
+    .eq("approved_by_syntia", true)
+    .eq("approved_by_vertx", true)
+    .eq("approved_by_jurix", true)
     .contains("target_agi_ids", [input.agi_id])
     .lte("valid_from", now)
     .order("freshness_score", { ascending: false })
     .order("confidence_score", { ascending: false })
-    .limit(20);
+    .limit(80);
 
   if (error) throw new Error(`AGI_MEMORY_READ_FAILED: ${error.message}`);
-  return ((data ?? []) as MemoryRow[]).filter((row) => {
+  const rows = (data ?? []) as MemoryRow[];
+  const eligible = await resolveApprovedMemoryIds(rows, input.project_id);
+  return rows.filter((row) => eligible.has(row.id)).filter((row) => {
     if (row.expires_at && row.expires_at <= now) return false;
     if (!row.client_id) return true;
     return Boolean(input.client_id) && row.client_id === input.client_id;
-  });
+  }).slice(0, 20);
 }
 
 export async function buildAgiInferenceContext(input: {
