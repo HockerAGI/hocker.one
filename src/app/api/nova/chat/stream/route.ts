@@ -176,6 +176,7 @@ export async function POST(req: Request): Promise<Response> {
             user_email: chatCtx.user.email ?? null,
             context_data: parsed.data.context_data,
             allow_actions: false,
+            tools_requested: parsed.data.tools_requested,
             oidc_token: req.headers.get("x-vercel-oidc-token"),
           });
           controller.enqueue(sse("message", {
@@ -195,7 +196,7 @@ export async function POST(req: Request): Promise<Response> {
 
         // The streaming endpoint must enforce the same strict financial policy
         // as /api/nova/chat: never fail open to a potentially paid provider.
-        if (cloudflareZeroCreditMode() || novaChatFreeOnlyRequest({ project_id: chatCtx.project_id, message: parsed.data.message, allow_actions: parsed.data.allow_actions })) {
+        if (cloudflareZeroCreditMode() || novaChatFreeOnlyRequest({ project_id: chatCtx.project_id, message: parsed.data.message, allow_actions: false, tools_requested: parsed.data.tools_requested.length > 0 })) {
           controller.enqueue(sse("error", {
             ok: false,
             error: "NOVA Free-only inference was unavailable; no paid fallback executed.",
