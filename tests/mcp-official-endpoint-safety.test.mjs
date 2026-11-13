@@ -49,6 +49,26 @@ test("MCP client parses bounded SSE JSON-RPC replies after modern negotiation fa
   assert.ok(output.init.capabilities.includes("tools"));
 });
 
+test("MCP SSE client returns the result without waiting for a long-lived event stream to close", () => {
+  const code = [
+    "import { McpClient } from './src/lib/mcp/mcp-client.ts';",
+    "globalThis.fetch = async (url,opts) => {",
+    "  const req=JSON.parse(opts.body);",
+    "  const result={jsonrpc:'2.0',id:req.id,result:req.method==='server/discover'?{capabilities:{tools:{}},serverInfo:{version:'test'}}:{tools:[]}};",
+    "  const wire='data: '+JSON.stringify(result)+'\\n\\n';",
+    "  const stream=new ReadableStream({start(controller){ controller.enqueue(new TextEncoder().encode(wire)); }});",
+    "  return new Response(stream,{status:200,headers:{'Content-Type':'text/event-stream'}});",
+    "};",
+    "const client=new McpClient({id:'github',name:'fixture',type:'github',url:'https://api.githubcopilot.com/mcp/readonly',timeoutMs:3000});",
+    "await client.initialize(); const list=await client.listTools(); console.log(JSON.stringify({count:list.length,status:client.status}));",
+  ].join("\n");
+  const r=spawnSync(process.execPath,["--experimental-strip-types","--input-type=module","--eval",code],{
+    cwd:new URL("../",import.meta.url),encoding:"utf8",timeout:7000,
+  });
+  assert.equal(r.status,0,r.stderr);
+  assert.deepEqual(JSON.parse(r.stdout.trim()),{count:0,status:"connected"});
+});
+
 test("MCP client rejects a response using a nonmatching JSON-RPC request ID", async () => {
   const client=await read("src/lib/mcp/mcp-client.ts");
   assert.match(client, /MCP_RESPONSE_ID_MISMATCH/);
