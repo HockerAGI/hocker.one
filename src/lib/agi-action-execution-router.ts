@@ -59,6 +59,16 @@ async function patchQueueItem(
   return data;
 }
 
+async function assertMcpDependencyComplete(projectId: string, payload: JsonRecord): Promise<void> {
+  const dependencyId = String(payload.depends_on_action_id ?? "").trim();
+  if (!dependencyId) return;
+
+  const dependency = await getQueueItem(projectId, dependencyId);
+  if (!["executed", "completed"].includes(String(dependency.status))) {
+    throw new Error(`Acción MCP bloqueada: la dependencia previa no está completada (${dependency.status}).`);
+  }
+}
+
 async function claimApprovedMcpAction(
   params: ExecuteParams,
   pending: AgiActionQueueRow,
@@ -115,8 +125,9 @@ async function executeApprovedMcpAction(
     throw new Error("Acción MCP sin contrato explícito de aprobación.");
   }
 
+  const payload = asRecord(pending.payload);
+  await assertMcpDependencyComplete(params.project_id, payload);
   const item = await claimApprovedMcpAction(params, pending);
-  const payload = asRecord(item.payload);
 
   try {
     const draft = validateDeferredMcpDraft({

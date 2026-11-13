@@ -173,8 +173,8 @@ const TOOL_CATALOG: RuntimeTool[] = [
     supports_realtime: false,
     dry_run_first: true,
     owner_gate_required: true,
-    implementation_status: "code_only",
-    next_step: "Validar executor de deployments, logs y dominios antes de habilitar escritura.",
+    implementation_status: "executor_ready",
+    next_step: "Executor Vercel disponible: lectura controlada y escritura sólo por cola + Owner Gate.",
     safe_note: "Deploys, dominios, logs y estado de producción.",
   },
   {

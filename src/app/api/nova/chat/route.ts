@@ -4,7 +4,7 @@ import { z } from "zod";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 import { requireProjectRole, toApiError } from "@/app/api/_lib";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
-import { materializeNovaGitHubActionsFromChat } from "@/lib/nova-github-action-materializer";
+import { materializeNovaApplicationDeliveryFromChat } from "@/lib/nova-application-delivery-materializer";
 import { materializeNovaMcpActionsFromUpstream } from "@/lib/nova-mcp-action-materializer";
 import {
   buildNovaCapabilitiesReply,
@@ -158,21 +158,33 @@ export async function POST(req: Request): Promise<Response> {
     queue_lock: queueLock,
   });
 
+  const routeThroughEngineeringRuntime =
+    draftPreview?.scope === "github_code";
+
   if (draftPreview && parsed.data.allow_actions) {
     try {
       const actionCtx = await requireProjectRole(chatCtx.project_id, ["owner", "admin", "operator"]);
       upstreamActionActorId = actionCtx.user.id;
-      localActionDraft = await materializeNovaGitHubActionsFromChat({
-        project_id: actionCtx.project_id,
-        message: parsed.data.message,
-        queue_lock: queueLock,
-        created_by: actionCtx.user.id,
-      }) as Record<string, unknown> | null;
+
+      // New-app bootstrap keeps its deterministic GitHub -> Vercel chain.
+      // Existing-app engineering always reaches the real NOVA tool loop so
+      // read-only inspection can happen before any mutation is proposed.
+      if (draftPreview.scope === "application_delivery") {
+        localActionDraft = (await materializeNovaApplicationDeliveryFromChat({
+          project_id: actionCtx.project_id,
+          message: parsed.data.message,
+          queue_lock: queueLock,
+          created_by: actionCtx.user.id,
+        })) as Record<string, unknown> | null;
+      }
     } catch (error) {
       const apiError = toApiError(error);
       return NextResponse.json(apiError.payload, { status: apiError.status });
     }
-  } else if (draftPreview) {
+  } else if (draftPreview && !routeThroughEngineeringRuntime) {
+    // Non-engineering action requests stay in the safe local draft path.
+    // Engineering requests must still execute READ-only MCP inspection even
+    // when allow_actions=false; writes remain blocked until Owner Gate.
     localActionDraft = draftPreview as Record<string, unknown>;
   }
 

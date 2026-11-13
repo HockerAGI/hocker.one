@@ -10,6 +10,7 @@ type QueueLockLike = {
 };
 
 type DraftScope =
+  | "application_delivery"
   | "github_code"
   | "supabase_data"
   | "vercel_cloud"
@@ -41,6 +42,50 @@ function hasAny(message: string, patterns: RegExp[]): boolean {
 
 function detectScope(message: string): DraftScope {
   if (hasAny(message, [/chido/i, /kyc/i, /retiro/i, /dep[oó]sito/i, /wallet/i, /apuesta/i, /pago/i, /casino/i])) return "chido_sensitive";
+  if (hasAny(message, [
+    /crear (una )?(nueva )?(app|aplicaci[oó]n|plataforma|proyecto)/i,
+    /nueva (app|aplicaci[oó]n|web|plataforma)/i,
+    /nuevo (repo|repositorio|proyecto)/i,
+    /bootstrap/i,
+    /provisionar (una )?(app|proyecto)/i,
+  ])) return "application_delivery";
+
+  const existingAppMutation = hasAny(message, [
+    /corrige/i,
+    /corregir/i,
+    /modifica/i,
+    /modificar/i,
+    /actualiza/i,
+    /actualizar/i,
+    /arregla/i,
+    /arreglar/i,
+    /repara/i,
+    /reparar/i,
+    /implementa/i,
+    /implementar/i,
+    /refactor/i,
+    /integra/i,
+    /integrar/i,
+    /mejora/i,
+    /mejorar/i,
+    /a(?:ñ|n)ade/i,
+    /agrega/i,
+    /cambia/i,
+    /cambiar/i,
+  ]) && hasAny(message, [
+    /\bapp\b/i,
+    /aplicaci[oó]n/i,
+    /plataforma/i,
+    /proyecto/i,
+    /sitio/i,
+    /\bweb\b/i,
+    /portal/i,
+    /sistema/i,
+    /\brepo\b/i,
+    /repositorio/i,
+  ]);
+
+  if (existingAppMutation) return "github_code";
   if (hasAny(message, [/github/i, /\brepo\b/i, /repositorio/i, /c[oó]digo/i, /\bbranch\b/i, /\brama\b/i, /\bpr\b/i, /pull request/i, /commit/i, /archivo/i, /\.tsx\b/i, /\.ts\b/i, /componente/i, /endpoint/i])) return "github_code";
   if (hasAny(message, [/supabase/i, /base de datos/i, /\bdb\b/i, /tabla/i, /memoria/i, /registro/i])) return "supabase_data";
   if (hasAny(message, [/vercel/i, /deploy/i, /despliegue/i, /producci[oó]n/i, /dominio/i])) return "vercel_cloud";
@@ -67,7 +112,7 @@ export function getNovaChatActionDraftPublicContext() {
       no_fake_integrations: true,
     },
     supported_now: {
-      github_code: "Crea borrador seguro en cola. La ejecución real sigue por Owner Gate.",
+      github_code: "Para apps/repos existentes, NOVA puede leer el repositorio real, analizar el cambio y preparar mutaciones GitHub reales bajo Owner Gate. Las actualizaciones de archivos existentes usan SHA observado para evitar sobrescrituras concurrentes.",
     },
     prepare_only_now: [
       "supabase_data",
@@ -79,7 +124,7 @@ export function getNovaChatActionDraftPublicContext() {
     blocked_now: [
       "chido_sensitive",
     ],
-    next_step: "12.7J-2 debe materializar borradores GitHub en acciones concretas create_branch/upsert_file/create_pr cuando haya plan completo.",
+    next_step: "El ciclo real para apps existentes es: inspeccionar → analizar → crear branch → modificar/corregir/integrar → validar CI/Preview → PR → merge protegido → deploy exact-SHA.",
   };
 }
 
@@ -135,7 +180,7 @@ export function detectNovaChatActionDraft(message: string, queueLock?: QueueLock
       requested: true,
       scope,
       can_enqueue: false,
-      tool_key: scope === "github_code" ? "github" : null,
+      tool_key: scope === "application_delivery" ? "github" : scope === "github_code" ? "github" : null,
       owner_agi: scope === "github_code" ? "hostia" : "nova",
       risk_level: "medium",
       reason: queueLock?.reason || "Queue Lock activo: hay trabajo pendiente.",
@@ -158,6 +203,20 @@ export function detectNovaChatActionDraft(message: string, queueLock?: QueueLock
     };
   }
 
+  if (scope === "application_delivery") {
+    return {
+      requested: true,
+      scope,
+      can_enqueue: true,
+      tool_key: "github",
+      owner_agi: "hostia",
+      risk_level: "high",
+      reason: "Solicitud de nueva aplicación detectada. NOVA puede materializar la cadena GitHub → Vercel bajo Owner Gate.",
+      current_limit: "Se crea repositorio privado y proyecto Vercel en cola segura; el código y el despliegue quedan sujetos a la cadena de aprobación.",
+      next_step: "Materializar create_repository y vercel.create_project; después preparar código/CI/Preview.",
+    };
+  }
+
   if (scope === "github_code") {
     return {
       requested: true,
@@ -167,8 +226,8 @@ export function detectNovaChatActionDraft(message: string, queueLock?: QueueLock
       owner_agi: "hostia",
       risk_level: "medium",
       reason: "Solicitud de repo/código detectada. GitHub es el primer executor real protegido.",
-      current_limit: "12.7J-1 crea borrador seguro. No ejecuta branch, archivo ni PR todavía desde chat.",
-      next_step: "Materializar el borrador en acciones GitHub concretas con Owner Gate.",
+      current_limit: "La escritura no sale directamente de inferencia: NOVA inspecciona primero y Hocker One convierte las mutaciones propuestas en acciones Owner-Gated.",
+      next_step: "Leer el repositorio real, obtener SHA de los archivos afectados y preparar create_branch/upsert_file/create_pr bajo Owner Gate.",
     };
   }
 
