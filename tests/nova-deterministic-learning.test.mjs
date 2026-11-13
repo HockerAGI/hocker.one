@@ -19,7 +19,7 @@ test("classifier accepts only exact known failure prefixes, never raw arbitrary 
     "console.log(JSON.stringify(samples.map(classifyKnownWorkerFailure)));",
   ].join("\n");
   const run = spawnSync(process.execPath,
-    ["--import", "tsx", "--input-type=module", "--eval", script],
+    ["--experimental-strip-types", "--input-type=module", "--eval", script],
     { cwd: new URL("../", import.meta.url), encoding: "utf8", timeout: 10_000 });
   assert.equal(run.status, 0, run.stderr);
   assert.deepEqual(JSON.parse(run.stdout.trim()), [
