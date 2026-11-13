@@ -21,5 +21,13 @@
 4. Perform a single genuine tiny prompt on preview, observe real response, usage and account quota, then Owner approves any production enablement.
 5. Do not confuse actual inference with fresh autonomous worker heartbeats, model self-training, independent memory mirror failover, or 16 AGI capability E2E. Keep #306 open.
 
+## Additional scoped chat-only production candidate (2026-11-13, not active)
+- New optional `NOVA_CHAT_FREE_ONLY=true` flag is independent of global `AGI_ZERO_CREDIT_ONLY`: it may be applied only to authorized `hocker-one` natural-language chat requests without tools, research, engineering or requested actions.
+- Request-scoped `completeAgi({ free_only: true })` selects exactly Cloudflare, blocks web-native search, and disallows MCP tools. Both chat API transports refuse dedicated/potentially billable fallback if this particular simple-chat request fails.
+- The original AGI worker, graders, engineering tasks and complex chat provider selection remain unchanged when the global `AGI_ZERO_CREDIT_ONLY` flag is OFF. Do not set that global flag for general production use.
+- `CLOUDFLARE_WORKERS_AI_ENABLED`, `CLOUDFLARE_WORKERS_AI_FREE_PLAN_VERIFIED`, exact `CLOUDFLARE_ACCOUNT_ID` and an appropriately scoped server-only token are still mandatory. This does not add a distributed neuron quota counter or claim free unlimited inference.
+- This is a deliberate **candidate feature**, not a blanket production certification: require exact-head CI, CodeQL/review, Preview, Owner-authenticated E2E for scoped mode, and verified no paid fallback before production enablement.
+- All existing AGI material action permissions/Owner Gate remain governed separately. The Cloudflare light model is **not** a replacement for tool-capable engineering, search, agent tasks or the dedicated `nova.agi` worker.
+
 ## Not performed
 - No new subscription, DNS/Worker/Gateway changes, automated cleanup, model inference, SQL writes, new Owner approvals, memory publication or material AGI action.
