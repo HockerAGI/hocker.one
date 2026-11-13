@@ -649,7 +649,6 @@ export const HOCKER_AGI_CANON = [
       "logs",
       "health checks",
       "Vercel",
-      "Cloudflare",
       "Namecheap",
       "Railway",
       "Supabase",

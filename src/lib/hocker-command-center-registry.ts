@@ -203,15 +203,6 @@ export const HOCKER_COMMAND_CENTER_INTEGRATIONS: HockerCommandItem[] = [
     next: "Crear diagnóstico real de despliegues.",
   },
   {
-    id: "cloudflare",
-    name: "Cloudflare",
-    label: "DNS / seguridad",
-    status: "building",
-    owner: "Hostia + Vertx",
-    short: "DNS, WAF, caché y dominios.",
-    next: "Sólo lectura primero.",
-  },
-  {
     id: "ads",
     name: "Ads APIs",
     label: "Publicidad",

@@ -2,6 +2,21 @@ name: Android Emulator QA
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "out/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "src/components/PwaRegister.tsx"
+      - "public/sw.js"
+      - "tests/pwa-production-readiness.test.mjs"
+      - "tests/android-emulator-qa.test.mjs"
+      - "tests/android-emulator-runner.test.mjs"
+      - "scripts/ci/android-emulator-qa.sh"
+      - ".github/workflows/android-emulator-qa.yml"
   pull_request:
     paths:
       - "android/**"
