@@ -113,6 +113,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   user_email?: string | null;
   context_data?: JsonRecord;
   allow_actions?: boolean;
+  tools_requested?: string[];
   oidc_token?: string | null;
   trace_id?: string | null;
 }): Promise<JsonRecord> {
@@ -158,7 +159,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   );
   const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(params.message);
   const freeOnlyChat = !engineeringTask && !webSearchRequired && specialist.id !== "curvewind" &&
-    novaChatFreeOnlyRequest({ project_id: params.project_id, message: params.message, allow_actions: params.allow_actions });
+    novaChatFreeOnlyRequest({ project_id: params.project_id, message: params.message, allow_actions: params.allow_actions, tools_requested: Boolean(params.tools_requested?.length) });
   const routes = configuredAgiRoutes(params.oidc_token, { free_only: freeOnlyChat });
   if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
