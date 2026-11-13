@@ -226,5 +226,12 @@ export function createVercelMcpConnector(): McpVercelConnector {
 
 export function isVercelMcpConfigured(): boolean {
   // REST tokens are not OAuth access tokens for the Vercel MCP resource server.
-  return Boolean(process.env.VERCEL_MCP_OAUTH_TOKEN);
+  if (!process.env.VERCEL_MCP_OAUTH_TOKEN) return false;
+  try {
+    trustedVercelMcpUrl(process.env.VERCEL_MCP_URL);
+    return true;
+  } catch {
+    // Never take other MCP providers down for a bad Vercel OAuth endpoint.
+    return false;
+  }
 }
