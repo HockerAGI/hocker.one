@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { reconcileProjectContinuity } from "@/lib/project-continuity";
 import { getNovaZeroCreditSnapshot } from "@/lib/nova-zero-credit-snapshot";
+import { processVerifiedFailureLearning } from "@/lib/nova-deterministic-learning";
 import { sanitizePublicError } from "@/lib/sanitize-error";
 
 export const dynamic = "force-dynamic";
@@ -44,12 +45,16 @@ export async function GET(req: NextRequest) {
     const observation = getNovaZeroCreditSnapshot()
       .then((snapshot) => ({ ok: true as const, snapshot }))
       .catch(() => ({ ok: false as const, reason: "NOVA_ZERO_CREDIT_OBSERVATION_UNAVAILABLE" }));
-    const [result, zeroCreditObservation] = await Promise.all([
-      reconcileProjectContinuity(), observation,
+    const learning = processVerifiedFailureLearning()
+      .then((summary) => ({ ok: true as const, summary }))
+      .catch(() => ({ ok: false as const, reason: "NOVA_LEARNING_TRIAGE_UNAVAILABLE" }));
+    const [result, zeroCreditObservation, learningTriage] = await Promise.all([
+      reconcileProjectContinuity(), observation, learning,
     ]);
     return NextResponse.json({
       ...result,
       zero_credit_observation: zeroCreditObservation,
+      learning_triage: learningTriage,
       trace_id: traceId,
       reconciled: true,
       manifest_activated: false,
