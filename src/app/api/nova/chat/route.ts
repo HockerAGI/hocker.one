@@ -1,4 +1,4 @@
-import { cloudflareZeroCreditMode, novaChatFreeOnlyRequest } from "@/lib/cloudflare-zero-credit-policy";
+import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -15,7 +15,7 @@ import {
 } from "@/lib/hocker-tool-router";
 import { log } from "@/lib/logger";
 import { persistDedicatedNovaFallbackTurn } from "@/lib/agi-session-store";
-import { runToolEnabledUnifiedNovaChat } from "@/lib/unified-nova-chat-runtime";
+import { runToolEnabledUnifiedNovaChat, decideNovaChatRoutes } from "@/lib/unified-nova-chat-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -406,7 +406,7 @@ export async function POST(req: Request): Promise<Response> {
 
   // In explicit Free-only mode, NEVER fall back to the dedicated runtime:
   // its provider plan and token spending controls have not been certified.
-  if (cloudflareZeroCreditMode() || novaChatFreeOnlyRequest({ project_id: chatCtx.project_id, message: parsed.data.message, allow_actions: parsed.data.allow_actions })) {
+  if (cloudflareZeroCreditMode() || decideNovaChatRoutes({ project_id: chatCtx.project_id, message: parsed.data.message, allow_actions: Boolean(upstreamActionActorId) }).freeOnlyChat) {
     return NextResponse.json({
       ok: false, error: "NOVA Free-only inference was unavailable; no paid fallback executed.",
       meta: { ...injectedMeta, runtime_primary: "hocker-one-unified",
