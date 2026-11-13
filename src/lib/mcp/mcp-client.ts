@@ -73,6 +73,39 @@ const CLIENT_INFO = {
   version: "1.0.0",
 } as const;
 
+/**
+ * Streamable HTTP may answer a JSON-RPC request as an SSE event sequence
+ * rather than JSON. Accept only a bounded JSON-RPC reply with the matching id.
+ */
+async function readMcpResponse(response: Response, requestId: string): Promise<McpResponse> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("text/event-stream")) {
+    const parsed = (await response.json()) as McpResponse;
+    if (!parsed || parsed.jsonrpc !== "2.0" || String(parsed.id) !== requestId) {
+      throw new Error("MCP_RESPONSE_ID_MISMATCH");
+    }
+    return parsed;
+  }
+
+  const payload = await response.text();
+  if (payload.length > 1_048_576) throw new Error("MCP_SSE_RESPONSE_TOO_LARGE");
+  const frames = payload.replace(/\r\n/g, "\n").split(/\n\n+/);
+  for (const frame of frames) {
+    const data = frame.split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n").trim();
+    if (!data || data === "[DONE]") continue;
+    try {
+      const event = JSON.parse(data) as McpResponse;
+      if (event?.jsonrpc === "2.0" && String(event.id) === requestId) return event;
+    } catch {
+      // SSE keepalives and non-JSON events are not tool results.
+    }
+  }
+  throw new Error("MCP_SSE_RESPONSE_ID_MISSING");
+}
+
 class McpModernNegotiationFallbackError extends Error {
   constructor(message: string) {
     super(message);
@@ -212,7 +245,7 @@ export class McpClient {
         this.state.status = "error";
         this.state.lastError = `HTTP ${response.status}: ${errorText.slice(0, 200)}`;
 
-        if (allowModernFallback && response.status === 400) {
+        if (allowModernFallback && [400, 404, 405, 406, 415].includes(response.status)) {
           throw new McpModernNegotiationFallbackError(
             `MCP ${this.config.id} does not accept the modern protocol probe`,
           );
@@ -221,7 +254,7 @@ export class McpClient {
         throw new Error(`MCP ${this.config.id} returned HTTP ${response.status}`);
       }
 
-      const mcpResponse = (await response.json()) as McpResponse;
+      const mcpResponse = await readMcpResponse(response, mcpRequest.id);
 
       if (mcpResponse.error) {
         this.state.status = "error";
