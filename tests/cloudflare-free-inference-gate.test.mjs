@@ -33,6 +33,18 @@ test("explicit zero-credit mode cannot fall back to Vercel, Gemini, Anthropic or
   assert.match(router,/"cloudflare-workers-ai": cloudflareWorkersAiProvider/);
 });
 
+
+test("streaming chat cannot fall back to uncertified dedicated runtime in strict free-only mode", async () => {
+  const stream = await read("src/app/api/nova/chat/stream/route.ts");
+  const gate = stream.indexOf("if (cloudflareZeroCreditMode())");
+  const fallback = stream.indexOf("const upstream = await fetch(");
+  const local = stream.indexOf("await runToolEnabledUnifiedNovaChat(");
+  assert.ok(local >= 0 && gate > local && fallback > gate, "strict gate must follow local inference and precede fallback");
+  assert.match(stream.slice(gate, fallback), /no paid fallback executed/);
+  assert.match(stream.slice(gate, fallback), /sse\("done", \{ ok: false \}\)/);
+  assert.match(stream, /allow_actions: false/);
+});
+
 test("native model call is bounded, request logs off, one attempt, no paid models or model tool execution", async () => {
   const provider=await read("src/lib/agi-model-providers/cloudflare-workers-ai.ts");
   const policy=await read("src/lib/cloudflare-zero-credit-policy.ts");
