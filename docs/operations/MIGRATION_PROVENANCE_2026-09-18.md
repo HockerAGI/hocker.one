@@ -10,6 +10,7 @@ Current production ledger tail:
 - `20260901063237 operational_event_fabric`
 - `20260902225257 rollback_operational_event_fabric`
 - `20260903182025 align_queue_orphan_view_with_reconciler`
+- `20260918081119 20260913170000_hocker_operating_loop_work_sessions`
 
 Production DDL was **not** executed during this reconciliation.
 
@@ -23,20 +24,22 @@ Production DDL was **not** executed during this reconciliation.
 
 | 20260918081119 | 20260913170000_hocker_operating_loop_work_sessions | `20260918081119_20260913170000_hocker_operating_loop_work_sessions.sql` | `8e1f78ae70cde0835e485b08101ace57d6448604` + production apply `success` | Work Session SQL validated on staging and applied once to production; effective ledger version normalized to the production-generated timestamp |
 
-## Unresolved production history
+## Recovered original production statements — 2026-11-12
 
-| Production version | Production name | Current evidence | Status |
+The previously unavailable text for the following two versions has been recovered **from production's authoritative** `supabase_migrations.schema_migrations.statements[1]`. The recovered strings were copied verbatim into the corresponding repository SQL files (no commentary or trailing newline inside the SQL source); their MD5 fingerprints match the production ledger:
+
+| Version | Migration | Production `md5(statements[1])` | Source |
 |---|---|---|---|
-| 20260830153247 | revoke_dead_public_agi_catalog_view_grants | Comment-only repository placeholder records the production version; effective production state is separately verified; no authoritative original SQL artifact located in accessible Hocker One Git history | **SOURCE UNAVAILABLE — placeholder only** |
-| 20260902225257 | rollback_operational_event_fabric | Comment-only repository placeholder records the production version; current production has no operational event-fabric objects/publication entry; original rollback SQL not located | **SOURCE UNAVAILABLE — placeholder only** |
+| 20260830153247 | `revoke_dead_public_agi_catalog_view_grants` | `239eb9922cc9d7c9be1934de8ffc06a9` | Production migration ledger |
+| 20260902225257 | `rollback_operational_event_fabric` | `eb6f12fe9c6b8be8065994e12646b007` | Production migration ledger |
 
-Effective database state cannot prove the historical migration text. These two records are therefore quarantined as externally applied historical changes until an authoritative source artifact is recovered.
+These are **source recovery updates**, not new migrations, and **were not executed on production** during recovery. The existing version IDs and filenames are unchanged. The migration-ledger regression test now checks exact source fingerprints for both recovered entries.
+
+The production database currently reports **109 distinct applied versions**, and GitHub `supabase/migrations/` contains **109 version-matched SQL files**, with no missing or duplicated versions as of this audit. Version parity and recovered source fingerprints are verified; clean-room migration replay and tenant authorization testing remain **separate, unfinished gates** (#212 / #183). The legacy validation project was restored as a candidate isolated environment, but is not deemed validated until it becomes healthy and the required tests pass.
 
 ## Reproducibility policy
 
-The repository test suite treats the verified/recoverable production migrations as required repository provenance.
-
-The two unavailable versions are tracked as comment-only placeholders and must remain SQL-free until an authoritative historical source is recovered. A future authoritative artifact must be tied to its production version before the strict all-ledger contract is expanded.
+An applied version in the ledger cannot be re-applied to production merely because its source was recovered. Reproduce migrations only in a separate validation database with the necessary schemas, roles, prerequisites and compensating rollback plan. **Do not assert full reproducibility from version parity and two hashes alone.** Add future migration changes as new, immutable versioned files, never by editing already executed production DDL.
 
 ## Operational rule
 
