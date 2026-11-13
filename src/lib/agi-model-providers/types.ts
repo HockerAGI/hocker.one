@@ -1,4 +1,5 @@
 export type AgiModelRoute =
+  | "cloudflare-workers-ai"
   | "vercel-gateway"
   | "openai-direct"
   | "gemini-direct"

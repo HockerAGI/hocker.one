@@ -1,4 +1,6 @@
 import { anthropicDirectProvider } from "@/lib/agi-model-providers/anthropic";
+import { cloudflareWorkersAiProvider } from "@/lib/agi-model-providers/cloudflare-workers-ai";
+import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
 import { geminiDirectProvider } from "@/lib/agi-model-providers/gemini";
 import { ollamaProvider } from "@/lib/agi-model-providers/ollama";
 import { openaiDirectProvider } from "@/lib/agi-model-providers/openai";
@@ -14,6 +16,7 @@ import {
 } from "@/lib/agi-model-providers/types";
 
 const PROVIDERS: Record<AgiModelRoute, AgiModelProvider> = {
+  "cloudflare-workers-ai": cloudflareWorkersAiProvider,
   "vercel-gateway": vercelGatewayProvider,
   "openai-direct": openaiDirectProvider,
   "gemini-direct": geminiDirectProvider,
@@ -22,6 +25,7 @@ const PROVIDERS: Record<AgiModelRoute, AgiModelProvider> = {
 };
 
 const DEFAULT_ORDER: AgiModelRoute[] = [
+  "cloudflare-workers-ai",
   "vercel-gateway",
   "openai-direct",
   "gemini-direct",
@@ -35,6 +39,7 @@ const TRANSIENT_ATTEMPT_CODE = /429|QUOTA|RATE|TIMEOUT|HTTP_5\d\d|EMPTY_RESPONSE
 const PERSISTENT_ATTEMPT_CODE = /401|403|AUTH_FAILED|HTTP_400|BAD_REQUEST|INVALID|NOT_CONFIGURED|EXCLUDED_BY_POLICY/i;
 
 function routeOrder(): AgiModelRoute[] {
+  if (cloudflareZeroCreditMode()) return ["cloudflare-workers-ai"];
   const configured = envValue("AGI_MODEL_ROUTE_ORDER")
     .split(",")
     .map((value) => value.trim())
@@ -72,6 +77,11 @@ export function agiModelRouterConfigured(oidcToken?: string | null): boolean {
 
 export async function completeAgi(input: AgiCompletionInput): Promise<AgiCompletionResult> {
   const attempts: AgiProviderAttempt[] = [];
+  if (cloudflareZeroCreditMode() && input.web_search) {
+    throw new AgiProviderError("No provider-native web search in free-only mode", {
+      code: "CLOUDFLARE_FREE_WEB_SEARCH_UNAVAILABLE", fallback_eligible: false,
+    });
+  }
   const order = input.web_search
     ? routeOrder().filter((route) => route === "openai-direct" || route === "gemini-direct" || route === "anthropic-direct")
     : routeOrder();
