@@ -13,6 +13,8 @@ test("GitHub remote MCP uses GitHub-owned read-only endpoint with no arbitrary t
   assert.match(connector, /url\.origin !== "https:\/\/api\.githubcopilot\.com"/);
   assert.match(connector, /"X-MCP-Readonly": "true"/);
   assert.match(connector, /config\.githubToken/);
+  assert.match(connector, /trustedReadOnlyGithubMcpUrl\(process\.env\.GITHUB_MCP_URL\)/);
+  assert.match(connector, /catch \{[\s\S]*?return false;/);
 });
 
 test("Vercel REST bearer is never mistaken for the separately authorized OAuth MCP token", async () => {
@@ -22,6 +24,8 @@ test("Vercel REST bearer is never mistaken for the separately authorized OAuth M
   assert.match(connector, /Boolean\(process\.env\.VERCEL_MCP_OAUTH_TOKEN\)/);
   assert.match(connector, /config\.oauthAccessToken/);
   assert.doesNotMatch(connector, /VERCEL_API_BASE|\/v1\/mcp|config\.vercelToken/);
+  assert.match(connector, /trustedVercelMcpUrl\(process\.env\.VERCEL_MCP_URL\)/);
+  assert.match(connector, /catch \{[\s\S]*?return false;/);
 });
 
 test("MCP client parses bounded SSE JSON-RPC replies after modern negotiation fallback", () => {
