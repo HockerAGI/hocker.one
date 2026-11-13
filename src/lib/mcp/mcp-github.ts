@@ -327,5 +327,13 @@ export function createGitHubMcpConnector(): McpGitHubConnector {
 }
 
 export function isGitHubMcpConfigured(): boolean {
-  return Boolean(process.env.GITHUB_TOKEN);
+  if (!process.env.GITHUB_TOKEN) return false;
+  try {
+    trustedReadOnlyGithubMcpUrl(process.env.GITHUB_MCP_URL);
+    return true;
+  } catch {
+    // Fail this provider closed without aborting registration of Supabase,
+    // Vercel or other independently configured MCP providers.
+    return false;
+  }
 }
