@@ -7,6 +7,7 @@ import {
 } from "@/lib/hocker-agi-operational";
 import { buildAgiInferenceContext } from "@/lib/agi-context-builder";
 import { completeAgi, configuredAgiRoutes } from "@/lib/agi-model-router";
+import { novaChatFreeOnlyRequest } from "@/lib/cloudflare-zero-credit-policy";
 import {
   buildAgiMcpPromptBlock,
   buildAgiMcpResultBlock,
@@ -104,6 +105,31 @@ function publicReplyFromToolEnvelope(input: {
   return safeText(input.raw_text);
 }
 
+/**
+ * One authoritative routing decision used by execution and both API fallback
+ * guards. Never infer "free-only" from a smaller subset of these conditions.
+ */
+export function decideNovaChatRoutes(input: {
+  project_id: string;
+  message: string;
+  allow_actions?: boolean;
+  tools_requested?: string[];
+}): { webSearchRequired: boolean; engineeringTask: boolean; freeOnlyChat: boolean } {
+  const specialistId = routeChatProfile(input.message);
+  const webSearchRequired = input.message.trim().length > 0 && (
+    specialistId === "curvewind"
+    || /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|actual|reciente|hoy|latest|research|auditoría|auditoria)\b/i.test(input.message)
+  );
+  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(input.message);
+  const freeOnlyChat = !engineeringTask && !webSearchRequired && specialistId !== "curvewind" &&
+    novaChatFreeOnlyRequest({
+      project_id: input.project_id, message: input.message,
+      allow_actions: input.allow_actions,
+      tools_requested: Boolean(input.tools_requested?.length),
+    });
+  return { webSearchRequired, engineeringTask, freeOnlyChat };
+}
+
 export async function runToolEnabledUnifiedNovaChat(params: {
   project_id: string;
   thread_id?: string | null;
@@ -112,6 +138,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   user_email?: string | null;
   context_data?: JsonRecord;
   allow_actions?: boolean;
+  tools_requested?: string[];
   oidc_token?: string | null;
   trace_id?: string | null;
 }): Promise<JsonRecord> {
@@ -151,14 +178,12 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     },
   });
 
-  const routes = configuredAgiRoutes(params.oidc_token);
+  const { webSearchRequired, engineeringTask, freeOnlyChat } = decideNovaChatRoutes(params);
+  const routes = configuredAgiRoutes(params.oidc_token, { free_only: freeOnlyChat });
   if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
-  const webSearchRequired = params.message.trim().length > 0 && (
-    specialist.id === "curvewind"
-    || /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|actual|reciente|hoy|latest|research|auditoría|auditoria)\b/i.test(params.message)
-  );
-  const nativeMcpTools = await buildAgiNativeMcpTools(params.message);
+  // Free-only chat neither exposes nor executes external tools.
+  const nativeMcpTools = freeOnlyChat ? [] : await buildAgiNativeMcpTools(params.message);
 
   const [context, mcpPrompt] = await Promise.all([
     buildAgiInferenceContext({
@@ -168,7 +193,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       user_id: params.user_id,
       operational_context: params.context_data ?? {},
     }),
-    buildAgiMcpPromptBlock(),
+    freeOnlyChat ? Promise.resolve("") : buildAgiMcpPromptBlock(),
   ]);
 
   const system = [
@@ -187,21 +212,20 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     ...context.messages,
   ];
 
-  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(params.message);
-
   const first = await completeAgi({
     messages: baseMessages,
     timeout_ms: engineeringTask ? INITIAL_MCP_TIMEOUT_MS : 40_000,
     oidc_token: params.oidc_token,
     tools: nativeMcpTools,
+    free_only: freeOnlyChat,
     web_search: webSearchRequired,
     web_max_uses: webSearchRequired ? 8 : undefined,
   });
 
   const maxFollowUps = engineeringTask ? MAX_MCP_FOLLOW_UPS : 1;
   let currentCompletion = first;
-  let currentEnvelope = parseAgiMcpEnvelope(first.text);
-  let currentNativeCalls = first.tool_calls ?? [];
+  let currentEnvelope = freeOnlyChat ? { reply: first.text, tool_calls: [] } : parseAgiMcpEnvelope(first.text);
+  let currentNativeCalls = freeOnlyChat ? [] : (first.tool_calls ?? []);
   let finalCompletion = first;
   let finalReply = publicReplyFromToolEnvelope({
     raw_text: first.text,
@@ -212,7 +236,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   const allToolResults: AgiMcpToolResult[] = [];
 
   for (let followUp = 0; followUp <= maxFollowUps; followUp += 1) {
-    const resolvedCalls = currentNativeCalls.length > 0
+    const resolvedCalls = freeOnlyChat ? [] : currentNativeCalls.length > 0
       ? toLegacyAgiMcpToolCalls(currentNativeCalls)
       : currentEnvelope.tool_calls;
 
@@ -271,6 +295,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       timeout_ms: FOLLOW_UP_MCP_TIMEOUT_MS,
       oidc_token: params.oidc_token,
       tools: nativeMcpTools,
+    free_only: freeOnlyChat,
       tool_calls: currentNativeCalls,
       tool_results: nativeToolResults,
       web_search: webSearchRequired,
@@ -304,6 +329,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     tokens_out: finalCompletion.usage.tokens_out,
     meta: {
       route: finalCompletion.route,
+      scoped_cloudflare_free_only: freeOnlyChat,
       route_attempts: combinedAttempts(first, ...(finalCompletion === first ? [] : [finalCompletion])),
       internal_specialist_agi: specialist.id,
       runtime: "hocker-one-unified",

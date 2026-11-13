@@ -126,7 +126,7 @@ test("web research is provider-native, automatic for research intents, and citat
   ]);
   assert.match(types, /web_search\?: boolean/);
   assert.match(types, /AgiWebCitation/);
-  assert.match(router, /routeOrder\(\)\.filter/);
+  assert.match(router, /routeOrder\(input\.free_only === true\)\.filter/);
   assert.match(router, /openai-direct/);
   assert.match(router, /gemini-direct/);
   assert.match(router, /anthropic-direct/);

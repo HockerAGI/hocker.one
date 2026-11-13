@@ -25,7 +25,6 @@ const PROVIDERS: Record<AgiModelRoute, AgiModelProvider> = {
 };
 
 const DEFAULT_ORDER: AgiModelRoute[] = [
-  "cloudflare-workers-ai",
   "vercel-gateway",
   "openai-direct",
   "gemini-direct",
@@ -38,12 +37,13 @@ const FALLBACK_ERROR_HINTS = /401|403|429|quota|balance|rate|timeout|5\d\d/i;
 const TRANSIENT_ATTEMPT_CODE = /429|QUOTA|RATE|TIMEOUT|HTTP_5\d\d|EMPTY_RESPONSE|(?:^|_)FAILED$/i;
 const PERSISTENT_ATTEMPT_CODE = /401|403|AUTH_FAILED|HTTP_400|BAD_REQUEST|INVALID|NOT_CONFIGURED|EXCLUDED_BY_POLICY/i;
 
-function routeOrder(): AgiModelRoute[] {
+function routeOrder(freeOnly = false): AgiModelRoute[] {
   if (cloudflareZeroCreditMode()) return ["cloudflare-workers-ai"];
+  if (freeOnly) return ["cloudflare-workers-ai"];
   const configured = envValue("AGI_MODEL_ROUTE_ORDER")
     .split(",")
     .map((value) => value.trim())
-    .filter((value): value is AgiModelRoute => value in PROVIDERS);
+    .filter((value): value is AgiModelRoute => value in PROVIDERS && value !== "cloudflare-workers-ai");
   const result: AgiModelRoute[] = [];
   for (const route of [...configured, ...DEFAULT_ORDER]) {
     if (!result.includes(route)) result.push(route);
@@ -67,8 +67,8 @@ function isTransientAttemptCode(code: string): boolean {
   return TRANSIENT_ATTEMPT_CODE.test(code);
 }
 
-export function configuredAgiRoutes(oidcToken?: string | null): AgiModelRoute[] {
-  return routeOrder().filter((route) => PROVIDERS[route].configured({ oidc_token: oidcToken }));
+export function configuredAgiRoutes(oidcToken?: string | null, options?: { free_only?: boolean }): AgiModelRoute[] {
+  return routeOrder(options?.free_only === true).filter((route) => PROVIDERS[route].configured({ oidc_token: oidcToken }));
 }
 
 export function agiModelRouterConfigured(oidcToken?: string | null): boolean {
@@ -77,14 +77,14 @@ export function agiModelRouterConfigured(oidcToken?: string | null): boolean {
 
 export async function completeAgi(input: AgiCompletionInput): Promise<AgiCompletionResult> {
   const attempts: AgiProviderAttempt[] = [];
-  if (cloudflareZeroCreditMode() && input.web_search) {
+  if ((cloudflareZeroCreditMode() || input.free_only) && input.web_search) {
     throw new AgiProviderError("No provider-native web search in free-only mode", {
       code: "CLOUDFLARE_FREE_WEB_SEARCH_UNAVAILABLE", fallback_eligible: false,
     });
   }
   const order = input.web_search
-    ? routeOrder().filter((route) => route === "openai-direct" || route === "gemini-direct" || route === "anthropic-direct")
-    : routeOrder();
+    ? routeOrder(input.free_only === true).filter((route) => route === "openai-direct" || route === "gemini-direct" || route === "anthropic-direct")
+    : routeOrder(input.free_only === true);
   const excluded = new Set(input.exclude_routes ?? []);
   let sawConfigured = false;
 
