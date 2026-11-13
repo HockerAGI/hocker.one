@@ -426,7 +426,7 @@ const CAPABILITY_DEFINITIONS: HockerCapabilityDefinition[] = [
     owner_agi: "hostia",
     support_agis: ["vertx", "jurix"],
     app_key: "hocker-one",
-    tool_keys: ["namecheap", "cloudflare", "hetzner", "vercel"],
+    tool_keys: ["namecheap", "hetzner", "vercel"],
     base_status: "partial",
     mode: "owner_gate",
     requires_owner_gate: true,
