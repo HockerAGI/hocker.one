@@ -40,7 +40,7 @@ test("chat-only free mode never reconfigures workers or engineering and search r
     "values.push(f({project_id:'hocker-one',message:'Responde solo LISTO',tools_requested:true}));",
     "values.push(f({project_id:'hocker-one',message:'List all Base44 apps'}));",
     "values.push(f({project_id:'hocker-one',message:'Responde con la lista de Base44 apps'}));",
-    "values.push(c());"
+    "values.push(c());",
     "process.env.CLOUDFLARE_WORKERS_AI_ENABLED='true';process.env.CLOUDFLARE_WORKERS_AI_FREE_PLAN_VERIFIED='true';process.env.CLOUDFLARE_ACCOUNT_ID='e53a864ed398f9d933c88b8a2c68c52b';process.env.CLOUDFLARE_WORKERS_AI_API_TOKEN='fixture';",
     "values.push(c());",
     "console.log(JSON.stringify(values));",
