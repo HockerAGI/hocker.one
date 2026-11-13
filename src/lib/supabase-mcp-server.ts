@@ -15,12 +15,12 @@
 import {
   createSupabaseContext,
   type SupabaseContext,
-  type AuthModeWithKey,
+  type CredentialedAuthMode,
   type AuthError,
 } from "@supabase/server";
 
 /** Auth modes accepted by Hocker ONE server-side endpoints. */
-const HOCKER_SERVER_AUTH_MODES: AuthModeWithKey[] = [
+const HOCKER_SERVER_AUTH_MODES: [CredentialedAuthMode, ...CredentialedAuthMode[]] = [
   "user",
   "secret",
   "publishable",

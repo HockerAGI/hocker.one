@@ -23,7 +23,7 @@ const CreateSchema = z.object({
   intent: z.enum(["general", "code", "ops", "finance", "social", "research"]).default("general"),
   priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
   write_policy: z.enum(["read_only", "draft_only", "owner_gate"]).default("draft_only"),
-  context: z.record(z.unknown()).default({}),
+  context: z.record(z.string(), z.unknown()).default({}),
   idempotency_key: z.string().min(8).max(240).optional(),
 });
 const RunSchema = z.object({

@@ -13,9 +13,10 @@ test("Vercel is a real governed executor, not a fake AI Gateway label", async ()
 
   assert.match(runtime, /tool_key: "vercel"/);
   assert.match(runtime, /implementation_status: "executor_ready"/);
-  assert.match(executor, /POST.*\/v11\/projects/);
+  assert.match(executor, /buildPath\("\/v11\/projects", teamId\),\s*token,\s*"POST"/);
   assert.match(executor, /VERCEL_TOKEN/);
-  assert.match(route, /vercel\.create_project/);
+  assert.match(route, /"create_project"/);
+  assert.match(route, /enqueueAgiAction/);
   assert.match(worker, /pending\.tool_key === "vercel"/);
   assert.match(worker, /depends_on_action_id/);
 });
@@ -27,9 +28,10 @@ test("new repositories are private by default and restricted to HockerAGI", asyn
 
   assert.match(executor, /create_repository/);
   assert.match(executor, /ensureHockerOrganization/);
-  assert.match(worker, /visibility = \["private", "internal", "public"\]/);
+  assert.match(worker, /visibility: stringValue\(payload\.visibility, "private"\) as "private" \| "internal" \| "public"/);
   assert.match(worker, /payload\.private !== false/);
-  assert.match(worker, /owner !== \(envValue\("HOCKER_GITHUB_ORG"\) \|\| "HockerAGI"\)/);
+  assert.match(executor, /if \(owner !== allowedOwner\)/);
+  assert.match(executor, /ensureHockerOrganization\(owner\)/);
   assert.match(route, /"create_repository"/);
   assert.match(route, /private: z\.boolean\(\)\.default\(true\)/);
 });
@@ -74,7 +76,7 @@ test("existing apps use NOVA inspection plus SHA-guarded GitHub mutations", asyn
   const capabilities = await read("src/lib/hocker-capabilities-contract.ts");
 
   assert.match(route, /draftPreview\.scope === "application_delivery"/);
-  assert.match(route, /inspect the live repository before proposing any mutation/i);
+  assert.match(route, /read-only inspection can happen before any mutation is proposed/i);
   assert.doesNotMatch(route, /materializeNovaGitHubActionsFromChat/);
   assert.match(policy, /isAllowedGithubRepository/);
   assert.match(policy, /update_file.*create_or_update_file/);
@@ -95,7 +97,7 @@ test("GitHub MCP lifecycle mutations are dependency-ordered", async () => {
   assert.match(router, /assertMcpDependencyComplete/);
   assert.match(router, /dependencia previa no está completada/);
   assert.match(policy, /"create_or_update_file"/);
-  assert.match(policy, /github: \/\^\(list_\|get_\|read_\|search_\)\//);
+  assert.match(policy, /github: \[\/\^\(list_\|get_\|read_\|search_\)\//);
 });
 
 test("new repository bootstrap creates a usable default branch", async () => {

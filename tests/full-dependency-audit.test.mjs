@@ -27,14 +27,13 @@ test("brace-expansion vulnerable 1.1.x release is overridden", async () => {
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
 
-  assert.equal(manifest.overrides?.["brace-expansion"], "1.1.18");
-  assert.equal(lockfile.packages?.["node_modules/brace-expansion"]?.version, "1.1.18");
+  assert.equal(manifest.overrides?.["brace-expansion"], "1.1.21");
+  assert.ok(atLeast(lockfile.packages?.["node_modules/brace-expansion"]?.version, "1.1.21"));
 
   for (const [path, metadata] of Object.entries(lockfile.packages ?? {})) {
     if (!path.endsWith("node_modules/brace-expansion")) continue;
     const version = metadata?.version;
-    assert.notEqual(version, "1.1.16", `${path} must not use vulnerable brace-expansion 1.1.16`);
-    assert.notEqual(version, "1.1.17", `${path} must not use vulnerable brace-expansion 1.1.17`);
+    assert.ok(atLeast(version, "1.1.21"), `${path} must use a patched brace-expansion release`);
   }
 });
 
@@ -89,13 +88,13 @@ test("known high/moderate audit floors are pinned across the lockfile", async ()
   const manifest = await readJson("package.json");
   const lockfile = await readJson("package-lock.json");
 
-  assert.equal(manifest.dependencies?.sharp, "0.35.4");
-  assert.equal(manifest.overrides?.sharp, "0.35.4");
+  assert.equal(manifest.dependencies?.sharp, "0.35.5");
+  assert.equal(manifest.overrides?.sharp, "0.35.5");
   assert.equal(manifest.overrides?.["@xmldom/xmldom"], "0.9.12");
   assert.equal(manifest.overrides?.["js-yaml"], "4.3.2");
   assert.equal(manifest.overrides?.uuid, "11.1.1");
 
-  assert.ok(atLeast(lockfile.packages?.["node_modules/sharp"]?.version, "0.35.4"));
+  assert.ok(atLeast(lockfile.packages?.["node_modules/sharp"]?.version, "0.35.5"));
   assert.ok(atLeast(lockfile.packages?.["node_modules/@xmldom/xmldom"]?.version, "0.9.12"));
   assert.ok(atLeast(lockfile.packages?.["node_modules/js-yaml"]?.version, "4.3.2"));
   assert.ok(atLeast(lockfile.packages?.["node_modules/uuid"]?.version, "11.1.1"));

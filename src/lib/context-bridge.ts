@@ -63,7 +63,7 @@ export const ContextBridgeCheckpointSchema = z.object({
   decisions: z.array(z.string().trim().min(1).max(1000)).max(64).default([]),
   open_items: z.array(z.string().trim().min(1).max(1000)).max(64).default([]),
   canonical_refs: z.array(CanonicalRefSchema).max(128).default([]),
-  cursor: z.record(z.unknown()).default({}),
+  cursor: z.record(z.string(), z.unknown()).default({}),
   capabilities: z.array(CapabilitySchema).max(256).default([]),
   observed_at: z.string().datetime({ offset: true }).optional(),
 }).strict();
