@@ -54,6 +54,8 @@ export type AgiCompletionInput = {
   timeout_ms?: number;
   oidc_token?: string | null;
   exclude_routes?: AgiModelRoute[];
+  /** Restrict this one completion to the certified free Workers AI route. */
+  free_only?: boolean;
   /** Native function tools selected by Hocker's Capability Fabric. */
   tools?: AgiNativeTool[];
   /** Native tool calls emitted by the previous model turn. */
