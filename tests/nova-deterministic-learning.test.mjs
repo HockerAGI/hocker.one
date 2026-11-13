@@ -44,7 +44,8 @@ test("learning triage uses only real recent failed worker evidence and caps all 
   assert.match(code, /status === "pending_review"/);
   assert.match(code, /owner_gate_bypassed: false/);
   assert.match(code, /replayed_legacy_tasks: 0/);
-  assert.doesNotMatch(code, /\.from\("agi_memory_mirror"\)/);
+  assert.match(code, /\.from\("agi_memory_mirror"\)\.select\("source_hash"\)/);
+  assert.doesNotMatch(code, /\.from\("agi_memory_mirror"\)\.(?:insert|update|upsert|delete)\(/);
   assert.doesNotMatch(code, /runUnifiedAgiWorkerOnce|executeCommand|ai-gateway\.vercel\.sh|\/api\/chat/);
 });
 
