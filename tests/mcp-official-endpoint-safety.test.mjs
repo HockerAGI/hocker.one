@@ -21,7 +21,7 @@ test("Vercel REST bearer is never mistaken for the separately authorized OAuth M
   const connector = await read("src/lib/mcp/mcp-vercel.ts");
   assert.match(connector, /https:\/\/mcp\.vercel\.com/);
   assert.match(connector, /oauthAccessToken: process\.env\.VERCEL_MCP_OAUTH_TOKEN/);
-  assert.match(connector, /Boolean\(process\.env\.VERCEL_MCP_OAUTH_TOKEN\)/);
+  assert.match(connector, /if \(!process\.env\.VERCEL_MCP_OAUTH_TOKEN\) return false/);
   assert.match(connector, /config\.oauthAccessToken/);
   assert.doesNotMatch(connector, /VERCEL_API_BASE|\/v1\/mcp|config\.vercelToken/);
   assert.match(connector, /trustedVercelMcpUrl\(process\.env\.VERCEL_MCP_URL\)/);
