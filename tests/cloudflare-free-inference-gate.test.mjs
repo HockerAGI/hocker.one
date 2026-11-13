@@ -37,7 +37,10 @@ test("chat-only free mode never reconfigures workers or engineering and search r
     "values.push(f({project_id:'hocker-one',message:'Corrige el repo en GitHub'}));",
     "values.push(f({project_id:'hocker-one',message:'Investiga fuentes recientes'}));",
     "values.push(f({project_id:'hocker-one',message:'Responde solo LISTO',allow_actions:true}));",
-    "values.push(c());",
+    "values.push(f({project_id:'hocker-one',message:'Responde solo LISTO',tools_requested:true}));",
+    "values.push(f({project_id:'hocker-one',message:'List all Base44 apps'}));",
+    "values.push(f({project_id:'hocker-one',message:'Responde con la lista de Base44 apps'}));",
+    "values.push(c());"
     "process.env.CLOUDFLARE_WORKERS_AI_ENABLED='true';process.env.CLOUDFLARE_WORKERS_AI_FREE_PLAN_VERIFIED='true';process.env.CLOUDFLARE_ACCOUNT_ID='e53a864ed398f9d933c88b8a2c68c52b';process.env.CLOUDFLARE_WORKERS_AI_API_TOKEN='fixture';",
     "values.push(c());",
     "console.log(JSON.stringify(values));",
@@ -49,7 +52,7 @@ test("chat-only free mode never reconfigures workers or engineering and search r
       CLOUDFLARE_ACCOUNT_ID: "", CLOUDFLARE_WORKERS_AI_API_TOKEN: ""},
   });
   assert.equal(run.status, 0, run.stderr);
-  assert.deepEqual(JSON.parse(run.stdout.trim()), [false,true,false,false,false,false,false,true]);
+  assert.deepEqual(JSON.parse(run.stdout.trim()), [false,true,false,false,false,false,false,false,false,false,true]);
 });
 
 test("scoped chat cannot change AGI provider defaults or enable model tools", async () => {
@@ -65,6 +68,7 @@ test("scoped chat cannot change AGI provider defaults or enable model tools", as
   assert.match(runtime, /free_only: freeOnlyChat/);
   assert.match(provider, /input.tools\?\.length/);
   assert.match(runtime, /scoped_cloudflare_free_only: freeOnlyChat/);
+  assert.match(runtime, /tools_requested: Boolean\(params.tools_requested\?\.length\)/);
 });
 
 test("both NOVA API variants fail closed for simple scoped-free chat", async () => {
@@ -92,6 +96,7 @@ test("streaming chat cannot fall back to uncertified dedicated runtime in strict
   const local = stream.indexOf("await runToolEnabledUnifiedNovaChat(");
   assert.ok(local >= 0 && gate > local && fallback > gate, "strict gate must follow local inference and precede fallback");
   assert.match(stream.slice(gate, fallback), /no paid fallback executed/);
+  assert.match(stream.slice(gate, fallback), /allow_actions: false, tools_requested: parsed.data.tools_requested.length > 0/);
   assert.match(stream.slice(gate, fallback), /sse\("done", \{ ok: false \}\)/);
   assert.match(stream, /allow_actions: false/);
 });
