@@ -3,7 +3,7 @@ import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
 import { requireProjectRole } from "@/app/api/_lib";
 import { runToolEnabledUnifiedNovaChat } from "@/lib/unified-nova-chat-runtime";
-import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
+import { cloudflareZeroCreditMode, novaChatFreeOnlyRequest } from "@/lib/cloudflare-zero-credit-policy";
 import { buildNovaCapabilitiesReply, buildNovaChatCapabilitiesContext, buildNovaUpstreamRuntimeContext, shouldAnswerCapabilitiesLocally } from "@/lib/hocker-tool-router";
 
 export const runtime = "nodejs";
@@ -195,7 +195,7 @@ export async function POST(req: Request): Promise<Response> {
 
         // The streaming endpoint must enforce the same strict financial policy
         // as /api/nova/chat: never fail open to a potentially paid provider.
-        if (cloudflareZeroCreditMode()) {
+        if (cloudflareZeroCreditMode() || novaChatFreeOnlyRequest({ project_id: chatCtx.project_id, message: parsed.data.message, allow_actions: parsed.data.allow_actions })) {
           controller.enqueue(sse("error", {
             ok: false,
             error: "NOVA Free-only inference was unavailable; no paid fallback executed.",
