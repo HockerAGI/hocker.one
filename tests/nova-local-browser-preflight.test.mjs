@@ -31,3 +31,9 @@ test("status verification reuses protected read-only endpoint with existing cook
   assert.match(chat,/href="\/chat\/local"/);
   assert.match(chat,/shouldAllowActionDraft\(prompt\)/);
 });
+
+test("local preparation page itself is server-side role gated",async()=>{
+  const code=await read("src/app/chat/local/page.tsx");
+  assert.match(code,/await requireProjectRole\("hocker-one", \["owner", "admin", "operator", "viewer"\]\)/);
+  assert.match(code,/redirect\("\/login"\)/);
+});
