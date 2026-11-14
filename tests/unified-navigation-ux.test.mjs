@@ -119,3 +119,24 @@ test("overview and topbar never approve sensitive actions without full Owner con
   assert.match(homeApprovals, /Sin verificar/);
   assert.match(approvalCenter, /\/api\/agi\/runtime\/actions\/decision/);
 });
+
+
+test("pending approval pagination does not hide older Owner actions", async () => {
+  const [center, route, queue] = await Promise.all([
+    read("src/components/owner/OwnerApprovalCenter.tsx"),
+    read("src/app/api/agi/runtime/actions/route.ts"),
+    read("src/lib/agi-action-execution.ts"),
+  ]);
+  // A 20-row recent-history snapshot must never be the only way to discover
+  // a pending decision, since >20 completed actions can be newer.
+  assert.match(center, /params\.set\("status", view\)/);
+  assert.match(center, /"needs_approval" \| "approved" \| "history"/);
+  assert.match(center, /offset: String\(page \* PAGE_SIZE\)/);
+  assert.match(center, /setPage\(\(value\) => value \+ 1\)/);
+  assert.match(center, /href="\/owner\/actions"|Centro de aprobación AGI/);
+  assert.match(route, /const offset = Number\(query\.get\("offset"\) \|\| 0\)/);
+  assert.match(route, /Number\.isSafeInteger\(offset\)/);
+  assert.match(route, /tool_key: toolKey, limit, offset/);
+  assert.match(queue, /\.range\(offset, offset \+ limit - 1\)/);
+  assert.match(queue, /\.order\("id", \{ ascending: false \}\)/);
+});
