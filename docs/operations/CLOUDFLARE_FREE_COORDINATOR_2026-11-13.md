@@ -50,3 +50,61 @@ Sources:
 - https://developers.cloudflare.com/workers/platform/pricing/
 - https://developers.cloudflare.com/workers/configuration/cron-triggers/
 - HOCKER Canon DOC-05 (2026-08), DOC-06 (2026-08), Hocker One #306.
+
+
+## Incident addendum — Vercel protected production, November 2026
+
+**Do not mistake a READY deployment for a successful scheduled observation.**
+After PR #417 was merged, a Worker+Cron was provisioned outside this initial inert
+repository configuration. Cloudflare GraphQL recorded 13 consecutive
+`scriptThrewException` invocations before containment and two more after an
+exact-SHA, new-environment production deployment. Worker Logs recorded
+`COORDINATOR_REQUEST_FAILED` with no safe upstream HTTP response code. The
+general code does **not** prove a DNS, redirect, authorization, or database fault.
+The Vercel deployment-fetch connector was itself rejected by deployment
+authentication. Do not disable Vercel Authentication merely to clear this error.
+
+### Protected Vercel integration (a separate approval and credential gate)
+
+The documented Vercel **Protection Bypass for Automation** feature provides a
+per-project automation credential for protected deployments, passed via the
+`x-vercel-protection-bypass` header. This bypass credential grants access past
+deployment protection to **all deployments in this Vercel project**, so it is
+more privileged than the read-only coordinator Bearer token. Protect it as a
+separate high-sensitivity credential; application auth/Owner Gate remains in
+force. Do not commit it, paste it into an issue, expose it in queries or logs,
+or reuse Supabase, model, CRON_SECRET, or Hocker internal keys.
+
+The Worker now **fails closed** unless BOTH bindings exist:
+- `NOVA_COORDINATOR_READ_TOKEN` — Hocker One application-level GET-only token
+- `NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN` — a distinct Vercel-generated automation
+  bypass secret; Worker `secret_text` binding, not plain `[vars]`
+
+The Worker still issues only one fixed-origin GET, rejects redirects and oversized
+responses, and does no writes, tool execution, model calls, or node heartbeats.
+The app endpoint still independently rejects an invalid or missing Bearer token.
+
+### Rollout / certification acceptance
+
+1. Keep Cron disabled while fixing the protected-route access issue. Check
+   exact-main CI, TypeScript, security review, a fresh Vercel Preview and final
+   production alias. Confirm Cloudflare plan/cost gate separately: current OAuth
+   connection cannot read billing (`403`).
+2. Deploy this reviewed Worker source with its existing read-only secret
+   preserved; configure the new Vercel bypass credential as a Worker secret,
+   not in GitHub, Vercel public environment, CLI history, URLs or logs.
+3. Verify public `/health` stays minimal. Use a controlled authorized
+   read-only request and inspect sanitized logs for
+   `COORDINATOR_OBSERVED`. Explicitly verify missing/invalid bypass and Bearer
+   fail closed without access.
+4. Only then enable one UTC `*/5 * * * *` Cron. Require at least three
+   independent successes and zero errors, writes, model calls and heartbeat
+   fabrication. If an exception returns, set Worker schedules to `[]`,
+   confirm with a second GET, and preserve diagnostic evidence.
+5. Any AGI task claim, paid model fallback or material tool execution is a
+   separate PR and Owner authorization. A successful observer **never**
+   certifies the dedicated NOVA/Node process, 16 autonomous AGIs or Owner
+   material-action flow.
+
+See: https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
+and Hocker One issue #306.

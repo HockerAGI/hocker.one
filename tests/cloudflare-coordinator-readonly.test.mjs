@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import worker, { observe } from "../infra/cloudflare/nova-coordinator/index.mjs";
 
 const token = "r".repeat(48);
+const bypass = "b".repeat(32);
 const good = {
   ok: true, service: "hocker-one", coordinator_mode: "observe_only",
   project_id: "hocker-one",
@@ -29,10 +30,12 @@ test("one GET to fixed Hocker One origin, with scoped token and no payload", asy
   let n=0;
   const result = await observe({
     NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
   },async (url,init)=>{
     n++; assert.equal(url,"https://hockerone.vercel.app/api/internal/nova-coordinator");
     assert.equal(init.method,"GET");
     assert.equal(init.headers.Authorization,"Bearer "+token);
+    assert.equal(init.headers["x-vercel-protection-bypass"],bypass);
     assert.equal(init.redirect,"error");
     assert.equal(init.body,undefined);
     return okResponse();
@@ -42,19 +45,30 @@ test("one GET to fixed Hocker One origin, with scoped token and no payload", asy
   assert.equal(result.registered_agi_profiles,16);
   assert.equal(result.queued_agi_tasks,14);
   assert.equal(JSON.stringify(result).includes(token),false);
+  assert.equal(JSON.stringify(result).includes(bypass),false);
 });
 
 test("rejects invalid auth, redirects, leaks and unauthenticated output",async()=>{
   await assert.rejects(observe({NOVA_COORDINATOR_ENABLED:"true"},()=>okResponse()),
     /COORDINATOR_SECRET_MISSING/);
+  // A missing project-wide deployment bypass must never silently fall back
+  // to a public URL or a broader HOCKER token.
+  await assert.rejects(observe({NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token},
+    ()=>okResponse()),/COORDINATOR_VERCEL_BYPASS_MISSING/);
+  await assert.rejects(observe({NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:"not-valid"},
+    ()=>okResponse()),/COORDINATOR_VERCEL_BYPASS_MISSING/);
   await assert.rejects(observe({
     NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
   },()=>new Response("",{status:401})),/COORDINATOR_UPSTREAM_HTTP_401/);
   await assert.rejects(observe({
     NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
   },()=>okResponse({...good,model_requests:1})),/COORDINATOR_RESPONSE_CONTRACT_INVALID/);
   await assert.rejects(observe({
     NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
   },()=>okResponse({...good,owner_gate_bypassed:true})),/COORDINATOR_RESPONSE_CONTRACT_INVALID/);
 });
 
