@@ -9,6 +9,13 @@
  * an explicit legacy initialize-era fallback for existing MCP servers.
  */
 
+import {
+  encodeMcpHttpHeaderValue,
+  mcpParamHeaders,
+  parseMcpParamAnnotations,
+  type McpParamHeader,
+} from "./mcp-http-param-headers.ts";
+
 export type McpTransport = "http" | "sse";
 
 export type McpConnectionStatus =
@@ -139,6 +146,7 @@ export class McpClient {
   private state: McpProviderState;
   private requestIdCounter = 0;
   private protocolEra: McpProtocolEra | null = null;
+  private readonly toolHeaderAnnotations = new Map<string, McpParamHeader[]>();
 
   constructor(config: McpProviderConfig) {
     this.config = config;
@@ -220,7 +228,15 @@ export class McpClient {
         routeName = String(params?.uri ?? "").trim();
       }
 
-      if (routeName) headers["Mcp-Name"] = routeName;
+      if (routeName) headers["Mcp-Name"] = encodeMcpHttpHeaderValue(routeName);
+
+      if (method === "tools/call" && routeName) {
+        const annotations = this.toolHeaderAnnotations.get(routeName) ?? [];
+        const callArgs = params?.arguments;
+        const resolvedArgs = callArgs && typeof callArgs === "object" &&
+          !Array.isArray(callArgs) ? callArgs as Record<string, unknown> : {};
+        Object.assign(headers, mcpParamHeaders(annotations, resolvedArgs));
+      }
     }
 
     return headers;
@@ -397,7 +413,23 @@ export class McpClient {
    */
   async listTools(): Promise<McpTool[]> {
     const result = (await this.request("tools/list")) as { tools?: McpTool[] } | null;
-    return result?.tools ?? [];
+    const tools = result?.tools ?? [];
+    this.toolHeaderAnnotations.clear();
+    if (this.protocolEra !== "modern") return tools;
+
+    const safeTools: McpTool[] = [];
+    for (const tool of tools) {
+      if (typeof tool?.name !== "string" || !tool.name) continue;
+      try {
+        const annotations = parseMcpParamAnnotations(tool.inputSchema ?? {});
+        this.toolHeaderAnnotations.set(tool.name, annotations);
+        safeTools.push(tool);
+      } catch {
+        // Malformed x-mcp-header annotations are NOT safe for modern HTTP.
+        // Exclude only the offending tool; other provider tools still work.
+      }
+    }
+    return safeTools;
   }
 
   /**
@@ -444,6 +476,7 @@ export class McpClient {
    * Disconnect and reset state.
    */
   disconnect(): void {
+    this.toolHeaderAnnotations.clear();
     this.protocolEra = null;
     this.state.status = "disconnected";
     this.state.lastError = null;
