@@ -6,11 +6,12 @@
  * needing external platforms like the Supabase Dashboard.
  *
  * Uses the MCP server URL: https://mcp.supabase.com/mcp
- * with project_ref parameter and Supabase server auth.
+ * with read_only=true, a single project_ref, and a dedicated platform PAT.
  */
 
 import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
+import { trustedSupabaseMcpUrl } from "./mcp-provider-targets";
 
 export type SupabaseMcpConfig = {
   /** Supabase project URL */
@@ -19,31 +20,10 @@ export type SupabaseMcpConfig = {
   projectRef: string;
   /** MCP server URL (defaults to https://mcp.supabase.com/mcp) */
   mcpServerUrl?: string;
-  /** Supabase publishable key for auth */
-  publishableKey?: string;
-  /** Supabase secret key for admin operations */
-  secretKey?: string;
-  /** Features to enable (docs, account, database, development, debugging, functions, branching) */
-  features?: string[];
+  /** Dedicated Supabase platform MCP PAT; never a Supabase Data API key. */
+  accessToken?: string;
 };
 
-const SUPABASE_MCP_BASE_URL = "https://mcp.supabase.com/mcp";
-
-const DEFAULT_FEATURES = [
-  "docs",
-  "account",
-  "database",
-  "development",
-  "debugging",
-  "functions",
-  "branching",
-];
-
-function extractProjectRef(url: string): string {
-  // Extract from https://yvuibbcuntqpyqiuqggd.supabase.co
-  const match = url.match(/https:\/\/([a-z0-9]+)\.supabase\.co/);
-  return match?.[1] ?? "";
-}
 
 export class McpSupabaseConnector {
   private client: McpClient;
@@ -53,19 +33,12 @@ export class McpSupabaseConnector {
   constructor(config: SupabaseMcpConfig) {
     this.config = config;
 
-    const projectRef = config.projectRef || extractProjectRef(config.supabaseUrl);
-    const features = config.features ?? DEFAULT_FEATURES;
-    const mcpUrl =
-      config.mcpServerUrl ??
-      `${SUPABASE_MCP_BASE_URL}?project_ref=${projectRef}&features=${features.join(",")}`;
-
-    const authHeaders: Record<string, string> = {};
-    if (config.secretKey) {
-      authHeaders["Authorization"] = `Bearer ${config.secretKey}`;
-    }
-    if (config.publishableKey) {
-      authHeaders["X-Supabase-Publishable-Key"] = config.publishableKey;
-    }
+    const mcpUrl = trustedSupabaseMcpUrl(config);
+    // Never reuse SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY, or
+    // SUPABASE_PUBLISHABLE_KEY against the remote administrative MCP server.
+    const authHeaders: Record<string, string> = config.accessToken
+      ? { Authorization: `Bearer ${config.accessToken}` }
+      : {};
 
     const providerConfig: McpProviderConfig = {
       id: "supabase",
@@ -75,7 +48,7 @@ export class McpSupabaseConnector {
       authHeaders,
       transport: "http",
       timeoutMs: 30_000,
-      enabled: Boolean(config.supabaseUrl && (config.secretKey || config.publishableKey)),
+      enabled: Boolean(config.supabaseUrl && config.accessToken),
     };
 
     this.client = new McpClient(providerConfig);
@@ -143,7 +116,7 @@ export class McpSupabaseConnector {
    * Insert rows into a table.
    */
   async insert(table: string, rows: Record<string, unknown>[]): Promise<unknown> {
-    return this.client.callTool("insert_rows", { table, rows });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
@@ -154,14 +127,14 @@ export class McpSupabaseConnector {
     filter: Record<string, unknown>,
     values: Record<string, unknown>,
   ): Promise<unknown> {
-    return this.client.callTool("update_rows", { table, filter, values });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
    * Delete rows from a table.
    */
   async delete(table: string, filter: Record<string, unknown>): Promise<unknown> {
-    return this.client.callTool("delete_rows", { table, filter });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
@@ -182,21 +155,21 @@ export class McpSupabaseConnector {
    * Deploy an edge function.
    */
   async deployFunction(name: string, code: string): Promise<unknown> {
-    return this.client.callTool("deploy_function", { name, code });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
    * Create a database migration.
    */
   async createMigration(name: string, sql: string): Promise<unknown> {
-    return this.client.callTool("create_migration", { name, sql });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
    * Apply a migration.
    */
   async applyMigration(name: string): Promise<unknown> {
-    return this.client.callTool("apply_migration", { name });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
@@ -237,15 +210,21 @@ export function createSupabaseMcpConnector(): McpSupabaseConnector {
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     projectRef: process.env.SUPABASE_PROJECT_REF ?? "",
     mcpServerUrl: process.env.SUPABASE_MCP_URL,
-    publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
-    secretKey: process.env.SUPABASE_SECRET_KEY,
-    features: DEFAULT_FEATURES,
+    accessToken: process.env.SUPABASE_MCP_ACCESS_TOKEN,
   });
 }
 
 export function isSupabaseMcpConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY),
-  );
+  if (!process.env.SUPABASE_MCP_ACCESS_TOKEN || !process.env.NEXT_PUBLIC_SUPABASE_URL) return false;
+  try {
+    trustedSupabaseMcpUrl({
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      projectRef: process.env.SUPABASE_PROJECT_REF,
+      mcpServerUrl: process.env.SUPABASE_MCP_URL,
+    });
+    return true;
+  } catch {
+    // A malformed override disables ONLY this provider, not the MCP registry.
+    return false;
+  }
 }

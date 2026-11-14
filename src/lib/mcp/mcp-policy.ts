@@ -82,7 +82,7 @@ const READ_ONLY_TOOLS: Record<McpProviderId, RegExp[]> = {
   ],
   github: [/^(list_|get_|read_|search_)/],
   vercel: [/^(list_|get_|read_|inspect_)/],
-  openai: [/^(list_models|moderate|create_embedding)$/],
+  openai: [/^(search_openai_docs|lookup_page)$/],
   base44: [/^(list_apps|get_app_status)$/],
 };
 

@@ -653,11 +653,11 @@ export function getMcpConfigurationSummary(): Record<string, { configured: boole
   return {
     supabase: {
       configured: isSupabaseMcpConfigured(),
-      required: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY or SUPABASE_PUBLISHABLE_KEY"],
+      required: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_MCP_ACCESS_TOKEN (project-scoped PAT)"],
     },
     vercel: {
       configured: isVercelMcpConfigured(),
-      required: ["VERCEL_TOKEN"],
+      required: ["VERCEL_MCP_OAUTH_TOKEN (approved OAuth client)"],
     },
     github: {
       configured: isGitHubMcpConfigured(),
@@ -665,7 +665,7 @@ export function getMcpConfigurationSummary(): Record<string, { configured: boole
     },
     openai: {
       configured: isOpenAIMcpConfigured(),
-      required: ["OPENAI_API_KEY"],
+      required: ["OPENAI_DOCS_MCP_ENABLED=true (public docs only)"],
     },
     base44: {
       configured: isBase44McpConfigured(),

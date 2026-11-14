@@ -53,11 +53,13 @@ declare namespace NodeJS {
     OPENAI_API_KEY?: string;
     OPENAI_ORG_ID?: string;
     OPENAI_MCP_URL?: string;
+    OPENAI_DOCS_MCP_ENABLED?: string;
     OPENAI_DEFAULT_MODEL?: string;
 
     /* Supabase MCP */
     SUPABASE_PROJECT_REF?: string;
     SUPABASE_MCP_URL?: string;
+    SUPABASE_MCP_ACCESS_TOKEN?: string;
 
     /* Logging & Rate Limiting */
     LOG_LEVEL?: string;
