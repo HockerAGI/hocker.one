@@ -57,8 +57,8 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
           <p className="hko-uni-panel-kicker">Aprobaciones</p>
           <p className="hko-uni-panel-title">Cola AGI · {pending.length} pendientes</p>
         </div>
-        <span className={`hko-status-val ${pending.length > 0 ? "warn" : "ok"}`}>
-          {pending.length > 0 ? "Revisar" : "Limpia"}
+        <span className={`hko-status-val ${loadError || pending.length > 0 ? "warn" : "ok"}`}>
+          {loadError ? "Sin verificar" : pending.length > 0 ? "Revisar" : "Limpia"}
         </span>
       </div>
       <div className="hko-uni-panel-body">
