@@ -309,9 +309,13 @@ export async function runToolEnabledUnifiedNovaChat(params: {
 
   const toolResults = allToolResults;
   if (!finalReply) {
+    const githubCommitReadFailed = toolResults.some((item) =>
+      item.name === "github.list_commits" && !item.executed);
     finalReply = toolResults.some((item) => item.needs_approval)
       ? "Preparé la solicitud para revisión mediante Owner Gate. No ejecuté ninguna acción."
-      : "No pude generar una respuesta verificable con la evidencia disponible.";
+      : githubCommitReadFailed
+        ? "GitHub MCP no completó la consulta de commits. No obtuve un SHA verificable y no modifiqué ningún repositorio."
+        : "No pude generar una respuesta verificable con la evidencia disponible.";
   }
 
   const deferredActions = collectAgiMcpDeferredActions(toolResults);

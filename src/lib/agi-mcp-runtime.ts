@@ -7,6 +7,7 @@ import {
   type McpProviderId,
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import { normalizeGitHubListCommitsArguments } from "@/lib/mcp/mcp-github-read-arguments";
 import { createServerlessAgiTask } from "@/lib/serverless-agi-runtime";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
@@ -323,8 +324,15 @@ export async function executeAgiMcpToolCalls(
       continue;
     }
 
+    let authorizedArgs = call.args;
     try {
-      assertMcpReadToolPolicy(call.provider, call.tool, call.args);
+      // Authorization must check the same resolved repository sent to GitHub.
+      // Never authorize aliases as the default Hocker repo and later rewrite
+      // their outbound target into a different owner namespace.
+      authorizedArgs = call.provider === "github" && call.tool === "list_commits"
+        ? normalizeGitHubListCommitsArguments(call.args)
+        : call.args;
+      assertMcpReadToolPolicy(call.provider, call.tool, authorizedArgs);
     } catch {
       results.push({
         id: call.id,
@@ -337,7 +345,7 @@ export async function executeAgiMcpToolCalls(
     }
 
     try {
-      const raw = await registry.executeTool(call.provider, call.tool, call.args);
+      const raw = await registry.executeTool(call.provider, call.tool, authorizedArgs);
       results.push({
         id: call.id,
         name: call.qualified_name,

@@ -10,8 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireOwnerOrInternal } from "@/lib/hocker-owner-api-gate";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import { normalizeGitHubListCommitsArguments } from "@/lib/mcp/mcp-github-read-arguments";
 import {
   assertMcpToolAvailable,
+  assertMcpReadToolPolicy,
   isReadOnlyMcpTool,
   MCP_PROVIDER_IDS,
   type McpProviderId,
@@ -65,6 +67,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Apply the same full allowlist / sensitive-path policy as NOVA Chat.
+    // The final outbound GitHub target must be authorized after normalization.
+    const safeArgs = provider === "github" && tool === "list_commits"
+      ? normalizeGitHubListCommitsArguments(args ?? {})
+      : (args ?? {});
+    assertMcpReadToolPolicy(provider, tool, safeArgs);
     await assertMcpToolAvailable(provider, tool);
 
     log.info("MCP read request", {
@@ -75,7 +83,7 @@ export async function POST(req: NextRequest) {
     });
 
     const registry = getMcpRegistry();
-    const result = await registry.executeTool(provider, tool, args);
+    const result = await registry.executeTool(provider, tool, safeArgs);
 
     return NextResponse.json({
       ok: true,

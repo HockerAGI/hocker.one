@@ -42,7 +42,7 @@ test("MCP read tools are allowlisted and sensitive GitHub paths are blocked befo
   assert.match(policy, /HOCKER_GITHUB_ALLOWED_REPOS/);
   assert.match(policy, /HockerAGI\/punto\.g/);
   assert.match(policy, /Path sensible bloqueado para lectura AGI/);
-  assert.match(runtime, /assertMcpReadToolPolicy\(call\.provider, call\.tool, call\.args\)/);
+  assert.match(runtime, /assertMcpReadToolPolicy\(call\.provider, call\.tool, authorizedArgs\)/);
   assert.match(runtime, /MCP_READ_BLOCKED_BY_POLICY/);
 });
 
