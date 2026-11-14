@@ -66,6 +66,7 @@ test("MCP connectors do not send application API keys to admin/docs servers",asy
   ]);
   assert.match(supabase,/accessToken: process\.env\.SUPABASE_MCP_ACCESS_TOKEN/);
   assert.match(supabase,/config\.accessToken/);
+  assert.equal((supabase.match(/throw new Error\("SUPABASE_MCP_READ_ONLY"\)/g) ?? []).length,6);
   assert.doesNotMatch(supabase,/secretKey: process\.env|publishableKey: process\.env/);
   assert.doesNotMatch(supabase,/Authorization.*config\.secretKey/);
   assert.match(openai,/OPENAI_DOCS_MCP_ENABLED !== "true"/);
