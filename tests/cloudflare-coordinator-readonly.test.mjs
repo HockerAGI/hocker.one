@@ -70,6 +70,9 @@ test("public Worker only provides minimal health; routes do not execute tools",a
   assert.match(route,/NOVA_COORDINATOR_READ_TOKEN/);
   assert.match(route,/NOVA_COORDINATOR_OBSERVE_ENABLED !== "true"/);
   assert.match(route,/timingSafeEqual/);
+  assert.match(route,/from\("agi_agents"\)\.select\("agi_id", \{ head: true, count: "exact" \}\)/);
+  assert.doesNotMatch(route,/from\("agi_agents"\)\.select\("id"/);
+  assert.match(route,/from\("agi_tasks"\)\.select\("id", \{ head: true, count: "exact" \}\)/);
   assert.doesNotMatch(route,/\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(|executeCommand\(|runUnifiedAgiWorkerOnce\(/);
   assert.match(config,/NOVA_COORDINATOR_ENABLED = "false"/);
   assert.doesNotMatch(config,/^crons\s*=/m);
