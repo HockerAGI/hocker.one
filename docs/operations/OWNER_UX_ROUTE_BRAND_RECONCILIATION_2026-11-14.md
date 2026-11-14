@@ -41,6 +41,21 @@
 
 **Remaining UX debt:** multiple UI components independently poll the same pending-action count; fix with a single provider/event source after measuring authenticated UI behavior. No whole-shell VFX rewrite here.
 
+### Review finding and correction — 2026-11-14
+
+Code review on the first candidate identified a real access regression: replacing
+quick approvals with the Owner center would hide an old pending request if
+20 newer already-closed records filled its unfiltered list. The PR now:
+- Adds bounded `offset` support to the project-scoped action-list API and
+  a stable `created_at`, `id` ordering for paginated results.
+- Separately filters `needs_approval` and `approved` records before paging,
+  with a third history view and explicit Previous/Next navigation.
+- Keeps the AAL2 Owner route as the only review/mutation UI; no Topbar
+  shortcuts regain material write permission.
+- Adds regression assertions for filtered pending fetch, offset validation
+  and database range. The initial CI/Preview belonged to the pre-fix SHA
+  and must be repeated for the new exact head.
+
 ## 5. Release gates and limitations
 
 1. Unit/contract tests, TypeScript, lint, production build, security/audit and exact-head Preview must pass. Review branch diff for unrelated changes.
