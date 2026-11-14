@@ -42,7 +42,7 @@ test("MCP connector sends normalized arguments without changing mutation or Owne
   assert.match(registry,/normalizeGitHubListCommitsArguments\(args \?\? \{\}\)/);
   assert.match(registry,/argument_keys: Object\.keys\(args \?\? \{\}\)/);
   assert.match(policy,/assertMcpReadToolPolicy/);
-  assert.match(runtime,/assertMcpReadToolPolicy\(call\.provider, call\.tool, call\.args\)/);
+  assert.match(runtime,/assertMcpReadToolPolicy\(call\.provider, call\.tool, authorizedArgs\)/);
   assert.match(runtime,/MCP_MUTATION_REQUIRES_HOCKER_ONE_OWNER_GATE/);
   const normalizeAt = runtime.indexOf("normalizeGitHubListCommitsArguments(call.args)");
   const policyAt = runtime.indexOf("assertMcpReadToolPolicy(call.provider, call.tool, authorizedArgs)");
