@@ -82,6 +82,8 @@ test("Context Bridge is discoverable in More and on mobile without weakening MFA
   assert.match(shell, /<ContextNav \/>/);
   assert.match(shell, /showMobileContextNav/);
   assert.match(context, /requireOwnerAal2Page\("\/owner\/context-bridge"\)/);
+  assert.match(context, /legacyActiveWithoutApproval/);
+  assert.match(context, /no tiene un approval_id asociado/);
   assert.match(palette, /HOCKER_SECONDARY_NAVIGATION/);
 });
 
