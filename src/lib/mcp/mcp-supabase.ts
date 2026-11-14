@@ -6,11 +6,12 @@
  * needing external platforms like the Supabase Dashboard.
  *
  * Uses the MCP server URL: https://mcp.supabase.com/mcp
- * with project_ref parameter and Supabase server auth.
+ * with read_only=true, a single project_ref, and a dedicated platform PAT.
  */
 
 import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
+import { trustedSupabaseMcpUrl } from "./mcp-provider-targets";
 
 export type SupabaseMcpConfig = {
   /** Supabase project URL */
@@ -21,48 +22,8 @@ export type SupabaseMcpConfig = {
   mcpServerUrl?: string;
   /** Dedicated Supabase platform MCP PAT; never a Supabase Data API key. */
   accessToken?: string;
-  /** Features to enable (docs, account, database, development, debugging, functions, branching) */
-  features?: string[];
 };
 
-const SUPABASE_MCP_BASE_URL = "https://mcp.supabase.com/mcp";
-
-// The hosted administration MCP is separate from Hocker's Supabase Data API.
-// A single project and server-enforced read-only mode are mandatory.
-const DEFAULT_FEATURES = ["database", "debugging", "docs"] as const;
-const PROJECT_REF = /^[a-z0-9]{20}$/;
-
-function extractProjectRef(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const match = /^([a-z0-9]{20})\.supabase\.co$/.exec(parsed.hostname);
-    return parsed.protocol === "https:" ? (match?.[1] ?? "") : "";
-  } catch { return ""; }
-}
-
-/** The token may only be sent to the official Supabase-hosted MCP origin. */
-export function trustedSupabaseMcpUrl(input: {
-  supabaseUrl: string;
-  projectRef?: string;
-  mcpServerUrl?: string;
-}): string {
-  const fromUrl = extractProjectRef(input.supabaseUrl);
-  const explicit = String(input.projectRef ?? "").trim();
-  const projectRef = explicit || fromUrl;
-  if (!PROJECT_REF.test(projectRef) || (fromUrl && explicit && explicit !== fromUrl)) {
-    throw new Error("SUPABASE_MCP_PROJECT_SCOPE_INVALID");
-  }
-  const raw = new URL(input.mcpServerUrl || SUPABASE_MCP_BASE_URL);
-  if (raw.origin !== "https://mcp.supabase.com" ||
-      raw.pathname !== "/mcp" || raw.username || raw.password ||
-      raw.search || raw.hash) {
-    throw new Error("SUPABASE_MCP_UNTRUSTED_ENDPOINT");
-  }
-  raw.searchParams.set("project_ref", projectRef);
-  raw.searchParams.set("read_only", "true");
-  raw.searchParams.set("features", DEFAULT_FEATURES.join(","));
-  return raw.toString();
-}
 
 export class McpSupabaseConnector {
   private client: McpClient;
