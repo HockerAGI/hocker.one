@@ -60,7 +60,13 @@ export function normalizeGitHubListCommitsArguments(input: GitHubListCommitsInpu
   const normalized: Record<string, unknown> = { owner, repo };
   const sha = optionalString(raw.sha ?? raw.ref ?? raw.branch ?? raw.branch_name, "sha", 160);
   if (sha) {
-    if (!/^[A-Za-z0-9_./-]+$/.test(sha) || sha.includes("..")) throw new Error("GITHUB_MCP_INVALID_SHA");
+    // GitHub's sha selector also supports branch/tag names. Git refs permit
+    // '+' and '@', but not traversal-like, control, whitespace, .lock or @{.
+    const validRef = /^[A-Za-z0-9_./@+-]+$/.test(sha) &&
+      sha !== "@" && !sha.startsWith("/") && !sha.endsWith("/") &&
+      !sha.includes("..") && !sha.includes("//") && !sha.includes("@{") &&
+      !sha.split("/").some((part) => part.startsWith(".") || part.endsWith(".") || part.endsWith(".lock"));
+    if (!validRef) throw new Error("GITHUB_MCP_INVALID_SHA");
     normalized.sha = sha.replace(/^refs\/heads\//, "");
   }
   const count = integerOption(raw.perPage ?? raw.per_page ?? raw.limit, "per_page", 100);
