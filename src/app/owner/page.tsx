@@ -1,17 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Activity,
-  ArrowUpRight,
-  Brain,
-  DatabaseZap,
-  GitBranch,
-  Map as MapIcon,
-  Network,
-  ShieldCheck,
-  Sparkles,
-  Workflow,
-} from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight, Brain, Network, ShieldCheck, Workflow } from "lucide-react";
 
 import "@/styles/owner-unified.css";
 
@@ -40,14 +30,10 @@ export const metadata: Metadata = {
 };
 
 const QUICK_LINKS = [
-  { href: "/map", icon: MapIcon, title: "Mapa", text: "Dependencias y estado operativo" },
-  { href: "/live", icon: Activity, title: "Sistema en vivo", text: "Nodos, señales y actividad" },
-  { href: "/agis", icon: Brain, title: "AGIs", text: "Perfiles y workers verificables" },
-  { href: "/apps", icon: Network, title: "Aplicaciones", text: "Existencia, señal y evidencia" },
-  { href: "/integrations", icon: Workflow, title: "Integraciones", text: "Configuradas frente a verificadas" },
-  { href: "/security", icon: ShieldCheck, title: "Seguridad", text: "Permisos y acceso owner" },
-  { href: "/memory", icon: DatabaseZap, title: "Memoria IA", text: "Registros y última actividad" },
-  { href: "/status", icon: GitBranch, title: "Estado general", text: "Servicios y controles" },
+  { href: "/owner/actions", icon: ShieldCheck, title: "Aprobaciones", text: "Revisar decisiones con MFA Owner" },
+  { href: "/owner/context-bridge", icon: Network, title: "Continuidad", text: "Context Bridge y fuentes verificadas" },
+  { href: "/agis", icon: Brain, title: "AGIs", text: "Perfiles y capacidades con evidencia" },
+  { href: "/integrations", icon: Workflow, title: "Conexiones", text: "Integraciones configuradas frente a verificadas" },
 ];
 
 function novaLabel(status: string): string {
@@ -78,7 +64,7 @@ export default async function OwnerPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="relative grid h-9 w-9 place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_28px_rgba(30,200,255,0.18)]">
-              <Sparkles className="h-5 w-5" />
+              <Image src="/ecosystem/apps/hocker-one/icon.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" priority />
               <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaIsOnline ? "bg-emerald-400" : novaService.status === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
             </span>
             <h1 className="hko-uni-hero-title">Hocker ONE</h1>
