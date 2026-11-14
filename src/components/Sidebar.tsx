@@ -36,7 +36,7 @@ export default function Sidebar() {
   return (
     <aside className="hko-sidebar fixed left-3 top-3 z-[95] hidden h-[calc(100dvh-1.5rem)] w-[264px] flex-col overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#050d1a]/90 text-white shadow-[0_24px_70px_rgba(0,0,0,0.42)] backdrop-blur-3xl lg:flex" aria-label="Navegación principal">
       <Link href="/owner" className="mx-3 mt-3 flex h-[58px] shrink-0 items-center justify-center rounded-[18px]" aria-label="Inicio">
-        <Image src="/brand/hocker-one-logo.png" alt="Hocker ONE" className="max-h-9 w-[144px] object-contain" width={152} height={40} priority />
+        <Image src="/ecosystem/apps/hocker-one/logo.png" alt="Hocker ONE" className="max-h-14 w-[184px] object-contain" width={184} height={68} priority />
       </Link>
 
       {pendingCount > 0 ? (
@@ -59,7 +59,7 @@ export default function Sidebar() {
         </div>
 
         {activeSection.items.length > 1 ? (
-          <details className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
+          <details open={activeSection.id === "trabajo" || activeSection.id === "mas"} className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-slate-400">
               <ChevronDown className="h-4 w-4" /> En {activeSection.label}
             </summary>
