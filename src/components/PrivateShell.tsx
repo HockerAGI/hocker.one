@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import BottomDock from "@/components/BottomDock";
+import ContextNav from "@/components/ContextNav";
+import { getActiveHockerSection } from "@/lib/hocker-navigation";
 import CommandPalette from "@/components/CommandPalette";
 import HockerLiveBackground from "@/components/ui-hocker/HockerLiveBackground";
 
@@ -13,6 +15,8 @@ const HockerVfxLayer = dynamic(() => import("@/components/vfx/HockerVfxLayer"), 
 export default function PrivateShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/owner";
   const immersive = pathname === "/chat";
+  const section = getActiveHockerSection(pathname);
+  const showMobileContextNav = !immersive && section.id !== "inicio" && section.items.length > 1;
 
   return (
     <div className="hko-cinematic-root relative flex min-h-[100dvh] w-full flex-col overflow-x-hidden bg-[#030711] text-slate-50">
@@ -28,7 +32,10 @@ export default function PrivateShell({ children }: { children: React.ReactNode }
             : "hko-shell-main hko-mobile-dock-reserve relative mx-auto flex w-full flex-1 flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+8.5rem)] pt-[76px] sm:px-5 lg:pb-8 lg:pt-[72px]"}
           id="main-content"
         >
-          <div className={immersive ? "flex min-h-0 w-full flex-1 flex-col" : "mx-auto flex w-full max-w-[1800px] flex-1 flex-col"}>{children}</div>
+          <div className={immersive ? "flex min-h-0 w-full flex-1 flex-col" : "mx-auto flex w-full max-w-[1800px] flex-1 flex-col"}>
+            {showMobileContextNav ? <div className="mb-3 lg:hidden"><ContextNav /></div> : null}
+            {children}
+          </div>
         </main>
       </div>
 
