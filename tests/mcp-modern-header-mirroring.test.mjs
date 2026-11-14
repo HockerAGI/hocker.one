@@ -44,6 +44,32 @@ test("MCP malformed x-mcp-header definitions fail closed",()=>{
   assert.throws(()=>parseMcpParamAnnotations({properties:{bad:{type:"object",items:{type:"string","x-mcp-header":"Hidden"}}}}),/MCP_INVALID_TOOL_HEADER_ANNOTATION/);
 });
 
+test("MCP singleton JSON Schema primitive arrays are normalized before value checks", () => {
+  const annotations = parseMcpParamAnnotations({
+    type:"object", properties:{count:{type:["integer"],"x-mcp-header":"Count"}},
+  });
+  assert.equal(annotations[0].type, "integer");
+  assert.deepEqual(mcpParamHeaders(annotations,{count:4}),{"Mcp-Param-Count":"4"});
+  for (const count of [1.5,1e30,{}, "4"]) {
+    assert.throws(() => mcpParamHeaders(annotations,{count}),/MCP_TOOL_HEADER_TYPE_MISMATCH/);
+  }
+  assert.throws(() => parseMcpParamAnnotations({
+    properties:{count:{type:["integer","null"],"x-mcp-header":"Count"}},
+  }), /MCP_INVALID_TOOL_HEADER_ANNOTATION/);
+});
+
+test("Literal default, const and enum instance values are not header annotations", () => {
+  const input = {type:"object",properties:{
+    payload:{type:"object",default:{"x-mcp-header":"literal"},
+      const:{"x-mcp-header":"literal"},
+      enum:[{"x-mcp-header":"literal"}],examples:[{"x-mcp-header":"literal"}]},
+    owner:{type:"string","x-mcp-header":"Owner"},
+  }};
+  assert.deepEqual(parseMcpParamAnnotations(input),[
+    {name:"Owner",path:["owner"],type:"string"},
+  ]);
+});
+
 test("Authenticated read-only GitHub MCP wire request includes required annotated headers",()=>{
   const code = [
     "import {McpClient} from './src/lib/mcp/mcp-client.ts';",
