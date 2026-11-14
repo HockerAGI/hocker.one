@@ -28,10 +28,15 @@ export function parseMcpParamAnnotations(schema: Record<string, unknown>): McpPa
 
     if (Object.hasOwn(node, "x-mcp-header")) {
       const headerName = node["x-mcp-header"];
-      const type = node.type;
+      // JSON Schema permits singleton type arrays. Canonicalize the value
+      // before checking or storing, never store an unchecked array as a type.
+      const declaredType = node.type;
+      const type = Array.isArray(declaredType) && declaredType.length === 1
+        ? declaredType[0] : declaredType;
       if (!reachable || !path.length || typeof headerName !== "string" ||
           !headerName || !HEADER_TOKEN.test(headerName) ||
-          !["string","integer","boolean"].includes(String(type)) ||
+          typeof type !== "string" ||
+          !["string","integer","boolean"].includes(type) ||
           names.has(headerName.toLowerCase()) || result.length >= 24) {
         throw new Error("MCP_INVALID_TOOL_HEADER_ANNOTATION");
       }
@@ -52,7 +57,7 @@ export function parseMcpParamAnnotations(schema: Record<string, unknown>): McpPa
         } else {
           walk(child, path, false, depth + 1);
         }
-      } else if (key !== "x-mcp-header" && key !== "description" && key !== "examples" &&
+      } else if (!["x-mcp-header","description","examples","example","default","const","enum","title"].includes(key) &&
                  typeof child === "object" && child !== null) {
         if (Array.isArray(child)) {
           for (const item of child) walk(item, path, false, depth + 1);
