@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import worker, { observe } from "../infra/cloudflare/nova-coordinator/index.mjs";
+import worker, { observe, safeCoordinatorErrorCode } from "../infra/cloudflare/nova-coordinator/index.mjs";
 
 const token = "r".repeat(48);
 const bypass = "b".repeat(32);
@@ -36,7 +36,7 @@ test("one GET to fixed Hocker One origin, with scoped token and no payload", asy
     assert.equal(init.method,"GET");
     assert.equal(init.headers.Authorization,"Bearer "+token);
     assert.equal(init.headers["x-vercel-protection-bypass"],bypass);
-    assert.equal(init.redirect,"error");
+    assert.equal(init.redirect,"manual");
     assert.equal(init.body,undefined);
     return okResponse();
   });
@@ -70,6 +70,35 @@ test("rejects invalid auth, redirects, leaks and unauthenticated output",async()
     NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
     NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
   },()=>okResponse({...good,owner_gate_bypassed:true})),/COORDINATOR_RESPONSE_CONTRACT_INVALID/);
+});
+
+test("protected Vercel redirects fail closed and are not followed",async()=>{
+  let calls=0;
+  await assert.rejects(observe({
+    NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
+  },async (_url,init)=>{
+    calls++;
+    assert.equal(init.redirect,"manual");
+    return new Response(null,{status:302,headers:{Location:"https://untrusted.example/redirect"}});
+  }),/COORDINATOR_UPSTREAM_HTTP_302/);
+  assert.equal(calls,1);
+});
+
+test("diagnostics map errors to fixed codes without exposing secrets",()=>{
+  const redirect=new TypeError("redirect blocked: "+token+" "+bypass);
+  const network=new TypeError("DNS fetch failed for secret "+bypass);
+  assert.equal(safeCoordinatorErrorCode(redirect),"COORDINATOR_FETCH_REDIRECT_ERROR");
+  assert.equal(safeCoordinatorErrorCode(network),"COORDINATOR_FETCH_NETWORK_ERROR");
+  assert.equal(safeCoordinatorErrorCode(new TypeError("unknown "+token)),"COORDINATOR_FETCH_TYPE_ERROR");
+  const abort=new Error("Abort error "+token);
+  abort.name="AbortError";
+  assert.equal(safeCoordinatorErrorCode(abort),"COORDINATOR_FETCH_TIMEOUT");
+  for(const err of [redirect,network,new TypeError("unknown "+token),abort]){
+    const out=safeCoordinatorErrorCode(err);
+    assert.equal(out.includes(token),false);
+    assert.equal(out.includes(bypass),false);
+  }
 });
 
 test("public Worker only provides minimal health; routes do not execute tools",async()=>{

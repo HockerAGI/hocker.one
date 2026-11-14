@@ -36,7 +36,8 @@ export async function observe(env, fetcher = fetch) {
         Accept: "application/json",
         "Cache-Control": "no-store",
       },
-      redirect: "error",
+      // A 3xx is an explicit failure. Never follow or forward credentials.
+      redirect: "manual",
       signal: controller.signal,
     });
     if (!response.ok || response.status !== 200) {
@@ -98,6 +99,23 @@ export async function observe(env, fetcher = fetch) {
   }
 }
 
+/** Sanitize all fetch/redirect errors to fixed codes; never log URL/headers/body. */
+export function safeCoordinatorErrorCode(error) {
+  if (error instanceof Error &&
+      /^COORDINATOR_[A-Z0-9_]+$/.test(error.message)) return error.message;
+  if (error instanceof Error && error.name === "AbortError") {
+    return "COORDINATOR_FETCH_TIMEOUT";
+  }
+  if (error instanceof Error && error.name === "TypeError") {
+    if (/redirect/i.test(error.message)) return "COORDINATOR_FETCH_REDIRECT_ERROR";
+    if (/network|fetch failed|dns|connection|socket|tls/i.test(error.message)) {
+      return "COORDINATOR_FETCH_NETWORK_ERROR";
+    }
+    return "COORDINATOR_FETCH_TYPE_ERROR";
+  }
+  return "COORDINATOR_REQUEST_FAILED";
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -122,9 +140,7 @@ export default {
       console.log(JSON.stringify({ event: "coordinator_observation", ...status }));
     } catch (error) {
       // Never log upstream responses, prompts or authorization headers.
-      const code = error instanceof Error &&
-        /^COORDINATOR_[A-Z0-9_]+$/.test(error.message)
-        ? error.message : "COORDINATOR_REQUEST_FAILED";
+      const code = safeCoordinatorErrorCode(error);
       console.error(JSON.stringify({ event: "coordinator_failed", code }));
       throw new Error(code);
     }

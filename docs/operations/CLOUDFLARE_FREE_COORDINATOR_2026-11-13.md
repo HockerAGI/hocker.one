@@ -108,3 +108,28 @@ The app endpoint still independently rejects an invalid or missing Bearer token.
 
 See: https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
 and Hocker One issue #306.
+
+
+### Diagnostic follow-up after bypass binding (2026-11-14 06:30 UTC)
+
+The user placed `NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN` into the existing Worker as
+a `secret_text` alongside the original `NOVA_COORDINATOR_READ_TOKEN`.
+The post-binding single Cron canary at `06:30:04 UTC` still yielded
+`scriptThrewException`, and sanitized Workers Logs emitted
+`COORDINATOR_REQUEST_FAILED`; event wall time was ~1 ms with 0 recorded
+subrequests. No incoming request was found in sampled Vercel runtime logs.
+The actual root cause remains unknown, and a valid 32-character binding does
+not prove that the value matches an existing Vercel bypass credential.
+
+Cron was disabled immediately at `06:31:14 UTC` with an independent
+`schedules: []` read-back. This change provides **safe diagnostics only**:
+redirect mode is `manual`, which **does not follow** or forward tokens to
+redirected destinations; any 3xx response fails with a fixed
+`COORDINATOR_UPSTREAM_HTTP_<status>`. Fetch exceptions are classified into
+fixed allowlisted timeout/redirect/network/type codes. No raw error messages,
+upstream URLs, response bodies, headers, or credentials are logged.
+
+After review, unit tests, Preview and deployment of this same script, run
+**one bounded read-only canary** and inspect the fixed error code. If error
+persists, keep Cron off and investigate the specific category. Do not guess
+whether it was Vercel protection, DNS, an edge redirect, or runtime API.
