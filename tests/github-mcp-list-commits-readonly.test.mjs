@@ -14,6 +14,10 @@ test("GitHub list_commits converts natural tool aliases to documented owner/repo
     { owner:"HockerAGI",repo:"hocker.one",sha:"main",perPage:1 });
   assert.deepEqual(normalize({ repo:"HockerAGI/hocker.one",limit:1 }),
     { owner:"HockerAGI",repo:"hocker.one",perPage:1 });
+  assert.deepEqual(normalize({owner:"HockerAGI",repo:"hocker.one",branch:"release/1.0+hotfix"}),
+    {owner:"HockerAGI",repo:"hocker.one",sha:"release/1.0+hotfix"});
+  assert.deepEqual(normalize({owner:"HockerAGI",repo:"hocker.one",sha:"user@work"}),
+    {owner:"HockerAGI",repo:"hocker.one",sha:"user@work"});
 });
 
 test("GitHub list_commits refuses ambiguous, invalid or conflicting repository selectors", () => {
@@ -23,6 +27,9 @@ test("GitHub list_commits refuses ambiguous, invalid or conflicting repository s
   assert.throws(() => normalize({owner:"HockerAGI",repo:"hocker.one",perPage:0}),/GITHUB_MCP_INVALID_PER_PAGE/);
   assert.throws(() => normalize({owner:"HockerAGI",repo:"hocker.one",perPage:101}),/GITHUB_MCP_INVALID_PER_PAGE/);
   assert.throws(() => normalize({owner:"HockerAGI",repo:"hocker.one",sha:"../main"}),/GITHUB_MCP_INVALID_SHA/);
+  assert.throws(() => normalize({owner:"HockerAGI",repo:"hocker.one",sha:"main@{1"}),/GITHUB_MCP_INVALID_SHA/);
+  assert.deepEqual(normalize({repo:"OtherOrg/private-repo",perPage:1}),
+    {owner:"OtherOrg",repo:"private-repo",perPage:1}); // Runtime must then authorize this normalized target.
 });
 
 test("MCP connector sends normalized arguments without changing mutation or Owner Gate policy", async () => {
@@ -37,4 +44,9 @@ test("MCP connector sends normalized arguments without changing mutation or Owne
   assert.match(policy,/assertMcpReadToolPolicy/);
   assert.match(runtime,/assertMcpReadToolPolicy\(call\.provider, call\.tool, call\.args\)/);
   assert.match(runtime,/MCP_MUTATION_REQUIRES_HOCKER_ONE_OWNER_GATE/);
+  const normalizeAt = runtime.indexOf("normalizeGitHubListCommitsArguments(call.args)");
+  const policyAt = runtime.indexOf("assertMcpReadToolPolicy(call.provider, call.tool, authorizedArgs)");
+  const executeAt = runtime.indexOf("registry.executeTool(call.provider, call.tool, authorizedArgs)");
+  assert.ok(normalizeAt >= 0 && policyAt > normalizeAt && executeAt > policyAt,
+    "MCP read policy must validate the normalized destination before dispatch");
 });
