@@ -29,6 +29,7 @@ import {
   isOpenAIMcpConfigured,
 } from "./mcp-openai";
 import { log } from "@/lib/logger";
+import { normalizeGitHubListCommitsArguments } from "./mcp-github-read-arguments";
 import { alertMcpProviderDown } from "@/lib/hocker-alerts";
 
 // ── Base44 MCP Connector ─────────────────────────────────────
@@ -516,7 +517,10 @@ class McpRegistrySingleton {
         if (!client) {
           throw new Error(`MCP provider ${providerId} client not available.`);
         }
-        result = await client.callTool(toolName, args);
+        const sanitizedArgs = providerId === "github" && toolName === "list_commits"
+          ? normalizeGitHubListCommitsArguments(args ?? {})
+          : args;
+        result = await client.callTool(toolName, sanitizedArgs);
       }
 
       log.info("MCP tool executed", {
@@ -532,6 +536,9 @@ class McpRegistrySingleton {
         provider: providerId,
         tool: toolName,
         detail: msg,
+        ...(providerId === "github" && toolName === "list_commits"
+          ? { argument_keys: Object.keys(args ?? {}).sort().slice(0, 20) }
+          : {}),
       });
       alertMcpProviderDown(providerId, msg);
       throw err;
