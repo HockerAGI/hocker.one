@@ -32,7 +32,7 @@ test("MCP 2026-07-28 tool header annotations mirror exactly the annotated argume
 test("MCP parameter headers encode non-ASCII, whitespace and sentinel safely", () => {
   assert.equal(encodeMcpHttpHeaderValue("foo"),"foo");
   assert.equal(encodeMcpHttpHeaderValue("a\nb"),"=?base64?YQpi?=");
-  assert.equal(encodeMcpHttpHeaderValue(" Méx"),"=?base64?IE3DqXg?=");
+  assert.equal(encodeMcpHttpHeaderValue(" Méx"),"=?base64?IE3DqXg=?=");
   assert.equal(encodeMcpHttpHeaderValue("=?base64?literal?="),"=?base64?PT9iYXNlNjQ/bGl0ZXJhbD89?=");
   assert.throws(()=>mcpParamHeaders(parseMcpParamAnnotations(annotatedSchema),{owner:2,repo:"hocker.one"}),/MCP_TOOL_HEADER_TYPE_MISMATCH/);
 });
