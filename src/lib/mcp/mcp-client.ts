@@ -14,7 +14,7 @@ import {
   mcpParamHeaders,
   parseMcpParamAnnotations,
   type McpParamHeader,
-} from "./mcp-http-param-headers";
+} from "./mcp-http-param-headers.ts";
 
 export type McpTransport = "http" | "sse";
 
