@@ -19,30 +19,49 @@ export type SupabaseMcpConfig = {
   projectRef: string;
   /** MCP server URL (defaults to https://mcp.supabase.com/mcp) */
   mcpServerUrl?: string;
-  /** Supabase publishable key for auth */
-  publishableKey?: string;
-  /** Supabase secret key for admin operations */
-  secretKey?: string;
+  /** Dedicated Supabase platform MCP PAT; never a Supabase Data API key. */
+  accessToken?: string;
   /** Features to enable (docs, account, database, development, debugging, functions, branching) */
   features?: string[];
 };
 
 const SUPABASE_MCP_BASE_URL = "https://mcp.supabase.com/mcp";
 
-const DEFAULT_FEATURES = [
-  "docs",
-  "account",
-  "database",
-  "development",
-  "debugging",
-  "functions",
-  "branching",
-];
+// The hosted administration MCP is separate from Hocker's Supabase Data API.
+// A single project and server-enforced read-only mode are mandatory.
+const DEFAULT_FEATURES = ["database", "debugging", "docs"] as const;
+const PROJECT_REF = /^[a-z0-9]{20}$/;
 
 function extractProjectRef(url: string): string {
-  // Extract from https://yvuibbcuntqpyqiuqggd.supabase.co
-  const match = url.match(/https:\/\/([a-z0-9]+)\.supabase\.co/);
-  return match?.[1] ?? "";
+  try {
+    const parsed = new URL(url);
+    const match = /^([a-z0-9]{20})\.supabase\.co$/.exec(parsed.hostname);
+    return parsed.protocol === "https:" ? (match?.[1] ?? "") : "";
+  } catch { return ""; }
+}
+
+/** The token may only be sent to the official Supabase-hosted MCP origin. */
+export function trustedSupabaseMcpUrl(input: {
+  supabaseUrl: string;
+  projectRef?: string;
+  mcpServerUrl?: string;
+}): string {
+  const fromUrl = extractProjectRef(input.supabaseUrl);
+  const explicit = String(input.projectRef ?? "").trim();
+  const projectRef = explicit || fromUrl;
+  if (!PROJECT_REF.test(projectRef) || (fromUrl && explicit && explicit !== fromUrl)) {
+    throw new Error("SUPABASE_MCP_PROJECT_SCOPE_INVALID");
+  }
+  const raw = new URL(input.mcpServerUrl || SUPABASE_MCP_BASE_URL);
+  if (raw.origin !== "https://mcp.supabase.com" ||
+      raw.pathname !== "/mcp" || raw.username || raw.password ||
+      raw.search || raw.hash) {
+    throw new Error("SUPABASE_MCP_UNTRUSTED_ENDPOINT");
+  }
+  raw.searchParams.set("project_ref", projectRef);
+  raw.searchParams.set("read_only", "true");
+  raw.searchParams.set("features", DEFAULT_FEATURES.join(","));
+  return raw.toString();
 }
 
 export class McpSupabaseConnector {
@@ -53,19 +72,12 @@ export class McpSupabaseConnector {
   constructor(config: SupabaseMcpConfig) {
     this.config = config;
 
-    const projectRef = config.projectRef || extractProjectRef(config.supabaseUrl);
-    const features = config.features ?? DEFAULT_FEATURES;
-    const mcpUrl =
-      config.mcpServerUrl ??
-      `${SUPABASE_MCP_BASE_URL}?project_ref=${projectRef}&features=${features.join(",")}`;
-
-    const authHeaders: Record<string, string> = {};
-    if (config.secretKey) {
-      authHeaders["Authorization"] = `Bearer ${config.secretKey}`;
-    }
-    if (config.publishableKey) {
-      authHeaders["X-Supabase-Publishable-Key"] = config.publishableKey;
-    }
+    const mcpUrl = trustedSupabaseMcpUrl(config);
+    // Never reuse SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY, or
+    // SUPABASE_PUBLISHABLE_KEY against the remote administrative MCP server.
+    const authHeaders: Record<string, string> = config.accessToken
+      ? { Authorization: `Bearer ${config.accessToken}` }
+      : {};
 
     const providerConfig: McpProviderConfig = {
       id: "supabase",
@@ -75,7 +87,7 @@ export class McpSupabaseConnector {
       authHeaders,
       transport: "http",
       timeoutMs: 30_000,
-      enabled: Boolean(config.supabaseUrl && (config.secretKey || config.publishableKey)),
+      enabled: Boolean(config.supabaseUrl && config.accessToken),
     };
 
     this.client = new McpClient(providerConfig);
@@ -237,15 +249,21 @@ export function createSupabaseMcpConnector(): McpSupabaseConnector {
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     projectRef: process.env.SUPABASE_PROJECT_REF ?? "",
     mcpServerUrl: process.env.SUPABASE_MCP_URL,
-    publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
-    secretKey: process.env.SUPABASE_SECRET_KEY,
-    features: DEFAULT_FEATURES,
+    accessToken: process.env.SUPABASE_MCP_ACCESS_TOKEN,
   });
 }
 
 export function isSupabaseMcpConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY),
-  );
+  if (!process.env.SUPABASE_MCP_ACCESS_TOKEN || !process.env.NEXT_PUBLIC_SUPABASE_URL) return false;
+  try {
+    trustedSupabaseMcpUrl({
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      projectRef: process.env.SUPABASE_PROJECT_REF,
+      mcpServerUrl: process.env.SUPABASE_MCP_URL,
+    });
+    return true;
+  } catch {
+    // A malformed override disables ONLY this provider, not the MCP registry.
+    return false;
+  }
 }
