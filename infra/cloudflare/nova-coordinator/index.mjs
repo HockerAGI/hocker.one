@@ -13,6 +13,12 @@ function assertSafeConfig(env) {
       env.NOVA_COORDINATOR_READ_TOKEN.length < 32) {
     throw new Error("COORDINATOR_SECRET_MISSING");
   }
+  // Vercel Authentication is independent of the narrowly scoped observation token.
+  // Never disable deployment protection or reuse a material-action credential.
+  if (typeof env.NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN !== "string" ||
+      !/^[A-Za-z0-9]{32}$/.test(env.NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN)) {
+    throw new Error("COORDINATOR_VERCEL_BYPASS_MISSING");
+  }
   return true;
 }
 
@@ -26,6 +32,7 @@ export async function observe(env, fetcher = fetch) {
       method: "GET",
       headers: {
         Authorization: "Bearer " + env.NOVA_COORDINATOR_READ_TOKEN,
+        "x-vercel-protection-bypass": env.NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN,
         Accept: "application/json",
         "Cache-Control": "no-store",
       },
