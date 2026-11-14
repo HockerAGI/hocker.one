@@ -37,13 +37,18 @@ export async function GET(req: Request): Promise<Response> {
     const status = query.get("status") || undefined;
     const toolKey = query.get("tool_key") || undefined;
     const limit = Number(query.get("limit") || 30);
+    const offset = Number(query.get("offset") || 0);
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000) {
+      return json({ ok: false, error: "INVALID_ACTION_QUEUE_OFFSET" }, 400);
+    }
     const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
-    const actions = await listAgiActions({ project_id: ctx.project_id, status, tool_key: toolKey, limit });
+    const actions = await listAgiActions({ project_id: ctx.project_id, status, tool_key: toolKey, limit, offset });
 
     return json({
       ok: true,
       project_id: ctx.project_id,
       count: actions.length,
+      offset,
       actions,
       message: "Cola Herramientas reales leída con seguridad. Las escrituras reales requieren aprobación owner.",
     });
