@@ -54,3 +54,66 @@ test("command palette searches primary and secondary destinations", async () => 
   assert.match(palette, /HOCKER_SECONDARY_NAVIGATION/);
   assert.match(palette, /role="dialog"/);
 });
+
+
+test("Owner approvals resolve to a real gated page, not a redirect or placeholder", async () => {
+  const [redirects, page, tasks] = await Promise.all([
+    read("next.config.ts"),
+    read("src/app/owner/actions/page.tsx"),
+    read("src/app/commands/page.tsx"),
+  ]);
+  assert.doesNotMatch(redirects, /source: "\/owner\/actions", destination: "\/commands"/);
+  assert.match(page, /requireOwnerAal2Page\("\/owner\/actions"/);
+  assert.match(page, /<OwnerApprovalCenter projectId=\{projectId\}/);
+  assert.match(page, /robots: \{ index: false/);
+  assert.doesNotMatch(page, /Aquí irá el listado de acciones|OwnerShell/);
+  assert.match(tasks, /href="\/owner\/actions"/);
+});
+
+test("Context Bridge is discoverable in More and on mobile without weakening MFA", async () => {
+  const [navigation, shell, context, palette] = await Promise.all([
+    read("src/lib/hocker-navigation.ts"),
+    read("src/components/PrivateShell.tsx"),
+    read("src/app/owner/context-bridge/page.tsx"),
+    read("src/components/CommandPalette.tsx"),
+  ]);
+  assert.match(navigation, /id: "context-bridge", href: "\/owner\/context-bridge", label: "Continuidad"/);
+  assert.match(navigation, /matchPrefixes: \["\/owner\/evidence", "\/owner\/context-bridge"/);
+  assert.match(shell, /<ContextNav \/>/);
+  assert.match(shell, /showMobileContextNav/);
+  assert.match(context, /requireOwnerAal2Page\("\/owner\/context-bridge"\)/);
+  assert.match(palette, /HOCKER_SECONDARY_NAVIGATION/);
+});
+
+test("official verified repository assets are used as wordmark and isotype", async () => {
+  const [sidebar, topbar, home, manifest, logo, icon] = await Promise.all([
+    read("src/components/Sidebar.tsx"),
+    read("src/components/Topbar.tsx"),
+    read("src/app/owner/page.tsx"),
+    read("public/ecosystem/asset-map.json").then(JSON.parse),
+    readFile(new URL("../public/ecosystem/apps/hocker-one/logo.png", import.meta.url)),
+    readFile(new URL("../public/ecosystem/apps/hocker-one/icon.png", import.meta.url)),
+  ]);
+  assert.match(sidebar, /src="\/ecosystem\/apps\/hocker-one\/logo\.png"/);
+  assert.match(topbar, /src="\/ecosystem\/apps\/hocker-one\/icon\.png"/);
+  assert.match(home, /src="\/ecosystem\/apps\/hocker-one\/icon\.png"/);
+  assert.doesNotMatch(sidebar, /src="\/brand\/hocker-one-logo\.png"/);
+  assert.equal(manifest["hocker-one"].logo.dest, "ecosystem/apps/hocker-one/logo.png");
+  assert.equal(manifest["hocker-one"].icon.dest, "ecosystem/apps/hocker-one/icon.png");
+  const pngSignature = Buffer.from([137,80,78,71,13,10,26,10]);
+  assert.ok(logo.subarray(0,8).equals(pngSignature), "wordmark must be original PNG");
+  assert.ok(icon.subarray(0,8).equals(pngSignature), "isotype must be original PNG");
+});
+
+test("overview and topbar never approve sensitive actions without full Owner context", async () => {
+  const [topbar, homeApprovals, approvalCenter] = await Promise.all([
+    read("src/components/Topbar.tsx"),
+    read("src/components/owner/OwnerUnifiedApprovals.tsx"),
+    read("src/components/owner/OwnerApprovalCenter.tsx"),
+  ]);
+  assert.doesNotMatch(topbar, /handleDecision|decision: "approve"|decision: "reject"/);
+  assert.doesNotMatch(homeApprovals, /api\/agi\/runtime\/actions\/decision|function mutate/);
+  assert.match(homeApprovals, /href="\/owner\/actions"/);
+  assert.match(homeApprovals, /Sin verificar/);
+  assert.match(approvalCenter, /\/api\/agi\/runtime\/actions\/decision/);
+});
