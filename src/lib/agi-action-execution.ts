@@ -363,16 +363,21 @@ async function patchQueueItem(actionId: string, patch: Partial<AgiActionQueueRow
   return data;
 }
 
-export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number }): Promise<AgiActionQueueRow[]> {
+export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number; offset?: number }): Promise<AgiActionQueueRow[]> {
   const sb = createAdminSupabase();
   const limit = Math.max(1, Math.min(Number(params.limit || 30), 100));
+  const offset = params.offset ?? 0;
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000) {
+    throw new Error("INVALID_ACTION_QUEUE_OFFSET");
+  }
 
   let query = sb
     .from("agi_action_queue")
     .select("*")
     .eq("project_id", params.project_id)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("id", { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (params.status) query = query.eq("status", params.status);
   if (params.tool_key) query = query.eq("tool_key", params.tool_key);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type RuntimeAction = {
   id: string;
@@ -30,6 +30,9 @@ type RuntimeAction = {
 type ApiListResponse = { ok?: boolean; actions?: RuntimeAction[]; error?: string };
 type MutateResponse = { ok?: boolean; item?: RuntimeAction; error?: string; message?: string };
 
+type ActionView = "needs_approval" | "approved" | "history";
+const PAGE_SIZE = 30;
+
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     needs_approval: "Pendiente",
@@ -52,23 +55,41 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
+  const [view, setView] = useState<ActionView>("needs_approval");
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  const pendingCount = useMemo(() => actions.filter((item) => item.status === "needs_approval").length, [actions]);
+  const pendingCount = view === "needs_approval" ? actions.length : null;
 
   const load = useCallback(async () => {
     queueMicrotask(() => setLoading(true));
-    setMessage("");
     try {
-      const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&limit=20`, { cache: "no-store" });
+      // Fetch the selected status before pagination. A pending approval must
+      // never be hidden behind more recent closed actions.
+      const params = new URLSearchParams({
+        project_id: projectId,
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE),
+      });
+      if (view !== "history") params.set("status", view);
+      const res = await fetch(`/api/agi/runtime/actions?${params.toString()}`, { cache: "no-store" });
       const data = (await res.json()) as ApiListResponse;
-      if (!res.ok || data.error) throw new Error(data.error || "No se pudo leer la cola AGI.");
-      setActions(data.actions ?? []);
+      if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) {
+        throw new Error(data.error || "No se pudo leer la cola AGI.");
+      }
+      setActions(data.actions);
+      setHasNext(data.actions.length === PAGE_SIZE);
+      setLoadError(false);
     } catch (error) {
+      setActions([]);
+      setHasNext(false);
+      setLoadError(true);
       setMessage(error instanceof Error ? error.message : "No se pudo leer la cola AGI.");
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, view, page]);
 
   useEffect(() => {
     const timer = setTimeout(() => { void load(); }, 0);
@@ -86,8 +107,8 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
       });
       const data = (await res.json()) as MutateResponse;
       if (!res.ok || data.error) throw new Error(data.error || "Operación no completada.");
-      setMessage(data.message || "Operación completada.");
       await load();
+      setMessage(data.message || "Operación completada.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Operación no completada.");
     } finally {
@@ -109,17 +130,36 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
       </div>
 
       <div className="hko-approval-metrics">
-        <div><span>Pendientes</span><strong>{pendingCount}</strong></div>
-        <div><span>Total cola</span><strong>{actions.length}</strong></div>
+        <div><span>{view === "needs_approval" ? "Pendientes visibles" : "Vista actual"}</span><strong>{pendingCount ?? (view === "approved" ? "Aprobadas" : "Historial")}</strong></div>
+        <div><span>Registros en página</span><strong>{actions.length}</strong></div>
         <div><span>Modo</span><strong>Owner Gate</strong></div>
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar acciones">
+        {([
+          ["needs_approval", "Por aprobar"],
+          ["approved", "Aprobadas"],
+          ["history", "Historial"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={view === key}
+            disabled={loading}
+            onClick={() => { setView(key); setPage(0); setMessage(""); }}
+            className={`min-h-11 rounded-xl border px-4 text-sm font-semibold transition ${view === key
+              ? "border-sky-300/35 bg-sky-400/10 text-sky-100"
+              : "border-white/10 text-slate-400 hover:bg-white/[0.05]"}`}
+          >{label}</button>
+        ))}
       </div>
 
       {message ? <p className="hko-approval-message">{message}</p> : null}
 
       <div className="hko-approval-list">
-        {actions.length === 0 && !loading ? (
+        {actions.length === 0 && !loading && !loadError ? (
           <article className="hko-approval-empty">
-            <h3>Sin acciones pendientes</h3>
+            <h3>{view === "needs_approval" ? "Sin aprobaciones en esta página" : "Sin registros en esta página"}</h3>
             <p>Cuando NOVA proponga cambios reales, aparecerán aquí con plan, riesgo y rollback.</p>
           </article>
         ) : null}
@@ -161,6 +201,13 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
           );
         })}
       </div>
+      <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginación de acciones">
+        <button type="button" disabled={loading || page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}
+          className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Anterior</button>
+        <span className="text-xs text-slate-400">Página {page + 1} · {view === "needs_approval" ? "Pendientes" : view === "approved" ? "Aprobadas" : "Historial"}</span>
+        <button type="button" disabled={loading || !hasNext} onClick={() => setPage((value) => value + 1)}
+          className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Siguiente</button>
+      </nav>
     </section>
   );
 }

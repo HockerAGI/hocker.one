@@ -87,10 +87,11 @@ export const HOCKER_NAVIGATION: HockerNavigationSection[] = [
   },
   {
     id: "mas", label: "Más", shortLabel: "Más", href: "/security", icon: MoreHorizontal,
-    matchPrefixes: ["/owner/evidence", "/admin/jurix"],
+    matchPrefixes: ["/owner/evidence", "/owner/context-bridge", "/admin/jurix"],
     items: [
       { id: "security", href: "/security", label: "Seguridad", icon: ShieldCheck, keywords: "seguridad rls permisos" },
       { id: "governance", href: "/governance", label: "Reglas", icon: Landmark, keywords: "reglas gobierno políticas" },
+      { id: "context-bridge", href: "/owner/context-bridge", label: "Continuidad", icon: Network, keywords: "context bridge continuidad checkpoints owner mfa aval aprobacion" },
       { id: "owner-evidence", href: "/owner/evidence", label: "Evidencia", icon: FileCheck2, keywords: "evidencia auditoria registros" },
       { id: "jurix", href: "/admin/jurix", label: "Legal", icon: FileCheck2, keywords: "jurix legal cumplimiento" },
     ],

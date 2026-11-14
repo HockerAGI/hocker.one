@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Bell, Bot, CheckCircle, Loader2, Search, X, XCircle } from "lucide-react";
+import { Bell, Bot, CheckCircle, Search, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { getHockerRouteTitle } from "@/lib/hocker-navigation";
@@ -20,7 +21,6 @@ export default function Topbar() {
   const title = getHockerRouteTitle(pathname);
   const [showApprovals, setShowApprovals] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
-  const [processing, setProcessing] = useState<string | null>(null);
 
   const fetchPending = useCallback(async () => {
     try {
@@ -41,18 +41,6 @@ export default function Topbar() {
   }, [fetchPending]);
   useEffect(() => setShowApprovals(false), [pathname]);
 
-  const handleDecision = useCallback(async (id: string, decision: "approve" | "reject") => {
-    setProcessing(id);
-    try {
-      await fetch("/api/agi/runtime/actions/decision", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action_id: id, decision }),
-      });
-      await fetchPending();
-    } finally {
-      setProcessing(null);
-    }
-  }, [fetchPending]);
-
   function triggerPalette() {
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: !navigator.platform.includes("Mac"), bubbles: true }));
   }
@@ -62,6 +50,9 @@ export default function Topbar() {
     <>
       <header className="fixed inset-x-0 top-0 z-[90] border-b border-white/[0.06] bg-[#030711]/92 backdrop-blur-2xl lg:left-[290px]">
         <div className="mx-auto flex h-16 w-full max-w-[1800px] items-center gap-2 px-3 sm:px-4 lg:h-[60px]">
+          <Link href="/owner" aria-label="Inicio Hocker ONE" className="mr-1 grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-white/[0.03] lg:hidden">
+            <Image src="/ecosystem/apps/hocker-one/icon.png" alt="" width={36} height={36} className="h-9 w-9 object-contain" priority />
+          </Link>
           <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">{title}</p>
           <nav className="flex shrink-0 items-center gap-1.5" aria-label="Accesos rápidos">
             <button type="button" onClick={triggerPalette} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-label="Buscar">
@@ -72,7 +63,7 @@ export default function Topbar() {
                 <Bot className="h-4 w-4" /><span className="hidden text-xs sm:inline">NOVA</span>
               </Link>
             ) : null}
-            <button type="button" onClick={() => setShowApprovals((value) => !value)} className={["relative grid h-10 w-10 place-items-center rounded-xl", count > 0 ? "bg-amber-400/10 text-amber-300" : "text-slate-500 hover:bg-white/[0.05]"].join(" ")} aria-label={`${count} aprobaciones pendientes`} aria-expanded={showApprovals}>
+            <button type="button" onClick={() => setShowApprovals((value) => !value)} className={["relative grid h-11 w-11 place-items-center rounded-xl", count > 0 ? "bg-amber-400/10 text-amber-300" : "text-slate-500 hover:bg-white/[0.05]"].join(" ")} aria-label={`${count} aprobaciones pendientes`} aria-expanded={showApprovals}>
               <Bell className="h-4 w-4" />
               {count > 0 ? <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[8px] font-black text-black">{count}</span> : null}
             </button>
@@ -91,10 +82,9 @@ export default function Topbar() {
               <article key={action.id} className="border-b border-white/[0.05] px-4 py-3 last:border-0">
                 <p className="text-sm font-medium text-slate-200">{action.title || action.action_type || "Acción"}</p>
                 <p className="mt-1 text-xs text-slate-500">{[action.tool_key, action.risk_level].filter(Boolean).join(" · ")}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" disabled={processing === action.id} onClick={() => void handleDecision(action.id, "approve")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400/10 text-xs font-semibold text-emerald-300 disabled:opacity-50">{processing === action.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}Aprobar</button>
-                  <button type="button" disabled={processing === action.id} onClick={() => void handleDecision(action.id, "reject")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-400/10 text-xs font-semibold text-rose-300 disabled:opacity-50"><XCircle className="h-4 w-4" />Rechazar</button>
-                </div>
+                <Link href="/owner/actions" onClick={() => setShowApprovals(false)} className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3 text-xs font-semibold text-amber-100 hover:bg-amber-300/10">
+                  Revisar alcance, riesgo y aprobación
+                </Link>
               </article>
             ))}
           </div>
