@@ -38,12 +38,34 @@ export async function observe(env, fetcher = fetch) {
     if (!(response.headers.get("content-type") || "").toLowerCase().includes("application/json")) {
       throw new Error("COORDINATOR_RESPONSE_TYPE_INVALID");
     }
-    const body = await response.text();
-    if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
+    const declared = Number(response.headers.get("content-length"));
+    if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
       throw new Error("COORDINATOR_RESPONSE_TOO_LARGE");
     }
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("COORDINATOR_RESPONSE_EMPTY");
+    const chunks = [];
+    let size = 0;
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        size += part.value.byteLength;
+        if (size > MAX_BODY_BYTES) throw new Error("COORDINATOR_RESPONSE_TOO_LARGE");
+        chunks.push(part.value);
+      }
+    } finally {
+      await reader.cancel().catch(() => {});
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
     let payload;
-    try { payload = JSON.parse(body); } catch { throw new Error("COORDINATOR_RESPONSE_NOT_JSON"); }
+    try { payload = JSON.parse(new TextDecoder().decode(bytes)); }
+    catch { throw new Error("COORDINATOR_RESPONSE_NOT_JSON"); }
     const m = payload?.metrics;
     if (payload?.ok !== true || payload?.service !== "hocker-one" ||
         payload?.coordinator_mode !== "observe_only" ||
