@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3 } from "lucide-react";
 
 type RuntimeAction = {
   id: string;
@@ -14,7 +15,6 @@ type RuntimeAction = {
 };
 
 type ApiListResponse = { ok?: boolean; actions?: RuntimeAction[]; error?: string };
-type MutateResponse = { ok?: boolean; item?: RuntimeAction; error?: string; message?: string };
 
 function riskLabel(risk: string) {
   const labels: Record<string, string> = { low: "Bajo", medium: "Medio", high: "Alto", critical: "Crítico" };
@@ -24,7 +24,7 @@ function riskLabel(risk: string) {
 export default function OwnerUnifiedApprovals({ projectId }: { projectId: string }) {
   const [actions, setActions] = useState<RuntimeAction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const pending = useMemo(() => actions.filter((a) => a.status === "needs_approval"), [actions]);
 
@@ -32,9 +32,11 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
     try {
       const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&limit=10`, { cache: "no-store" });
       const data = (await res.json()) as ApiListResponse;
-      if (!res.ok || data.error) throw new Error(data.error);
+      if (!res.ok || data.error) throw new Error(data.error || "No se pudo consultar la cola.");
+      setLoadError(false);
       setActions(data.actions ?? []);
     } catch {
+      setLoadError(true);
       setActions([]);
     } finally {
       setLoading(false);
@@ -47,23 +49,6 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
     return () => { clearTimeout(t); clearInterval(interval); };
   }, [load]);
 
-  async function mutate(actionId: string, decision: "approve" | "reject") {
-    setBusyId(actionId);
-    try {
-      const res = await fetch("/api/agi/runtime/actions/decision", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, action_id: actionId, decision, note: "Aprobado/rechazado desde panel unificado." }),
-      });
-      const data = (await res.json()) as MutateResponse;
-      if (!res.ok || data.error) throw new Error(data.error);
-      await load();
-    } catch {
-      /* silent — UI stays consistent */
-    } finally {
-      setBusyId(null);
-    }
-  }
 
   return (
     <section className="hko-uni-panel hko-uni-appr">
@@ -79,6 +64,10 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
       <div className="hko-uni-panel-body">
         {loading ? (
           <p className="hko-uni-appr-empty">Leyendo cola…</p>
+        ) : loadError ? (
+          <p className="hko-uni-appr-empty text-amber-200" role="status">
+            No fue posible consultar la cola. Revisa el centro Owner antes de asumir que no hay pendientes.
+          </p>
         ) : pending.length === 0 ? (
           <p className="hko-uni-appr-empty">
             <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-300/60" />
@@ -98,12 +87,9 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
                 </div>
               </div>
               <div className="hko-uni-appr-btns">
-                <button type="button" className="hko-uni-appr-btn approve" disabled={busyId === action.id} onClick={() => void mutate(action.id, "approve")}>
-                  <CheckCircle2 className="mr-1 inline h-3 w-3" /> Aprobar
-                </button>
-                <button type="button" className="hko-uni-appr-btn reject" disabled={busyId === action.id} onClick={() => void mutate(action.id, "reject")}>
-                  <XCircle className="mr-1 inline h-3 w-3" /> Rechazar
-                </button>
+                <Link href="/owner/actions" className="hko-uni-appr-btn approve inline-flex min-h-11 items-center justify-center">
+                  Revisar alcance y decidir en Owner Gate
+                </Link>
               </div>
             </div>
           ))
