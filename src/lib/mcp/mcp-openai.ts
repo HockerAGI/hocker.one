@@ -8,24 +8,13 @@
  */
 import { McpClient, type McpProviderConfig, type McpTool } from "./mcp-client";
 import { log } from "@/lib/logger";
-
-const OPENAI_DOCS_MCP_URL = "https://developers.openai.com/mcp";
+import { trustedOpenAIDocsMcpUrl } from "./mcp-provider-targets";
 
 export type OpenAIMcpConfig = {
   /** Explicitly opt-in to the free, documentation-only connector. */
   enabled?: boolean;
   mcpServerUrl?: string;
 };
-
-export function trustedOpenAIDocsMcpUrl(override?: string): string {
-  const url = new URL(override || OPENAI_DOCS_MCP_URL);
-  if (url.origin !== "https://developers.openai.com" ||
-      url.pathname !== "/mcp" || url.username || url.password ||
-      url.search || url.hash) {
-    throw new Error("OPENAI_DOCS_MCP_UNTRUSTED_ENDPOINT");
-  }
-  return url.toString();
-}
 
 export class McpOpenAIConnector {
   private client: McpClient;
