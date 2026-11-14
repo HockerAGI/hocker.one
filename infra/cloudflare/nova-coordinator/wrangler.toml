@@ -1,0 +1,12 @@
+name = "hocker-nova-coordinator"
+main = "index.mjs"
+compatibility_date = "2026-11-13"
+workers_dev = true
+
+[vars]
+NOVA_COORDINATOR_ENABLED = "false"
+
+# Intentionally NO crons in the initial deployment. Add one bounded schedule
+# only after Workers Free + both secrets + Owner Gate/read-only E2E are verified.
+# [triggers]
+# crons = ["*/5 * * * *"]
