@@ -36,7 +36,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     const now = new Date();
     const freshAfter = new Date(now.getTime() - 5 * 60_000).toISOString();
     const [agents, tasks, actions, nodes] = await Promise.all([
-      sb.from("agi_agents").select("id", { head: true, count: "exact" })
+      sb.from("agi_agents").select("agi_id", { head: true, count: "exact" })
         .eq("project_id", PROJECT_ID),
       sb.from("agi_tasks").select("id", { head: true, count: "exact" })
         .eq("project_id", PROJECT_ID).in("status", ["queued", "pending"]),
