@@ -665,7 +665,7 @@ export function getMcpConfigurationSummary(): Record<string, { configured: boole
     },
     openai: {
       configured: isOpenAIMcpConfigured(),
-      required: ["OPENAI_API_KEY"],
+      required: ["OPENAI_DOCS_MCP_ENABLED=true (public docs only)"],
     },
     base44: {
       configured: isBase44McpConfigured(),
