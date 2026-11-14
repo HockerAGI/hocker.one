@@ -24,6 +24,7 @@ export default async function OwnerContextBridgePage() {
   const coverage = Array.isArray(active.coverage)
     ? active.coverage.map(asRecord)
     : [];
+  const legacyActiveWithoutApproval = active.state === "active" && !String(active.approval_id ?? "").trim();
 
   return (
     <PageShell
@@ -43,7 +44,9 @@ export default async function OwnerContextBridgePage() {
               </div>
               <div>
                 <p className="text-xs text-slate-500">Estado</p>
-                <p className="mt-1 text-sm font-bold text-emerald-300">{String(active.state ?? "active")}</p>
+                <p className={`mt-1 text-sm font-bold ${legacyActiveWithoutApproval ? "text-amber-300" : "text-emerald-300"}`}>
+                  {legacyActiveWithoutApproval ? "Histórico · verificar" : String(active.state ?? "sin verificar")}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Aprobación</p>
@@ -55,6 +58,14 @@ export default async function OwnerContextBridgePage() {
           ) : (
             <p className="mt-3 text-sm text-amber-200">No existe un manifiesto activo para hocker-one.</p>
           )}
+
+          {legacyActiveWithoutApproval ? (
+            <p role="status" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.055] p-3 text-sm leading-6 text-amber-100">
+              El manifiesto marcado activo es histórico y no tiene un approval_id asociado.
+              No equivale a una nueva aprobación Owner ni a cobertura reciente de las seis fuentes.
+              Revisa la evidencia antes de activar una actualización con MFA.
+            </p>
+          ) : null}
 
           {coverage.length > 0 ? (
             <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
