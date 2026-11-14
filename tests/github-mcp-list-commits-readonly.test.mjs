@@ -32,6 +32,19 @@ test("GitHub list_commits refuses ambiguous, invalid or conflicting repository s
     {owner:"OtherOrg",repo:"private-repo",perPage:1}); // Runtime must then authorize this normalized target.
 });
 
+test("Owner direct MCP endpoint authorizes the final normalized GitHub target", async () => {
+  const route = await readFile(
+    new URL("../src/app/api/mcp/execute/route.ts", import.meta.url), "utf8",
+  );
+  const normalization = route.indexOf('normalizeGitHubListCommitsArguments(args ?? {})');
+  const policy = route.indexOf('assertMcpReadToolPolicy(provider, tool, safeArgs)');
+  const dispatch = route.indexOf('registry.executeTool(provider, tool, safeArgs)');
+  assert.ok(normalization > 0 && policy > normalization && dispatch > policy,
+    "Direct MCP reads must authorize the exact destination before dispatch");
+  assert.match(route, /requireOwnerOrInternal/);
+  assert.match(route, /MCP_MUTATION_REQUIRES_OWNER_GATE_QUEUE/);
+});
+
 test("MCP connector sends normalized arguments without changing mutation or Owner Gate policy", async () => {
   const [registry, policy, runtime] = await Promise.all([
     readFile(new URL("../src/lib/mcp/mcp-registry.ts",import.meta.url),"utf8"),
