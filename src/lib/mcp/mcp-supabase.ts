@@ -116,7 +116,7 @@ export class McpSupabaseConnector {
    * Insert rows into a table.
    */
   async insert(table: string, rows: Record<string, unknown>[]): Promise<unknown> {
-    return this.client.callTool("insert_rows", { table, rows });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
@@ -127,14 +127,14 @@ export class McpSupabaseConnector {
     filter: Record<string, unknown>,
     values: Record<string, unknown>,
   ): Promise<unknown> {
-    return this.client.callTool("update_rows", { table, filter, values });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
    * Delete rows from a table.
    */
   async delete(table: string, filter: Record<string, unknown>): Promise<unknown> {
-    return this.client.callTool("delete_rows", { table, filter });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
@@ -155,21 +155,21 @@ export class McpSupabaseConnector {
    * Deploy an edge function.
    */
   async deployFunction(name: string, code: string): Promise<unknown> {
-    return this.client.callTool("deploy_function", { name, code });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
    * Create a database migration.
    */
   async createMigration(name: string, sql: string): Promise<unknown> {
-    return this.client.callTool("create_migration", { name, sql });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
    * Apply a migration.
    */
   async applyMigration(name: string): Promise<unknown> {
-    return this.client.callTool("apply_migration", { name });
+    throw new Error("SUPABASE_MCP_READ_ONLY");
   }
 
   /**
