@@ -101,6 +101,10 @@ type ConsolePayload = {
     items: WorkerTask[];
     truncated: boolean;
   };
+  operational_gates?: {
+    context_bridge: { current_sources: number | null; required_sources: number; max_age_hours: number };
+    runtime: { fresh_nodes: number | null; heartbeat_window_minutes: number };
+  };
   runs?: WorkerRun[];
   error?: string;
 };
@@ -165,7 +169,7 @@ function policyLabel(value: string | null | undefined) {
 /** Render the model's plain text/markdown-like output as readable, escaped React nodes. */
 function ResultText({ value }: { value: string }) {
   const paragraphs = value
-    .replace(/\\r\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
     .replace(/\s+(?=\d{1,2}\.\s+\*\*)/g, "\n")
     .split(/\n+/)
     .map((piece) => piece.trim())
@@ -228,6 +232,7 @@ export default function VerifiableWorkersConsole() {
   const pendingTotal = totals ? totals.queued + totals.pending : null;
   const staleReview = data.stale_review;
   const staleTasks = staleReview?.ready === true ? staleReview.items : [];
+  const gateSummary = data.operational_gates;
   const loop = data.status?.loop ?? {};
   const schemaReady = data.status?.schema_ready === true && data.schema_query_ready === true;
   const backlog = data.status?.stale_backlog;
@@ -312,6 +317,32 @@ export default function VerifiableWorkersConsole() {
         {" "}<strong className="text-slate-200">{schemaReady ? "disponible" : "verificar"}</strong>.
         Ejecución automática: <strong className="text-slate-200">{loop.enabled ? "activada" : "apagada"}</strong>.
       </p>
+
+      <section aria-label="Qué falta para operar" className="grid gap-2 sm:grid-cols-3">
+        <a href="#revision-pendientes" className="min-w-0 rounded-xl border border-white/10 bg-slate-950/40 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p className="text-xs font-semibold text-slate-300">1. Cola histórica</p>
+          <p className="mt-1 text-sm font-bold text-white">{pendingTotal === null ? "Sin verificar" : `${pendingTotal} por revisar`}</p>
+          <p className="mt-1 text-xs text-slate-500">Revisar sin ejecutar</p>
+        </a>
+        <Link href="/owner/context-bridge" className="min-w-0 rounded-xl border border-white/10 bg-slate-950/40 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p className="text-xs font-semibold text-slate-300">2. Continuidad</p>
+          <p className="mt-1 text-sm font-bold text-white">
+            {typeof gateSummary?.context_bridge.current_sources === "number"
+              ? `${gateSummary.context_bridge.current_sources}/6 fuentes vigentes`
+              : "Sin verificar"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Ver evidencias y MFA</p>
+        </Link>
+        <Link href="/nodes" className="min-w-0 rounded-xl border border-white/10 bg-slate-950/40 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p className="text-xs font-semibold text-slate-300">3. Runtime NOVA</p>
+          <p className="mt-1 text-sm font-bold text-white">
+            {typeof gateSummary?.runtime.fresh_nodes === "number"
+              ? `${gateSummary.runtime.fresh_nodes} nodos con señal reciente`
+              : "Sin verificar"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Revisar nodos y salud</p>
+        </Link>
+      </section>
 
       {executionBlocked ? (
         <section role="status" className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.065] px-4 py-4 sm:p-5">
