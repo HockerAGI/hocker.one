@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { deploymentIdFromRestRow } from "@/lib/vercel-deployment-id";
 
 import { getAgiCertificationSnapshot } from "@/lib/agi-certification";
 import { createContextBridgeCheckpoint } from "@/lib/context-bridge";
@@ -396,7 +397,7 @@ async function verifyReadyDeployment(
   const projectId = String(row.projectId ?? row.project_id ?? HOCKER_ONE_VERCEL_PROJECT_ID);
   const state = String(row.state ?? row.readyState ?? "");
   const target = String(row.target ?? "");
-  const id = String(row.id ?? "");
+  const id = deploymentIdFromRestRow(row) ?? "";
   const host = String(row.url ?? "");
   const metadata = asRecord(row.meta);
   const sha = String(metadata.githubCommitSha ?? "");
@@ -518,7 +519,7 @@ async function readVercelProductionEvidence(): Promise<VercelEvidenceCheck> {
     const validated = await verifyReadyDeployment(
       record, "vercel_rest_by_id_and_github_main", mainSha,
     );
-    if (record.id !== candidateId) {
+    if (deploymentIdFromRestRow(record) !== candidateId) {
       return { deployment: null, failure: "vercel_production_deployment_id_mismatch" };
     }
     return validated;
