@@ -104,7 +104,7 @@ export const HOCKER_MOBILE_NAVIGATION: HockerNavigationItem[] = [
   { id: "inicio", href: "/owner", label: "Inicio", shortLabel: "Inicio", icon: Home, keywords: "inicio" },
   { id: "nova", href: "/chat", label: "NOVA", shortLabel: "NOVA", icon: Bot, keywords: "nova chat" },
   { id: "trabajo", href: "/commands", label: "Trabajo", shortLabel: "Trabajo", icon: CheckSquare, keywords: "tareas aprobaciones" },
-  { id: "ecosistema", href: "/apps", label: "Ecosistema", shortLabel: "Ecosistema", icon: Grid2X2, keywords: "apps agis" },
+  { id: "ecosistema", href: "/apps", label: "Ecosistema", shortLabel: "Apps", icon: Grid2X2, keywords: "apps agis" },
   { id: "mas", href: "/security", label: "Más", shortLabel: "Más", icon: MoreHorizontal, keywords: "operacion seguridad reglas evidencia" },
 ];
 
