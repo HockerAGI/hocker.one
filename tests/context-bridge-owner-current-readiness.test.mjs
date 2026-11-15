@@ -21,7 +21,13 @@ test("Owner context screen exposes current proof separately from historical COMP
   assert.match(panel, /currentCoverageComplete/);
   assert.match(panel, /&& currentCoverageComplete;/);
   assert.match(panel, /disabled=\{!canSubmit \|\| loading\}/);
-  assert.match(panel, /if \(!currentCoverageComplete\) return;/);
+  assert.match(panel, /if \(!canSubmit \|\| !currentProofs\) return;/);
+  assert.match(panel, /window\.setInterval\(refreshClock, 15_000\)/);
+  assert.match(panel, /document\.addEventListener\("visibilitychange"/);
+  assert.match(panel, /window\.clearInterval\(interval\)/);
+  assert.match(panel, /cutoffNow = Date\.now\(\) - freshnessHours/);
+  assert.match(panel, /completeAtClick/);
+  assert.match(panel, /La evidencia venció durante esta sesión/);
   assert.match(panel, /currentProofs \? `\$\{completeProviders\}\/6 vigentes` : "Sin verificar"/);
   assert.match(panel, /No aumentes el umbral de antigüedad/);
   assert.match(coverage, /checkpointTime < staleBefore/);
