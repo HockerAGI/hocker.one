@@ -24,6 +24,17 @@ Independent read-only Supabase evidence at the same date:
 - Preserve the existing POST route as the **authoritative** check: fresh AAL2, provider capability verification, `record_owner_gate_approval` and one-time `activate_context_bridge_manifest_v2`. A client preflight is never authorization; do not bypass the server or relax the 168-hour threshold simply to approve old records.
 - This PR **does not** create checkpoints, connect ChatGPT/Codex/Drive, alter six-provider rules, mark sources verified, change Owner approval history, or trigger activation.
 
+### Code-review finding addressed before merge
+
+The first PR head was reviewed and flagged a real idle-tab edge case: using
+only the server-render timestamp could leave an expired checkpoint showing
+`6/6 vigentes` if the page stayed open past the age limit.
+The client now refreshes wall-clock status every 15 seconds, when the tab
+becomes visible again, and **synchronously at the activation click** before
+sending a POST. If a checkpoint expires, it fails closed and asks for a fresh
+page load. This does not bypass or replace the server's independent re-check.
+A new exact-head CI, Preview and code review are required after this fix.
+
 ## Remaining operational work after this UI release
 
 An authorized recorder must create real, sanitized, verifiable checkpoints and fresh verified capabilities for ChatGPT, Codex, Google Drive and Vercel, respecting each source's contract. Then re-evaluate all six from the actual Owner page. Only then may the Owner intentionally approve and activate the new manifest from a current AAL2 session. A green result does not certify the autonomous AGI runtime or physical Node Agent.
