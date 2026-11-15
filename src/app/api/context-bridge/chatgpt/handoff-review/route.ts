@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
       ],
     }, "owner-aal2-chatgpt-handoff-review");
     return json({
-      ok: true, stored: true, checkpoint_id: checkpoint.id ?? null,
+      ok: true, stored: true, content_hash: checkpoint.content_hash,
       owner_reviewed: true, github_evidence_crosschecked: true,
       provider_session_verified: false, capability_status: "partial",
       coverage_upgraded: false, manifest_activated: false,
