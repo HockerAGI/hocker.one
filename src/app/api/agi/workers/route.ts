@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { getContextBridgeCurrentProofs } from "@/lib/context-bridge";
+import { deriveProviderCoverageStatus } from "@/lib/context-bridge-coverage";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { AGI_STALE_BACKLOG_BLOCK_CODE, AGI_STALE_BACKLOG_READ_ERROR } from "@/lib/agi-stale-backlog-gate";
 import {
@@ -94,6 +96,38 @@ async function loadStaleTaskReview(projectId: string) {
   return { ready: true, items: rows.slice(0, 100), truncated: rows.length > 100 };
 }
 
+async function loadOperationalGates(projectId: string) {
+  // Read-only checks, never a substitute for health checks on a real host.
+  const freshnessMinutes = 5;
+  const cutoff = new Date(Date.now() - freshnessMinutes * 60_000).toISOString();
+  const [nodeResult, bridgeResult] = await Promise.allSettled([
+    db().from("nodes").select("id", { count: "exact", head: true })
+      .eq("project_id", projectId).gt("last_seen_at", cutoff),
+    getContextBridgeCurrentProofs(projectId),
+  ]);
+  let freshNodes: number | null = null;
+  if (nodeResult.status === "fulfilled" &&
+    !nodeResult.value.error && typeof nodeResult.value.count === "number") {
+    freshNodes = nodeResult.value.count;
+  }
+  let currentSources: number | null = null;
+  if (bridgeResult.status === "fulfilled") {
+    const snapshot = bridgeResult.value;
+    const cutoffMs = Date.parse(snapshot.observedAt) - 168 * 60 * 60 * 1000;
+    currentSources = snapshot.providers.filter((proof) =>
+      deriveProviderCoverageStatus({
+        checkpointObservedAt: proof.checkpointObservedAt,
+        staleBefore: cutoffMs,
+        capabilities: proof.capabilities,
+      }) === "complete",
+    ).length;
+  }
+  return {
+    context_bridge: { current_sources: currentSources, required_sources: 6, max_age_hours: 168 },
+    runtime: { fresh_nodes: freshNodes, heartbeat_window_minutes: freshnessMinutes },
+  };
+}
+
 async function loadRuns(projectId: string) {
   const { data, error } = await db()
     .from("agi_runs")
@@ -112,12 +146,13 @@ export async function GET(req: Request): Promise<Response> {
     const projectId = ProjectSchema.parse(url.searchParams.get("project_id") || undefined);
     await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
 
-    const [taskState, runs, status, totals, staleReview] = await Promise.all([
+    const [taskState, runs, status, totals, staleReview, gates] = await Promise.all([
       loadTasks(projectId),
       loadRuns(projectId),
       getUnifiedAgiWorkerStatus(projectId, req.headers.get("x-vercel-oidc-token")),
       loadExactTaskCounts(projectId),
       loadStaleTaskReview(projectId),
+      loadOperationalGates(projectId),
     ]);
 
     return json({
@@ -129,6 +164,7 @@ export async function GET(req: Request): Promise<Response> {
       // Last-60 recent rows are never the source for the project-wide totals.
       totals,
       stale_review: staleReview,
+      operational_gates: gates,
       runs,
       schema_query_ready: taskState.schema_query_ready,
       schema_query_error: taskState.error,
