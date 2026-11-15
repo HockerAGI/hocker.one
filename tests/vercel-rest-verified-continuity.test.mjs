@@ -30,7 +30,7 @@ test("Vercel remains fail-closed with actionable HTTP diagnostics and no secret 
   assert.match(continuity, /row\) => row\.target === "production"/);
   assert.match(continuity, /main\.object\?\.sha/);
   assert.match(continuity, /vercel_rest_by_id_and_github_main/);
-  assert.match(continuity, /record\.id !== candidateId/);
+  assert.match(continuity, /deploymentIdFromRestRow\(record\) !== candidateId/);
   assert.match(continuity, /s\.context === "Vercel" && s\.state === "success"/);
   assert.match(continuity, /target !== "production"/);
   assert.match(continuity, /gitRef !== "main"/);
