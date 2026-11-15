@@ -324,6 +324,8 @@ export async function runServerlessAgiWorkerOnce(params: {
 }): Promise<JsonRecord> {
   // Never claim a task that would need an unapproved paid model.
   if (cloudflareZeroCreditMode()) return { ok: false, processed: false, reason: "ZERO_CREDIT_SERVERLESS_WORKER_PAUSED" };
+  // Defense in depth for the legacy callable worker, even if not routed by UI.
+  await assertAgiBacklogReviewed(params.project_id);
   const workerId = `hocker-one-serverless:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
 
