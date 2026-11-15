@@ -1,0 +1,9 @@
+# Vercel Context Bridge — REST v6 deployment ID compatibility (2026-11-15)
+
+Owner screenshot 2026-11-15 09:33 America/Tijuana showed `vercel_production_identity_unverified` after authenticated MFA refresh; checkpoint in real Supabase remained `partial`. The earlier #430 correction confirmed server-side REST route availability and reported a precise failure, but production identity parsing was too strict for the actual REST v6 **uid** field.
+
+Official Vercel SDK `GetDeployments` model lists required `uid` for `/v6/deployments`, and its `GetDeployment` detail shape may expose `id`. Vercel MCP normalizes the deployment identity as `id`, so connected tool results masked that discrepancy. Fix with a tiny pure `deploymentIdFromRestRow` that accepts `uid` or `id`, rejects missing/non-string/invalid identifiers or simultaneous conflicting fields, and reuses it for both the direct list path and authenticated by-ID fallback.
+
+The security acceptance conditions **do not change**: authenticated Vercel REST, exact project, target production, READY, allowed deployment URL, HockerAGI/hocker.one main Git SHA and fresh live `hockerone.vercel.app` alias GET matching the same deployment ID. No new secrets, model use, schedules, provider connections, SQL, altered MFA, simulated checkpoints or manual DB promotion. Successful code deployment does not itself imply Context Bridge 3/6; require fresh authenticated Owner/cron observation with capability `verified`.
+
+Regression tests execute the normalizer with real v6 uid-only row, v13 id-only row, matching fields, mismatches and malformed ID. Existing broader continuity/security tests remain unchanged.
