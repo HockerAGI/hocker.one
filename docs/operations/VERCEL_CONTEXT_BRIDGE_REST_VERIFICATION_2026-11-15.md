@@ -1,0 +1,11 @@
+# Vercel REST verification repair — 2026-11-15
+
+Observed real Owner MFA reconciliation from mobile at 2026-11-15T16:52Z returned `vercel_production_rest_verification_unavailable` despite the connected Vercel provider reporting `dpl_6emqj7mmHhUD7iuUpGvWZ1ZrbReC READY`, `main=0b05f5e40127cd83b74522538a6b92406844674e`, official Vercel GitHub status success. Supabase correctly persisted a PARTIAL Vercel checkpoint with current observed timestamp; it did not fabricate green.
+
+Production Vercel `VERCEL_TOKEN` and `VERCEL_TEAM_ID` exist and the stored team ID equals `team_nEtACFYtjltFLERznYyZ40pK`. This metadata alone does not prove the actual REST token is active or sufficiently privileged. The previous code swallowed every exception into null; hence root error class was invisible.
+
+Fix: existing `listVercelDeployments(target=production)` remains the primary evidence. When its list fails/is empty, authenticated GitHub reads the latest main SHA's official Vercel commit-status project URL, extracts one deployment candidate, and the existing server-only Vercel REST token must read this exact ID via `GET /v13/deployments/{id}`. Both paths require real `target=production`, `state=READY`, matching project, org/repo, ref main, exact current SHA and known Vercel team hostname. No trusting GitHub status alone, UI cache, runtime environment metadata, or historic manifest. If any check fails, capability remains partial, no manifest activation.
+
+Sanitized failure reasons now distinguish token missing, HTTP 401/403/404/5xx, permission or transport unavailable, deployment not ready, wrong target/project/identity/SHA. The Owner refresh UI renders actionable Spanish diagnostics but never credentials. The same daily scheduled reconciler benefits automatically without new Cron, DNS, providers, billing or tokens.
+
+Do not manually mark 3/6 until a Vercel REST-backed verified checkpoint is persisted after Owner MFA or scheduled reconciliation. Review Vercel token permissions or expiry if error is 401/403. Verify Vercel runtime logs/CI after exact-head deployment; do not infer verified on code change alone.

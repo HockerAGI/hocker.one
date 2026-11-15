@@ -3,7 +3,11 @@ import { createHash } from "node:crypto";
 import { getAgiCertificationSnapshot } from "@/lib/agi-certification";
 import { createContextBridgeCheckpoint } from "@/lib/context-bridge";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { listVercelDeployments } from "@/lib/vercel-runtime-executor";
+import {
+  getVercelDeploymentById,
+  hasVercelRuntimeToken,
+  listVercelDeployments,
+} from "@/lib/vercel-runtime-executor";
 
 const PROJECT_ID = "hocker-one";
 const DEFAULT_GITHUB_OWNER = "HockerAGI";
@@ -359,37 +363,61 @@ type VercelDeploymentEvidence = {
   deployment_url: string;
   production_url: string;
   region: string | null;
-  verification_method: "vercel_rest_and_github_main";
+  verification_method: "vercel_rest_and_github_main" | "vercel_rest_by_id_and_github_main";
 };
 
 /**
  * Reuse the existing server-only Vercel REST adapter and GitHub read token.
  * A current READY production deployment must match the real repository main.
  */
-async function readVercelProductionEvidence(): Promise<VercelDeploymentEvidence | null> {
-  try {
-    const response = asRecord(await listVercelDeployments({
-      project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
-      target: "production",
-    }));
-    const rows = Array.isArray(response.deployments) ? response.deployments : [];
-    // Newest-first. Do not skip a building production deployment and certify
-    // an old READY release as if it were current.
-    const latestProduction = rows.map(asRecord).find((row) => row.target === "production");
-    if (!latestProduction || latestProduction.state !== "READY") return null;
-    const id = String(latestProduction.id ?? "");
-    const host = String(latestProduction.url ?? "");
-    const metadata = asRecord(latestProduction.meta);
-    const sha = String(metadata.githubCommitSha ?? "");
-    const gitRef = String(metadata.githubCommitRef ?? "");
-    if (!/^dpl_[A-Za-z0-9]+$/.test(id) ||
-      !/^hocker-[a-z0-9-]+-hockeragi\.vercel\.app$/.test(host) ||
-      !/^[a-f0-9]{40}$/.test(sha) || gitRef !== "main") return null;
-    const main = await githubRequest<GithubRef>(
-      "/repos/HockerAGI/hocker.one/git/ref/heads/main",
-    );
-    if (main.object?.sha !== sha) return null;
-    return {
+type VercelEvidenceCheck = {
+  deployment: VercelDeploymentEvidence | null;
+  failure: string | null;
+};
+
+function vercelRestFailureCode(error: unknown): string {
+  const status = typeof error === "object" && error !== null &&
+    "httpStatus" in error ? Number(error.httpStatus) : null;
+  if (status === 401) return "vercel_rest_http_401";
+  if (status === 403) return "vercel_rest_http_403";
+  if (status === 404) return "vercel_rest_http_404";
+  if (typeof status === "number" && Number.isInteger(status) && status >= 500) {
+    return "vercel_rest_http_5xx";
+  }
+  return "vercel_rest_transport_or_permission_unverified";
+}
+
+async function verifyReadyDeployment(
+  row: Record<string, unknown>,
+  method: VercelDeploymentEvidence["verification_method"],
+  expectedMainSha: string,
+): Promise<VercelEvidenceCheck> {
+  const projectId = String(row.projectId ?? row.project_id ?? HOCKER_ONE_VERCEL_PROJECT_ID);
+  const state = String(row.state ?? row.readyState ?? "");
+  const target = String(row.target ?? "");
+  const id = String(row.id ?? "");
+  const host = String(row.url ?? "");
+  const metadata = asRecord(row.meta);
+  const sha = String(metadata.githubCommitSha ?? "");
+  const gitRef = String(metadata.githubCommitRef ?? "");
+  const gitOrg = String(metadata.githubOrg ?? "HockerAGI");
+  const gitRepo = String(metadata.githubRepo ?? "hocker.one");
+  if (state !== "READY") return { deployment: null, failure: "vercel_production_not_ready" };
+  if (target !== "production") return { deployment: null, failure: "vercel_deployment_target_not_production" };
+  if (projectId !== HOCKER_ONE_VERCEL_PROJECT_ID) {
+    return { deployment: null, failure: "vercel_production_project_mismatch" };
+  }
+  if (!/^dpl_[A-Za-z0-9]+$/.test(id) ||
+    !/^hocker-[a-z0-9-]+-hockeragi\.vercel\.app$/.test(host) ||
+    !/^[a-f0-9]{40}$/.test(sha) ||
+    gitRef !== "main" || gitOrg !== "HockerAGI" || gitRepo !== "hocker.one") {
+    return { deployment: null, failure: "vercel_production_identity_unverified" };
+  }
+  if (sha !== expectedMainSha) {
+    return { deployment: null, failure: "vercel_production_main_sha_mismatch" };
+  }
+  return {
+    deployment: {
       environment: "production",
       project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
       git_commit_sha: sha,
@@ -398,11 +426,83 @@ async function readVercelProductionEvidence(): Promise<VercelDeploymentEvidence 
       deployment_url: "https://" + host,
       production_url: "https://hockerone.vercel.app",
       region: null,
-      verification_method: "vercel_rest_and_github_main",
-    };
+      verification_method: method,
+    },
+    failure: null,
+  };
+}
+
+/**
+ * Two methods, both requiring authenticated Vercel REST and exact GitHub main:
+ * - filtered production list (preferred),
+ * - when list access fails, derive a candidate ID from the current SHA's
+ *   official Vercel GitHub status; re-read THAT ID using authenticated REST.
+ * A GitHub success status alone NEVER verifies production or fills a checkpoint.
+ */
+async function readVercelProductionEvidence(): Promise<VercelEvidenceCheck> {
+  if (!hasVercelRuntimeToken()) {
+    return { deployment: null, failure: "vercel_rest_token_missing_in_production" };
+  }
+  let mainSha: string;
+  try {
+    const main = await githubRequest<GithubRef>("/repos/HockerAGI/hocker.one/git/ref/heads/main");
+    mainSha = String(main.object?.sha ?? "");
+    if (!/^[a-f0-9]{40}$/.test(mainSha)) {
+      return { deployment: null, failure: "vercel_github_main_unavailable" };
+    }
   } catch {
-    // Missing/rejected credential, upstream failure or unverified SHA.
-    return null;
+    return { deployment: null, failure: "vercel_github_main_unavailable" };
+  }
+
+  let listFailure = "vercel_production_list_empty";
+  try {
+    const response = asRecord(await listVercelDeployments({
+      project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
+      target: "production",
+    }));
+    const rows = Array.isArray(response.deployments) ? response.deployments : [];
+    // The newest production release must be READY; do not select an older one.
+    const latestProduction = rows.map(asRecord).find((row) => row.target === "production");
+    if (latestProduction) {
+      if (latestProduction.state !== "READY") {
+        return { deployment: null, failure: "vercel_production_not_ready" };
+      }
+      return verifyReadyDeployment(latestProduction, "vercel_rest_and_github_main", mainSha);
+    }
+  } catch (error) {
+    listFailure = vercelRestFailureCode(error);
+  }
+
+  // Fallback never uses a guessed deployment. Read the provider's GitHub commit
+  // status, validate its project-scoped URL, then require an independent Vercel
+  // REST GET of that exact deployment, including production/READY/SHA checks.
+  let candidateId: string | null = null;
+  try {
+    const statuses = await githubRequest<{
+      statuses?: Array<{ context?: string; state?: string; target_url?: string }>;
+    }>(\`/repos/HockerAGI/hocker.one/commits/\${mainSha}/status\`);
+    const item = statuses.statuses?.find((s) =>
+      s.context === "Vercel" && s.state === "success" &&
+      /^https:\/\/vercel\.com\/hockeragi\/hocker-one\/[A-Za-z0-9]+$/.test(s.target_url ?? ""),
+    );
+    if (item?.target_url) candidateId = "dpl_" + item.target_url.split("/").at(-1);
+  } catch {
+    return { deployment: null, failure: listFailure };
+  }
+  if (!candidateId) return { deployment: null, failure: listFailure };
+  try {
+    const record = asRecord(await getVercelDeploymentById({ deployment_id: candidateId }));
+    const validated = await verifyReadyDeployment(
+      record, "vercel_rest_by_id_and_github_main", mainSha,
+    );
+    if (record.id !== candidateId) {
+      return { deployment: null, failure: "vercel_production_deployment_id_mismatch" };
+    }
+    return validated;
+  } catch (error) {
+    const idFailure = vercelRestFailureCode(error);
+    return { deployment: null, failure: idFailure === "vercel_rest_http_404"
+      ? idFailure : listFailure === "vercel_production_list_empty" ? idFailure : listFailure };
   }
 }
 
@@ -420,7 +520,8 @@ async function reconcileVercel(): Promise<ContinuitySourceResult> {
   };
   // The historical runtime metadata was null in production. Verify the
   // actual deployment via authenticated REST, not incomplete environment data.
-  const verifiedDeployment = await readVercelProductionEvidence();
+  const evidenceCheck = await readVercelProductionEvidence();
+  const verifiedDeployment = evidenceCheck.deployment;
   const verified = verifiedDeployment !== null;
   const deployment = verifiedDeployment ?? runtime;
   const revision = verifiedDeployment?.git_commit_sha ?? sha256(runtime);
@@ -437,11 +538,12 @@ async function reconcileVercel(): Promise<ContinuitySourceResult> {
     source_revision: revision,
     summary: verifiedDeployment
       ? "Vercel production READY, SHA " + verifiedDeployment.git_commit_sha + " verificado frente a GitHub main, deployment " + verifiedDeployment.deployment_id + "."
-      : "No se verificó Vercel READY con SHA igual al GitHub main actual.",
+      : "Vercel Production no verificado: " + (evidenceCheck.failure ?? "vercel_evidence_unavailable") + ".",
     decisions: [],
     open_items: verifiedDeployment
       ? []
-      : ["Verificar REST autenticado, producción READY y SHA de GitHub main; no usar metadata incompleta."],
+      : ["Verificar REST autenticado, producción READY y SHA de GitHub main; no usar metadata incompleta. Código: " +
+          (evidenceCheck.failure ?? "vercel_evidence_unavailable")],
     canonical_refs: verifiedDeployment ? [{
       kind: "production",
       ref: verifiedDeployment.deployment_url,
@@ -462,7 +564,7 @@ async function reconcileVercel(): Promise<ContinuitySourceResult> {
     ok: verified,
     revision,
     checkpoint_id: checkpoint.content_hash,
-    ...(verified ? {} : { error: "vercel_production_rest_verification_unavailable" }),
+    ...(verified ? {} : { error: evidenceCheck.failure ?? "vercel_production_rest_verification_unavailable" }),
   };
 }
 

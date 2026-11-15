@@ -115,7 +115,11 @@ async function vercelRequest<T>(
       details.error?.message ||
       details.message ||
       `Vercel HTTP ${response.status}`;
-    throw new Error(message);
+    // Preserve the HTTP status for sanitized, actionable reconciliation evidence.
+    // Never expose the bearer token or upstream response body to the browser.
+    const failure = new Error(message) as Error & { httpStatus?: number };
+    failure.httpStatus = response.status;
+    throw failure;
   }
 
   return payload as T;
@@ -162,6 +166,20 @@ export async function listVercelDeployments(input: VercelRuntimeInput) {
   if (input.target === "production") query.set("target", input.target);
 
   return vercelRequest(`/v6/deployments?${query.toString()}`, token);
+}
+
+/** Read one deployment using the SAME server-only token and team as list_deployments. */
+export async function getVercelDeploymentById(input: VercelRuntimeInput) {
+  const token = getVercelRuntimeToken();
+  if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
+  const deploymentId = String(input.deployment_id ?? "").trim();
+  if (!/^dpl_[A-Za-z0-9]+$/.test(deploymentId)) {
+    throw new Error("VERCEL_DEPLOYMENT_ID_INVALID");
+  }
+  return vercelRequest<Record<string, unknown>>(
+    buildPath(`/v13/deployments/${encodeURIComponent(deploymentId)}`, envValue("VERCEL_TEAM_ID")),
+    token,
+  );
 }
 
 export async function getVercelDeploymentLogs(input: VercelRuntimeInput) {

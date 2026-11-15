@@ -113,8 +113,19 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
         window.location.reload();
         return;
       }
+      const failureText: Record<string, string> = {
+        vercel_rest_http_401: "Vercel rechazó el token de Production (401). Revisa su vigencia.",
+        vercel_rest_http_403: "Vercel denegó permisos al token de Production (403). Revisa acceso al equipo/proyecto.",
+        vercel_rest_http_404: "El deployment no fue encontrado por el token de Vercel (404).",
+        vercel_rest_token_missing_in_production: "No se detectó VERCEL_TOKEN en Production.",
+        vercel_production_not_ready: "El deployment productivo más reciente no está READY.",
+        vercel_production_main_sha_mismatch: "El SHA productivo de Vercel no coincide con GitHub main.",
+        vercel_production_list_empty: "La API REST no devolvió deployments de producción verificados.",
+        vercel_rest_transport_or_permission_unverified: "La consulta REST de Vercel no pudo completarse. Verifica token, conexión y permisos.",
+      };
       const failures = payload.sources?.filter((source) => !source.ok).map(
-        (source) => source.source + (source.error ? ": " + source.error : ""),
+        (source) => source.source + (source.error
+          ? ": " + (failureText[source.error] ?? source.error) : ""),
       ) ?? [];
       setSourceRefreshResult(failures.join(" · ") || payload.error || "La verificación no pudo completarse.");
     } catch {
