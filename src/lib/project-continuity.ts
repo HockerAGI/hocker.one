@@ -5,6 +5,7 @@ import { createContextBridgeCheckpoint } from "@/lib/context-bridge";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import {
   getVercelDeploymentById,
+  getVercelProductionAlias,
   hasVercelRuntimeToken,
   listVercelDeployments,
 } from "@/lib/vercel-runtime-executor";
@@ -416,6 +417,26 @@ async function verifyReadyDeployment(
   if (sha !== expectedMainSha) {
     return { deployment: null, failure: "vercel_production_main_sha_mismatch" };
   }
+  // Production can be rolled back to another SHA without changing this
+  // deployment's READY state. The *live alias* must point to this exact ID.
+  // A Vercel GitHub check or deployment detail alone cannot satisfy this gate.
+  let alias: Record<string, unknown>;
+  try {
+    alias = asRecord(await getVercelProductionAlias({
+      project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
+    }));
+  } catch (error) {
+    return { deployment: null, failure: vercelRestFailureCode(error) };
+  }
+  const aliasedDeployment = asRecord(alias.deployment);
+  if (alias.alias !== "hockerone.vercel.app" ||
+      alias.projectId !== HOCKER_ONE_VERCEL_PROJECT_ID ||
+      alias.deploymentId !== id ||
+      aliasedDeployment.id !== id ||
+      (aliasedDeployment.url != null && aliasedDeployment.url !== host) ||
+      alias.deletedAt != null || alias.redirect != null) {
+    return { deployment: null, failure: "vercel_production_alias_not_current" };
+  }
   return {
     deployment: {
       environment: "production",
@@ -437,6 +458,8 @@ async function verifyReadyDeployment(
  * - filtered production list (preferred),
  * - when list access fails, derive a candidate ID from the current SHA's
  *   official Vercel GitHub status; re-read THAT ID using authenticated REST.
+ * BOTH paths ALSO verify the live production alias assignment via Vercel REST
+ * to prevent stale READY deployments after Instant Rollback.
  * A GitHub success status alone NEVER verifies production or fills a checkpoint.
  */
 async function readVercelProductionEvidence(): Promise<VercelEvidenceCheck> {

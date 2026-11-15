@@ -119,6 +119,7 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
         vercel_rest_http_404: "El deployment no fue encontrado por el token de Vercel (404).",
         vercel_rest_token_missing_in_production: "No se detectó VERCEL_TOKEN en Production.",
         vercel_production_not_ready: "El deployment productivo más reciente no está READY.",
+        vercel_production_alias_not_current: "El dominio público apunta a otro deployment o no pudo verificarse su asignación actual.",
         vercel_production_main_sha_mismatch: "El SHA productivo de Vercel no coincide con GitHub main.",
         vercel_production_list_empty: "La API REST no devolvió deployments de producción verificados.",
         vercel_rest_transport_or_permission_unverified: "La consulta REST de Vercel no pudo completarse. Verifica token, conexión y permisos.",

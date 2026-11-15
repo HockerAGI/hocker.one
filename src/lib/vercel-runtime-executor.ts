@@ -182,6 +182,20 @@ export async function getVercelDeploymentById(input: VercelRuntimeInput) {
   );
 }
 
+/** The current assigned production alias, not just a historical READY build. */
+export async function getVercelProductionAlias(input: VercelRuntimeInput) {
+  const token = getVercelRuntimeToken();
+  if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");
+  const projectId = String(input.project_id ?? envValue("VERCEL_PROJECT_ID")).trim();
+  if (!projectId) throw new Error("Falta project_id.");
+  const query = new URLSearchParams({ projectId });
+  const teamId = envValue("VERCEL_TEAM_ID");
+  if (teamId) query.set("teamId", teamId);
+  return vercelRequest<Record<string, unknown>>(
+    `/v4/aliases/hockerone.vercel.app?${query.toString()}`, token,
+  );
+}
+
 export async function getVercelDeploymentLogs(input: VercelRuntimeInput) {
   const token = getVercelRuntimeToken();
   if (!token) throw new Error("Vercel no configurado: falta VERCEL_TOKEN.");

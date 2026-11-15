@@ -12,6 +12,8 @@ test("Vercel remains fail-closed with actionable HTTP diagnostics and no secret 
   ]);
   assert.match(runtime, /failure\.httpStatus = response\.status/);
   assert.match(runtime, /export async function getVercelDeploymentById/);
+  assert.match(runtime, /export async function getVercelProductionAlias/);
+  assert.match(runtime, /\/v4\/aliases\/hockerone\.vercel\.app/);
   assert.match(runtime, /\/v13\/deployments\//);
   assert.match(continuity, /hasVercelRuntimeToken\(\)/);
   assert.match(continuity, /vercel_rest_http_401/);
@@ -20,6 +22,10 @@ test("Vercel remains fail-closed with actionable HTTP diagnostics and no secret 
   assert.match(continuity, /status: verified \? "verified" : "partial"/);
   assert.match(continuity, /listVercelDeployments/);
   assert.match(continuity, /getVercelDeploymentById/);
+  assert.match(continuity, /getVercelProductionAlias/);
+  assert.match(continuity, /alias\.deploymentId !== id/);
+  assert.match(continuity, /alias\.projectId !== HOCKER_ONE_VERCEL_PROJECT_ID/);
+  assert.match(continuity, /vercel_production_alias_not_current/);
   assert.match(continuity, /latestProduction\.state !== "READY"/);
   assert.match(continuity, /row\) => row\.target === "production"/);
   assert.match(continuity, /main\.object\?\.sha/);
