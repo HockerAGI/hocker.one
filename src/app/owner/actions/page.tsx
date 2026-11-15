@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
+import "./owner-actions-mobile.css";
 import PageShell from "@/components/PageShell";
 import OwnerApprovalCenter from "@/components/owner/OwnerApprovalCenter";
 import { requireOwnerAal2Page } from "@/lib/owner-session-gate";
@@ -25,6 +27,7 @@ export default async function OwnerActionsPage() {
       title="Aprobaciones"
       description="Revisa el alcance, riesgo y plan de cada acción antes de autorizarla. NOVA no ejecuta cambios sensibles desde el chat."
       compact
+      className="hko-owner-actions-page"
       actions={
         <>
           <Link href="/commands" className="hko-action-secondary">Ver tareas</Link>
@@ -33,11 +36,17 @@ export default async function OwnerActionsPage() {
       }
     >
       <div className="space-y-4">
-        <p className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.045] px-4 py-3 text-sm leading-6 text-amber-100">
-          Sesión Owner con MFA verificada. Aprobar no equivale a ejecutar:
-          revisa repositorio, rama, impacto y reversibilidad antes de cada decisión.
-          Ninguna acción se aprueba automáticamente por abrir esta pantalla.
-        </p>
+        <details className="hko-owner-safety rounded-2xl border border-sky-300/15 bg-sky-300/[0.035] text-sm text-slate-300">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300">
+            <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>Sesión Owner y MFA AAL2 verificadas</span>
+            <span className="ml-auto shrink-0 text-xs text-slate-400">Detalles</span>
+          </summary>
+          <p className="border-t border-white/[0.06] px-4 py-3 leading-6 text-slate-300">
+            Aprobar no equivale a ejecutar. Revisa repositorio, rama, impacto y reversibilidad antes de cada decisión.
+            Ninguna acción se aprueba automáticamente por abrir esta pantalla.
+          </p>
+        </details>
         <OwnerApprovalCenter projectId={projectId} />
       </div>
     </PageShell>
