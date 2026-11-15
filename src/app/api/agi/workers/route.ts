@@ -39,7 +39,15 @@ const RecoverSchema = z.object({
   operation: z.literal("recover_stale"),
   project_id: ProjectSchema,
 });
-const ActionSchema = z.discriminatedUnion("operation", [CreateSchema, RunSchema, RecoverSchema]);
+const CancelStaleSchema = z.object({
+  operation: z.literal("cancel_stale"),
+  project_id: ProjectSchema,
+  task_id: z.string().uuid(),
+  reason: z.string().trim().min(12).max(400),
+});
+const ActionSchema = z.discriminatedUnion("operation", [
+  CreateSchema, RunSchema, RecoverSchema, CancelStaleSchema,
+]);
 
 type UntypedSupabase = SupabaseClient<any, "public", any>;
 
@@ -203,6 +211,30 @@ export async function POST(req: Request): Promise<Response> {
     if (!ownerGate.ok) return ownerGate.response;
 
     try {
+      if (action.operation === "cancel_stale") {
+        // Atomic event + task status update in service-only SQL; the browser
+        // cannot select a batch or cancel a task without current Owner AAL2.
+        const { data: result, error: cancelError } = await db().rpc(
+          "owner_cancel_stale_agi_task_v1",
+          {
+            p_project_id: ctx.project_id,
+            p_task_id: action.task_id,
+            p_owner_id: ctx.user.id,
+            p_reason: action.reason,
+          },
+        );
+        if (cancelError) {
+          const forbidden = /AGI_STALE_TASK_(NOT_FOUND|NOT_ELIGIBLE|REVIEW_INVALID)/.test(
+            String(cancelError.message ?? ""),
+          );
+          return json({
+            ok: false, canceled: false,
+            error: forbidden ? "AGI_STALE_TASK_REVIEW_REJECTED" : "AGI_STALE_TASK_REVIEW_UNAVAILABLE",
+            message: "La tarea no se canceló. Verifica su estado y las reglas de revisión.",
+          }, forbidden ? 409 : 503);
+        }
+        return json({ ok: true, canceled: true, result }, 200);
+      }
       if (action.operation === "run_once") {
         const result = await runUnifiedAgiWorkerOnce({
           project_id: ctx.project_id,
