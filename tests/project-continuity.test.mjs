@@ -17,7 +17,8 @@ test("continuity reconciler is read-only toward GitHub and writes normalized che
   assert.match(code, /HOCKER_ONE_VERCEL_PROJECT_ID/);
   assert.match(code, /latestProduction\.state !== "READY"/);
   assert.match(code, /gitRef !== "main"/);
-  assert.match(code, /main\.object\?\.sha/);\n  assert.match(code, /sha !== expectedMainSha/);
+  assert.match(code, /main\.object\?\.sha/);
+  assert.match(code, /sha !== expectedMainSha/);
   assert.match(code, /observed_at: new Date\(\)\.toISOString\(\)/);
   assert.match(code, /observed_at: observedAt/);
   assert.doesNotMatch(code, /method:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i);
