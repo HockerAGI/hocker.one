@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
-  Activity,
   AlertTriangle,
   Bot,
   CheckCircle2,
-  Clock3,
   FileCheck2,
   Fingerprint,
   Loader2,
@@ -93,6 +92,19 @@ type ConsolePayload = {
     };
   };
   tasks?: WorkerTask[];
+  totals?: {
+    ready: boolean;
+    counts: Record<"queued" | "pending" | "working" | "completed" | "failed", number> | null;
+  };
+  stale_review?: {
+    ready: boolean;
+    items: WorkerTask[];
+    truncated: boolean;
+  };
+  operational_gates?: {
+    context_bridge: { current_sources: number | null; required_sources: number; max_age_hours: number };
+    runtime: { fresh_nodes: number | null; heartbeat_window_minutes: number };
+  };
   runs?: WorkerRun[];
   error?: string;
 };
@@ -140,10 +152,38 @@ function statusClass(status: string) {
 
 function statusLabel(status: string) {
   if (status === "completed") return "Completada";
-  if (status === "working") return "Trabajando";
-  if (status === "queued") return "En cola";
-  if (status === "failed") return "Falló";
+  if (status === "working") return "En ejecución";
+  if (status === "queued" || status === "pending") return "Pendiente";
+  if (status === "canceled") return "Cancelada";
+  if (status === "failed") return "Con error";
   return status || "Sin estado";
+}
+
+function policyLabel(value: string | null | undefined) {
+  if (value === "draft_only") return "Solo borradores";
+  if (value === "read_only") return "Solo lectura";
+  if (value === "owner_gate") return "Solicita autorización";
+  return "No especificada";
+}
+
+/** Render the model's plain text/markdown-like output as readable, escaped React nodes. */
+function ResultText({ value }: { value: string }) {
+  const paragraphs = value
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+(?=\d{1,2}\.\s+\*\*)/g, "\n")
+    .split(/\n+/)
+    .map((piece) => piece.trim())
+    .filter(Boolean);
+  return (
+    <div className="space-y-3 break-words text-sm leading-7 text-slate-300">
+      {paragraphs.map((piece, i) => (
+        <p key={i}>
+          {piece.split(/\*\*([^*]+)\*\*/g).map((part, j) =>
+            j % 2 ? <strong key={j} className="font-semibold text-slate-100">{part}</strong> : part)}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 async function requestConsole(init?: RequestInit): Promise<ConsolePayload> {
@@ -167,6 +207,10 @@ export default function VerifiableWorkersConsole() {
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState("normal");
   const [writePolicy, setWritePolicy] = useState("draft_only");
+  const [visibleRecent, setVisibleRecent] = useState(6);
+  const [cancelReasons, setCancelReasons] = useState<Record<string, string>>({});
+  const [cancelBusy, setCancelBusy] = useState<string | null>(null);
+  const [cancelFeedback, setCancelFeedback] = useState<string>("");
 
   const refresh = useCallback(async () => {
     try {
@@ -187,11 +231,11 @@ export default function VerifiableWorkersConsole() {
 
   const tasks = useMemo(() => Array.isArray(data.tasks) ? data.tasks : [], [data.tasks]);
   const runs = useMemo(() => Array.isArray(data.runs) ? data.runs : [], [data.runs]);
-  const counts = useMemo(() => tasks.reduce((current, task) => {
-    const key = text(task.status, "unknown");
-    current[key] = (current[key] ?? 0) + 1;
-    return current;
-  }, {} as Record<string, number>), [tasks]);
+  const totals = data.totals?.ready === true ? data.totals.counts : null;
+  const pendingTotal = totals ? totals.queued + totals.pending : null;
+  const staleReview = data.stale_review;
+  const staleTasks = staleReview?.ready === true ? staleReview.items : [];
+  const gateSummary = data.operational_gates;
   const loop = data.status?.loop ?? {};
   const schemaReady = data.status?.schema_ready === true && data.schema_query_ready === true;
   const backlog = data.status?.stale_backlog;
@@ -230,6 +274,45 @@ export default function VerifiableWorkersConsole() {
     }
   }
 
+  async function cancelOldTask(task: WorkerTask) {
+    const reason = (cancelReasons[task.id] ?? "").trim();
+    if (reason.length < 12 || reason.length > 400) {
+      setCancelFeedback("Escribe un motivo de 12 a 400 caracteres para esta tarea.");
+      return;
+    }
+    if (!window.confirm(`¿Cancelar únicamente "${text(task.title)}"? Esta acción conserva historial y no ejecuta modelos.`)) return;
+    setCancelBusy(task.id);
+    setCancelFeedback("");
+    try {
+      const response = await fetch("/api/agi/workers", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          operation: "cancel_stale",
+          project_id: "hocker-one",
+          task_id: task.id,
+          reason,
+        }),
+      });
+      const payload = await response.json().catch(() => ({})) as JsonRecord;
+      if (!response.ok || payload.ok !== true) {
+        const code = text(payload.error, "AGI_STALE_TASK_REVIEW_UNAVAILABLE");
+        if (code === "owner_mfa_required" || response.status === 403) {
+          throw new Error("La acción requiere verificar MFA AAL2 en tu sesión Owner.");
+        }
+        throw new Error(text(payload.message, "No se pudo cancelar el registro. Comprueba su estado."));
+      }
+      setCancelFeedback(`Tarea cancelada con registro de auditoría: ${task.id}`);
+      setCancelReasons((current) => ({ ...current, [task.id]: "" }));
+      await refresh();
+    } catch (error) {
+      setCancelFeedback(error instanceof Error ? error.message : "Cancelación no completada.");
+    } finally {
+      setCancelBusy(null);
+    }
+  }
+
   async function createTask(event: React.FormEvent) {
     event.preventDefault();
     if (!subject.trim() || !body.trim()) return;
@@ -255,52 +338,74 @@ export default function VerifiableWorkersConsole() {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Esquema</p>
-          <div className="mt-3 flex items-center gap-2">
-            {schemaReady ? <CheckCircle2 className="h-5 w-5 text-emerald-300" /> : <AlertTriangle className="h-5 w-5 text-amber-300" />}
-            <strong className="text-sm text-white">{schemaReady ? "Preparado" : "No aplicado"}</strong>
+      <section aria-label="Resumen de trabajos" className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        {[
+          { label: "Pendientes", value: pendingTotal, note: "Incluye trabajos antiguos", tone: "text-amber-200" },
+          { label: "En ejecución", value: totals?.working, note: "Procesando ahora", tone: "text-cyan-200" },
+          { label: "Completadas", value: totals?.completed, note: "Total registrado", tone: "text-emerald-200" },
+          { label: "Con errores", value: totals?.failed, note: "Total registrado", tone: "text-rose-200" },
+        ].map((metric) => (
+          <div key={metric.label} className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3 sm:p-4">
+            <p className="text-xs font-semibold text-slate-400">{metric.label}</p>
+            <p className={`mt-1 text-2xl font-bold tabular-nums sm:text-3xl ${metric.tone}`}>
+              {typeof metric.value === "number" ? metric.value : "—"}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-500">{metric.note}</p>
           </div>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">En cola</p>
-          <p className="mt-2 text-3xl font-black text-amber-200">{counts.queued ?? 0}</p>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Trabajando</p>
-          <p className="mt-2 text-3xl font-black text-cyan-200">{counts.working ?? 0}</p>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Completadas</p>
-          <p className="mt-2 text-3xl font-black text-emerald-200">{counts.completed ?? 0}</p>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Loop automático</p>
-          <div className="mt-3 flex items-center gap-2">
-            {loop.enabled ? <Activity className="h-5 w-5 text-emerald-300" /> : <Clock3 className="h-5 w-5 text-slate-500" />}
-            <strong className="text-sm text-white">{loop.enabled ? loop.running ? "Procesando" : "Activo" : "Desactivado"}</strong>
-          </div>
-        </div>
+        ))}
+      </section>
+      <p className="text-xs leading-5 text-slate-400">
+        Totales del proyecto, no una muestra de las últimas tareas. Base de datos:
+        {" "}<strong className="text-slate-200">{schemaReady ? "disponible" : "verificar"}</strong>.
+        Ejecución automática: <strong className="text-slate-200">{loop.enabled ? "activada" : "apagada"}</strong>.
+      </p>
+
+      <section aria-label="Qué falta para operar" className="grid gap-2 sm:grid-cols-3">
+        <a href="#revision-pendientes" className="min-w-0 rounded-xl border border-white/10 bg-slate-950/40 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p className="text-xs font-semibold text-slate-300">1. Cola histórica</p>
+          <p className="mt-1 text-sm font-bold text-white">{pendingTotal === null ? "Sin verificar" : `${pendingTotal} por revisar`}</p>
+          <p className="mt-1 text-xs text-slate-500">Revisar sin ejecutar</p>
+        </a>
+        <Link href="/owner/context-bridge" className="min-w-0 rounded-xl border border-white/10 bg-slate-950/40 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p className="text-xs font-semibold text-slate-300">2. Continuidad</p>
+          <p className="mt-1 text-sm font-bold text-white">
+            {typeof gateSummary?.context_bridge.current_sources === "number"
+              ? `${gateSummary.context_bridge.current_sources}/6 fuentes vigentes`
+              : "Sin verificar"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Ver evidencias y MFA</p>
+        </Link>
+        <Link href="/nodes" className="min-w-0 rounded-xl border border-white/10 bg-slate-950/40 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          <p className="text-xs font-semibold text-slate-300">3. Runtime NOVA</p>
+          <p className="mt-1 text-sm font-bold text-white">
+            {typeof gateSummary?.runtime.fresh_nodes === "number"
+              ? `${gateSummary.runtime.fresh_nodes} nodos con señal reciente`
+              : "Sin verificar"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Revisar nodos y salud</p>
+        </Link>
       </section>
 
       {executionBlocked ? (
-        <section role="status" className="rounded-[22px] border border-amber-300/25 bg-amber-300/[0.065] p-4 sm:p-5">
+        <section role="status" className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.065] px-4 py-4 sm:p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
-            <div>
-              <h2 className="font-bold text-amber-100">Ejecución bloqueada para proteger la cola histórica</h2>
+            <div className="min-w-0">
+              <h2 className="font-semibold leading-snug text-amber-100">NOVA no procesará trabajos antiguos automáticamente</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 {backlog?.checked === true
-                  ? `${backlog.stale_count ?? 0} tarea(s) en queued/pending superan ${backlog.threshold_hours} horas y requieren revisión Owner.`
-                  : "No se pudo verificar el estado de toda la cola. No es seguro reclamar tareas ni recuperar locks."}
-                {" "}Este bloqueo también se aplica a la ejecución por token, no solo a los botones.
+                  ? `Hay ${backlog.stale_count ?? 0} trabajos de más de ${backlog.threshold_hours} horas por revisar.`
+                  : "No se pudo comprobar toda la cola. La ejecución permanece bloqueada por seguridad."}
+                {" "}Ninguna tarea se ha cancelado al abrir esta pantalla.
               </p>
-              <p className="mt-2 text-xs leading-5 text-slate-400">
-                Los registros no se han eliminado ni cancelado. Revísalos en la lista de Procesos,
-                conservando evidencia y permisos antes de una cancelación auditada.
-                La cola de tareas es distinta del centro de Aprobaciones AGI.
-              </p>
+              <a href="#revision-pendientes" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-amber-200/30 px-4 text-sm font-semibold text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
+                Revisar trabajos pendientes
+              </a>
+              <details className="mt-2 text-xs leading-5 text-slate-400">
+                <summary className="min-h-8 cursor-pointer py-1 font-medium text-slate-300">¿Por qué está bloqueado?</summary>
+                Este control impide retomar tareas de pruebas antiguas o recuperar bloqueos sin revisión del propietario.
+                También protege las rutas internas y por token. No es un fallo del diseño ni de las AGIs.
+              </details>
             </div>
           </div>
         </section>
@@ -321,8 +426,72 @@ export default function VerifiableWorkersConsole() {
         </section>
       ) : null}
 
-      <section className="grid gap-5 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
-        <form onSubmit={createTask} className="hocker-panel-pro p-5 sm:p-6">
+      <section id="revision-pendientes" className="scroll-mt-32 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-cyan-300">Revisión del propietario</p>
+            <h2 className="mt-1 text-lg font-bold text-white">Trabajos antiguos pendientes</h2>
+          </div>
+          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-sm font-semibold text-amber-200">
+            {backlog?.checked ? `${backlog.stale_count ?? 0} por revisar` : "Sin verificar"}
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          Estos trabajos se guardaron anteriormente. Puedes revisar y cancelar una tarea individual
+          con un motivo explícito, MFA Owner y auditoría. No se ejecuta ningún modelo.
+          Las autorizaciones de cambios sensibles se administran por separado en
+          {" "}<Link href="/owner/actions" className="font-medium text-cyan-200 underline underline-offset-4">Aprobaciones</Link>.
+        </p>
+        {cancelFeedback ? <p role="status" className="mt-3 rounded-xl border border-white/15 bg-white/[0.035] p-3 text-sm text-slate-200">{cancelFeedback}</p> : null}
+        {staleReview?.ready === false || !staleReview ? (
+          <p role="status" className="mt-3 text-sm text-amber-200">No se pudo cargar el inventario. No interpretes esta pantalla como una cola vacía.</p>
+        ) : staleTasks.length ? (
+          <div className="mt-4 space-y-2">
+            {staleTasks.map((task) => (
+              <details key={task.id} className="rounded-xl border border-white/10 bg-black/20">
+                <summary className="cursor-pointer px-3 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:px-4">
+                  <span className="block text-sm font-semibold text-slate-100">{text(task.title)}</span>
+                  <span className="mt-1 block text-xs text-slate-400">{text(task.agi_id || task.assigned_to)} · {statusLabel(text(task.status))} · {date(task.created_at)}</span>
+                </summary>
+                <div className="border-t border-white/10 px-3 py-3 text-xs leading-6 text-slate-300 sm:px-4">
+                  <p>Tipo: {text(task.task_type)} · Permiso: {policyLabel(task.write_policy)}</p>
+                  <p>Intentos: {task.attempt_count ?? 0} de {task.max_attempts ?? 3}</p>
+                  <p>Identificador: <code className="break-all text-slate-400">{task.id}</code></p>
+                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                    <label className="block">
+                      <span className="mb-1 block font-medium text-slate-300">Motivo de cancelación (obligatorio)</span>
+                      <textarea
+                        value={cancelReasons[task.id] ?? ""}
+                        onChange={(event) => setCancelReasons((current) => ({ ...current, [task.id]: event.target.value }))}
+                        maxLength={400} rows={2}
+                        placeholder="Ej. Pulso de prueba de agosto; se revisó y no debe reactivarse."
+                        className="w-full rounded-xl border border-white/15 bg-slate-950/70 p-3 text-sm text-slate-100 placeholder:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      />
+                    </label>
+                    <button type="button" onClick={() => void cancelOldTask(task)}
+                      disabled={cancelBusy !== null || (cancelReasons[task.id] ?? "").trim().length < 12}
+                      className="min-h-11 rounded-xl border border-amber-300/25 px-4 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40">
+                      {cancelBusy === task.id ? "Cancelando…" : "Cancelar solo esta tarea"}
+                    </button>
+                    <p className="text-xs text-slate-500">Se conserva el historial. Solo Owner con MFA puede confirmar; nunca se cancela en bloque.</p>
+                  </div>
+                </div>
+              </details>
+            ))}
+            {staleReview.truncated ? <p className="text-sm text-amber-200">Inventario parcial: supera los 100 registros. No se permite depuración masiva.</p> : null}
+          </div>
+        ) : <p className="mt-3 text-sm text-emerald-300">No se encontraron trabajos antiguos en esta revisión.</p>}
+      </section>
+
+      <section className="grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+        <details className="hocker-panel-pro p-4 sm:p-5">
+          <summary className="cursor-pointer text-base font-semibold text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+            Crear una tarea nueva (opcional)
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            Registrar una tarea no la ejecuta. Si hay trabajos antiguos pendientes, la ejecución seguirá bloqueada.
+          </p>
+          <form onSubmit={createTask} className="mt-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-300/10 text-violet-200"><Sparkles className="h-5 w-5" /></span>
             <div>
@@ -368,7 +537,8 @@ export default function VerifiableWorkersConsole() {
             {busy === "create" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Registrar tarea
           </button>
-        </form>
+          </form>
+        </details>
 
         <div className="space-y-4">
           <section className="hocker-panel-pro p-5">
@@ -376,13 +546,13 @@ export default function VerifiableWorkersConsole() {
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-300">Control Owner</p>
                 <h2 className="mt-1 text-xl font-black text-white">Ejecución y recuperación</h2>
-                <p className="mt-2 text-sm text-slate-400">El modo manual procesa una tarea. El loop automático permanece desactivado hasta configurarlo.</p>
+                <p className="mt-2 text-sm text-slate-400">Procesar inicia una tarea con el modelo; recuperar libera tareas interrumpidas. Ambas acciones requieren MFA y permanecen deshabilitadas mientras exista trabajo antiguo sin revisar.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "run_once", project_id: "hocker-one", assigned_agi: null }, "run")} className="hocker-button-primary inline-flex items-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "run_once", project_id: "hocker-one", assigned_agi: null }, "run")} className="hocker-button-primary inline-flex min-h-11 items-center gap-2 disabled:cursor-not-allowed disabled:!bg-slate-800 disabled:!text-slate-400 disabled:opacity-50">
                   {busy === "run" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Procesar siguiente
                 </button>
-                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "recover_stale", project_id: "hocker-one" }, "recover")} className="hocker-button-secondary inline-flex items-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "recover_stale", project_id: "hocker-one" }, "recover")} className="hocker-button-secondary inline-flex min-h-11 items-center gap-2 disabled:cursor-not-allowed disabled:opacity-40">
                   {busy === "recover" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Recuperar locks
                 </button>
                 <button type="button" onClick={() => void refresh()} className="hocker-button-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</button>
@@ -394,12 +564,14 @@ export default function VerifiableWorkersConsole() {
           <section className="hocker-panel-pro overflow-hidden">
             <div className="border-b border-white/[0.07] p-5">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Cola y evidencia</p>
-              <h2 className="mt-1 text-xl font-black text-white">Tareas recientes</h2>
+              <h2 className="mt-1 text-xl font-black text-white">Resultados recientes</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Muestra limitada a 60 registros; abre un resultado solo si necesitas leerlo completo.</p>
             </div>
-            <div className="max-h-[720px] divide-y divide-white/[0.07] overflow-y-auto hko-sidebar-scroll">
-              {tasks.map((task) => {
+            <div className="divide-y divide-white/[0.07]">
+              {tasks.slice(0, visibleRecent).map((task) => {
                 const output = asRecord(task.output);
                 const summary = text(output.summary, "Todavía no hay resultado.");
+                const preview = summary.replace(/\*\*/g, "").replace(/\s+/g, " ").trim().slice(0, 185);
                 const verification = asRecord(output.verification);
                 const taskRuns = runs.filter((run) => run.task_id === task.id);
                 return (
@@ -412,21 +584,33 @@ export default function VerifiableWorkersConsole() {
                           <span className="text-[10px] text-slate-500">{text(task.priority, "normal")}</span>
                         </div>
                         <h3 className="mt-3 text-base font-black text-white">{text(task.title)}</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-400">{summary}</p>
+                        <p className="mt-2 break-words text-sm leading-6 text-slate-400">
+                          {preview}{summary.length > 185 ? "…" : ""}
+                        </p>
+                        {summary.length > 185 ? (
+                          <details className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                            <summary className="min-h-9 cursor-pointer py-1 text-sm font-semibold text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                              Leer resultado completo
+                            </summary>
+                            <div className="mt-3 border-t border-white/10 pt-3"><ResultText value={summary} /></div>
+                          </details>
+                        ) : null}
                       </div>
                       {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" /> : task.status === "failed" ? <XCircle className="h-5 w-5 shrink-0 text-rose-300" /> : <Bot className="h-5 w-5 shrink-0 text-cyan-300" />}
                     </div>
 
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <details className="mt-3 rounded-xl border border-white/10 bg-slate-950/35 p-3">
+                      <summary className="min-h-9 cursor-pointer py-1 text-sm font-medium text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                        Datos técnicos y trazabilidad
+                      </summary>
+                      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
                       <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Intentos</p><p className="mt-1 text-xs font-bold text-white">{Number(task.attempt_count ?? 0)} / {Number(task.max_attempts ?? 3)}</p></div>
-                      <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Política</p><p className="mt-1 text-xs font-bold text-white">{text(task.write_policy)}</p></div>
+                      <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Política</p><p className="mt-1 text-xs font-bold text-white">{policyLabel(task.write_policy)}</p></div>
                       <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Evidencias</p><p className="mt-1 text-xs font-bold text-white">{Array.isArray(task.evidence) ? task.evidence.length : 0}</p></div>
                       <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Runs</p><p className="mt-1 text-xs font-bold text-white">{taskRuns.length}</p></div>
                     </div>
 
-                    <details className="mt-3 rounded-2xl border border-white/[0.07] bg-slate-950/35 p-3">
-                      <summary className="cursor-pointer text-xs font-bold text-cyan-100">Ver trazabilidad</summary>
-                      <div className="mt-3 space-y-2 text-xs leading-5 text-slate-400">
+                      <div className="mt-3 space-y-2 border-t border-white/10 pt-3 text-xs leading-5 text-slate-400">
                         <p className="flex items-start gap-2"><Fingerprint className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Task: {task.id}</p>
                         <p className="flex items-start gap-2"><FileCheck2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Request: {text(task.request_id)}</p>
                         <p className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Hash: {text(task.result_hash || verification.result_hash)}</p>
@@ -438,6 +622,14 @@ export default function VerifiableWorkersConsole() {
                   </article>
                 );
               })}
+              {tasks.length > visibleRecent ? (
+                <div className="p-4 text-center">
+                  <button type="button" onClick={() => setVisibleRecent((count) => count + 6)}
+                    className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                    Mostrar seis registros más ({Math.max(0, tasks.length - visibleRecent)} restantes)
+                  </button>
+                </div>
+              ) : null}
               {tasks.length === 0 ? <div className="p-10 text-center"><Bot className="mx-auto h-8 w-8 text-slate-700" /><p className="mt-3 text-sm text-slate-500">Todavía no hay tareas verificables.</p></div> : null}
             </div>
           </section>

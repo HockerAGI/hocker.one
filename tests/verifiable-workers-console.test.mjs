@@ -44,7 +44,7 @@ test("console displays evidence and does not imply direct AGI writes", async () 
   assert.match(console, /attempt_count/);
   assert.match(console, /write_policy/);
   assert.match(console, /Owner Gate/);
-  assert.match(console, /Loop automático/);
+  assert.match(console, /Ejecución automática/);
   assert.match(console, /El código está preparado, pero el esquema todavía no está activo/);
   assert.doesNotMatch(console, /conciencia real/i);
 });

@@ -10,8 +10,10 @@ export const metadata: Metadata = {
 export default function WorkersPage() {
   return (
     <PageShell
-      title="Trabajadores AGI"
-      subtitle="Asignación especializada, cola atómica, intentos, evidencia y resultados correlacionados con NOVA."
+      title="Procesos AGI"
+      subtitle="Estado real de los trabajos, revisión de pendientes y resultados de NOVA."
+      compact
+      className="hko-workers-page"
     >
       <VerifiableWorkersConsole />
     </PageShell>

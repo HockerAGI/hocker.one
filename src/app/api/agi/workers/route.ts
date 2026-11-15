@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { getContextBridgeCurrentProofs } from "@/lib/context-bridge";
+import { deriveProviderCoverageStatus } from "@/lib/context-bridge-coverage";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { AGI_STALE_BACKLOG_BLOCK_CODE, AGI_STALE_BACKLOG_READ_ERROR } from "@/lib/agi-stale-backlog-gate";
 import {
@@ -37,7 +39,15 @@ const RecoverSchema = z.object({
   operation: z.literal("recover_stale"),
   project_id: ProjectSchema,
 });
-const ActionSchema = z.discriminatedUnion("operation", [CreateSchema, RunSchema, RecoverSchema]);
+const CancelStaleSchema = z.object({
+  operation: z.literal("cancel_stale"),
+  project_id: ProjectSchema,
+  task_id: z.string().uuid(),
+  reason: z.string().trim().min(12).max(400),
+});
+const ActionSchema = z.discriminatedUnion("operation", [
+  CreateSchema, RunSchema, RecoverSchema, CancelStaleSchema,
+]);
 
 type UntypedSupabase = SupabaseClient<any, "public", any>;
 
@@ -61,6 +71,71 @@ async function loadTasks(projectId: string) {
   return { tasks: data ?? [], schema_query_ready: true, error: null };
 }
 
+type WorkerQueueStatus = "queued" | "pending" | "working" | "completed" | "failed";
+
+async function loadExactTaskCounts(projectId: string) {
+  const statuses: WorkerQueueStatus[] = ["queued", "pending", "working", "completed", "failed"];
+  const responses = await Promise.all(statuses.map((status) =>
+    db().from("agi_tasks").select("id", { count: "exact", head: true })
+      .eq("project_id", projectId).eq("status", status),
+  ));
+  const valid = responses.every((response) =>
+    !response.error && typeof response.count === "number" &&
+    Number.isSafeInteger(response.count) && response.count >= 0);
+  if (!valid) return { ready: false as const, counts: null };
+  return {
+    ready: true as const,
+    counts: Object.fromEntries(statuses.map((status, i) => [status, responses[i]!.count])) as Record<WorkerQueueStatus, number>,
+  };
+}
+
+async function loadStaleTaskReview(projectId: string) {
+  // Distinct from the last-60 activity list; no input/payload/output/secrets.
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await db().from("agi_tasks")
+    .select("id,project_id,agi_id,assigned_to,title,status,task_type,write_policy,requires_approval,attempt_count,max_attempts,created_at,locked_at,lock_owner")
+    .eq("project_id", projectId)
+    .in("status", ["queued", "pending"])
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(101);
+  if (error) return { ready: false, items: [], truncated: false };
+  const rows = data ?? [];
+  return { ready: true, items: rows.slice(0, 100), truncated: rows.length > 100 };
+}
+
+async function loadOperationalGates(projectId: string) {
+  // Read-only checks, never a substitute for health checks on a real host.
+  const freshnessMinutes = 5;
+  const cutoff = new Date(Date.now() - freshnessMinutes * 60_000).toISOString();
+  const [nodeResult, bridgeResult] = await Promise.allSettled([
+    db().from("nodes").select("id", { count: "exact", head: true })
+      .eq("project_id", projectId).gt("last_seen_at", cutoff),
+    getContextBridgeCurrentProofs(projectId),
+  ]);
+  let freshNodes: number | null = null;
+  if (nodeResult.status === "fulfilled" &&
+    !nodeResult.value.error && typeof nodeResult.value.count === "number") {
+    freshNodes = nodeResult.value.count;
+  }
+  let currentSources: number | null = null;
+  if (bridgeResult.status === "fulfilled") {
+    const snapshot = bridgeResult.value;
+    const cutoffMs = Date.parse(snapshot.observedAt) - 168 * 60 * 60 * 1000;
+    currentSources = snapshot.providers.filter((proof) =>
+      deriveProviderCoverageStatus({
+        checkpointObservedAt: proof.checkpointObservedAt,
+        staleBefore: cutoffMs,
+        capabilities: proof.capabilities,
+      }) === "complete",
+    ).length;
+  }
+  return {
+    context_bridge: { current_sources: currentSources, required_sources: 6, max_age_hours: 168 },
+    runtime: { fresh_nodes: freshNodes, heartbeat_window_minutes: freshnessMinutes },
+  };
+}
+
 async function loadRuns(projectId: string) {
   const { data, error } = await db()
     .from("agi_runs")
@@ -79,10 +154,13 @@ export async function GET(req: Request): Promise<Response> {
     const projectId = ProjectSchema.parse(url.searchParams.get("project_id") || undefined);
     await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
 
-    const [taskState, runs, status] = await Promise.all([
+    const [taskState, runs, status, totals, staleReview, gates] = await Promise.all([
       loadTasks(projectId),
       loadRuns(projectId),
       getUnifiedAgiWorkerStatus(projectId, req.headers.get("x-vercel-oidc-token")),
+      loadExactTaskCounts(projectId),
+      loadStaleTaskReview(projectId),
+      loadOperationalGates(projectId),
     ]);
 
     return json({
@@ -91,6 +169,10 @@ export async function GET(req: Request): Promise<Response> {
       status,
       status_http: status.ready === true ? 200 : 503,
       tasks: taskState.tasks,
+      // Last-60 recent rows are never the source for the project-wide totals.
+      totals,
+      stale_review: staleReview,
+      operational_gates: gates,
       runs,
       schema_query_ready: taskState.schema_query_ready,
       schema_query_error: taskState.error,
@@ -129,6 +211,30 @@ export async function POST(req: Request): Promise<Response> {
     if (!ownerGate.ok) return ownerGate.response;
 
     try {
+      if (action.operation === "cancel_stale") {
+        // Atomic event + task status update in service-only SQL; the browser
+        // cannot select a batch or cancel a task without current Owner AAL2.
+        const { data: result, error: cancelError } = await db().rpc(
+          "owner_cancel_stale_agi_task_v1",
+          {
+            p_project_id: ctx.project_id,
+            p_task_id: action.task_id,
+            p_owner_id: ctx.user.id,
+            p_reason: action.reason,
+          },
+        );
+        if (cancelError) {
+          const forbidden = /AGI_STALE_TASK_(NOT_FOUND|NOT_ELIGIBLE|REVIEW_INVALID)/.test(
+            String(cancelError.message ?? ""),
+          );
+          return json({
+            ok: false, canceled: false,
+            error: forbidden ? "AGI_STALE_TASK_REVIEW_REJECTED" : "AGI_STALE_TASK_REVIEW_UNAVAILABLE",
+            message: "La tarea no se canceló. Verifica su estado y las reglas de revisión.",
+          }, forbidden ? 409 : 503);
+        }
+        return json({ ok: true, canceled: true, result }, 200);
+      }
       if (action.operation === "run_once") {
         const result = await runUnifiedAgiWorkerOnce({
           project_id: ctx.project_id,
