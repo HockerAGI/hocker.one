@@ -1,0 +1,11 @@
+name = "hocker-nova-event-preflight"
+main = "index.mjs"
+compatibility_date = "2026-11-13"
+workers_dev = true
+
+[vars]
+NOVA_EVENT_PREFLIGHT_ENABLED = "false"
+
+# Intentionally no Cron trigger. Do not provision or deploy before
+# CI, Preview, review, Workers Free account confirmation and protected secrets.
+# The existing hocker-nova-coordinator remains untouched and observe-only.
