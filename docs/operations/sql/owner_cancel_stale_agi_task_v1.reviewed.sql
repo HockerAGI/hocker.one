@@ -50,7 +50,7 @@ BEGIN
   -- Same DB transaction: if audit insert fails, task status is rolled back.
   INSERT INTO public.events(project_id, node_id, level, type, message, data)
   VALUES (
-    p_project_id, 'owner-gate', 'info', 'agi.task.owner_canceled',
+    p_project_id, NULL, 'info', 'agi.task.owner_canceled',
     'Stale draft-only AGI task canceled after individual Owner review',
     pg_catalog.jsonb_build_object(
       'task_id', v_task.id,
