@@ -3,10 +3,14 @@ import { createHash } from "node:crypto";
 import { getAgiCertificationSnapshot } from "@/lib/agi-certification";
 import { createContextBridgeCheckpoint } from "@/lib/context-bridge";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { listVercelDeployments } from "@/lib/vercel-runtime-executor";
 
 const PROJECT_ID = "hocker-one";
 const DEFAULT_GITHUB_OWNER = "HockerAGI";
 const FOCUS_REPOSITORIES = new Set(["hocker.one", "nova.agi"]);
+// Existing production project; the Vercel REST client uses already configured
+// server-only VERCEL_TOKEN and VERCEL_TEAM_ID. No new provider or credentials.
+const HOCKER_ONE_VERCEL_PROJECT_ID = "prj_QoUSRUZj4LQmB3qoRF3bnoFOFQPz";
 
 type GithubRepository = {
   id: number;
@@ -240,6 +244,7 @@ async function reconcileGithub(): Promise<ContinuitySourceResult> {
     project_id: PROJECT_ID,
     source_id: "github.ecosystem",
     provider: "github",
+    observed_at: new Date().toISOString(),
     source_kind: "git_code",
     external_ref: `github://${owner}/repositories`,
     source_revision: revision,
@@ -299,6 +304,7 @@ async function reconcileSupabase(): Promise<ContinuitySourceResult> {
     project_id: PROJECT_ID,
     source_id: "supabase.agi-evidence",
     provider: "supabase",
+    observed_at: new Date().toISOString(),
     source_kind: "production_state",
     external_ref: "supabase://hocker-one/agi-certification",
     source_revision: revision,
@@ -344,37 +350,101 @@ async function reconcileSupabase(): Promise<ContinuitySourceResult> {
   };
 }
 
+type VercelDeploymentEvidence = {
+  environment: "production";
+  project_id: string;
+  git_commit_sha: string;
+  git_commit_ref: "main";
+  deployment_id: string;
+  deployment_url: string;
+  production_url: string;
+  region: string | null;
+  verification_method: "vercel_rest_and_github_main";
+};
+
+/**
+ * Reuse the existing server-only Vercel REST adapter and GitHub read token.
+ * A current READY production deployment must match the real repository main.
+ */
+async function readVercelProductionEvidence(): Promise<VercelDeploymentEvidence | null> {
+  try {
+    const response = asRecord(await listVercelDeployments({
+      project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
+    }));
+    const rows = Array.isArray(response.deployments) ? response.deployments : [];
+    // Newest-first. Do not skip a building production deployment and certify
+    // an old READY release as if it were current.
+    const latestProduction = rows.map(asRecord).find((row) => row.target === "production");
+    if (!latestProduction || latestProduction.state !== "READY") return null;
+    const id = String(latestProduction.id ?? "");
+    const host = String(latestProduction.url ?? "");
+    const metadata = asRecord(latestProduction.meta);
+    const sha = String(metadata.githubCommitSha ?? "");
+    const gitRef = String(metadata.githubCommitRef ?? "");
+    if (!/^dpl_[A-Za-z0-9]+$/.test(id) ||
+      !/^hocker-[a-z0-9-]+-hockeragi\.vercel\.app$/.test(host) ||
+      !/^[a-f0-9]{40}$/.test(sha) || gitRef !== "main") return null;
+    const main = await githubRequest<GithubRef>(
+      "/repos/HockerAGI/hocker.one/git/ref/heads/main",
+    );
+    if (main.object?.sha !== sha) return null;
+    return {
+      environment: "production",
+      project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
+      git_commit_sha: sha,
+      git_commit_ref: "main",
+      deployment_id: id,
+      deployment_url: "https://" + host,
+      production_url: "https://hockerone.vercel.app",
+      region: null,
+      verification_method: "vercel_rest_and_github_main",
+    };
+  } catch {
+    // Missing/rejected credential, upstream failure or unverified SHA.
+    return null;
+  }
+}
+
 async function reconcileVercel(): Promise<ContinuitySourceResult> {
-  const deployment = {
+  const runtime = {
     environment: process.env.VERCEL_ENV ?? null,
     project_id: process.env.VERCEL_PROJECT_ID ?? null,
     git_commit_sha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     git_commit_ref: process.env.VERCEL_GIT_COMMIT_REF ?? null,
-    deployment_url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+    deployment_url: process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : null,
     production_url: process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      ? "https://" + process.env.VERCEL_PROJECT_PRODUCTION_URL
       : null,
     region: process.env.VERCEL_REGION ?? null,
   };
-  const revision = sha256(deployment);
-  const verified = Boolean(deployment.environment && deployment.git_commit_sha && deployment.deployment_url);
-
+  // The historical runtime metadata was null in production. Verify the
+  // actual deployment via authenticated REST, not incomplete environment data.
+  const verifiedDeployment = await readVercelProductionEvidence();
+  const verified = verifiedDeployment !== null;
+  const deployment = verifiedDeployment ?? runtime;
+  const revision = verifiedDeployment?.git_commit_sha ?? sha256(runtime);
+  const observedAt = new Date().toISOString();
   const checkpoint = await createContextBridgeCheckpoint({
     project_id: PROJECT_ID,
     source_id: "vercel.hocker-one-runtime",
     provider: "vercel",
     source_kind: "production_state",
-    external_ref: deployment.deployment_url ?? "vercel://hocker-one/runtime",
-    source_revision: deployment.git_commit_sha ?? revision,
-    summary: verified
-      ? `Hocker One ejecutándose en Vercel ${deployment.environment} para SHA ${deployment.git_commit_sha}.`
-      : "Metadata de runtime Vercel incompleta en este entorno; no se declara deployment verificado.",
+    // Explicit observation timestamp participates in the checkpoint hash.
+    // Database conflict deduplication otherwise keeps an old observed_at.
+    observed_at: observedAt,
+    external_ref: verifiedDeployment?.deployment_url ?? "vercel://hocker-one/runtime",
+    source_revision: revision,
+    summary: verifiedDeployment
+      ? "Vercel production READY, SHA " + verifiedDeployment.git_commit_sha + " verificado frente a GitHub main, deployment " + verifiedDeployment.deployment_id + "."
+      : "No se verificó Vercel READY con SHA igual al GitHub main actual.",
     decisions: [],
-    open_items: verified ? [] : ["Verificar metadata del deployment Vercel desde un entorno productivo conectado."],
-    canonical_refs: deployment.git_commit_sha ? [{
+    open_items: verifiedDeployment
+      ? []
+      : ["Verificar REST autenticado, producción READY y SHA de GitHub main; no usar metadata incompleta."],
+    canonical_refs: verifiedDeployment ? [{
       kind: "production",
-      ref: deployment.deployment_url ?? "vercel://hocker-one/runtime",
-      revision: deployment.git_commit_sha,
+      ref: verifiedDeployment.deployment_url,
+      revision: verifiedDeployment.git_commit_sha,
     }] : [],
     cursor: deployment,
     capabilities: [{
@@ -383,16 +453,15 @@ async function reconcileVercel(): Promise<ContinuitySourceResult> {
       status: verified ? "verified" : "partial",
       mutates_external: false,
       owner_gate_required: false,
-      evidence_ref: deployment.deployment_url ?? "vercel://hocker-one/runtime",
+      evidence_ref: verifiedDeployment?.deployment_url ?? "vercel://hocker-one/runtime",
     }],
   }, "continuity-reconciler:vercel");
-
   return {
     source: "vercel",
     ok: verified,
     revision,
     checkpoint_id: checkpoint.content_hash,
-    ...(verified ? {} : { error: "vercel_runtime_metadata_incomplete" }),
+    ...(verified ? {} : { error: "vercel_production_rest_verification_unavailable" }),
   };
 }
 

@@ -13,6 +13,13 @@ test("continuity reconciler is read-only toward GitHub and writes normalized che
   assert.match(code, /github\.ecosystem/);
   assert.match(code, /supabase\.agi-evidence/);
   assert.match(code, /vercel\.hocker-one-runtime/);
+  assert.match(code, /listVercelDeployments/);
+  assert.match(code, /HOCKER_ONE_VERCEL_PROJECT_ID/);
+  assert.match(code, /latestProduction\.state !== "READY"/);
+  assert.match(code, /gitRef !== "main"/);
+  assert.match(code, /main\.object\?\.sha !== sha/);
+  assert.match(code, /observed_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(code, /observed_at: observedAt/);
   assert.doesNotMatch(code, /method:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i);
 });
 
@@ -165,4 +172,18 @@ test("live summary does not claim the dedicated NOVA runtime is live before cert
   const live = await source("src/lib/hocker-live-summary.ts");
   assert.match(live, /runtime dedicado nova\.agi permanece sin certificación live/i);
   assert.doesNotMatch(live, /NOVA está viva y responde desde Railway/i);
+});
+
+
+test("Vercel checkpoint freshness comes from existing REST credentials and exact current main", async () => {
+  const code = await source("src/lib/project-continuity.ts");
+  const executor = await source("src/lib/vercel-runtime-executor.ts");
+  assert.match(executor, /VERCEL_TOKEN/);
+  assert.match(executor, /VERCEL_TEAM_ID/);
+  assert.match(code, /readVercelProductionEvidence/);
+  assert.match(code, /row\) => row\.target === "production"/);
+  assert.match(code, /\/repos\/HockerAGI\/hocker\.one\/git\/ref\/heads\/main/);
+  assert.match(code, /status: verified \? "verified" : "partial"/);
+  assert.match(code, /vercel_production_rest_verification_unavailable/);
+  assert.doesNotMatch(code, /VERCEL_TOKEN\s*=/);
 });
