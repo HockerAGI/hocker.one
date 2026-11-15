@@ -24,13 +24,14 @@ test("one daily real pilot is atomic and never enters the generic queued claim",
 
 test("Owner AAL2 and hard-disabled-by-default model route must precede atomic DB start", async () => {
   const code = await read("src/app/api/agi/free-pilot/route.ts");
+  const policy = await read("src/lib/cloudflare-zero-credit-policy.ts");
   const owner = code.indexOf("await requireOwnerAal2Api(PROJECT_ID)");
   const conf = code.indexOf("if (!pilotConfigured())", code.indexOf("export async function POST"));
   const backlog = code.indexOf("await assertAgiBacklogReviewed(PROJECT_ID)");
   const db = code.indexOf('"start_free_readonly_agi_pilot_v1"');
   assert.ok(owner >= 0 && conf > owner && backlog > conf && db > backlog);
-  assert.match(code, /AGI_FREE_READONLY_PILOT_ENABLED === "true"/);
-  assert.match(code, /cloudflareFreeRouteConfigured\(\)/);
+  assert.match(policy, /AGI_FREE_READONLY_PILOT_ENABLED === "true"/);
+  assert.match(code, /cloudflareFreePilotConfigured\(\)/);
   assert.match(code, /z\.literal\(true\)/);
   assert.match(code, /z\.literal\("hocker-one"\)/);
   assert.match(code, /cloudflareWorkersAiProvider\.complete/);
