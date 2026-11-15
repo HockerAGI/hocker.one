@@ -4,6 +4,26 @@
  * This is isolated from the working hocker-nova-coordinator observer.
  */
 const TARGET = "https://hockerone.vercel.app/api/internal/nova-event-preflight";
+const TARGET_PATH = "/api/internal/nova-event-preflight";
+const PREVIEW_HOST = /^hocker-[a-z0-9-]+-hockeragi\\.vercel\\.app$/;
+
+export function resolveTarget(env) {
+  if (env.NOVA_EVENT_PREFLIGHT_STAGE === "production") return TARGET;
+  if (env.NOVA_EVENT_PREFLIGHT_STAGE !== "preview") {
+    throw new Error("NOVA_EVENT_PREFLIGHT_STAGE_INVALID");
+  }
+  let url;
+  try { url = new URL(env.NOVA_EVENT_PREFLIGHT_PREVIEW_URL); }
+  catch { throw new Error("NOVA_EVENT_PREFLIGHT_PREVIEW_URL_INVALID"); }
+  // Strict account-owned immutable preview host; never allow redirects, URLs
+  // with credentials, ports, queries, fragments, or arbitrary hostnames.
+  if (url.protocol !== "https:" || !PREVIEW_HOST.test(url.hostname) ||
+    url.pathname !== TARGET_PATH || url.username || url.password ||
+    url.port || url.search || url.hash) {
+    throw new Error("NOVA_EVENT_PREFLIGHT_PREVIEW_URL_INVALID");
+  }
+  return url.href;
+}
 const MAX_RESPONSE_BYTES = 3072;
 const TIMEOUT_MS = 6000;
 const CONTRACT = JSON.stringify({ contract_version: 1, project_id: "hocker-one", mode: "preflight" });
@@ -18,6 +38,11 @@ function validConfig(env) {
   if (typeof bypass !== "string" || !/^[A-Za-z0-9]{32}$/.test(bypass)) {
     throw new Error("NOVA_EVENT_PREFLIGHT_BYPASS_MISSING");
   }
+  if (typeof env.NOVA_EVENT_PREFLIGHT_EXPECTED_SHA !== "string" ||
+    !/^[a-f0-9]{40}$/.test(env.NOVA_EVENT_PREFLIGHT_EXPECTED_SHA)) {
+    throw new Error("NOVA_EVENT_PREFLIGHT_SHA_INVALID");
+  }
+  resolveTarget(env);
   return true;
 }
 
@@ -59,7 +84,7 @@ export async function preflight(env, fetcher = fetch) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const response = await fetcher(TARGET, {
+    const response = await fetcher(resolveTarget(env), {
       method: "POST",
       headers: {
         Authorization: "Bearer " + env.NOVA_EVENT_PREFLIGHT_TOKEN,
@@ -80,6 +105,9 @@ export async function preflight(env, fetcher = fetch) {
     }
     const data = await boundedJson(response);
     const m = data?.metrics;
+    if (data?.deployment_sha !== env.NOVA_EVENT_PREFLIGHT_EXPECTED_SHA) {
+      throw new Error("NOVA_EVENT_PREFLIGHT_SHA_MISMATCH");
+    }
     if (data?.ok !== true || data?.service !== "hocker-one" ||
       data?.mode !== "event_preflight_only" || data?.project_id !== "hocker-one" ||
       data?.contract_version !== 1 || data?.ready_for_dispatch !== false ||

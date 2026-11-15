@@ -100,6 +100,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       project_id: PROJECT_ID,
       mode: "event_preflight_only",
       contract_version: 1,
+      deployment_sha: process.env.VERCEL_GIT_COMMIT_SHA || null,
       observed_at: new Date().toISOString(),
       metrics: {
         queued_agi_tasks: tasks.count,
