@@ -18,6 +18,9 @@ export type VercelRuntimeInput = {
   install_command?: string;
   team_id?: string;
   deployment_id?: string;
+  // Optional server-side deployment filter; production reconciliation must
+  // not be displaced by large numbers of more recent Preview deployments.
+  target?: "production";
 };
 
 type VercelApiErrorPayload = {
@@ -156,6 +159,7 @@ export async function listVercelDeployments(input: VercelRuntimeInput) {
   });
   const teamId = envValue("VERCEL_TEAM_ID");
   if (teamId) query.set("teamId", teamId);
+  if (input.target === "production") query.set("target", input.target);
 
   return vercelRequest(`/v6/deployments?${query.toString()}`, token);
 }
