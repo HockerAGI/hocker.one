@@ -140,3 +140,28 @@ test("pending approval pagination does not hide older Owner actions", async () =
   assert.match(queue, /\.range\(offset, offset \+ limit - 1\)/);
   assert.match(queue, /\.order\("id", \{ ascending: false \}\)/);
 });
+
+
+test("Owner approval mobile design keeps review visible above excessive chrome", async () => {
+  const [page, css, dock, navigation] = await Promise.all([
+    read("src/app/owner/actions/page.tsx"),
+    read("src/app/owner/actions/owner-actions-mobile.css"),
+    read("src/components/BottomDock.tsx"),
+    read("src/lib/hocker-navigation.ts"),
+  ]);
+
+  assert.match(page, /className="hko-owner-actions-page"/);
+  assert.match(page, /<details className="hko-owner-safety/);
+  assert.match(page, /requireOwnerAal2Page\("\/owner\/actions"/);
+  assert.match(page, /<OwnerApprovalCenter projectId=\{projectId\}/);
+  assert.doesNotMatch(page, /<OwnerShell|Aquí irá el listado de acciones/);
+
+  assert.match(css, /@media \(max-width: 720px\)/);
+  assert.match(css, /\.hko-owner-actions-page \.hko-approval-metrics/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /min-height: 44px/);
+  assert.doesNotMatch(css, /display: none;[\s\S]*?\.hko-approval-list\s*\{/);
+
+  assert.match(navigation, /id: "ecosistema", href: "\/apps", label: "Ecosistema", shortLabel: "Apps"/);
+  assert.match(dock, /aria-label=\{item.label\}/);
+});

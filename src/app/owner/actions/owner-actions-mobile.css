@@ -1,0 +1,130 @@
+/*
+ * Hocker ONE — owner approvals: source-grounded mobile refinement (2026-11-14).
+ * Scoped to this route: do not alter desktop modules, Owner permissions,
+ * historical action data, or the general six-section shell.
+ */
+@media (max-width: 720px) {
+  .hko-owner-actions-page > div > header {
+    border-radius: 18px;
+    padding: 12px 14px;
+    box-shadow: none;
+    background: rgba(7, 16, 31, .72);
+  }
+
+  .hko-owner-actions-page > div > header > div:last-child {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .hko-owner-actions-page > div > header h1 {
+    margin-top: 5px;
+    font-size: 1.45rem;
+    line-height: 1.15;
+    letter-spacing: -.04em;
+  }
+
+  .hko-owner-actions-page > div > header p:not(:first-child) {
+    margin-top: 6px;
+    font-size: .79rem;
+    line-height: 1.45;
+  }
+
+  .hko-owner-actions-page > div > header > div:last-child > div:last-child {
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .hko-owner-actions-page > div > header a {
+    flex: 1 1 auto;
+    min-height: 44px;
+    font-size: .7rem;
+  }
+
+  .hko-owner-actions-page > div > div:last-child {
+    margin-top: 12px;
+  }
+
+  .hko-owner-actions-page .hko-approval-shell {
+    border-radius: 20px;
+    padding: 14px 12px;
+  }
+
+  .hko-owner-actions-page .hko-approval-shell::before {
+    display: none;
+  }
+
+  .hko-owner-actions-page .hko-approval-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .hko-owner-actions-page .hko-approval-head h2 {
+    font-size: 1.25rem;
+    line-height: 1.18;
+    letter-spacing: -.04em;
+  }
+
+  .hko-owner-actions-page .hko-approval-head p:not(.hko-kicker) {
+    font-size: .78rem;
+    line-height: 1.45;
+  }
+
+  .hko-owner-actions-page .hko-approval-refresh {
+    width: auto;
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: .7rem;
+    letter-spacing: .06em;
+  }
+
+  .hko-owner-actions-page .hko-approval-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 12px;
+  }
+
+  .hko-owner-actions-page .hko-approval-metrics > div {
+    min-width: 0;
+    padding: 10px 8px;
+    border-radius: 14px;
+  }
+
+  .hko-owner-actions-page .hko-approval-metrics span {
+    font-size: .61rem;
+    line-height: 1.35;
+    letter-spacing: .025em;
+    overflow-wrap: anywhere;
+  }
+
+  .hko-owner-actions-page .hko-approval-metrics strong {
+    font-size: 1.15rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .hko-owner-actions-page .hko-approval-card,
+  .hko-owner-actions-page .hko-approval-empty {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .hko-owner-actions-page .hko-approval-card h3 {
+    font-size: 1.1rem;
+    line-height: 1.25;
+  }
+
+  .hko-owner-actions-page .hko-approval-actions button {
+    min-height: 44px;
+    letter-spacing: .06em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hko-owner-actions-page .hko-approval-shell::before {
+    animation: none;
+  }
+}
