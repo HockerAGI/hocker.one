@@ -29,7 +29,7 @@ test("Worker status distinguishes exact project totals from capped recent result
 test("Owner cancellation is one task at a time, AAL2 verified and DB atomic", async () => {
   const [api, migration, ui] = await Promise.all([
     read("src/app/api/agi/workers/route.ts"),
-    read("supabase/migrations/20261115042500_owner_cancel_stale_agi_task_v1.sql"),
+    read("docs/operations/sql/owner_cancel_stale_agi_task_v1.reviewed.sql"),
     read("src/components/workers/VerifiableWorkersConsole.tsx"),
   ]);
   assert.match(api, /operation: z\.literal\("cancel_stale"\)/);
