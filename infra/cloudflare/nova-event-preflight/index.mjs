@@ -5,7 +5,7 @@
  */
 const TARGET = "https://hockerone.vercel.app/api/internal/nova-event-preflight";
 const TARGET_PATH = "/api/internal/nova-event-preflight";
-const PREVIEW_HOST = /^hocker-[a-z0-9-]+-hockeragi\\.vercel\\.app$/;
+const PREVIEW_HOST = /^hocker-[a-z0-9-]+-hockeragi\.vercel\.app$/;
 
 export function resolveTarget(env) {
   if (env.NOVA_EVENT_PREFLIGHT_STAGE === "production") return TARGET;
