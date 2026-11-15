@@ -40,7 +40,8 @@ test("Owner AAL2 and hard-disabled-by-default model route must precede atomic DB
   assert.match(code, /complete_serverless_agi_execution/);
   assert.match(code, /fail_agi_task/);
   assert.match(code, /material_actions_executed: 0/);
-  assert.doesNotMatch(code, /claim_next_agi_task|runUnifiedAgiWorkerOnce|completeAgi\(|executeAgiMcpToolCalls|AI_GATEWAY_API_KEY|openai-direct|vercel-gateway/);
+  // Do not confuse explanatory comments with actual unsafe function calls.
+  assert.doesNotMatch(code, /\.rpc\s*\(\s*["\x27]claim_next_agi_task|runUnifiedAgiWorkerOnce\s*\(|completeAgi\s*\(|executeAgiMcpToolCalls\s*\(|AI_GATEWAY_API_KEY|openai-direct|vercel-gateway/);
 });
 
 test("worker UI exposes only an explicit human-confirmed pilot", async () => {

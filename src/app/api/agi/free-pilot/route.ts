@@ -65,7 +65,13 @@ export async function POST(request: NextRequest) {
   // Browser Owner session is also bound to this exact origin to reduce CSRF.
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
-  if (!origin || !host || new URL(origin).host !== host) {
+  let sameOrigin = false;
+  try {
+    sameOrigin = Boolean(origin && host && new URL(origin).host === host);
+  } catch {
+    sameOrigin = false;
+  }
+  if (!sameOrigin) {
     return result({ ok: false, error: "FREE_PILOT_ORIGIN_REJECTED" }, 403);
   }
   const parsed = PilotRequest.safeParse(await request.json().catch(() => null));
