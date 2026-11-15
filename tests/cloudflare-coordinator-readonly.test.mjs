@@ -9,6 +9,10 @@ const good = {
   ok: true, service: "hocker-one", coordinator_mode: "observe_only",
   project_id: "hocker-one",
   owner_gate_bypassed: false, material_actions_executed: 0, model_requests: 0,
+  agi_tasks_claimed: 0,
+  event_preflight: {contract_version: 1, mode: "event_preflight_only",
+    checked: true, stale_agi_tasks: 0, blocked: false,
+    ready_for_dispatch: false, task_executor: false, dedicated_runtime: false},
   metrics: {
     registered_agi_profiles: 16, queued_agi_tasks: 14,
     blocked_or_pending_material_actions: 0, fresh_dedicated_nodes: 0,
@@ -44,6 +48,9 @@ test("one GET to fixed Hocker One origin, with scoped token and no payload", asy
   assert.equal(result.ok,true);
   assert.equal(result.registered_agi_profiles,16);
   assert.equal(result.queued_agi_tasks,14);
+  assert.equal(result.event_preflight_verified,true);
+  assert.equal(result.stale_agi_tasks,0);
+  assert.equal(result.ready_for_dispatch,false);
   assert.equal(JSON.stringify(result).includes(token),false);
   assert.equal(JSON.stringify(result).includes(bypass),false);
 });
@@ -70,6 +77,29 @@ test("rejects invalid auth, redirects, leaks and unauthenticated output",async()
     NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
     NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass,
   },()=>okResponse({...good,owner_gate_bypassed:true})),/COORDINATOR_RESPONSE_CONTRACT_INVALID/);
+});
+
+test("stale and forged preflight evidence fails closed", async()=>{
+  const env={NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass};
+  const bad=[
+    {...good,event_preflight:undefined},
+    {...good,event_preflight:{...good.event_preflight,checked:false}},
+    {...good,event_preflight:{...good.event_preflight,stale_agi_tasks:3,blocked:false}},
+    {...good,event_preflight:{...good.event_preflight,ready_for_dispatch:true}},
+    {...good,event_preflight:{...good.event_preflight,task_executor:true}},
+    {...good,event_preflight:{...good.event_preflight,dedicated_runtime:true}},
+    {...good,agi_tasks_claimed:1},
+  ];
+  for(const payload of bad){
+    await assert.rejects(observe(env,()=>okResponse(payload)),/COORDINATOR_RESPONSE_CONTRACT_INVALID/);
+  }
+  const reviewed = await observe(env,()=>okResponse({
+    ...good,event_preflight:{...good.event_preflight,stale_agi_tasks:3,blocked:true}
+  }));
+  assert.equal(reviewed.event_preflight_verified,true);
+  assert.equal(reviewed.stale_backlog_blocked,true);
+  assert.equal(reviewed.ready_for_dispatch,false);
 });
 
 test("protected Vercel redirects fail closed and are not followed",async()=>{
@@ -113,6 +143,9 @@ test("public Worker only provides minimal health; routes do not execute tools",a
   assert.match(route,/NOVA_COORDINATOR_READ_TOKEN/);
   assert.match(route,/NOVA_COORDINATOR_OBSERVE_ENABLED !== "true"/);
   assert.match(route,/timingSafeEqual/);
+  assert.match(route,/inspectAgiBacklog\(PROJECT_ID\)/);
+  assert.match(route,/event_preflight:/);
+  assert.match(route,/ready_for_dispatch: false/);
   assert.match(route,/from\("agi_agents"\)\.select\("agi_id", \{ head: true, count: "exact" \}\)/);
   assert.doesNotMatch(route,/from\("agi_agents"\)\.select\("id"/);
   assert.match(route,/from\("agi_tasks"\)\.select\("id", \{ head: true, count: "exact" \}\)/);
