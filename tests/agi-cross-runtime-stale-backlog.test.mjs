@@ -84,5 +84,5 @@ test("console shows exact count/read errors and disables dangerous buttons, not 
   assert.match(panel, /\!schemaReady \|\| executionBlocked/);
   assert.match(panel, /operation: "run_once"/);
   assert.match(panel, /operation: "recover_stale"/);
-  assert.match(panel, /cola de tareas es distinta del centro de Aprobaciones AGI/);
+  assert.match(panel, /Las autorizaciones de cambios sensibles se administran por separado/);
 });
