@@ -61,6 +61,39 @@ async function loadTasks(projectId: string) {
   return { tasks: data ?? [], schema_query_ready: true, error: null };
 }
 
+type WorkerQueueStatus = "queued" | "pending" | "working" | "completed" | "failed";
+
+async function loadExactTaskCounts(projectId: string) {
+  const statuses: WorkerQueueStatus[] = ["queued", "pending", "working", "completed", "failed"];
+  const responses = await Promise.all(statuses.map((status) =>
+    db().from("agi_tasks").select("id", { count: "exact", head: true })
+      .eq("project_id", projectId).eq("status", status),
+  ));
+  const valid = responses.every((response) =>
+    !response.error && typeof response.count === "number" &&
+    Number.isSafeInteger(response.count) && response.count >= 0);
+  if (!valid) return { ready: false as const, counts: null };
+  return {
+    ready: true as const,
+    counts: Object.fromEntries(statuses.map((status, i) => [status, responses[i]!.count])) as Record<WorkerQueueStatus, number>,
+  };
+}
+
+async function loadStaleTaskReview(projectId: string) {
+  // Distinct from the last-60 activity list; no input/payload/output/secrets.
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await db().from("agi_tasks")
+    .select("id,project_id,agi_id,assigned_to,title,status,task_type,write_policy,requires_approval,attempt_count,max_attempts,created_at,locked_at,lock_owner")
+    .eq("project_id", projectId)
+    .in("status", ["queued", "pending"])
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(101);
+  if (error) return { ready: false, items: [], truncated: false };
+  const rows = data ?? [];
+  return { ready: true, items: rows.slice(0, 100), truncated: rows.length > 100 };
+}
+
 async function loadRuns(projectId: string) {
   const { data, error } = await db()
     .from("agi_runs")
@@ -79,10 +112,12 @@ export async function GET(req: Request): Promise<Response> {
     const projectId = ProjectSchema.parse(url.searchParams.get("project_id") || undefined);
     await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
 
-    const [taskState, runs, status] = await Promise.all([
+    const [taskState, runs, status, totals, staleReview] = await Promise.all([
       loadTasks(projectId),
       loadRuns(projectId),
       getUnifiedAgiWorkerStatus(projectId, req.headers.get("x-vercel-oidc-token")),
+      loadExactTaskCounts(projectId),
+      loadStaleTaskReview(projectId),
     ]);
 
     return json({
@@ -91,6 +126,9 @@ export async function GET(req: Request): Promise<Response> {
       status,
       status_http: status.ready === true ? 200 : 503,
       tasks: taskState.tasks,
+      // Last-60 recent rows are never the source for the project-wide totals.
+      totals,
+      stale_review: staleReview,
       runs,
       schema_query_ready: taskState.schema_query_ready,
       schema_query_error: taskState.error,
