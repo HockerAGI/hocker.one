@@ -370,6 +370,7 @@ async function readVercelProductionEvidence(): Promise<VercelDeploymentEvidence 
   try {
     const response = asRecord(await listVercelDeployments({
       project_id: HOCKER_ONE_VERCEL_PROJECT_ID,
+      target: "production",
     }));
     const rows = Array.isArray(response.deployments) ? response.deployments : [];
     // Newest-first. Do not skip a building production deployment and certify

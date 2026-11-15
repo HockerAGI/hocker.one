@@ -181,6 +181,8 @@ test("Vercel checkpoint freshness comes from existing REST credentials and exact
   assert.match(executor, /VERCEL_TOKEN/);
   assert.match(executor, /VERCEL_TEAM_ID/);
   assert.match(code, /readVercelProductionEvidence/);
+  assert.match(code, /target: "production"/);
+  assert.match(executor, /query\.set\("target", input\.target\)/);
   assert.match(code, /row\) => row\.target === "production"/);
   assert.match(code, /\/repos\/HockerAGI\/hocker\.one\/git\/ref\/heads\/main/);
   assert.match(code, /status: verified \? "verified" : "partial"/);

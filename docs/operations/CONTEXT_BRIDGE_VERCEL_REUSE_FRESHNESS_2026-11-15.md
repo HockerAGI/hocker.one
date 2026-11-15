@@ -14,3 +14,4 @@ No new token, bypass, paid host, SQL DDL/DML or external write. The existing Hob
 ## Evidence required before calling the Vercel provider complete
 Exact-head CI + CodeQL + Preview READY; postmerge main checks all success and production READY; actual authenticated reconciliation triggered via existing authorized Cron/route, persisted new Vercel checkpoint observed_at after deploy with verified capability and exact production SHA.
 No re-run of historical 16/16 AGI certification, 14 previously canceled tasks, or Cloudflare coordinator's already-certified Cron contract.
+Review #427 follow-up: Codex P2 identified that the existing listVercelDeployments read returned only the first 20 unfiltered Preview/production deployments. The existing adapter now accepts target=production and the reconciler sets it. No new endpoint or token. Verify in CI and review before merge.
