@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { inspectAgiBacklog } from "@/lib/agi-stale-backlog-gate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     const sb = createAdminSupabase();
     const now = new Date();
     const freshAfter = new Date(now.getTime() - 5 * 60_000).toISOString();
-    const [agents, tasks, actions, nodes] = await Promise.all([
+    const [agents, tasks, actions, nodes, preflight] = await Promise.all([
       sb.from("agi_agents").select("agi_id", { head: true, count: "exact" })
         .eq("project_id", PROJECT_ID),
       sb.from("agi_tasks").select("id", { head: true, count: "exact" })
@@ -44,8 +45,11 @@ export async function GET(req: Request): Promise<NextResponse> {
         .eq("project_id", PROJECT_ID).in("status", [...ACTIVE_ACTION_STATUSES]),
       sb.from("nodes").select("id", { head: true, count: "exact" })
         .eq("project_id", PROJECT_ID).gte("last_seen_at", freshAfter),
+      inspectAgiBacklog(PROJECT_ID),
     ]);
-    if ([agents, tasks, actions, nodes].some((result) => result.error || result.count === null)) {
+    if (!preflight.checked || [agents, tasks, actions, nodes].some((result) =>
+      result.error || typeof result.count !== "number" ||
+      !Number.isSafeInteger(result.count) || result.count < 0)) {
       return NextResponse.json({ ok: false, code: "COORDINATOR_EVIDENCE_UNAVAILABLE" },
         { status: 503 });
     }
@@ -61,6 +65,16 @@ export async function GET(req: Request): Promise<NextResponse> {
         queued_agi_tasks: tasks.count,
         blocked_or_pending_material_actions: actions.count,
         fresh_dedicated_nodes: nodes.count,
+      },
+      event_preflight: {
+        contract_version: 1,
+        mode: "event_preflight_only",
+        checked: true,
+        stale_agi_tasks: preflight.stale_count,
+        blocked: preflight.blocked,
+        ready_for_dispatch: false,
+        task_executor: false,
+        dedicated_runtime: false,
       },
       agi_tasks_claimed: 0,
       model_requests: 0,

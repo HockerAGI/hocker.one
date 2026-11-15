@@ -75,15 +75,23 @@ export async function observe(env, fetcher = fetch) {
     try { payload = JSON.parse(new TextDecoder().decode(bytes)); }
     catch { throw new Error("COORDINATOR_RESPONSE_NOT_JSON"); }
     const m = payload?.metrics;
+    const p = payload?.event_preflight;
     if (payload?.ok !== true || payload?.service !== "hocker-one" ||
         payload?.coordinator_mode !== "observe_only" ||
         payload?.project_id !== "hocker-one" ||
         payload?.owner_gate_bypassed !== false ||
         payload?.material_actions_executed !== 0 ||
         payload?.model_requests !== 0 ||
+        payload?.agi_tasks_claimed !== 0 ||
         !m || !["registered_agi_profiles","queued_agi_tasks",
           "blocked_or_pending_material_actions","fresh_dedicated_nodes"]
-          .every(k => Number.isSafeInteger(m[k]) && m[k] >= 0)) {
+          .every(k => Number.isSafeInteger(m[k]) && m[k] >= 0) ||
+        !p || p.contract_version !== 1 || p.mode !== "event_preflight_only" ||
+        p.checked !== true || !Number.isSafeInteger(p.stale_agi_tasks) ||
+        p.stale_agi_tasks < 0 || typeof p.blocked !== "boolean" ||
+        p.blocked !== (p.stale_agi_tasks > 0) ||
+        p.ready_for_dispatch !== false || p.task_executor !== false ||
+        p.dedicated_runtime !== false) {
       throw new Error("COORDINATOR_RESPONSE_CONTRACT_INVALID");
     }
     return {
@@ -93,6 +101,10 @@ export async function observe(env, fetcher = fetch) {
       queued_agi_tasks: m.queued_agi_tasks,
       pending_material_actions: m.blocked_or_pending_material_actions,
       fresh_dedicated_nodes: m.fresh_dedicated_nodes,
+      event_preflight_verified: true,
+      stale_agi_tasks: p.stale_agi_tasks,
+      stale_backlog_blocked: p.blocked,
+      ready_for_dispatch: false,
     };
   } finally {
     clearTimeout(timeout);
