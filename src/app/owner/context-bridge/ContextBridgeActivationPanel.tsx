@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { deriveProviderCoverageStatus } from "@/lib/context-bridge-coverage";
 import type { ContextBridgeCurrentProof } from "@/lib/context-bridge";
 
@@ -54,9 +54,25 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
   const [maxStalenessHours, setMaxStalenessHours] = useState("168");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ActivationResponse | null>(null);
+  // Keep the server snapshot deterministic during SSR/hydration. Once mounted,
+  // use real wall-clock time so an open tab cannot keep an expired green badge.
+  const [liveNowMs, setLiveNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    const refreshClock = () => setLiveNowMs(Date.now());
+    refreshClock();
+    const interval = window.setInterval(refreshClock, 15_000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshClock();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
 
   const freshnessHours = Number(maxStalenessHours);
-  const checkedAtMs = Date.parse(currentProofs?.observedAt ?? "");
+  const checkedAtMs = liveNowMs ?? Date.parse(currentProofs?.observedAt ?? "");
   const providerReadiness = currentProofs && Number.isFinite(checkedAtMs)
     ? currentProofs.providers.map((proof) => ({
         ...proof,
@@ -76,7 +92,25 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
 
 
   async function activate() {
-    if (!currentCoverageComplete) return;
+    if (!canSubmit || !currentProofs) return;
+    // A hidden/mobile tab may throttle intervals. Revalidate against the
+    // actual current clock immediately before any network request.
+    const cutoffNow = Date.now() - freshnessHours * 60 * 60 * 1000;
+    const completeAtClick = REQUIRED_PROVIDERS.every((provider) =>
+      currentProofs.providers.some((proof) =>
+        proof.provider === provider
+        && deriveProviderCoverageStatus({
+          checkpointObservedAt: proof.checkpointObservedAt,
+          staleBefore: cutoffNow,
+          capabilities: proof.capabilities,
+        }) === "complete",
+      ),
+    );
+    if (!completeAtClick) {
+      setLiveNowMs(Date.now());
+      setResult({ ok: false, error: "La evidencia venció durante esta sesión. Actualiza la página y vuelve a comprobar los seis proveedores." });
+      return;
+    }
     setLoading(true);
     setResult(null);
 
