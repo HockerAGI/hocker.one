@@ -30,7 +30,7 @@ Scope only `HockerAGI/hocker.one`. User provided nine real Android screenshots, 
 
 ## Release protocol and pending closure
 
-- Apply **versioned migration only after complete CI/code review and Preview exact-head READY** and security advisor review; migration deployment must precede merger because new route calls this RPC. SQL does not modify any task until Owner explicitly cancels.
+- **Migration applied after approved first-stage CI, Codex review, and Preview READY:** production Supabase version `20261115044903_owner_cancel_stale_agi_task_v1`, mirrored exactly at `supabase/migrations/20261115044903_owner_cancel_stale_agi_task_v1.sql`. Verified `service_role` EXECUTE true, `authenticated`/`anon` false; no tasks canceled, no audit events written. Security advisors show no new finding on the function; unrelated legacy GraphQL / Auth warnings remain outside this repo scope. A second full exact-head CI/Preview/review is required before merging.
 - Merge only after all checks green. Production via automatic `main` deploy, verify exact SHA/alias and runtime error aggregates; do not manually duplicate.
 - Real end-to-end cancellation requires an actual Owner session with MFA AAL2; do not pretend to have it. Until then all 14 tasks remain intact and block worker claims.
 - Context Bridge four old providers require **authentic source-backed checkpoint ingestion** before 6/6 and separate Owner activation. This PR only visualizes existing read-only evidence.
