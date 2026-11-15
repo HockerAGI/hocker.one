@@ -62,6 +62,12 @@ export async function POST(request: NextRequest) {
   // is required before any task creation or model request.
   const owner = await requireOwnerAal2Api(PROJECT_ID);
   if (!owner.ok) return owner.response;
+  // Browser Owner session is also bound to this exact origin to reduce CSRF.
+  const origin = request.headers.get("origin");
+  const host = request.headers.get("host");
+  if (!origin || !host || new URL(origin).host !== host) {
+    return result({ ok: false, error: "FREE_PILOT_ORIGIN_REJECTED" }, 403);
+  }
   const parsed = PilotRequest.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return result({ ok: false, error: "FREE_PILOT_EXPLICIT_CONFIRMATION_REQUIRED" }, 400);
   if (!pilotConfigured()) {
