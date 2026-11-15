@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { deriveProviderCoverageStatus } from "@/lib/context-bridge-coverage";
+import type { ContextBridgeCurrentProof } from "@/lib/context-bridge";
 
 type ActivationResponse = {
   ok?: boolean;
@@ -22,7 +24,29 @@ const REQUIRED_PROVIDERS = [
   "vercel",
 ] as const;
 
-export default function ContextBridgeActivationPanel() {
+type CurrentProofs = {
+  observedAt: string;
+  providers: ContextBridgeCurrentProof[];
+} | null;
+
+const PROVIDER_LABELS: Record<(typeof REQUIRED_PROVIDERS)[number], string> = {
+  chatgpt: "ChatGPT",
+  codex: "Codex",
+  github: "GitHub",
+  google_drive: "Google Drive",
+  supabase: "Supabase",
+  vercel: "Vercel",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  complete: "Vigente",
+  stale: "Vencido",
+  missing: "Sin evidencia",
+  partial: "Incompleto",
+  blocked: "Bloqueado",
+};
+
+export default function ContextBridgeActivationPanel({ currentProofs }: { currentProofs: CurrentProofs }) {
   const [title, setTitle] = useState("Context Bridge · actualización aprobada");
   const [summary, setSummary] = useState(
     "Snapshot generado desde checkpoints verificados y activado por Owner con MFA AAL2.",
@@ -30,8 +54,63 @@ export default function ContextBridgeActivationPanel() {
   const [maxStalenessHours, setMaxStalenessHours] = useState("168");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ActivationResponse | null>(null);
+  // Keep the server snapshot deterministic during SSR/hydration. Once mounted,
+  // use real wall-clock time so an open tab cannot keep an expired green badge.
+  const [liveNowMs, setLiveNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    const refreshClock = () => setLiveNowMs(Date.now());
+    refreshClock();
+    const interval = window.setInterval(refreshClock, 15_000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshClock();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  const freshnessHours = Number(maxStalenessHours);
+  const checkedAtMs = liveNowMs ?? Date.parse(currentProofs?.observedAt ?? "");
+  const providerReadiness = currentProofs && Number.isFinite(checkedAtMs)
+    ? currentProofs.providers.map((proof) => ({
+        ...proof,
+        status: deriveProviderCoverageStatus({
+          checkpointObservedAt: proof.checkpointObservedAt,
+          staleBefore: checkedAtMs - freshnessHours * 60 * 60 * 1000,
+          capabilities: proof.capabilities,
+        }),
+      }))
+    : [];
+  const currentCoverageComplete = providerReadiness.length === REQUIRED_PROVIDERS.length
+    && REQUIRED_PROVIDERS.every((provider) =>
+      providerReadiness.some((proof) => proof.provider === provider && proof.status === "complete"),
+    );
+  const completeProviders = providerReadiness.filter((proof) => proof.status === "complete").length;
+
+
 
   async function activate() {
+    if (!canSubmit || !currentProofs) return;
+    // A hidden/mobile tab may throttle intervals. Revalidate against the
+    // actual current clock immediately before any network request.
+    const cutoffNow = Date.now() - freshnessHours * 60 * 60 * 1000;
+    const completeAtClick = REQUIRED_PROVIDERS.every((provider) =>
+      currentProofs.providers.some((proof) =>
+        proof.provider === provider
+        && deriveProviderCoverageStatus({
+          checkpointObservedAt: proof.checkpointObservedAt,
+          staleBefore: cutoffNow,
+          capabilities: proof.capabilities,
+        }) === "complete",
+      ),
+    );
+    if (!completeAtClick) {
+      setLiveNowMs(Date.now());
+      setResult({ ok: false, error: "La evidencia venció durante esta sesión. Actualiza la página y vuelve a comprobar los seis proveedores." });
+      return;
+    }
     setLoading(true);
     setResult(null);
 
@@ -69,7 +148,8 @@ export default function ContextBridgeActivationPanel() {
     && summary.trim().length > 0
     && Number.isInteger(Number(maxStalenessHours))
     && Number(maxStalenessHours) >= 1
-    && Number(maxStalenessHours) <= 720;
+    && Number(maxStalenessHours) <= 720
+    && currentCoverageComplete;
 
   return (
     <section className="hocker-panel-pro p-5">
@@ -81,6 +161,54 @@ export default function ContextBridgeActivationPanel() {
         Esta acción crea un manifiesto con los checkpoints más recientes. Solo se activa si los seis
         proveedores requeridos tienen cobertura completa y la sesión actual sigue en AAL2.
       </p>
+
+      <section aria-label="Cobertura actual de Context Bridge" className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-white">Comprobación actual de las seis fuentes</h3>
+          <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${currentCoverageComplete
+            ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-300/10 text-amber-200"}`}>
+            {currentProofs ? `${completeProviders}/6 vigentes` : "Sin verificar"}
+          </span>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-slate-400">
+          Esta vista consulta los checkpoints actuales, no los indicadores COMPLETE del manifiesto histórico.
+          Los límites se recalculan según las horas seleccionadas abajo. Una verificación de interfaz
+          no sustituye la validación final del servidor.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {REQUIRED_PROVIDERS.map((provider) => {
+            const proof = providerReadiness.find((item) => item.provider === provider);
+            const status = proof?.status ?? "missing";
+            return (
+              <div key={provider} className="min-w-0 rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs font-bold text-slate-100">{PROVIDER_LABELS[provider]}</p>
+                <p className={`mt-1 text-xs font-semibold ${status === "complete"
+                  ? "text-emerald-300" : status === "blocked" ? "text-rose-300" : "text-amber-200"}`}>
+                  {currentProofs ? (STATUS_LABELS[status] ?? "Sin verificar") : "Sin verificar"}
+                </p>
+                <p className="mt-1 break-words text-[10px] leading-4 text-slate-500">
+                  {proof?.checkpointObservedAt
+                    ? `Checkpoint: ${proof.checkpointObservedAt.slice(0, 16).replace("T", " ")} UTC`
+                    : "Sin checkpoint verificado"}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        {!currentCoverageComplete ? (
+          <p role="status" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.045] p-3 text-xs leading-5 text-amber-100">
+            Activación no disponible: primero deben actualizarse las evidencias y capacidades
+            verificadas de los seis proveedores. Para consultar nuevos checkpoints,
+            actualiza esta página. No aumentes el umbral de antigüedad solo para aprobar
+            registros históricos.
+          </p>
+        ) : (
+          <p role="status" className="mt-3 text-xs text-emerald-200">
+            Seis fuentes vigentes en esta comprobación. La activación final requiere
+            la autorización Owner AAL2 y vuelve a verificar toda la cobertura.
+          </p>
+        )}
+      </section>
 
       <div className="mt-5 grid gap-4">
         <label className="grid gap-2">

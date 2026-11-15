@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
-import { getActiveContextBridgeManifest } from "@/lib/context-bridge";
+import { getActiveContextBridgeManifest, getContextBridgeCurrentProofs } from "@/lib/context-bridge";
 import { requireOwnerAal2Page } from "@/lib/owner-session-gate";
 import ContextBridgeActivationPanel from "./ContextBridgeActivationPanel";
 
@@ -25,6 +25,14 @@ export default async function OwnerContextBridgePage() {
     ? active.coverage.map(asRecord)
     : [];
   const legacyActiveWithoutApproval = active.state === "active" && !String(active.approval_id ?? "").trim();
+  // The historical active manifest and the live activation readiness are
+  // separate facts; failure to read fresh evidence must never imply success.
+  let currentProofs: Awaited<ReturnType<typeof getContextBridgeCurrentProofs>> | null = null;
+  try {
+    currentProofs = await getContextBridgeCurrentProofs("hocker-one");
+  } catch {
+    currentProofs = null;
+  }
 
   return (
     <PageShell
@@ -68,7 +76,11 @@ export default async function OwnerContextBridgePage() {
           ) : null}
 
           {coverage.length > 0 ? (
-            <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <details className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <summary className="flex min-h-11 cursor-pointer items-center text-xs font-bold text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                Mostrar cobertura del manifiesto histórico · {coverage.length} fuentes
+              </summary>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {coverage.map((item, index) => (
                 <div key={String(item.domain_key ?? `coverage-${index}`)} className="rounded-xl border border-white/8 bg-black/20 p-3">
                   <p className="text-[10px] font-bold text-white">{String(item.domain_key ?? "provider")}</p>
@@ -79,11 +91,12 @@ export default async function OwnerContextBridgePage() {
                   </p>
                 </div>
               ))}
-            </div>
+              </div>
+            </details>
           ) : null}
         </section>
 
-        <ContextBridgeActivationPanel />
+        <ContextBridgeActivationPanel currentProofs={currentProofs} />
       </div>
     </PageShell>
   );
