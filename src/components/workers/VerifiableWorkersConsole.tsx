@@ -208,6 +208,9 @@ export default function VerifiableWorkersConsole() {
   const [priority, setPriority] = useState("normal");
   const [writePolicy, setWritePolicy] = useState("draft_only");
   const [visibleRecent, setVisibleRecent] = useState(6);
+  const [cancelReasons, setCancelReasons] = useState<Record<string, string>>({});
+  const [cancelBusy, setCancelBusy] = useState<string | null>(null);
+  const [cancelFeedback, setCancelFeedback] = useState<string>("");
 
   const refresh = useCallback(async () => {
     try {
@@ -268,6 +271,45 @@ export default function VerifiableWorkersConsole() {
       setMessage(error instanceof Error ? error.message : "La operación no pudo completarse.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function cancelOldTask(task: WorkerTask) {
+    const reason = (cancelReasons[task.id] ?? "").trim();
+    if (reason.length < 12 || reason.length > 400) {
+      setCancelFeedback("Escribe un motivo de 12 a 400 caracteres para esta tarea.");
+      return;
+    }
+    if (!window.confirm(`¿Cancelar únicamente "${text(task.title)}"? Esta acción conserva historial y no ejecuta modelos.`)) return;
+    setCancelBusy(task.id);
+    setCancelFeedback("");
+    try {
+      const response = await fetch("/api/agi/workers", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          operation: "cancel_stale",
+          project_id: "hocker-one",
+          task_id: task.id,
+          reason,
+        }),
+      });
+      const payload = await response.json().catch(() => ({})) as JsonRecord;
+      if (!response.ok || payload.ok !== true) {
+        const code = text(payload.error, "AGI_STALE_TASK_REVIEW_UNAVAILABLE");
+        if (code === "owner_mfa_required" || response.status === 403) {
+          throw new Error("La acción requiere verificar MFA AAL2 en tu sesión Owner.");
+        }
+        throw new Error(text(payload.message, "No se pudo cancelar el registro. Comprueba su estado."));
+      }
+      setCancelFeedback(`Tarea cancelada con registro de auditoría: ${task.id}`);
+      setCancelReasons((current) => ({ ...current, [task.id]: "" }));
+      await refresh();
+    } catch (error) {
+      setCancelFeedback(error instanceof Error ? error.message : "Cancelación no completada.");
+    } finally {
+      setCancelBusy(null);
     }
   }
 
@@ -395,10 +437,12 @@ export default function VerifiableWorkersConsole() {
           </span>
         </div>
         <p className="mt-2 text-sm leading-6 text-slate-400">
-          Estos trabajos se guardaron anteriormente. Revisar aquí no los ejecuta, aprueba ni elimina.
+          Estos trabajos se guardaron anteriormente. Puedes revisar y cancelar una tarea individual
+          con un motivo explícito, MFA Owner y auditoría. No se ejecuta ningún modelo.
           Las autorizaciones de cambios sensibles se administran por separado en
           {" "}<Link href="/owner/actions" className="font-medium text-cyan-200 underline underline-offset-4">Aprobaciones</Link>.
         </p>
+        {cancelFeedback ? <p role="status" className="mt-3 rounded-xl border border-white/15 bg-white/[0.035] p-3 text-sm text-slate-200">{cancelFeedback}</p> : null}
         {staleReview?.ready === false || !staleReview ? (
           <p role="status" className="mt-3 text-sm text-amber-200">No se pudo cargar el inventario. No interpretes esta pantalla como una cola vacía.</p>
         ) : staleTasks.length ? (
@@ -413,7 +457,24 @@ export default function VerifiableWorkersConsole() {
                   <p>Tipo: {text(task.task_type)} · Permiso: {policyLabel(task.write_policy)}</p>
                   <p>Intentos: {task.attempt_count ?? 0} de {task.max_attempts ?? 3}</p>
                   <p>Identificador: <code className="break-all text-slate-400">{task.id}</code></p>
-                  <p className="mt-2 text-amber-200">Estado conservado. No se dispone aún de cancelación individual auditada en esta vista.</p>
+                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                    <label className="block">
+                      <span className="mb-1 block font-medium text-slate-300">Motivo de cancelación (obligatorio)</span>
+                      <textarea
+                        value={cancelReasons[task.id] ?? ""}
+                        onChange={(event) => setCancelReasons((current) => ({ ...current, [task.id]: event.target.value }))}
+                        maxLength={400} rows={2}
+                        placeholder="Ej. Pulso de prueba de agosto; se revisó y no debe reactivarse."
+                        className="w-full rounded-xl border border-white/15 bg-slate-950/70 p-3 text-sm text-slate-100 placeholder:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                      />
+                    </label>
+                    <button type="button" onClick={() => void cancelOldTask(task)}
+                      disabled={cancelBusy !== null || (cancelReasons[task.id] ?? "").trim().length < 12}
+                      className="min-h-11 rounded-xl border border-amber-300/25 px-4 text-sm font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-40">
+                      {cancelBusy === task.id ? "Cancelando…" : "Cancelar solo esta tarea"}
+                    </button>
+                    <p className="text-xs text-slate-500">Se conserva el historial. Solo Owner con MFA puede confirmar; nunca se cancela en bloque.</p>
+                  </div>
                 </div>
               </details>
             ))}
