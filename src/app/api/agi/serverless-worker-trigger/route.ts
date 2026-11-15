@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { runUnifiedAgiWorkerOnce } from "@/lib/unified-agi-runtime";
+import { AGI_STALE_BACKLOG_BLOCK_CODE, AGI_STALE_BACKLOG_READ_ERROR } from "@/lib/agi-stale-backlog-gate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,17 +92,35 @@ async function execute(req: Request): Promise<Response> {
 
   const url = new URL(req.url);
   const assignedAgi = String(url.searchParams.get("agi") ?? "").trim() || null;
-  const result = await runUnifiedAgiWorkerOnce({
-    project_id: token.project_id,
-    assigned_agi: assignedAgi,
-    requested_by: `runtime-token:${token.purpose}`,
-    oidc_token: req.headers.get("x-vercel-oidc-token"),
-  });
-
-  return NextResponse.json(result, {
-    status: result.ok === false ? 502 : 200,
-    headers: { "Cache-Control": "no-store, max-age=0" },
-  });
+  try {
+    const result = await runUnifiedAgiWorkerOnce({
+      project_id: token.project_id,
+      assigned_agi: assignedAgi,
+      requested_by: `runtime-token:${token.purpose}`,
+      oidc_token: req.headers.get("x-vercel-oidc-token"),
+    });
+    return NextResponse.json(result, {
+      status: result.ok === false ? 502 : 200,
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
+  } catch (error) {
+    if (error instanceof Error && [
+      AGI_STALE_BACKLOG_BLOCK_CODE,
+      AGI_STALE_BACKLOG_READ_ERROR,
+      "AGI_WORKER_BACKLOG_PREFLIGHT_INVALID",
+    ].includes(error.message)) {
+      return NextResponse.json({
+        ok: false,
+        processed: false,
+        error: error.message,
+        blocked: true,
+      }, {
+        status: error.message === AGI_STALE_BACKLOG_BLOCK_CODE ? 409 : 503,
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
+    }
+    throw error;
+  }
 }
 
 export async function GET(req: Request): Promise<Response> {
