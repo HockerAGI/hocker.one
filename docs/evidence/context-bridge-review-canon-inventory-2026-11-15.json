@@ -1,0 +1,127 @@
+{
+  "schema_version": "context-bridge-readiness-evidence-v1",
+  "project_id": "hocker-one",
+  "evidence_cut_date": "2026-11-15",
+  "status": "review_pending_not_activation_eligible",
+  "staleness_hours": 168,
+  "sources": [
+    {
+      "source_id": "github.ecosystem",
+      "provider": "github",
+      "observed_at": "2026-11-15T17:58:40.193Z",
+      "verified": true
+    },
+    {
+      "source_id": "supabase.agi-evidence",
+      "provider": "supabase",
+      "observed_at": "2026-11-15T17:58:39.568Z",
+      "verified": true
+    },
+    {
+      "source_id": "vercel.hocker-one-runtime",
+      "provider": "vercel",
+      "observed_at": "2026-11-15T17:58:39.746Z",
+      "verified": true,
+      "sha": "e04211370bc1b67ba9f85221e07e341f7ca849a8",
+      "deployment_id": "dpl_FNuGRqqFJRZoANMSJzv9nkMbv1s1"
+    },
+    {
+      "source_id": "chatgpt-hocker-project-handoff",
+      "provider": "chatgpt",
+      "observed_at": "2026-08-17T00:18:00Z",
+      "verified": false,
+      "reason": "source_handoff_stale"
+    },
+    {
+      "source_id": "codex-release-operator",
+      "provider": "codex",
+      "observed_at": "2026-08-16T05:59:04.782063Z",
+      "verified": false,
+      "reason": "runtime_workspace_handoff_not_observed"
+    },
+    {
+      "source_id": "google-drive-canon",
+      "provider": "google_drive",
+      "observed_at": "2026-08-17T00:18:00Z",
+      "verified": false,
+      "reason": "canonical_set_undetermined_and_write_403"
+    }
+  ],
+  "verified_count": 3,
+  "required_count": 6,
+  "uploaded_pdf_candidates": [
+    {
+      "document_id": "DOC-00",
+      "file_name": "HOCKER_Indice_Maestro_y_Gobierno_Documental_2026-08.pdf",
+      "sha256": "a34a55ea14642731398f6c92acdbed3ea5abd96f411aa65081c3c95db40b9bad",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-01",
+      "file_name": "HOCKER_Vision_Gobierno_y_Mapa_del_Ecosistema_2026-08.pdf",
+      "sha256": "ba9e93cdc1ae927c17d02b5db55494fc6694b69cf74aeea63cb9d2d9ba10775f",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-03",
+      "file_name": "APPS_Unificadas_Fuente_Canonica_2026-08_CORREGIDA.pdf",
+      "sha256": "ff8ab32f02e9f38ad4fc7bd4ad1ba5ecfc0dab115e09dea925ad15882f11b0d2",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-04",
+      "file_name": "HOCKER_Modelo_de_Negocio_Monetizacion_y_GTM_2026-08.pdf",
+      "sha256": "bde1c257df93eaa03dfa71af9492ad5a96e39020626656365deab4f68cac871f",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-05",
+      "file_name": "HOCKER_Arquitectura_Tecnica_y_Plataforma_2026-08.pdf",
+      "sha256": "1cf654d38d15da86c05d68279c80444ccd0cb3026be3d1f16cc45662e3e8a1ea",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-06",
+      "file_name": "HOCKER_Manual_de_Ingenieria_de_Agentes_y_AGIs_2026-08.pdf",
+      "sha256": "5104433cbf7bc1bd517ca0af42951f55b372aeda58b0e54cb2d0a09955a0b27a",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-07",
+      "file_name": "HOCKER_Seguridad_Privacidad_Soberania_y_Continuidad_2026-08.pdf",
+      "sha256": "7576aeae782474792535fa607956f7c2e3c3ceb9205556e8bb679eb5742a6b34",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-08",
+      "file_name": "HOCKER_Sistema_de_Diseno_y_Arquitectura_UX_2026-08.pdf",
+      "sha256": "bde55b55be4d8ac73fc3cfbc7221f0b087df967c91285927fb03d20c4e6343a6",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-10",
+      "file_name": "HOCKER_Legal_Compliance_y_Contratos_2026-08.pdf",
+      "sha256": "cf36a685eff059c25626571761117b315187780c016575e28914a70ee19c8d7c",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    },
+    {
+      "document_id": "DOC-11",
+      "file_name": "HOCKER_Operacion_QA_SRE_FinOps_e_Incidentes_2026-08.pdf",
+      "sha256": "dffcebfad44369b4800dbf4ddababd7409e48ac7eb5f913e6763f80919f04134",
+      "authority": "uploaded_pdf_candidate_not_drive_revision"
+    }
+  ],
+  "exclusions": [
+    "raw_chats",
+    "credentials_docs",
+    "restricted_pii",
+    "approval_without_aal2",
+    "synthetic_provider_checkpoints"
+  ],
+  "approval": {
+    "owner_aal2_required": true,
+    "eligible": false,
+    "manifest_created": false,
+    "activated": false
+  }
+}
