@@ -54,6 +54,8 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
   const [maxStalenessHours, setMaxStalenessHours] = useState("168");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ActivationResponse | null>(null);
+  const [refreshingSources, setRefreshingSources] = useState(false);
+  const [sourceRefreshResult, setSourceRefreshResult] = useState<string | null>(null);
   // Keep the server snapshot deterministic during SSR/hydration. Once mounted,
   // use real wall-clock time so an open tab cannot keep an expired green badge.
   const [liveNowMs, setLiveNowMs] = useState<number | null>(null);
@@ -90,6 +92,37 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
   const completeProviders = providerReadiness.filter((proof) => proof.status === "complete").length;
 
 
+
+  async function refreshConnectedSources() {
+    if (refreshingSources) return;
+    if (!window.confirm("¿Actualizar AHORA evidencia real de GitHub, Supabase y Vercel sin activar el manifiesto ni ejecutar acciones externas?")) return;
+    setRefreshingSources(true);
+    setSourceRefreshResult(null);
+    try {
+      const response = await fetch("/api/context-bridge/reconcile/owner", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: "hocker-one", confirm: true }),
+      });
+      const payload = await response.json() as {
+        ok?: boolean;
+        sources?: Array<{ source: string; ok: boolean; error?: string }>;
+        error?: string;
+      };
+      if (response.ok && payload.ok) {
+        window.location.reload();
+        return;
+      }
+      const failures = payload.sources?.filter((source) => !source.ok).map(
+        (source) => source.source + (source.error ? ": " + source.error : ""),
+      ) ?? [];
+      setSourceRefreshResult(failures.join(" · ") || payload.error || "La verificación no pudo completarse.");
+    } catch {
+      setSourceRefreshResult("La reconciliación no confirmó éxito; consulta los checkpoints actuales.");
+    } finally {
+      setRefreshingSources(false);
+    }
+  }
 
   async function activate() {
     if (!canSubmit || !currentProofs) return;
@@ -209,6 +242,26 @@ export default function ContextBridgeActivationPanel({ currentProofs }: { curren
           </p>
         )}
       </section>
+
+      <div className="mt-4 rounded-xl border border-white/10 p-4">
+        <p className="text-sm font-semibold text-slate-100">Actualizar evidencias conectadas</p>
+        <p className="mt-1 text-xs leading-5 text-slate-400">
+          Reutiliza el reconciliador existente para GitHub, Supabase y Vercel.
+          Solo Owner MFA AAL2. No crea ni activa manifiestos, ni renueva
+          artificialmente ChatGPT, Codex o Drive.
+        </p>
+        <button
+          type="button"
+          onClick={() => { void refreshConnectedSources(); }}
+          disabled={refreshingSources}
+          className="hocker-button-primary mt-3 disabled:opacity-50"
+        >
+          {refreshingSources ? "Consultando fuentes reales…" : "Actualizar evidencias ahora (MFA)"}
+        </button>
+        {sourceRefreshResult ? (
+          <p role="status" className="mt-3 text-xs text-amber-200">{sourceRefreshResult}</p>
+        ) : null}
+      </div>
 
       <div className="mt-5 grid gap-4">
         <label className="grid gap-2">

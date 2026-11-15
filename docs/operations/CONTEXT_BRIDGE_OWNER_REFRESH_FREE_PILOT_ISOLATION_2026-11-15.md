@@ -1,0 +1,9 @@
+# Owner AAL2 evidence refresh + isolated Free pilot (2026-11-15)
+
+The existing daily reconciler in Hocker One has genuine GitHub and Supabase fresh checkpoints, but Vercel was still stale until the PR #427 production deployment. The only Cron is Hobby-safe once/day and must remain untouched.
+
+New POST /api/context-bridge/reconcile/owner accepts only current Owner MFA AAL2 same-origin POST with explicit confirmation. It delegates to **the existing** reconcileProjectContinuity(), writes only normalized GitHub/Supabase/Vercel checkpoints through the pre-existing service-role backend and never activates a manifest. The existing Owner Context Bridge page exposes the refresh button. Owner must use their own authenticated MFA browser to run it; never fabricate timestamps/approval or call through unscoped API keys.
+
+Separate Cloudflare Workers AI pilot guard is independent from global AGI_ZERO_CREDIT_ONLY/NOVA_CHAT_FREE_ONLY. Existing default Chat/GitHub/Vercel engineering routes remain unchanged when the distinct AGI_FREE_READONLY_PILOT_ENABLED switch is ON. The Cloudflare model adapter only permits the pilot Free route for input.free_only=true, and still refuses tools/web search, has fixed model, one bounded attempt, and no paid fallback. Gateway billing plan and production authorization must be verified before enabling any model request.
+
+Remaining provider constraints: ChatGPT and Codex must supply real current handoff or provider-specific evidence; Google Drive must point to current authenticated 2026 canon/change revision, not 2025 legacy files. Snapshot activation remains Owner AAL2 and 6/6 fail closed. Dedicated Linux runtime heartbeat has not been certified, and a Cloudflare Cron is not Linux 24/7.
