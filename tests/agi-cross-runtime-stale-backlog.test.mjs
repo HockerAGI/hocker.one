@@ -78,9 +78,9 @@ test("console shows exact count/read errors and disables dangerous buttons, not 
   assert.match(runtime, /ready: schemaReady && routes\.length > 0 && !backlog\.blocked/);
   assert.match(runtime, /stale_backlog: backlog/);
   assert.match(runtime, /execution_blocked: backlog\.blocked/);
-  assert.match(panel, /Ejecución bloqueada para proteger la cola histórica/);
+  assert.match(panel, /NOVA no procesará trabajos antiguos automáticamente/);
   assert.match(panel, /backlog\.stale_count/);
-  assert.match(panel, /No se pudo verificar el estado de toda la cola/);
+  assert.match(panel, /No se pudo comprobar toda la cola/);
   assert.match(panel, /\!schemaReady \|\| executionBlocked/);
   assert.match(panel, /operation: "run_once"/);
   assert.match(panel, /operation: "recover_stale"/);
