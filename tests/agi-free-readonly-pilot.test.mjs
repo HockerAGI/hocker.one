@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL("../" + path, import.meta.url), "utf8");
 
 test("one daily real pilot is atomic and never enters the generic queued claim", async () => {
-  const sql = await read("supabase/pending_migrations/free_readonly_agi_pilot_v1.sql");
+  const sql = await read("supabase/migrations/20261115093001_free_readonly_agi_pilot_v1.sql");
   assert.match(sql, /start_free_readonly_agi_pilot_v1/);
   assert.match(sql, /v_key := 'free-pilot-v1:' \|\| v_date/);
   assert.match(sql, /'working','normal','analysis'/);

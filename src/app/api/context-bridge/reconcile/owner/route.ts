@@ -15,8 +15,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const gate = await requireOwnerAal2Api("hocker-one");
   if (!gate.ok) return gate.response;
 
-  // Current Owner session, same origin and explicit confirmation. No CRON_SECRET
-  // copied into the browser and no scheduled/internal bypass of MFA.
+  // Current Owner session, same origin, explicit confirmation. No scheduled
+  // credential is exposed to the browser and MFA cannot be bypassed.
   const origin = req.headers.get("origin");
   const host = req.headers.get("host");
   let sameOrigin = false;

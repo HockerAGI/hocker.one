@@ -117,6 +117,7 @@ const REMOTE_PRODUCTION_MIGRATIONS = [
   { version: "20260905192000", name: "bound_agi_delegation_trace" },
   { version: "20260918081119", name: "20260913170000_hocker_operating_loop_work_sessions" },
   { version: "20261115044903", name: "owner_cancel_stale_agi_task_v1" },
+  { version: "20261115093001", name: "free_readonly_agi_pilot_v1" },
 ];
 
 test("Hocker One migration ledger matches production version/name multiplicity exactly", async () => {
