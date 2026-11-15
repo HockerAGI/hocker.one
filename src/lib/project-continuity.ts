@@ -480,7 +480,7 @@ async function readVercelProductionEvidence(): Promise<VercelEvidenceCheck> {
   try {
     const statuses = await githubRequest<{
       statuses?: Array<{ context?: string; state?: string; target_url?: string }>;
-    }>(\`/repos/HockerAGI/hocker.one/commits/\${mainSha}/status\`);
+    }>("/repos/HockerAGI/hocker.one/commits/" + mainSha + "/status");
     const item = statuses.statuses?.find((s) =>
       s.context === "Vercel" && s.state === "success" &&
       /^https:\/\/vercel\.com\/hockeragi\/hocker-one\/[A-Za-z0-9]+$/.test(s.target_url ?? ""),
