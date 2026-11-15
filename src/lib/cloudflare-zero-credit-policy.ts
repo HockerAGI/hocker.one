@@ -21,6 +21,19 @@ export function cloudflareFreeRouteConfigured(): boolean {
 
 
 /**
+ * The Owner canary must not change the global model route order or NOVA chat
+ * policy. It has a distinct operator switch and never enables general AGI
+ * provider routing. The provider checks this only for a free_only request.
+ */
+export function cloudflareFreePilotConfigured(): boolean {
+  return process.env.AGI_FREE_READONLY_PILOT_ENABLED === "true" &&
+    process.env.CLOUDFLARE_WORKERS_AI_ENABLED === "true" &&
+    process.env.CLOUDFLARE_WORKERS_AI_FREE_PLAN_VERIFIED === "true" &&
+    process.env.CLOUDFLARE_ACCOUNT_ID === CF_FREE_ACCOUNT &&
+    Boolean(String(process.env.CLOUDFLARE_WORKERS_AI_API_TOKEN ?? "").trim());
+}
+
+/**
  * Optional, fail-closed chat-only free route. It is NOT a global AGI routing
  * flag: engineering, research, external tools and material actions must retain
  * their independently governed runtime and existing provider routing.

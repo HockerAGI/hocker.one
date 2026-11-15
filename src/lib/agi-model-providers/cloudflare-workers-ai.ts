@@ -5,6 +5,7 @@ import {
 import {
   CF_FREE_ACCOUNT, CF_FREE_GATEWAY, CF_FREE_MODEL, CF_MAX_INPUT_CHARS,
   CF_MAX_MESSAGES, CF_MAX_OUTPUT_TOKENS, cloudflareFreeRouteConfigured,
+  cloudflareFreePilotConfigured,
 } from "@/lib/cloudflare-zero-credit-policy";
 
 type ResponseBody = {
@@ -21,7 +22,7 @@ export const cloudflareWorkersAiProvider: AgiModelProvider = {
   route: "cloudflare-workers-ai",
   configured() { return cloudflareFreeRouteConfigured(); },
   async complete(input: AgiCompletionInput): Promise<AgiProviderResult> {
-    if (!cloudflareFreeRouteConfigured()) {
+    if (!cloudflareFreeRouteConfigured() && !(input.free_only === true && cloudflareFreePilotConfigured())) {
       throw new AgiProviderError("Cloudflare Free plan is not certified", {
         code: "CLOUDFLARE_FREE_GATE_CLOSED", fallback_eligible: false,
       });

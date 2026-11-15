@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { assertAgiBacklogReviewed } from "@/lib/agi-stale-backlog-gate";
-import { CF_FREE_MODEL, cloudflareFreeRouteConfigured } from "@/lib/cloudflare-zero-credit-policy";
+import { CF_FREE_MODEL, cloudflareFreePilotConfigured } from "@/lib/cloudflare-zero-credit-policy";
 import { cloudflareWorkersAiProvider } from "@/lib/agi-model-providers/cloudflare-workers-ai";
 import { AgiProviderError } from "@/lib/agi-model-providers/types";
 
@@ -19,8 +19,7 @@ const PilotRequest = z.object({
 }).strict();
 
 function pilotConfigured(): boolean {
-  return process.env.AGI_FREE_READONLY_PILOT_ENABLED === "true" &&
-    cloudflareFreeRouteConfigured();
+  return cloudflareFreePilotConfigured();
 }
 
 function result(payload: Record<string, unknown>, status = 200): NextResponse {
