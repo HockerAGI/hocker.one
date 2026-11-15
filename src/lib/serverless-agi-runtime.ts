@@ -9,6 +9,7 @@ import {
   routeChatProfile,
 } from "@/lib/hocker-agi-operational";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { assertAgiBacklogReviewed } from "@/lib/agi-stale-backlog-gate";
 
 type JsonRecord = Record<string, unknown>;
 type AdminSupabase = ReturnType<typeof createAdminSupabase>;
@@ -586,6 +587,8 @@ export async function createServerlessAgiTask(params: {
 export async function recoverStaleServerlessAgiTasks(
   projectId: string,
 ): Promise<JsonRecord> {
+  // Match the dedicated NOVA loop: historical unreviewed jobs block recovery writes.
+  await assertAgiBacklogReviewed(projectId);
   const { data, error } = await rpcDb().rpc<number>("recover_stale_agi_tasks", {
     p_project_id: projectId,
     p_stale_after: "00:10:00",
