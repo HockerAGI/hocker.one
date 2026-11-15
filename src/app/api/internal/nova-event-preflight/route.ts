@@ -19,8 +19,12 @@ function reply(body: Record<string, unknown>, status: number): NextResponse {
 function authorized(req: Request): boolean {
   const expected = process.env.NOVA_EVENT_PREFLIGHT_TOKEN || "";
   const received = req.headers.get("authorization")?.match(/^Bearer ([^\s]+)$/)?.[1] || "";
-  if (expected.length < 32 || expected.length > 256 || received.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+  if (expected.length < 32 || expected.length > 256) return false;
+  const expectedBytes = Buffer.from(expected);
+  const receivedBytes = Buffer.from(received);
+  // Compare bytes, not UTF-16 string length: malformed multibyte tokens must fail closed.
+  if (receivedBytes.length !== expectedBytes.length) return false;
+  return timingSafeEqual(expectedBytes, receivedBytes);
 }
 
 async function readBoundedContract(req: Request): Promise<boolean> {
