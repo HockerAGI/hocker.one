@@ -3,6 +3,7 @@ import PageShell from "@/components/PageShell";
 import { getActiveContextBridgeManifest, getContextBridgeCurrentProofs } from "@/lib/context-bridge";
 import { requireOwnerAal2Page } from "@/lib/owner-session-gate";
 import ContextBridgeActivationPanel from "./ContextBridgeActivationPanel";
+import ChatgptHandoffReviewPanel from "./ChatgptHandoffReviewPanel";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -96,6 +97,7 @@ export default async function OwnerContextBridgePage() {
           ) : null}
         </section>
 
+        <ChatgptHandoffReviewPanel />
         <ContextBridgeActivationPanel currentProofs={currentProofs} />
       </div>
     </PageShell>
