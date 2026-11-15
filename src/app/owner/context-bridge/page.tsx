@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
-import { getActiveContextBridgeManifest } from "@/lib/context-bridge";
+import { getActiveContextBridgeManifest, getContextBridgeCurrentProofs } from "@/lib/context-bridge";
 import { requireOwnerAal2Page } from "@/lib/owner-session-gate";
 import ContextBridgeActivationPanel from "./ContextBridgeActivationPanel";
 
@@ -25,6 +25,14 @@ export default async function OwnerContextBridgePage() {
     ? active.coverage.map(asRecord)
     : [];
   const legacyActiveWithoutApproval = active.state === "active" && !String(active.approval_id ?? "").trim();
+  // The historical active manifest and the live activation readiness are
+  // separate facts; failure to read fresh evidence must never imply success.
+  let currentProofs: Awaited<ReturnType<typeof getContextBridgeCurrentProofs>> | null = null;
+  try {
+    currentProofs = await getContextBridgeCurrentProofs("hocker-one");
+  } catch {
+    currentProofs = null;
+  }
 
   return (
     <PageShell
@@ -83,7 +91,7 @@ export default async function OwnerContextBridgePage() {
           ) : null}
         </section>
 
-        <ContextBridgeActivationPanel />
+        <ContextBridgeActivationPanel currentProofs={currentProofs} />
       </div>
     </PageShell>
   );
