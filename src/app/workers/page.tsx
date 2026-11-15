@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import VerifiableWorkersConsole from "@/components/workers/VerifiableWorkersConsole";
+import FreeReadonlyPilotPanel from "@/components/workers/FreeReadonlyPilotPanel";
 
 export const metadata: Metadata = {
   title: "Trabajadores AGI · Hocker ONE",
@@ -16,6 +17,7 @@ export default function WorkersPage() {
       className="hko-workers-page"
     >
       <VerifiableWorkersConsole />
+      <FreeReadonlyPilotPanel />
     </PageShell>
   );
 }
