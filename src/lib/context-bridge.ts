@@ -314,6 +314,7 @@ export async function getContextBridgeCurrentProofs(projectId = "hocker-one"): P
   let checkpoints: Array<{ source_id: string; observed_at: string | null }> = [];
   let capabilities: Array<{
     source_id: string;
+    provider: string;
     status: string;
     last_verified_at: string | null;
   }> = [];
@@ -325,7 +326,7 @@ export async function getContextBridgeCurrentProofs(projectId = "hocker-one"): P
         .in("source_id", sourceIds)
         .order("observed_at", { ascending: false }),
       supabase.from("context_bridge_capabilities")
-        .select("source_id, status, last_verified_at")
+        .select("source_id, provider, status, last_verified_at")
         .eq("project_id", projectId)
         .in("source_id", sourceIds),
     ]);
@@ -355,7 +356,7 @@ export async function getContextBridgeCurrentProofs(projectId = "hocker-one"): P
       provider,
       checkpointObservedAt: mostRecent?.observed_at ?? null,
       capabilities: mostRecent
-        ? capabilities.filter((capability) => capability.source_id === mostRecent.source_id)
+        ? capabilities.filter((capability) => capability.source_id === mostRecent.source_id && capability.provider === provider)
           .map(({ status, last_verified_at }) => ({ status, last_verified_at }))
         : [],
     };
