@@ -285,6 +285,85 @@ export async function createContextBridgeManifest(input: ContextBridgeManifestIn
   };
 }
 
+/**
+ * Owner-only read model for the activation screen. It intentionally mirrors
+ * createContextBridgeManifest's per-source latest checkpoint and
+ * per-provider newest-checkpoint selection, but performs no mutations.
+ * This is a UI preflight; the POST handler remains authoritative.
+ */
+export type ContextBridgeCurrentProof = {
+  provider: (typeof CONTEXT_BRIDGE_PROVIDERS)[number];
+  checkpointObservedAt: string | null;
+  capabilities: Array<{ status: string; last_verified_at: string | null }>;
+};
+
+export async function getContextBridgeCurrentProofs(projectId = "hocker-one"): Promise<{
+  observedAt: string;
+  providers: ContextBridgeCurrentProof[];
+}> {
+  const supabase = createAdminSupabase();
+  const { data: sourceData, error: sourceError } = await supabase
+    .from("context_bridge_sources")
+    .select("id, provider")
+    .eq("project_id", projectId)
+    .in("provider", [...CONTEXT_BRIDGE_PROVIDERS]);
+  if (sourceError) throw new Error("CONTEXT_BRIDGE_READINESS_UNAVAILABLE");
+
+  const sources = (sourceData ?? []) as Array<{ id: string; provider: string }>;
+  const sourceIds = sources.map((source) => source.id).filter(Boolean);
+  let checkpoints: Array<{ source_id: string; observed_at: string | null }> = [];
+  let capabilities: Array<{
+    source_id: string;
+    status: string;
+    last_verified_at: string | null;
+  }> = [];
+  if (sourceIds.length > 0) {
+    const [checkpointResponse, capabilityResponse] = await Promise.all([
+      supabase.from("context_bridge_checkpoints")
+        .select("source_id, observed_at")
+        .eq("project_id", projectId)
+        .in("source_id", sourceIds)
+        .order("observed_at", { ascending: false }),
+      supabase.from("context_bridge_capabilities")
+        .select("source_id, status, last_verified_at")
+        .eq("project_id", projectId)
+        .in("source_id", sourceIds),
+    ]);
+    if (checkpointResponse.error || capabilityResponse.error) {
+      throw new Error("CONTEXT_BRIDGE_READINESS_UNAVAILABLE");
+    }
+    checkpoints = checkpointResponse.data ?? [];
+    capabilities = capabilityResponse.data ?? [];
+  }
+
+  const latestBySource = new Map<string, typeof checkpoints[number]>();
+  for (const checkpoint of checkpoints) {
+    if (checkpoint.source_id && !latestBySource.has(checkpoint.source_id)) {
+      latestBySource.set(checkpoint.source_id, checkpoint);
+    }
+  }
+
+  const providers: ContextBridgeCurrentProof[] = CONTEXT_BRIDGE_PROVIDERS.map((provider) => {
+    const mostRecent = sources
+      .filter((source) => source.provider === provider)
+      .map((source) => latestBySource.get(source.id))
+      .filter((value): value is typeof checkpoints[number] => Boolean(value))
+      .sort((left, right) =>
+        Date.parse(String(right.observed_at ?? "")) - Date.parse(String(left.observed_at ?? "")),
+      )[0];
+    return {
+      provider,
+      checkpointObservedAt: mostRecent?.observed_at ?? null,
+      capabilities: mostRecent
+        ? capabilities.filter((capability) => capability.source_id === mostRecent.source_id)
+          .map(({ status, last_verified_at }) => ({ status, last_verified_at }))
+        : [],
+    };
+  });
+
+  return { observedAt: new Date().toISOString(), providers };
+}
+
 export async function getActiveContextBridgeManifest(projectId = "hocker-one") {
   const supabase = createAdminSupabase();
   const { data: manifest, error } = await supabase
