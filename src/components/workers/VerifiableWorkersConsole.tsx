@@ -83,6 +83,14 @@ type ConsolePayload = {
     loop?: WorkerLoop;
     execution_policy?: JsonRecord;
     error?: string;
+    execution_blocked?: boolean;
+    stale_backlog?: {
+      checked: boolean;
+      blocked: boolean;
+      stale_count: number | null;
+      threshold_hours: number;
+      reason: string | null;
+    };
   };
   tasks?: WorkerTask[];
   runs?: WorkerRun[];
@@ -186,6 +194,8 @@ export default function VerifiableWorkersConsole() {
   }, {} as Record<string, number>), [tasks]);
   const loop = data.status?.loop ?? {};
   const schemaReady = data.status?.schema_ready === true && data.schema_query_ready === true;
+  const backlog = data.status?.stale_backlog;
+  const executionBlocked = data.status?.execution_blocked !== false || backlog?.blocked !== false;
 
   async function postAction(payload: JsonRecord, action: typeof busy) {
     setBusy(action);
@@ -274,6 +284,28 @@ export default function VerifiableWorkersConsole() {
         </div>
       </section>
 
+      {executionBlocked ? (
+        <section role="status" className="rounded-[22px] border border-amber-300/25 bg-amber-300/[0.065] p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
+            <div>
+              <h2 className="font-bold text-amber-100">Ejecución bloqueada para proteger la cola histórica</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                {backlog?.checked === true
+                  ? `${backlog.stale_count ?? 0} tarea(s) en queued/pending superan ${backlog.threshold_hours} horas y requieren revisión Owner.`
+                  : "No se pudo verificar el estado de toda la cola. No es seguro reclamar tareas ni recuperar locks."}
+                {" "}Este bloqueo también se aplica a la ejecución por token, no solo a los botones.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                Los registros no se han eliminado ni cancelado. Revísalos en la lista de Procesos,
+                conservando evidencia y permisos antes de una cancelación auditada.
+                La cola de tareas es distinta del centro de Aprobaciones AGI.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {!schemaReady ? (
         <section className="rounded-[28px] border border-amber-300/20 bg-amber-300/[0.07] p-5">
           <div className="flex items-start gap-3">
@@ -347,10 +379,10 @@ export default function VerifiableWorkersConsole() {
                 <p className="mt-2 text-sm text-slate-400">El modo manual procesa una tarea. El loop automático permanece desactivado hasta configurarlo.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy !== null || !schemaReady} onClick={() => void postAction({ operation: "run_once", project_id: "hocker-one", assigned_agi: null }, "run")} className="hocker-button-primary inline-flex items-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "run_once", project_id: "hocker-one", assigned_agi: null }, "run")} className="hocker-button-primary inline-flex items-center gap-2 disabled:opacity-50">
                   {busy === "run" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Procesar siguiente
                 </button>
-                <button type="button" disabled={busy !== null || !schemaReady} onClick={() => void postAction({ operation: "recover_stale", project_id: "hocker-one" }, "recover")} className="hocker-button-secondary inline-flex items-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "recover_stale", project_id: "hocker-one" }, "recover")} className="hocker-button-secondary inline-flex items-center gap-2 disabled:opacity-50">
                   {busy === "recover" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Recuperar locks
                 </button>
                 <button type="button" onClick={() => void refresh()} className="hocker-button-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</button>

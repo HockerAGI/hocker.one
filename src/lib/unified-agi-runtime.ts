@@ -10,6 +10,7 @@ import { completeAgi, configuredAgiRoutes } from "@/lib/agi-model-router";
 import { buildAgiNativeMcpTools, executeAgiMcpToolCalls, toLegacyAgiMcpToolCalls } from "@/lib/agi-mcp-runtime";
 import { extractLearningCandidate } from "@/lib/agi-learning-extractor";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { assertAgiBacklogReviewed, inspectAgiBacklog } from "@/lib/agi-stale-backlog-gate";
 import {
   createServerlessAgiTask,
   recoverStaleServerlessAgiTasks,
@@ -153,13 +154,16 @@ export async function getUnifiedAgiWorkerStatus(
   const legacy = await getServerlessAgiWorkerStatus(projectId, oidcToken);
   const routes = configuredAgiRoutes(oidcToken);
   const schemaReady = legacy.schema_ready === true;
+  const backlog = await inspectAgiBacklog(projectId);
   return {
     ...legacy,
     service: "hocker-one-unified-agi",
     provider: "hocker-model-router",
     provider_configured: routes.length > 0,
     inference_routes: routes,
-    ready: schemaReady && routes.length > 0,
+    ready: schemaReady && routes.length > 0 && !backlog.blocked,
+    stale_backlog: backlog,
+    execution_blocked: backlog.blocked,
     external_writes: "owner_gate_only",
   };
 }
@@ -170,6 +174,8 @@ export async function runUnifiedAgiWorkerOnce(params: {
   requested_by?: string | null;
   oidc_token?: string | null;
 }): Promise<JsonRecord> {
+  // Count-only guard before ANY claim RPC, including runtime tokens and run-once.
+  await assertAgiBacklogReviewed(params.project_id);
   const workerId = `hocker-one-unified:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
   const { data: claimed, error: claimError } = await rpcDb().rpc<AgiTask[]>(

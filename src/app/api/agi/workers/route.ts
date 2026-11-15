@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
+import { AGI_STALE_BACKLOG_BLOCK_CODE, AGI_STALE_BACKLOG_READ_ERROR } from "@/lib/agi-stale-backlog-gate";
 import {
   createServerlessAgiTask,
   getUnifiedAgiWorkerStatus,
@@ -121,18 +123,42 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     const ctx = await requireProjectRole(action.project_id, ["owner"]);
-    if (action.operation === "run_once") {
-      const result = await runUnifiedAgiWorkerOnce({
-        project_id: ctx.project_id,
-        assigned_agi: action.assigned_agi ?? null,
-        requested_by: ctx.user.id,
-        oidc_token: req.headers.get("x-vercel-oidc-token"),
-      });
-      return json(result, result.ok === false ? 502 : 200);
-    }
+    // Running or recovering workers is material: project membership alone
+    // is not the fresh Owner MFA AAL2 step-up authorization.
+    const ownerGate = await requireOwnerAal2Api(ctx.project_id);
+    if (!ownerGate.ok) return ownerGate.response;
 
-    const result = await recoverStaleServerlessAgiTasks(ctx.project_id);
-    return json(result, 200);
+    try {
+      if (action.operation === "run_once") {
+        const result = await runUnifiedAgiWorkerOnce({
+          project_id: ctx.project_id,
+          assigned_agi: action.assigned_agi ?? null,
+          requested_by: ctx.user.id,
+          oidc_token: req.headers.get("x-vercel-oidc-token"),
+        });
+        return json(result, result.ok === false ? 502 : 200);
+      }
+
+      const result = await recoverStaleServerlessAgiTasks(ctx.project_id);
+      return json(result, 200);
+    } catch (error) {
+      // Fixed, non-sensitive codes; do not make read failure look like an empty queue.
+      if (error instanceof Error && [
+        AGI_STALE_BACKLOG_BLOCK_CODE,
+        AGI_STALE_BACKLOG_READ_ERROR,
+        "AGI_WORKER_BACKLOG_PREFLIGHT_INVALID",
+      ].includes(error.message)) {
+        return json({
+          ok: false,
+          executed: false,
+          recovered: 0,
+          blocked: true,
+          error: error.message,
+          message: "Hay tareas antiguas por revisar, o no se pudo comprobar la cola. No se modificó ninguna tarea.",
+        }, error.message === AGI_STALE_BACKLOG_BLOCK_CODE ? 409 : 503);
+      }
+      throw error;
+    }
   } catch (error) {
     const apiError = toApiError(error);
     return json(apiError.payload, apiError.status);
