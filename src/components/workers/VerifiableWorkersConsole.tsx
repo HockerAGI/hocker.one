@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
@@ -93,6 +94,15 @@ type ConsolePayload = {
     };
   };
   tasks?: WorkerTask[];
+  totals?: {
+    ready: boolean;
+    counts: Record<"queued" | "pending" | "working" | "completed" | "failed", number> | null;
+  };
+  stale_review?: {
+    ready: boolean;
+    items: WorkerTask[];
+    truncated: boolean;
+  };
   runs?: WorkerRun[];
   error?: string;
 };
@@ -140,10 +150,38 @@ function statusClass(status: string) {
 
 function statusLabel(status: string) {
   if (status === "completed") return "Completada";
-  if (status === "working") return "Trabajando";
-  if (status === "queued") return "En cola";
-  if (status === "failed") return "Falló";
+  if (status === "working") return "En ejecución";
+  if (status === "queued" || status === "pending") return "Pendiente";
+  if (status === "canceled") return "Cancelada";
+  if (status === "failed") return "Con error";
   return status || "Sin estado";
+}
+
+function policyLabel(value: string | null | undefined) {
+  if (value === "draft_only") return "Solo borradores";
+  if (value === "read_only") return "Solo lectura";
+  if (value === "owner_gate") return "Solicita autorización";
+  return "No especificada";
+}
+
+/** Render the model's plain text/markdown-like output as readable, escaped React nodes. */
+function ResultText({ value }: { value: string }) {
+  const paragraphs = value
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\s+(?=\d{1,2}\.\s+\*\*)/g, "\n")
+    .split(/\n+/)
+    .map((piece) => piece.trim())
+    .filter(Boolean);
+  return (
+    <div className="space-y-3 break-words text-sm leading-7 text-slate-300">
+      {paragraphs.map((piece, i) => (
+        <p key={i}>
+          {piece.split(/\*\*([^*]+)\*\*/g).map((part, j) =>
+            j % 2 ? <strong key={j} className="font-semibold text-slate-100">{part}</strong> : part)}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 async function requestConsole(init?: RequestInit): Promise<ConsolePayload> {
@@ -167,6 +205,7 @@ export default function VerifiableWorkersConsole() {
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState("normal");
   const [writePolicy, setWritePolicy] = useState("draft_only");
+  const [visibleRecent, setVisibleRecent] = useState(6);
 
   const refresh = useCallback(async () => {
     try {
@@ -187,11 +226,10 @@ export default function VerifiableWorkersConsole() {
 
   const tasks = useMemo(() => Array.isArray(data.tasks) ? data.tasks : [], [data.tasks]);
   const runs = useMemo(() => Array.isArray(data.runs) ? data.runs : [], [data.runs]);
-  const counts = useMemo(() => tasks.reduce((current, task) => {
-    const key = text(task.status, "unknown");
-    current[key] = (current[key] ?? 0) + 1;
-    return current;
-  }, {} as Record<string, number>), [tasks]);
+  const totals = data.totals?.ready === true ? data.totals.counts : null;
+  const pendingTotal = totals ? totals.queued + totals.pending : null;
+  const staleReview = data.stale_review;
+  const staleTasks = staleReview?.ready === true ? staleReview.items : [];
   const loop = data.status?.loop ?? {};
   const schemaReady = data.status?.schema_ready === true && data.schema_query_ready === true;
   const backlog = data.status?.stale_backlog;
@@ -255,52 +293,48 @@ export default function VerifiableWorkersConsole() {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Esquema</p>
-          <div className="mt-3 flex items-center gap-2">
-            {schemaReady ? <CheckCircle2 className="h-5 w-5 text-emerald-300" /> : <AlertTriangle className="h-5 w-5 text-amber-300" />}
-            <strong className="text-sm text-white">{schemaReady ? "Preparado" : "No aplicado"}</strong>
+      <section aria-label="Resumen de trabajos" className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        {[
+          { label: "Pendientes", value: pendingTotal, note: "Incluye trabajos antiguos", tone: "text-amber-200" },
+          { label: "En ejecución", value: totals?.working, note: "Procesando ahora", tone: "text-cyan-200" },
+          { label: "Completadas", value: totals?.completed, note: "Total registrado", tone: "text-emerald-200" },
+          { label: "Con errores", value: totals?.failed, note: "Total registrado", tone: "text-rose-200" },
+        ].map((metric) => (
+          <div key={metric.label} className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3 sm:p-4">
+            <p className="text-xs font-semibold text-slate-400">{metric.label}</p>
+            <p className={`mt-1 text-2xl font-bold tabular-nums sm:text-3xl ${metric.tone}`}>
+              {typeof metric.value === "number" ? metric.value : "—"}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-500">{metric.note}</p>
           </div>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">En cola</p>
-          <p className="mt-2 text-3xl font-black text-amber-200">{counts.queued ?? 0}</p>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Trabajando</p>
-          <p className="mt-2 text-3xl font-black text-cyan-200">{counts.working ?? 0}</p>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Completadas</p>
-          <p className="mt-2 text-3xl font-black text-emerald-200">{counts.completed ?? 0}</p>
-        </div>
-        <div className="hocker-panel-pro p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Loop automático</p>
-          <div className="mt-3 flex items-center gap-2">
-            {loop.enabled ? <Activity className="h-5 w-5 text-emerald-300" /> : <Clock3 className="h-5 w-5 text-slate-500" />}
-            <strong className="text-sm text-white">{loop.enabled ? loop.running ? "Procesando" : "Activo" : "Desactivado"}</strong>
-          </div>
-        </div>
+        ))}
       </section>
+      <p className="text-xs leading-5 text-slate-400">
+        Totales del proyecto, no una muestra de las últimas tareas. Base de datos:
+        {" "}<strong className="text-slate-200">{schemaReady ? "disponible" : "verificar"}</strong>.
+        Ejecución automática: <strong className="text-slate-200">{loop.enabled ? "activada" : "apagada"}</strong>.
+      </p>
 
       {executionBlocked ? (
-        <section role="status" className="rounded-[22px] border border-amber-300/25 bg-amber-300/[0.065] p-4 sm:p-5">
+        <section role="status" className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.065] px-4 py-4 sm:p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
-            <div>
-              <h2 className="font-bold text-amber-100">Ejecución bloqueada para proteger la cola histórica</h2>
+            <div className="min-w-0">
+              <h2 className="font-semibold leading-snug text-amber-100">NOVA no procesará trabajos antiguos automáticamente</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 {backlog?.checked === true
-                  ? `${backlog.stale_count ?? 0} tarea(s) en queued/pending superan ${backlog.threshold_hours} horas y requieren revisión Owner.`
-                  : "No se pudo verificar el estado de toda la cola. No es seguro reclamar tareas ni recuperar locks."}
-                {" "}Este bloqueo también se aplica a la ejecución por token, no solo a los botones.
+                  ? `Hay ${backlog.stale_count ?? 0} trabajos de más de ${backlog.threshold_hours} horas por revisar.`
+                  : "No se pudo comprobar toda la cola. La ejecución permanece bloqueada por seguridad."}
+                {" "}Ninguna tarea se ha cancelado al abrir esta pantalla.
               </p>
-              <p className="mt-2 text-xs leading-5 text-slate-400">
-                Los registros no se han eliminado ni cancelado. Revísalos en la lista de Procesos,
-                conservando evidencia y permisos antes de una cancelación auditada.
-                La cola de tareas es distinta del centro de Aprobaciones AGI.
-              </p>
+              <a href="#revision-pendientes" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-amber-200/30 px-4 text-sm font-semibold text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
+                Revisar trabajos pendientes
+              </a>
+              <details className="mt-2 text-xs leading-5 text-slate-400">
+                <summary className="min-h-8 cursor-pointer py-1 font-medium text-slate-300">¿Por qué está bloqueado?</summary>
+                Este control impide retomar tareas de pruebas antiguas o recuperar bloqueos sin revisión del propietario.
+                También protege las rutas internas y por token. No es un fallo del diseño ni de las AGIs.
+              </details>
             </div>
           </div>
         </section>
@@ -321,8 +355,53 @@ export default function VerifiableWorkersConsole() {
         </section>
       ) : null}
 
-      <section className="grid gap-5 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
-        <form onSubmit={createTask} className="hocker-panel-pro p-5 sm:p-6">
+      <section id="revision-pendientes" className="scroll-mt-32 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-cyan-300">Revisión del propietario</p>
+            <h2 className="mt-1 text-lg font-bold text-white">Trabajos antiguos pendientes</h2>
+          </div>
+          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-sm font-semibold text-amber-200">
+            {backlog?.checked ? `${backlog.stale_count ?? 0} por revisar` : "Sin verificar"}
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          Estos trabajos se guardaron anteriormente. Revisar aquí no los ejecuta, aprueba ni elimina.
+          Las autorizaciones de cambios sensibles se administran por separado en
+          {" "}<Link href="/owner/actions" className="font-medium text-cyan-200 underline underline-offset-4">Aprobaciones</Link>.
+        </p>
+        {staleReview?.ready === false || !staleReview ? (
+          <p role="status" className="mt-3 text-sm text-amber-200">No se pudo cargar el inventario. No interpretes esta pantalla como una cola vacía.</p>
+        ) : staleTasks.length ? (
+          <div className="mt-4 space-y-2">
+            {staleTasks.map((task) => (
+              <details key={task.id} className="rounded-xl border border-white/10 bg-black/20">
+                <summary className="cursor-pointer px-3 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:px-4">
+                  <span className="block text-sm font-semibold text-slate-100">{text(task.title)}</span>
+                  <span className="mt-1 block text-xs text-slate-400">{text(task.agi_id || task.assigned_to)} · {statusLabel(text(task.status))} · {date(task.created_at)}</span>
+                </summary>
+                <div className="border-t border-white/10 px-3 py-3 text-xs leading-6 text-slate-300 sm:px-4">
+                  <p>Tipo: {text(task.task_type)} · Permiso: {policyLabel(task.write_policy)}</p>
+                  <p>Intentos: {task.attempt_count ?? 0} de {task.max_attempts ?? 3}</p>
+                  <p>Identificador: <code className="break-all text-slate-400">{task.id}</code></p>
+                  <p className="mt-2 text-amber-200">Estado conservado. No se dispone aún de cancelación individual auditada en esta vista.</p>
+                </div>
+              </details>
+            ))}
+            {staleReview.truncated ? <p className="text-sm text-amber-200">Inventario parcial: supera los 100 registros. No se permite depuración masiva.</p> : null}
+          </div>
+        ) : <p className="mt-3 text-sm text-emerald-300">No se encontraron trabajos antiguos en esta revisión.</p>}
+      </section>
+
+      <section className="grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+        <details className="hocker-panel-pro p-4 sm:p-5">
+          <summary className="cursor-pointer text-base font-semibold text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+            Crear una tarea nueva (opcional)
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            Registrar una tarea no la ejecuta. Si hay trabajos antiguos pendientes, la ejecución seguirá bloqueada.
+          </p>
+          <form onSubmit={createTask} className="mt-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-300/10 text-violet-200"><Sparkles className="h-5 w-5" /></span>
             <div>
@@ -368,7 +447,8 @@ export default function VerifiableWorkersConsole() {
             {busy === "create" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Registrar tarea
           </button>
-        </form>
+          </form>
+        </details>
 
         <div className="space-y-4">
           <section className="hocker-panel-pro p-5">
@@ -376,13 +456,13 @@ export default function VerifiableWorkersConsole() {
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-300">Control Owner</p>
                 <h2 className="mt-1 text-xl font-black text-white">Ejecución y recuperación</h2>
-                <p className="mt-2 text-sm text-slate-400">El modo manual procesa una tarea. El loop automático permanece desactivado hasta configurarlo.</p>
+                <p className="mt-2 text-sm text-slate-400">Procesar inicia una tarea con el modelo; recuperar libera tareas interrumpidas. Ambas acciones requieren MFA y permanecen deshabilitadas mientras exista trabajo antiguo sin revisar.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "run_once", project_id: "hocker-one", assigned_agi: null }, "run")} className="hocker-button-primary inline-flex items-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "run_once", project_id: "hocker-one", assigned_agi: null }, "run")} className="hocker-button-primary inline-flex min-h-11 items-center gap-2 disabled:cursor-not-allowed disabled:!bg-slate-800 disabled:!text-slate-400 disabled:opacity-50">
                   {busy === "run" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Procesar siguiente
                 </button>
-                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "recover_stale", project_id: "hocker-one" }, "recover")} className="hocker-button-secondary inline-flex items-center gap-2 disabled:opacity-50">
+                <button type="button" disabled={busy !== null || !schemaReady || executionBlocked} onClick={() => void postAction({ operation: "recover_stale", project_id: "hocker-one" }, "recover")} className="hocker-button-secondary inline-flex min-h-11 items-center gap-2 disabled:cursor-not-allowed disabled:opacity-40">
                   {busy === "recover" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} Recuperar locks
                 </button>
                 <button type="button" onClick={() => void refresh()} className="hocker-button-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</button>
