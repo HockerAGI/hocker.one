@@ -3,11 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Activity,
   AlertTriangle,
   Bot,
   CheckCircle2,
-  Clock3,
   FileCheck2,
   Fingerprint,
   Loader2,
@@ -474,12 +472,14 @@ export default function VerifiableWorkersConsole() {
           <section className="hocker-panel-pro overflow-hidden">
             <div className="border-b border-white/[0.07] p-5">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Cola y evidencia</p>
-              <h2 className="mt-1 text-xl font-black text-white">Tareas recientes</h2>
+              <h2 className="mt-1 text-xl font-black text-white">Resultados recientes</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Muestra limitada a 60 registros; abre un resultado solo si necesitas leerlo completo.</p>
             </div>
-            <div className="max-h-[720px] divide-y divide-white/[0.07] overflow-y-auto hko-sidebar-scroll">
-              {tasks.map((task) => {
+            <div className="divide-y divide-white/[0.07]">
+              {tasks.slice(0, visibleRecent).map((task) => {
                 const output = asRecord(task.output);
                 const summary = text(output.summary, "Todavía no hay resultado.");
+                const preview = summary.replace(/\*\*/g, "").replace(/\s+/g, " ").trim().slice(0, 185);
                 const verification = asRecord(output.verification);
                 const taskRuns = runs.filter((run) => run.task_id === task.id);
                 return (
@@ -492,21 +492,33 @@ export default function VerifiableWorkersConsole() {
                           <span className="text-[10px] text-slate-500">{text(task.priority, "normal")}</span>
                         </div>
                         <h3 className="mt-3 text-base font-black text-white">{text(task.title)}</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-400">{summary}</p>
+                        <p className="mt-2 break-words text-sm leading-6 text-slate-400">
+                          {preview}{summary.length > 185 ? "…" : ""}
+                        </p>
+                        {summary.length > 185 ? (
+                          <details className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                            <summary className="min-h-9 cursor-pointer py-1 text-sm font-semibold text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                              Leer resultado completo
+                            </summary>
+                            <div className="mt-3 border-t border-white/10 pt-3"><ResultText value={summary} /></div>
+                          </details>
+                        ) : null}
                       </div>
                       {task.status === "completed" ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" /> : task.status === "failed" ? <XCircle className="h-5 w-5 shrink-0 text-rose-300" /> : <Bot className="h-5 w-5 shrink-0 text-cyan-300" />}
                     </div>
 
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <details className="mt-3 rounded-xl border border-white/10 bg-slate-950/35 p-3">
+                      <summary className="min-h-9 cursor-pointer py-1 text-sm font-medium text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                        Datos técnicos y trazabilidad
+                      </summary>
+                      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
                       <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Intentos</p><p className="mt-1 text-xs font-bold text-white">{Number(task.attempt_count ?? 0)} / {Number(task.max_attempts ?? 3)}</p></div>
-                      <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Política</p><p className="mt-1 text-xs font-bold text-white">{text(task.write_policy)}</p></div>
+                      <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Política</p><p className="mt-1 text-xs font-bold text-white">{policyLabel(task.write_policy)}</p></div>
                       <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Evidencias</p><p className="mt-1 text-xs font-bold text-white">{Array.isArray(task.evidence) ? task.evidence.length : 0}</p></div>
                       <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3"><p className="text-[9px] uppercase tracking-widest text-slate-500">Runs</p><p className="mt-1 text-xs font-bold text-white">{taskRuns.length}</p></div>
                     </div>
 
-                    <details className="mt-3 rounded-2xl border border-white/[0.07] bg-slate-950/35 p-3">
-                      <summary className="cursor-pointer text-xs font-bold text-cyan-100">Ver trazabilidad</summary>
-                      <div className="mt-3 space-y-2 text-xs leading-5 text-slate-400">
+                      <div className="mt-3 space-y-2 border-t border-white/10 pt-3 text-xs leading-5 text-slate-400">
                         <p className="flex items-start gap-2"><Fingerprint className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Task: {task.id}</p>
                         <p className="flex items-start gap-2"><FileCheck2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Request: {text(task.request_id)}</p>
                         <p className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Hash: {text(task.result_hash || verification.result_hash)}</p>
@@ -518,6 +530,14 @@ export default function VerifiableWorkersConsole() {
                   </article>
                 );
               })}
+              {tasks.length > visibleRecent ? (
+                <div className="p-4 text-center">
+                  <button type="button" onClick={() => setVisibleRecent((count) => count + 6)}
+                    className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                    Mostrar seis registros más ({Math.max(0, tasks.length - visibleRecent)} restantes)
+                  </button>
+                </div>
+              ) : null}
               {tasks.length === 0 ? <div className="p-10 text-center"><Bot className="mx-auto h-8 w-8 text-slate-700" /><p className="mt-3 text-sm text-slate-500">Todavía no hay tareas verificables.</p></div> : null}
             </div>
           </section>
