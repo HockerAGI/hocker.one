@@ -7,6 +7,7 @@ import { assertAgiBacklogReviewed } from "@/lib/agi-stale-backlog-gate";
 import { CF_FREE_MODEL, cloudflareFreePilotConfigured } from "@/lib/cloudflare-zero-credit-policy";
 import { cloudflareWorkersAiProvider } from "@/lib/agi-model-providers/cloudflare-workers-ai";
 import { AgiProviderError } from "@/lib/agi-model-providers/types";
+import { HOCKER_AGI_CANON } from "@/lib/hocker-agi-canon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ const PROJECT_ID = "hocker-one";
 const PilotRequest = z.object({
   confirm: z.literal(true),
   project_id: z.literal("hocker-one"),
+  agent: z.enum(["nova", "hostia"]).default("nova"),
 }).strict();
 
 function pilotConfigured(): boolean {
@@ -30,26 +32,40 @@ function result(payload: Record<string, unknown>, status = 200): NextResponse {
 function fingerprint(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
-function todayKey(): string {
-  return "free-pilot-v1:" + new Date().toISOString().slice(0, 10).replaceAll("-", "");
+function todayKey(agent: "nova" | "hostia" = "nova"): string {
+  const prefix = agent === "hostia" ? "free-specialist-v1:" : "free-pilot-v1:";
+  return prefix + new Date().toISOString().slice(0, 10).replaceAll("-", "");
 }
 
 export async function GET() {
   const owner = await requireOwnerAal2Api(PROJECT_ID);
   if (!owner.ok) return owner.response;
-  const { data, error } = await createAdminSupabase()
-    .from("agi_tasks")
-    .select("id,status,created_at,completed_at,result_hash,error,output")
-    .eq("project_id", PROJECT_ID)
-    .eq("idempotency_key", todayKey())
-    .maybeSingle();
-  if (error) return result({ ok: false, error: "FREE_PILOT_STATUS_UNAVAILABLE" }, 503);
+  const [nova, specialist] = await Promise.all([
+    createAdminSupabase().from("agi_tasks")
+      .select("id,status,created_at,completed_at,result_hash,error,output")
+      .eq("project_id", PROJECT_ID)
+      .eq("idempotency_key", todayKey("nova"))
+      .maybeSingle(),
+    createAdminSupabase().from("agi_tasks")
+      .select("id,status,created_at,completed_at,result_hash,error,output")
+      .eq("project_id", PROJECT_ID)
+      .eq("idempotency_key", todayKey("hostia"))
+      .maybeSingle(),
+  ]);
+  const { data } = nova;
+  if (nova.error || specialist.error) {
+    return result({ ok: false, error: "FREE_PILOT_STATUS_UNAVAILABLE" }, 503);
+  }
   return result({
     ok: true, mode: "owner_aal2_free_readonly_canary",
     configured: pilotConfigured(),
     ready_for_single_owner_pilot: pilotConfigured() && !data,
     already_started_today: Boolean(data),
     task: data ?? null,
+    specialist_task: specialist.data ?? null,
+    specialist_agent: "hostia",
+    specialist_ready_for_single_owner_pilot: pilotConfigured() && !specialist.data,
+    specialist_already_started_today: Boolean(specialist.data),
     model: CF_FREE_MODEL,
     no_tools: true, no_paid_fallback: true,
     autonomous_dispatch_enabled: false,
@@ -83,16 +99,17 @@ export async function POST(request: NextRequest) {
   }
 
   // Never borrow the permissive generic claim_next_agi_task or model router.
-  // The versioned RPC atomically creates exactly one scoped NOVA task and run.
+  // A versioned RPC atomically creates one scoped task/run for the selected agent.
   try {
     await assertAgiBacklogReviewed(PROJECT_ID);
   } catch {
     return result({ ok: false, executed: false, error: "FREE_PILOT_BACKLOG_PREFLIGHT_BLOCKED" }, 409);
   }
 
-  const workerId = "hocker-free-pilot:" + randomUUID();
+  const agent = parsed.data.agent;
+  const workerId = (agent === "hostia" ? "hocker-free-specialist:" : "hocker-free-pilot:") + randomUUID();
   const { data, error } = await createAdminSupabase().rpc(
-    "start_free_readonly_agi_pilot_v1", {
+    agent === "hostia" ? "start_free_readonly_hostia_pilot_v1" : "start_free_readonly_agi_pilot_v1", {
       p_project_id: PROJECT_ID,
       p_owner_id: owner.userId,
       p_worker_id: workerId,
@@ -103,8 +120,9 @@ export async function POST(request: NextRequest) {
     typeof claimed.run_id !== "string") {
     return result({
       ok: false, executed: false,
-      error: String(error?.message ?? "").includes("FREE_PILOT_ALREADY_RUN_TODAY")
-        ? "FREE_PILOT_ALREADY_RUN_TODAY" : "FREE_PILOT_ATOMIC_START_BLOCKED",
+      error: String(error?.message ?? "").includes("ALREADY_RUN_TODAY")
+        ? (agent === "hostia" ? "FREE_SPECIALIST_ALREADY_RUN_TODAY" : "FREE_PILOT_ALREADY_RUN_TODAY")
+        : (agent === "hostia" ? "FREE_SPECIALIST_ATOMIC_START_BLOCKED" : "FREE_PILOT_ATOMIC_START_BLOCKED"),
     }, 409);
   }
 
@@ -117,10 +135,24 @@ export async function POST(request: NextRequest) {
     // One bounded Cloudflare Workers AI request. No tools, web search, alternate
     // route, sensitive data or external mutations. The account's verified Free
     // gate and a distinct operator feature flag must both be true.
+    const hostia = HOCKER_AGI_CANON.find((profile) => profile.id === "hostia");
+    if (agent === "hostia" && !hostia) throw new Error("FREE_SPECIALIST_CANON_NOT_FOUND");
+    const specialistInstruction = agent === "hostia"
+      ? "Eres HOSTIA, especialista de infraestructura del ecosistema HOCKER. " +
+        "Rol canónico: " + String(hostia?.role ?? "") + ". " +
+        "Dominio canónico: " + String(hostia?.domain ?? "") + ". " +
+        "Este análisis no constituye una inspección de servidores, DNS, nodos ni heartbeats. " +
+        "Solo puedes analizar los conteos entregados. No infieras que el runtime está activo " +
+        "o inactivo, no recomiendes habilitar allow_actions globalmente. " +
+        "No puedes usar herramientas, web, credenciales ni ejecutar cambios. " +
+        "Separa evidencia medida, límites y siguiente verificación operativa. Responde en español. "
+      : "";
     const completion = await cloudflareWorkersAiProvider.complete({
       messages: [
         { role: "system", content:
-          "Eres NOVA del ecosistema HOCKER. Analiza solo los datos del snapshot proporcionado. " +
+          specialistInstruction +
+          (agent === "nova" ? "Eres NOVA del ecosistema HOCKER. " : "") +
+          "Analiza solo los datos del snapshot proporcionado. " +
           "Separa lo comprobado de lo no verificado. No atribuyas capacidades de ejecución, " +
           "runtime dedicado ni Context Bridge completo por estos conteos. " +
           "No tienes herramientas, navegador ni acceso de escritura. " +
@@ -132,8 +164,9 @@ export async function POST(request: NextRequest) {
           "Explica el alcance limitado de este snapshot y separa hechos de inferencias. " +
           "Responde en español." },
         { role: "user", content:
-          "Analiza este snapshot real de Supabase, sin inventar datos. " +
-          "Entrega hallazgos, riesgos y una recomendación de siguiente paso: " +
+          "Analiza este snapshot real de Supabase como " +
+          (agent === "hostia" ? "HOSTIA (infraestructura)" : "NOVA") +
+          ", sin inventar datos. Entrega hallazgos, límites y una recomendación de siguiente paso: " +
           JSON.stringify(snapshot) },
       ],
       timeout_ms: 20_000,
@@ -148,14 +181,16 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const output = {
       ok: true, verified_model_execution: true, verified_facts_only: false,
-      scope: "one_readonly_analysis",
+      scope: agent === "hostia" ? "one_free_hostia_specialist_analysis" : "one_readonly_analysis",
+      agi_id: agent,
       model: completion.model, provider: completion.provider, route: completion.route,
       summary: completion.text, usage: completion.usage, completed_at: now,
       material_actions_executed: 0, tools_executed: 0, no_paid_fallback: true,
     };
     const hash = fingerprint(output);
     const evidence = [{
-      kind: "free_model_execution_observed",
+      kind: agent === "hostia" ? "verified_free_specialist_model_completion" : "free_model_execution_observed",
+      agi_id: agent, worker_id: workerId,
       provider: completion.provider, model: completion.model,
       task_id: taskId, run_id: runId, input_sha256: fingerprint(snapshot),
       output_sha256: hash, completed_at: now, no_tools: true,
@@ -170,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
     return result({
       ok: true, executed: true, verified_model_execution: true, task_id: taskId,
-      run_id: runId, result_hash: hash, model: completion.model,
+      run_id: runId, result_hash: hash, model: completion.model, agi_id: agent,
       provider: completion.provider, summary: completion.text, usage: completion.usage,
       no_paid_fallback: true, material_actions_executed: 0,
     });
