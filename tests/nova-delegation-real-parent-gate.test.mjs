@@ -7,7 +7,21 @@ import ts from "typescript";
 
 const read = (path) => readFile(new URL("../" + path, import.meta.url), "utf8");
 
+async function loadWorkerPredicate() {
+  const source = await read("src/lib/serverless-agi-runtime.ts");
+  const start = source.indexOf("export function isVerifiedSpecialistWorkerRun(");
+  const end = source.indexOf("export async function getServerlessAgiWorkerStatus(", start);
+  assert.ok(start >= 0 && end > start);
+  const compiled = ts.transpileModule(source.slice(start, end), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const exports = {};
+  vm.runInNewContext(compiled, { exports, module: { exports } });
+  return exports.isVerifiedSpecialistWorkerRun;
+}
+
 async function loadGate(overrides = {}) {
+  const verifiedWorker = await loadWorkerPredicate();
   const compiled = ts.transpileModule(await read("src/lib/nova-agi-delegation-gate.ts"), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   }).outputText;
@@ -22,7 +36,7 @@ async function loadGate(overrides = {}) {
       worker_id: "hocker-one-serverless:iad1:123",
       finished_at: new Date().toISOString(),
       result_hash: "a".repeat(64),
-      evidence: [{ kind: "verified_model_completion", worker_id: "hocker-one-serverless:iad1:123", external_writes_executed: false }],
+      evidence: [{ kind: "verified_model_completion", worker_id: "hocker-one-serverless:iad1:123", output_sha256: "a".repeat(64), external_writes_executed: false }],
     },
   };
   const client = {
@@ -57,6 +71,10 @@ async function loadGate(overrides = {}) {
       if (name === "@/lib/serverless-agi-runtime") return {
         serverlessGatewayConfigured: () => overrides.providerConfigured !== false,
         getServerlessAgiWorkerStatus: async () => { state.workerReads++; return worker; },
+        isVerifiedSpecialistWorkerRun: verifiedWorker,
+      };
+      if (name === "@/lib/agi-model-router") return {
+        configuredAgiRoutes: () => overrides.routerConfigured === false ? [] : ["vercel-gateway"],
       };
       if (name === "@/lib/supabase-admin") return { createAdminSupabase: () => client };
       if (name === "@/lib/owner-session-gate") return {
@@ -154,6 +172,7 @@ test("NOVA genuine parent lineage is bound to the tool call and delegated task, 
   assert.match(chat, /parent_run_id: verifiedNovaParentRunId/);
   assert.doesNotMatch(chat, /parent_run_id: null/);
   assert.match(runtime, /AGI_DELEGATION_OWNER_ACTION_REQUIRED/);
+  assert.match(runtime, /idempotency_key: "nova-delegate:" + createHash("sha256")/);
   assert.match(runtime, /delegation_block_reason/);
   assert.match(runtime, /inspectNovaDelegationReadiness\(options\.project_id, options\.oidc_token\)/);
   assert.match(runtime, /parent_run_id: parentRunId, delegation_depth: depth \+ 1/);
@@ -161,5 +180,44 @@ test("NOVA genuine parent lineage is bound to the tool call and delegated task, 
   assert.match(tasks, /parent_run_id: parentRunId/);
   assert.match(tasks, /if \(delegationDepth > 0 && !parentRunId\)/);
   assert.match(owner, /requireOwnerAal2Api\(projectId\)/);
-  assert.match(owner, /VERIFIED_WORKER_PREFIX = "hocker-one-serverless:"/);
+  assert.match(owner, /isVerifiedSpecialistWorkerRun(last)/);
+});
+
+test("worker readiness recognizes real unified and serverless completions, never eval or chat-root evidence", async () => {
+  const matches = await loadWorkerPredicate();
+  const evidenceFor = (worker_id, hash = "a".repeat(64)) => [{
+    kind: "verified_model_completion", worker_id,
+    output_sha256: hash, external_writes_executed: false,
+  }];
+  for (const [worker_id, provider] of [
+    ["hocker-one-unified:iad1:real", "hocker-model-router"],
+    ["hocker-one-serverless:iad1:real", "vercel-ai-gateway"],
+  ]) {
+    const data = { worker_id, provider, status: "completed", model: "real-model",
+      result_hash: "a".repeat(64), evidence: evidenceFor(worker_id) };
+    assert.equal(matches(data), true);
+    assert.equal(matches({ ...data, evidence: evidenceFor(worker_id, "b".repeat(64)) }), false);
+    assert.equal(matches({ ...data, status: "failed" }), false);
+    assert.equal(matches({ ...data, evidence: [] }), false);
+  }
+  assert.equal(matches({
+    worker_id: "hocker-one-eval:nova:test", provider: "hocker-model-router", status: "completed",
+    model: "dynamic", result_hash: "a".repeat(64), evidence: evidenceFor("hocker-one-eval:nova:test"),
+  }), false);
+  assert.equal(matches({
+    worker_id: "hocker-one-unified-nova-chat", provider: "cloudflare-workers-ai", status: "completed",
+    model: "real", result_hash: "a".repeat(64), evidence: evidenceFor("hocker-one-unified-nova-chat"),
+  }), false);
+  const unifiedId = "hocker-one-unified:iad1:real";
+  const allowed = await loadGate({ enabled: true, providerConfigured: false, worker: {
+    ready: false, schema_ready: true, provider_configured: false,
+    last_verified_run: {
+      status: "completed", worker_id: unifiedId, provider: "hocker-model-router",
+      model: "auto", finished_at: new Date().toISOString(),
+      result_hash: "a".repeat(64), evidence: evidenceFor(unifiedId),
+    },
+  } });
+  // When router credentials are available, this genuine unified proof can pass
+  // even if the legacy AI gateway key is not configured.
+  assert.equal((await allowed.gate.inspectNovaDelegationReadiness("hocker-one")).ready, true);
 });

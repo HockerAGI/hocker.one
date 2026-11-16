@@ -599,6 +599,30 @@ export async function recoverStaleServerlessAgiTasks(
   return { ok: true, project_id: projectId, recovered: Number(data ?? 0) };
 }
 
+/**
+ * Only actual specialist worker completions count as readiness evidence.
+ * Excludes chat parent runs, standalone certification evals and model probes.
+ */
+export function isVerifiedSpecialistWorkerRun(run: Record<string, unknown>): boolean {
+  const workerId = String(run.worker_id ?? "");
+  const provider = String(run.provider ?? "");
+  const realWorker =
+    (workerId.startsWith("hocker-one-serverless:") && provider === "vercel-ai-gateway") ||
+    (workerId.startsWith("hocker-one-unified:") && provider === "hocker-model-router");
+  if (!realWorker || run.status !== "completed" ||
+      typeof run.model !== "string" || !run.model ||
+      typeof run.result_hash !== "string" || !/^[a-f0-9]{64}$/i.test(run.result_hash)) return false;
+  const evidence = Array.isArray(run.evidence) ? run.evidence : [];
+  return evidence.some((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+    const row = raw as Record<string, unknown>;
+    return row.kind === "verified_model_completion" &&
+      row.worker_id === workerId &&
+      row.output_sha256 === run.result_hash &&
+      row.external_writes_executed === false;
+  });
+}
+
 export async function getServerlessAgiWorkerStatus(
   projectId: string,
   oidcToken?: string | null,
@@ -628,17 +652,7 @@ export async function getServerlessAgiWorkerStatus(
     ]);
 
   const recentRuns = (recentRunsResult.data ?? []) as Array<JsonRecord>;
-  const lastVerified =
-    recentRuns.find(
-      (run) =>
-        run.status === "completed" &&
-        Boolean(run.provider) &&
-        Boolean(run.model) &&
-        Boolean(run.worker_id) &&
-        Boolean(run.result_hash) &&
-        Array.isArray(run.evidence) &&
-        run.evidence.length > 0,
-    ) ?? null;
+  const lastVerified = recentRuns.find(isVerifiedSpecialistWorkerRun) ?? null;
   const configured = serverlessGatewayConfigured(oidcToken);
   const schemaReady =
     !queuedResult.error &&

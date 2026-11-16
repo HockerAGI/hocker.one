@@ -6,7 +6,8 @@
  */
 import { createHash } from "node:crypto";
 import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
-import { getServerlessAgiWorkerStatus, serverlessGatewayConfigured } from "@/lib/serverless-agi-runtime";
+import { getServerlessAgiWorkerStatus, isVerifiedSpecialistWorkerRun, serverlessGatewayConfigured } from "@/lib/serverless-agi-runtime";
+import { configuredAgiRoutes } from "@/lib/agi-model-router";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import type { AgiCompletionResult } from "@/lib/agi-model-providers/types";
@@ -14,7 +15,6 @@ import type { AgiCompletionResult } from "@/lib/agi-model-providers/types";
 type JsonRecord = Record<string, unknown>;
 
 const ROOT_WORKER = "hocker-one-unified-nova-chat";
-const VERIFIED_WORKER_PREFIX = "hocker-one-serverless:";
 const MAX_WORKER_AGE_MS = 24 * 60 * 60 * 1000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -46,27 +46,21 @@ export async function inspectNovaDelegationReadiness(
   // Owner MFA AAL2 can activate a delegation, never a role-only chat flag.
   const owner = await requireOwnerAal2Api(projectId);
   if (!owner.ok) return { ready: false, reason: "AGI_DELEGATION_OWNER_AAL2_REQUIRED" };
-  if (!serverlessGatewayConfigured(oidcToken)) {
+  // The primary on-demand worker uses the unified router; the legacy worker
+  // uses Vercel Gateway. Do not require the legacy key for unified routing.
+  if (!serverlessGatewayConfigured(oidcToken) && configuredAgiRoutes(oidcToken).length === 0) {
     return { ready: false, reason: "AGI_DELEGATION_PROVIDER_NOT_CONFIGURED" };
   }
   try {
     const status = await getServerlessAgiWorkerStatus(projectId, oidcToken);
-    if (status.ready !== true || status.schema_ready !== true || status.provider_configured !== true) {
+    if (status.schema_ready !== true) {
       return { ready: false, reason: "AGI_DELEGATION_WORKER_NOT_READY" };
     }
     const last = status.last_verified_run as JsonRecord | null;
-    const evidence = Array.isArray(last?.evidence) ? last.evidence as JsonRecord[] : [];
     const timestamp = Date.parse(String(last?.finished_at ?? ""));
     const currentAge = Date.now() - timestamp;
-    const verified = last?.status === "completed" &&
-      last?.provider === "vercel-ai-gateway" &&
-      String(last?.worker_id ?? "").startsWith(VERIFIED_WORKER_PREFIX) &&
-      typeof last?.result_hash === "string" && last.result_hash.length === 64 &&
-      Number.isFinite(timestamp) && currentAge >= 0 && currentAge <= MAX_WORKER_AGE_MS &&
-      evidence.some((item) =>
-        item.kind === "verified_model_completion" &&
-        item.worker_id === last.worker_id &&
-        item.external_writes_executed === false);
+    const verified = Boolean(last && isVerifiedSpecialistWorkerRun(last)) &&
+      Number.isFinite(timestamp) && currentAge >= 0 && currentAge <= MAX_WORKER_AGE_MS;
     return verified
       ? { ready: true, reason: "AGI_VERIFIED_WORKER_RECENT" }
       : { ready: false, reason: "AGI_DELEGATION_NO_RECENT_REAL_WORKER_PROOF" };

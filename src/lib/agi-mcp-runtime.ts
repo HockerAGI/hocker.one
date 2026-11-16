@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   MCP_PROVIDER_IDS,
   assertMcpReadToolPolicy,
@@ -309,6 +309,10 @@ export async function executeAgiMcpToolCalls(
         if (!readiness.ready) throw new Error(readiness.reason);
         const delegated = await createServerlessAgiTask({
           project_id: options.project_id, to_agi: target, subject, body,
+          // Reuse the existing (project_id,idempotency_key) unique constraint
+          // to prevent a retried tool call from creating duplicate AGI tasks.
+          idempotency_key: "nova-delegate:" + createHash("sha256")
+            .update(JSON.stringify([parentRunId, call.id, target])).digest("hex"),
           intent: String(call.args.intent ?? "analysis"), priority: String(call.args.priority ?? "normal"),
           write_policy: writePolicy,
           context: { ...(asRecord(call.args.context)), parent_run_id: parentRunId, source_agi_id: options.source_agi_id ?? "nova",
@@ -564,7 +568,14 @@ export async function buildAgiNativeMcpTools(query?: string, allow_actions = fal
     return words.some((word) => haystack.includes(word));
   });
 
-  if (!engineeringIntent) return matching.slice(0, 32);
+  if (!engineeringIntent) {
+    // Specialist requests are not necessarily engineering prompts. Expose
+    // authorized delegation alongside relevant reads, never to AAL1/viewers.
+    const delegate = all.find((tool) => tool.qualified_name === "agi.delegate");
+    return delegate
+      ? [delegate, ...matching.filter((tool) => tool.qualified_name !== "agi.delegate")].slice(0, 32)
+      : matching.slice(0, 32);
+  }
 
   const preferredEngineeringTools = [
     "get_repository",
