@@ -1,4 +1,5 @@
 import { enqueueAgiAction } from "@/lib/agi-runtime-core";
+import { getAgiQueueLock } from "@/lib/agi-queue-lock";
 import {
   assertMcpToolAvailable,
   isReadOnlyMcpTool,
@@ -58,6 +59,22 @@ export async function materializeNovaMcpActionsFromUpstream(params: {
   const rawDrafts = extractDrafts(params.upstream_meta);
   const actions: MaterializedMcpAction[] = [];
   const rejected: Array<{ reason: string }> = [];
+
+  // Reuse the same project-scoped, fail-closed Queue Lock as NOVA Chat.
+  // Check just before materialization, after model/tool planning, because the
+  // queue may have changed while NOVA was reading the repository.
+  // One accepted request can still contain its ordered GitHub lifecycle steps.
+  if (rawDrafts.length > 0) {
+    const queueLock = await getAgiQueueLock(params.project_id);
+    if (queueLock.locked || queueLock.can_start_new_task !== true) {
+      return {
+        actions,
+        rejected: rawDrafts.map(() => ({
+          reason: "Queue Lock activo: no se materializaron acciones MCP; revisa la cola existente.",
+        })),
+      };
+    }
+  }
 
   let previousGithubLifecycleActionId: string | null = null;
 

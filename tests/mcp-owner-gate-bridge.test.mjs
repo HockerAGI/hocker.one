@@ -67,3 +67,20 @@ test("dynamic MCP providers are governed by an HTTPS host allowlist and canonica
   assert.match(policy, /READ_ONLY_TOOLS/);
   assert.match(runtime, /isKnownMcpProviderId/);
 });
+
+test("NOVA MCP materialization reuses project Queue Lock before any queued write", async () => {
+  const [materializer, queueLock] = await Promise.all([
+    read("src/lib/nova-mcp-action-materializer.ts"),
+    read("src/lib/agi-queue-lock.ts"),
+  ]);
+
+  const guardPosition = materializer.indexOf("const queueLock = await getAgiQueueLock(params.project_id)");
+  const enqueuePosition = materializer.indexOf("const row = await enqueueAgiAction(");
+  assert.ok(guardPosition >= 0 && enqueuePosition > guardPosition, "MCP queue writes must be preceded by Queue Lock");
+  assert.match(materializer, /queueLock\.locked \|\| queueLock\.can_start_new_task !== true/);
+  assert.match(materializer.slice(guardPosition, enqueuePosition), /return \{[\s\S]*?actions,[\s\S]*?rejected: rawDrafts\.map/);
+  assert.match(materializer, /rawDrafts\.length > 0/);
+  assert.match(queueLock, /locked: true/);
+  assert.match(queueLock, /can_start_new_task: false/);
+  assert.match(materializer, /depends_on_action_id/);
+});
