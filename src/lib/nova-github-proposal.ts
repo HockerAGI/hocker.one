@@ -17,6 +17,16 @@ const CORE_REPOSITORIES = new Set([
 ]);
 const SHA_PATTERN = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i;
 const MAX_CONTENT_BYTES = 12 * 1024;
+export const NOVA_GITHUB_MAX_FILES = 3;
+
+// Keep within the 16 KiB native-tool JSON argument boundary, including metadata.
+export const NOVA_GITHUB_MAX_BATCH_BYTES = 12 * 1024;
+
+export type NovaGithubFileChange = {
+  path: string;
+  expected_file_sha: string;
+  content: string;
+};
 
 export type NovaGithubCodeProposal = {
   repository: string;
@@ -28,6 +38,8 @@ export type NovaGithubCodeProposal = {
   commit_message: string;
   pr_title: string;
   pr_body: string;
+  /** Canonical, ordered and bounded file changes; includes the legacy one-file proposal. */
+  changes: NovaGithubFileChange[];
 };
 
 function requiredText(input: Record<string, unknown>, name: string, maxLength: number): string {
@@ -45,7 +57,7 @@ export function parseNovaGithubCodeProposal(input: unknown): NovaGithubCodePropo
   const data = input as Record<string, unknown>;
   const allowedKeys = new Set([
     "repository", "branch", "expected_base_sha", "path", "expected_file_sha",
-    "content", "commit_message", "pr_title", "pr_body",
+    "content", "changes", "commit_message", "pr_title", "pr_body",
   ]);
   if (Object.keys(data).some((key) => !allowedKeys.has(key))) {
     throw new Error("NOVA_GITHUB_PROPOSAL_UNEXPECTED_ARGUMENT");
@@ -63,22 +75,57 @@ export function parseNovaGithubCodeProposal(input: unknown): NovaGithubCodePropo
   }
 
   const expected_base_sha = requiredText(data, "expected_base_sha", 64);
-  const expected_file_sha = requiredText(data, "expected_file_sha", 64);
-  if (!SHA_PATTERN.test(expected_base_sha) || !SHA_PATTERN.test(expected_file_sha)) {
+  if (!SHA_PATTERN.test(expected_base_sha)) {
     throw new Error("NOVA_GITHUB_OBSERVED_SHA_REQUIRED");
   }
 
-  const path = requiredText(data, "path", 240);
-  if (!(path.startsWith("src/") || path.startsWith("docs/")) ||
-      path.includes("..") || path.includes("\\") || path.includes("//") ||
-      path.split("/").some((segment) => !segment || segment.startsWith(".")) ||
-      /(\.pem|\.key|\.p12|\.pfx|private-extra-headers\.json)$/i.test(path)) {
-    throw new Error("NOVA_GITHUB_PATH_NOT_ALLOWED");
+  // Native tools can propose 1-3 modified files in ONE existing Owner Gate
+  // lifecycle. Legacy one-file arguments remain accepted unchanged.
+  const hasBatch = Object.hasOwn(data, "changes");
+  if (hasBatch && ["path", "expected_file_sha", "content"].some((key) => Object.hasOwn(data, key))) {
+    throw new Error("NOVA_GITHUB_PROPOSAL_MIXED_FORMS");
+  }
+  if (hasBatch && (!Array.isArray(data.changes) ||
+      data.changes.length === 0 || data.changes.length > NOVA_GITHUB_MAX_FILES)) {
+    throw new Error("NOVA_GITHUB_PROPOSAL_INVALID_FILES_COUNT");
   }
 
-  if (typeof data.content !== "string" || !data.content.trim() ||
-      Buffer.byteLength(data.content, "utf8") > MAX_CONTENT_BYTES ||
-      /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9_]{20,}|sk-proj-[A-Za-z0-9_-]{20,}/.test(data.content)) {
+  const fileInputs: unknown[] = hasBatch
+    ? data.changes as unknown[]
+    : [{ path: data.path, expected_file_sha: data.expected_file_sha, content: data.content }];
+
+  const changes: NovaGithubFileChange[] = fileInputs.map((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new Error("NOVA_GITHUB_PROPOSAL_INVALID_FILE_CHANGE");
+    }
+    const file = raw as Record<string, unknown>;
+    if (Object.keys(file).some((key) => !["path", "expected_file_sha", "content"].includes(key))) {
+      throw new Error("NOVA_GITHUB_PROPOSAL_UNEXPECTED_ARGUMENT");
+    }
+    const expected_file_sha = requiredText(file, "expected_file_sha", 64);
+    if (!SHA_PATTERN.test(expected_file_sha)) throw new Error("NOVA_GITHUB_OBSERVED_SHA_REQUIRED");
+
+    const path = requiredText(file, "path", 240);
+    if (!(path.startsWith("src/") || path.startsWith("docs/")) ||
+        path.includes("..") || path.includes("\\") || path.includes("//") ||
+        path.split("/").some((segment) => !segment || segment.startsWith(".")) ||
+        /(\.pem|\.key|\.p12|\.pfx|private-extra-headers\.json)$/i.test(path)) {
+      throw new Error("NOVA_GITHUB_PATH_NOT_ALLOWED");
+    }
+
+    if (typeof file.content !== "string" || !file.content.trim() ||
+        Buffer.byteLength(file.content, "utf8") > MAX_CONTENT_BYTES ||
+        /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9_]{20,}|sk-proj-[A-Za-z0-9_-]{20,}/.test(file.content)) {
+      throw new Error("NOVA_GITHUB_CONTENT_INVALID_OR_SENSITIVE");
+    }
+    return { path, expected_file_sha, content: file.content };
+  });
+
+  if (new Set(changes.map((entry) => entry.path)).size !== changes.length) {
+    throw new Error("NOVA_GITHUB_DUPLICATE_FILE_PATH");
+  }
+  if (changes.reduce((sum, entry) => sum + Buffer.byteLength(entry.content, "utf8"), 0) >
+      NOVA_GITHUB_MAX_BATCH_BYTES) {
     throw new Error("NOVA_GITHUB_CONTENT_INVALID_OR_SENSITIVE");
   }
 
@@ -90,7 +137,10 @@ export function parseNovaGithubCodeProposal(input: unknown): NovaGithubCodePropo
   }
 
   return {
-    repository, branch, expected_base_sha, path, expected_file_sha,
-    content: data.content, commit_message, pr_title, pr_body,
+    repository, branch, expected_base_sha,
+    // Preserve the existing caller contract for one-file and test consumers.
+    path: changes[0].path, expected_file_sha: changes[0].expected_file_sha,
+    content: changes[0].content, commit_message, pr_title, pr_body,
+    changes,
   };
 }

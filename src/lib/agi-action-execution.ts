@@ -434,6 +434,15 @@ async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow):
   const siblings = ((data ?? []) as AgiActionQueueRow[])
     .filter((row) => guidedGithubBranchKey(row) === key)
     .sort((a, b) => {
+      const aPayload = asRecord(a.payload);
+      const bPayload = asRecord(b.payload);
+      if (aPayload.source === "nova_native_github_proposal" &&
+          bPayload.source === "nova_native_github_proposal" &&
+          Number.isInteger(aPayload.sequence_index) &&
+          Number.isInteger(bPayload.sequence_index)) {
+        const bySequence = Number(aPayload.sequence_index) - Number(bPayload.sequence_index);
+        if (bySequence !== 0) return bySequence;
+      }
       const byAction = guidedGithubActionIndex(a.action_type) - guidedGithubActionIndex(b.action_type);
       if (byAction !== 0) return byAction;
       return Date.parse(a.created_at || "") - Date.parse(b.created_at || "");

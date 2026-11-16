@@ -201,17 +201,20 @@ async function materializeNativeGithubProposal(
   const existingBranch = await readGitHubBranchHeadSha(proposal.repository, proposal.branch);
   if (existingBranch) throw new Error("NOVA_GITHUB_BRANCH_ALREADY_EXISTS");
 
-  // The SHA is independently checked against GitHub REST, not trusted merely
-  // because the model supplied it. A truncated file must never be overwritten.
-  const observedFile = asRecord(await executeGitHubReadOperation("read_file", {
-    repository: proposal.repository, ref: "main", path: proposal.path,
-  }));
-  if (observedFile.truncated === true || observedFile.sha !== proposal.expected_file_sha ||
-      typeof observedFile.content !== "string") {
-    throw new Error("NOVA_GITHUB_FILE_SHA_NOT_VERIFIED");
-  }
-  if (observedFile.content === proposal.content) {
-    throw new Error("NOVA_GITHUB_NO_ACTUAL_FILE_CHANGE");
+  // Every file is independently checked against the exact baseline GitHub
+  // commit before ANY action enters the queue. A batch fails wholly on a
+  // stale SHA, truncated read or no-op; never enqueue partial unverified data.
+  for (const file of proposal.changes) {
+    const observedFile = asRecord(await executeGitHubReadOperation("read_file", {
+      repository: proposal.repository, ref: "main", path: file.path,
+    }));
+    if (observedFile.truncated === true || observedFile.sha !== file.expected_file_sha ||
+        typeof observedFile.content !== "string") {
+      throw new Error("NOVA_GITHUB_FILE_SHA_NOT_VERIFIED");
+    }
+    if (observedFile.content === file.content) {
+      throw new Error("NOVA_GITHUB_NO_ACTUAL_FILE_CHANGE");
+    }
   }
 
   const common = {
@@ -226,10 +229,14 @@ async function materializeNativeGithubProposal(
 
   const steps: Array<{ operation: "create_branch" | "upsert_file" | "create_pr"; payload: Record<string, unknown> }> = [
     { operation: "create_branch", payload: { ...common, message: "NOVA prepare " + proposal.branch } },
-    { operation: "upsert_file", payload: {
-      ...common, path: proposal.path, expected_sha: proposal.expected_file_sha,
-      content: proposal.content, message: proposal.commit_message,
-    } },
+    ...proposal.changes.map((file, index) => ({
+      operation: "upsert_file" as const,
+      payload: {
+        ...common, path: file.path, expected_sha: file.expected_file_sha,
+        content: file.content, message: proposal.commit_message + " (" + String(index + 1) + "/" +
+          String(proposal.changes.length) + ")",
+      },
+    })),
     { operation: "create_pr", payload: {
       ...common, head: proposal.branch, title: proposal.pr_title, body: proposal.pr_body,
     } },
@@ -243,17 +250,18 @@ async function materializeNativeGithubProposal(
   });
 
   const actions: MaterializedMcpAction[] = [];
-  for (const { operation, payload, plan } of planned) {
+  for (const [stepIndex, { operation, payload, plan }] of planned.entries()) {
     const row = await enqueueAgiAction({
       project_id: params.project_id,
       agi_id: "nova",
       tool_key: "github",
       action_type: "github." + operation,
       title: "NOVA · " + (operation === "create_branch" ? "Crear rama" :
-        operation === "upsert_file" ? "Aplicar cambio a " + proposal.path : "Abrir PR draft"),
+        operation === "upsert_file" ? "Aplicar cambio a " + String(payload.path) : "Abrir PR draft"),
       payload: {
         ...payload,
         materializer_version: NOVA_GITHUB_GUIDED_CHAIN_VERSION,
+        sequence_index: stepIndex,
         source: "nova_native_github_proposal",
         trace_id: params.trace_id ?? null,
         request_preview: compact(params.original_message),
@@ -261,7 +269,7 @@ async function materializeNativeGithubProposal(
         safety: {
           executed_now: false, owner_gate_required: true, no_direct_main_write: true,
           verified_main_sha: proposal.expected_base_sha,
-          verified_file_sha: proposal.expected_file_sha,
+          verified_file_sha: operation === "upsert_file" ? payload.expected_sha : null,
           git_mcp_read_only: true,
         },
       },
