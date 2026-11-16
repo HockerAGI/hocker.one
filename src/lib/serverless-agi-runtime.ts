@@ -606,18 +606,36 @@ export async function recoverStaleServerlessAgiTasks(
 export function isVerifiedSpecialistWorkerRun(run: Record<string, unknown>): boolean {
   const workerId = String(run.worker_id ?? "");
   const provider = String(run.provider ?? "");
-  const realWorker =
-    (workerId.startsWith("hocker-one-serverless:") && provider === "vercel-ai-gateway") ||
-    (workerId.startsWith("hocker-one-unified:") && provider === "hocker-model-router");
-  if (!realWorker || run.status !== "completed" ||
-      typeof run.model !== "string" || !run.model ||
+  const unified = workerId.startsWith("hocker-one-unified:") && provider === "hocker-model-router";
+  const legacy = workerId.startsWith("hocker-one-serverless:") && provider === "vercel-ai-gateway";
+  if ((!unified && !legacy) || run.status !== "completed" ||
+      typeof run.task_id !== "string" || !run.task_id ||
+      typeof run.agi_id !== "string" || !run.agi_id ||
       typeof run.result_hash !== "string" || !/^[a-f0-9]{64}$/i.test(run.result_hash)) return false;
+
+  // A router placeholder like run.model="auto" is not the resolved model.
+  // A real completion must persist matching task, identity, route, model,
+  // provider and read-only proof in both output and evidence.
+  const output = run.output;
+  if (!output || typeof output !== "object" || Array.isArray(output)) return false;
+  const result = output as Record<string, unknown>;
+  if (result.ok !== true || result.verified_execution !== true ||
+      result.external_writes_executed !== false ||
+      result.task_id !== run.task_id || result.agi_id !== run.agi_id ||
+      typeof result.model !== "string" || !result.model.trim() ||
+      typeof result.provider !== "string" || !result.provider.trim() ||
+      (legacy && (result.provider !== provider || result.model !== run.model)) ||
+      (unified && (typeof result.route !== "string" || !result.route))) return false;
+
   const evidence = Array.isArray(run.evidence) ? run.evidence : [];
   return evidence.some((raw) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
     const row = raw as Record<string, unknown>;
     return row.kind === "verified_model_completion" &&
       row.worker_id === workerId &&
+      row.task_id === run.task_id && row.agi_id === run.agi_id &&
+      row.provider === result.provider && row.model === result.model &&
+      (!unified || row.route === result.route) &&
       row.output_sha256 === run.result_hash &&
       row.external_writes_executed === false;
   });
@@ -643,7 +661,7 @@ export async function getServerlessAgiWorkerStatus(
       client
         .from("agi_runs")
         .select(
-          "id,agi_id,status,provider,model,worker_id,result_hash,evidence,finished_at,created_at",
+          "id,task_id,agi_id,status,provider,model,worker_id,result_hash,evidence,output,finished_at,created_at",
         )
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
@@ -652,7 +670,25 @@ export async function getServerlessAgiWorkerStatus(
     ]);
 
   const recentRuns = (recentRunsResult.data ?? []) as Array<JsonRecord>;
-  const lastVerified = recentRuns.find(isVerifiedSpecialistWorkerRun) ?? null;
+  const verifiedWithOutput = recentRuns.find(isVerifiedSpecialistWorkerRun) ?? null;
+  // Send only non-sensitive completion metadata, never the raw summary or
+  // model-authored text, to the Owner/readiness status surface.
+  const verifiedOutput = verifiedWithOutput && asRecord(verifiedWithOutput.output);
+  const lastVerified = verifiedWithOutput && verifiedOutput
+    ? {
+        ...verifiedWithOutput,
+        output: {
+          ok: verifiedOutput.ok,
+          verified_execution: verifiedOutput.verified_execution,
+          external_writes_executed: verifiedOutput.external_writes_executed,
+          task_id: verifiedOutput.task_id,
+          agi_id: verifiedOutput.agi_id,
+          provider: verifiedOutput.provider,
+          model: verifiedOutput.model,
+          route: verifiedOutput.route,
+        },
+      }
+    : null;
   const configured = serverlessGatewayConfigured(oidcToken);
   const schemaReady =
     !queuedResult.error &&
