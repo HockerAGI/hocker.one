@@ -120,7 +120,8 @@ test("SQL one-time Owner grant and execution use atomic, service-role-only, exac
   assert.match(sql, /'model_requests',0/);
   assert.match(sql, /'tools_executed',0/);
   assert.match(sql, /'no_paid_fallback',true/);
-  assert.doesNotMatch(sql, /claim_next_agi_task|runUnifiedAgiWorkerOnce|completeAgi\(/);
+  const executableSql = sql.split("\n").filter((line) => !line.trimStart().startsWith("--")).join("\n");
+  assert.doesNotMatch(executableSql, /claim_next_agi_task|runUnifiedAgiWorkerOnce|completeAgi\(/);
 });
 
 test("Both HTTP gates require Owner MFA or independent authenticated Cron, never generic run_once", async () => {
