@@ -44,11 +44,16 @@ export async function POST(request: NextRequest) {
     return response({ ok: false, code: "FREE_INVENTORY_CONTRACT_REJECTED" }, 400);
   }
 
+  const deploymentSha = String(process.env.VERCEL_GIT_COMMIT_SHA ?? "").trim();
+  if (!/^[a-f0-9]{40}$/.test(deploymentSha)) {
+    return response({ ok: false, code: "FREE_INVENTORY_DEPLOYMENT_SHA_UNAVAILABLE" }, 503);
+  }
   const workerId = "hocker-free-inventory:" + randomUUID();
   try {
     const { data, error } = await createAdminSupabase().rpc(
       "run_owner_free_inventory_v1", {
         p_project_id: PROJECT, p_worker_id: workerId,
+        p_deployment_sha: deploymentSha,
       },
     );
     if (error || !data || data.ok !== true ||
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
       }, 503);
     }
     if (!data.processed) {
-      if (!["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED"].includes(data.reason)) {
+      if (!["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED", "OWNER_REVISION_CHANGED_CANCELED"].includes(data.reason)) {
         return response({ ok: false, code: "FREE_INVENTORY_NOOP_CONTRACT_INVALID" }, 503);
       }
       return response({
