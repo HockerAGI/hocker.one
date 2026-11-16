@@ -434,12 +434,36 @@ async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow):
   const siblings = ((data ?? []) as AgiActionQueueRow[])
     .filter((row) => guidedGithubBranchKey(row) === key)
     .sort((a, b) => {
+      const aPayload = asRecord(a.payload);
+      const bPayload = asRecord(b.payload);
+      if (aPayload.source === "nova_native_github_proposal" &&
+          bPayload.source === "nova_native_github_proposal" &&
+          Number.isInteger(aPayload.sequence_index) &&
+          Number.isInteger(bPayload.sequence_index)) {
+        const bySequence = Number(aPayload.sequence_index) - Number(bPayload.sequence_index);
+        if (bySequence !== 0) return bySequence;
+      }
       const byAction = guidedGithubActionIndex(a.action_type) - guidedGithubActionIndex(b.action_type);
       if (byAction !== 0) return byAction;
       return Date.parse(a.created_at || "") - Date.parse(b.created_at || "");
     });
 
   return { key, siblings };
+}
+
+/**
+ * All previous steps in a guided change set must have executed successfully.
+ * Rejection/cancellation/failure of any file prevents later file writes/PRs.
+ * This is essential when several upsert_file steps share an action_type.
+ */
+export function findGuidedGithubBlockingPredecessor<T extends { id: string; status: string }>(
+  siblings: T[],
+  actionId: string,
+): T | null {
+  const index = siblings.findIndex((row) => row.id === actionId);
+  if (index < 0) throw new Error("GITHUB_GUIDED_ACTION_NOT_IN_CHAIN");
+  return siblings.slice(0, index).find((row) =>
+    row.status !== "executed" && row.status !== "completed") ?? null;
 }
 
 async function assertGuidedGithubApprovalOrder(projectId: string, item: AgiActionQueueRow): Promise<void> {
@@ -451,11 +475,9 @@ async function assertGuidedGithubApprovalOrder(projectId: string, item: AgiActio
     throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: primero atiende ${next.action_type}. Acción actual: ${item.action_type}.`);
   }
 
-  const currentIndex = guidedGithubActionIndex(item.action_type);
-  const previousPending = chain.siblings.find((row) => guidedGithubActionIndex(row.action_type) < currentIndex && !isGuidedGithubExecuted(row));
-
+  const previousPending = findGuidedGithubBlockingPredecessor(chain.siblings, item.id);
   if (previousPending) {
-    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: antes de aprobar ${item.action_type}, debe ejecutarse ${previousPending.action_type}.`);
+    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: antes de aprobar ${item.action_type}, debe ejecutarse ${previousPending.action_type} (estado ${previousPending.status}).`);
   }
 }
 
@@ -468,11 +490,9 @@ async function assertGuidedGithubExecutionOrder(projectId: string, item: AgiActi
     throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: primero atiende ${next.action_type}. Acción actual: ${item.action_type}.`);
   }
 
-  const currentIndex = guidedGithubActionIndex(item.action_type);
-  const previousPending = chain.siblings.find((row) => guidedGithubActionIndex(row.action_type) < currentIndex && !isGuidedGithubExecuted(row));
-
+  const previousPending = findGuidedGithubBlockingPredecessor(chain.siblings, item.id);
   if (previousPending) {
-    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: antes de ejecutar ${item.action_type}, debe ejecutarse ${previousPending.action_type}.`);
+    throw new Error(`Cadena GitHub guiada ${GUIDED_GITHUB_CHAIN_VERSION}: antes de ejecutar ${item.action_type}, debe ejecutarse ${previousPending.action_type} (estado ${previousPending.status}).`);
   }
 }
 

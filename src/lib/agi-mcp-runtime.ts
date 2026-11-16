@@ -8,7 +8,7 @@ import {
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
 import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
-import { NOVA_GITHUB_PROPOSAL_TOOL, parseNovaGithubCodeProposal } from "@/lib/nova-github-proposal";
+import { NOVA_GITHUB_PROPOSAL_TOOL, parseNovaGithubCodeProposal, serializeNovaGithubProposalArgs } from "@/lib/nova-github-proposal";
 import { normalizeGitHubListCommitsArguments } from "@/lib/mcp/mcp-github-read-arguments";
 import { createServerlessAgiTask } from "@/lib/serverless-agi-runtime";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
@@ -235,7 +235,7 @@ export async function buildAgiMcpPromptBlock(allow_actions = false): Promise<str
   }
 
   if (allow_actions && hasGitHubRuntimeToken()) {
-    lines.push("github.propose_code_change [OWNER_GATE LOCAL]: propuesta de edición REAL sobre archivo src/ o docs/ existente, solo en rama nova/, con SHA base y SHA archivo comprobables; no ejecuta escrituras aquí.");
+    lines.push("github.propose_code_change [OWNER_GATE LOCAL]: propuesta de edición REAL sobre 1-3 archivos src/ o docs/ existentes; usa changes[] para varios archivos y los SHA reales de cada uno; solo rama nova/, no ejecuta escrituras aquí.");
   }
   if (!lines.length) return "MCP: no hay herramientas conectadas; no inventes datos de integraciones.";
 
@@ -321,7 +321,7 @@ export async function executeAgiMcpToolCalls(
               ...ownerGateDraft(call),
               tool_key: "github",
               action_type: "github.propose_code_change",
-              args: proposal,
+              args: serializeNovaGithubProposalArgs(proposal),
             },
           },
         });
@@ -499,7 +499,7 @@ export async function buildAgiNativeMcpTools(query?: string, allow_actions = fal
     all.unshift({
       name: "hocker__github__propose_code_change",
       qualified_name: "github.propose_code_change",
-      description: "Hocker ONE LOCAL Owner-Gated code change proposal. Only after reading the REAL GitHub main commit SHA and target file SHA. Requires full replacement file content (max 12 KiB), explicit authorized repository, a NEW nova/ branch, and PR details. This never executes a GitHub write; only requests Owner-Gated branch -> file update -> draft PR.",
+      description: "Hocker ONE LOCAL Owner-Gated proposal: update 1-3 existing src/ or docs/ files. Obtain real main commit SHA and each target file blob SHA via read-only GitHub first. Provide changes[] for multiple files, or path/expected_file_sha/content for legacy single-file requests. Max 12 KiB combined file content. New nova/ branch; creates guarded branch -> one edit per file -> draft PR only after separate Owner approvals. Never directly writes GitHub.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -509,12 +509,25 @@ export async function buildAgiNativeMcpTools(query?: string, allow_actions = fal
           expected_base_sha: { type: "string", description: "Real 40-character Git commit SHA of main obtained from GitHub list_commits." },
           path: { type: "string", description: "Existing src/ or docs/ file path." },
           expected_file_sha: { type: "string", description: "Real blob SHA from GitHub get_file_contents for main." },
-          content: { type: "string", description: "COMPLETE revised file source, not a diff, under 12 KiB." },
+          content: { type: "string", description: "Legacy one-file form: COMPLETE revised file source, not a diff, under 12 KiB." },
+          changes: {
+            type: "array", minItems: 1, maxItems: 3,
+            description: "Preferred multi-file form: 1-3 existing files, each with real main blob SHA and complete revised source. Do not mix with path/expected_file_sha/content; max 12 KiB total.",
+            items: {
+              type: "object", additionalProperties: false,
+              properties: {
+                path: { type: "string" },
+                expected_file_sha: { type: "string" },
+                content: { type: "string" },
+              },
+              required: ["path", "expected_file_sha", "content"],
+            },
+          },
           commit_message: { type: "string" },
           pr_title: { type: "string" },
           pr_body: { type: "string", description: "Summary, risk, tests, and rollback details." },
         },
-        required: ["repository", "branch", "expected_base_sha", "path", "expected_file_sha", "content", "commit_message", "pr_title", "pr_body"],
+        required: ["repository", "branch", "expected_base_sha", "commit_message", "pr_title", "pr_body"],
       },
       metadata: ownershipForProvider("github"),
     });

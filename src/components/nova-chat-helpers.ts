@@ -159,9 +159,25 @@ export function buildGuidedGitHubChain(items: RuntimeAction[]): GuidedGitHubChai
       }
     }
 
-    const ordered = GUIDED_GITHUB_ACTION_ORDER
-      .map((actionType) => latestByType.get(actionType))
-      .filter(Boolean) as RuntimeAction[];
+    // The current native proposal may contain multiple upsert_file steps. Do
+    // not collapse them into the legacy one-action-per-type summary: the Owner
+    // must be able to see every material action in its approved sequence.
+    const isNativeBatch = group.some((item) => item.payload?.source === "nova_native_github_proposal");
+    const ordered = isNativeBatch
+      ? [...group].sort((a, b) => {
+          const ai = a.payload?.sequence_index;
+          const bi = b.payload?.sequence_index;
+          if (Number.isInteger(ai) && Number.isInteger(bi) && ai !== bi) {
+            return Number(ai) - Number(bi);
+          }
+          const ar = GUIDED_GITHUB_ACTION_ORDER.indexOf(a.action_type);
+          const br = GUIDED_GITHUB_ACTION_ORDER.indexOf(b.action_type);
+          if (ar !== br) return ar - br;
+          return Date.parse(a.created_at || "") - Date.parse(b.created_at || "");
+        })
+      : GUIDED_GITHUB_ACTION_ORDER
+          .map((actionType) => latestByType.get(actionType))
+          .filter(Boolean) as RuntimeAction[];
 
     const nextAction = ordered.find((item) => !isGuidedGithubTerminal(item)) ?? null;
     const completed = ordered.filter(isGuidedGithubCompleted).length;
@@ -173,7 +189,7 @@ export function buildGuidedGitHubChain(items: RuntimeAction[]): GuidedGitHubChai
       actions: ordered,
       nextAction,
       completed,
-      total: GUIDED_GITHUB_ACTION_ORDER.length,
+      total: ordered.length,
       latestTime,
       hasOpenWork: Boolean(nextAction),
     };

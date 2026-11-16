@@ -349,8 +349,19 @@ export async function POST(req: Request): Promise<Response> {
         return draft.provider === "github" && draft.tool === "propose_code_change";
       });
     if (githubProposalRequested) {
-      safePayload.reply = mcpBridge.actions.length === 3 && mcpBridge.rejected.length === 0
-        ? "NOVA preparó tres acciones GitHub protegidas: crear rama, actualizar archivo y abrir PR draft. Están pendientes de aprobación Owner Gate; todavía no se modificó GitHub."
+      const githubDraft = (responseMcp.deferred_actions as unknown[]).find((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+        const value = item as Record<string, unknown>;
+        return value.provider === "github" && value.tool === "propose_code_change";
+      }) as Record<string, unknown> | undefined;
+      const draftArgs = githubDraft?.args && typeof githubDraft.args === "object" &&
+        !Array.isArray(githubDraft.args) ? githubDraft.args as Record<string, unknown> : {};
+      const fileCount = Array.isArray(draftArgs.changes) ? draftArgs.changes.length : 1;
+      const expectedCount = fileCount + 2; // branch + N governed file writes + draft PR
+      safePayload.reply = mcpBridge.actions.length === expectedCount && mcpBridge.rejected.length === 0
+        ? "NOVA preparó " + String(expectedCount) + " acciones GitHub protegidas: crear rama, actualizar " +
+          String(fileCount) + (fileCount === 1 ? " archivo" : " archivos") +
+          " y abrir PR draft. Están pendientes de aprobación Owner Gate; todavía no se modificó GitHub."
         : "La propuesta de código no se materializó completamente y no se autorizó ninguna ejecución. Revisa el detalle de rechazo y las acciones que pudieran haber quedado pendientes en Owner Gate.";
     }
 
