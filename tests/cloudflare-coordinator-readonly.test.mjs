@@ -110,7 +110,7 @@ test("stale and forged preflight evidence fails closed", async()=>{
     {...good,serverless_free_preflight:{...good.serverless_free_preflight,fixed_model:"wrong-model"}},
     {...good,serverless_free_preflight:{...good.serverless_free_preflight,billing_api_verified:true}},
     {...good,serverless_free_preflight:{...good.serverless_free_preflight,globally_enabled_material_agents:1,candidate_for_owner_review:true}},
-    {...good,serverless_free_preflight:{...good.serverless_free_preflight,provider_configured:true,candidate_for_owner_review:false}},
+    {...good,metrics:{...good.metrics,queued_agi_tasks:0},serverless_free_preflight:{...good.serverless_free_preflight,provider_configured:true,candidate_for_owner_review:false}},
     {...good,serverless_free_preflight:{...good.serverless_free_preflight,provider_configured:true,candidate_for_owner_review:true},metrics:{...good.metrics,queued_agi_tasks:1}},
   ];
   for(const payload of bad){
