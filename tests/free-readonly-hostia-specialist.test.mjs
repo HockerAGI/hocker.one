@@ -26,7 +26,8 @@ test("HOSTIA Free-only canary starts atomically under Owner scope, daily uniquen
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.start_free_readonly_hostia_pilot_v1\(text,uuid,text\)/);
   assert.match(sql, /FROM PUBLIC, anon, authenticated/);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION public\.start_free_readonly_hostia_pilot_v1\(text,uuid,text\)[\s\S]*TO service_role/);
-  assert.doesNotMatch(sql, /claim_next_agi_task|DELETE FROM|TRUNCATE|ON CONFLICT DO UPDATE/);
+  const executableSql = sql.split("\n").filter((line) => !line.trimStart().startsWith("--")).join("\n");
+  assert.doesNotMatch(executableSql, /claim_next_agi_task|DELETE FROM|TRUNCATE|ON CONFLICT DO UPDATE/);
 });
 
 test("HOSTIA uses the existing Owner MFA, same-origin, Cloudflare-only route without fallback", async () => {
@@ -57,7 +58,7 @@ test("HOSTIA uses the existing Owner MFA, same-origin, Cloudflare-only route wit
   assert.match(route, /fail_agi_task/);
   assert.match(route, /verified_facts_only: false/);
   assert.match(route, /material_actions_executed: 0, tools_executed: 0, no_paid_fallback: true/);
-  assert.doesNotMatch(route, /runUnifiedAgiWorkerOnce\s*\(|claim_next_agi_task|completeAgi\s*\(|AI_GATEWAY_API_KEY|openai-direct|vercel-gateway/);
+  assert.doesNotMatch(route, /runUnifiedAgiWorkerOnce\s*\(|\.rpc\s*\(\s*["']claim_next_agi_task|completeAgi\s*\(|AI_GATEWAY_API_KEY|openai-direct|vercel-gateway/);
   assert.match(provider, /max_tokens: CF_MAX_OUTPUT_TOKENS/);
   assert.match(provider, /"cf-aig-max-attempts": "1"/);
   assert.match(policy, /AGI_FREE_READONLY_PILOT_ENABLED === "true"/);

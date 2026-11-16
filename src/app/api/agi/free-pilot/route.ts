@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Never borrow the permissive generic claim_next_agi_task or model router.
-  // The versioned RPC atomically creates exactly one scoped NOVA task and run.
+  // A versioned RPC atomically creates one scoped task/run for the selected agent.
   try {
     await assertAgiBacklogReviewed(PROJECT_ID);
   } catch {
