@@ -340,6 +340,20 @@ export async function POST(req: Request): Promise<Response> {
     const currentActions = Array.isArray(safePayload.actions) ? safePayload.actions : [];
     safePayload.actions = [...currentActions, ...mcpBridge.actions];
 
+    // The model only PROPOSES; report the actual durable queue outcome.
+    // Do not claim that code was changed when validation/Queue Lock rejected it.
+    const githubProposalRequested = Array.isArray(responseMcp.deferred_actions) &&
+      responseMcp.deferred_actions.some((item: unknown) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+        const draft = item as Record<string, unknown>;
+        return draft.provider === "github" && draft.tool === "propose_code_change";
+      });
+    if (githubProposalRequested) {
+      safePayload.reply = mcpBridge.actions.length === 3 && mcpBridge.rejected.length === 0
+        ? "NOVA preparó tres acciones GitHub protegidas: crear rama, actualizar archivo y abrir PR draft. Están pendientes de aprobación Owner Gate; todavía no se modificó GitHub."
+        : "La propuesta de código no se materializó completamente y no se autorizó ninguna ejecución. Revisa el detalle de rechazo y las acciones que pudieran haber quedado pendientes en Owner Gate.";
+    }
+
     const safeMeta =
       safePayload.meta &&
       typeof safePayload.meta === "object" &&

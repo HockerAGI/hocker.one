@@ -183,7 +183,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
   if (!routes.length) throw new Error("AGI_INFERENCE_NOT_CONFIGURED");
 
   // Free-only chat neither exposes nor executes external tools.
-  const nativeMcpTools = freeOnlyChat ? [] : await buildAgiNativeMcpTools(params.message);
+  const nativeMcpTools = freeOnlyChat ? [] : await buildAgiNativeMcpTools(params.message, Boolean(params.allow_actions));
 
   const [context, mcpPrompt] = await Promise.all([
     buildAgiInferenceContext({
@@ -193,7 +193,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
       user_id: params.user_id,
       operational_context: params.context_data ?? {},
     }),
-    freeOnlyChat ? Promise.resolve("") : buildAgiMcpPromptBlock(),
+    freeOnlyChat ? Promise.resolve("") : buildAgiMcpPromptBlock(Boolean(params.allow_actions)),
   ]);
 
   const system = [

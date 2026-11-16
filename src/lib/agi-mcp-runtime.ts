@@ -7,6 +7,8 @@ import {
   type McpProviderId,
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
+import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
+import { NOVA_GITHUB_PROPOSAL_TOOL, parseNovaGithubCodeProposal } from "@/lib/nova-github-proposal";
 import { normalizeGitHubListCommitsArguments } from "@/lib/mcp/mcp-github-read-arguments";
 import { createServerlessAgiTask } from "@/lib/serverless-agi-runtime";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
@@ -218,7 +220,7 @@ async function ensureRegistry() {
   return registry;
 }
 
-export async function buildAgiMcpPromptBlock(): Promise<string> {
+export async function buildAgiMcpPromptBlock(allow_actions = false): Promise<string> {
   const registry = await ensureRegistry();
   const status = registry.getStatus();
   const connected = new Set(status.providers.filter((item) => item.connected).map((item) => item.id));
@@ -232,6 +234,9 @@ export async function buildAgiMcpPromptBlock(): Promise<string> {
     }
   }
 
+  if (allow_actions && hasGitHubRuntimeToken()) {
+    lines.push("github.propose_code_change [OWNER_GATE LOCAL]: propuesta de edición REAL sobre archivo src/ o docs/ existente, solo en rama nova/, con SHA base y SHA archivo comprobables; no ejecuta escrituras aquí.");
+  }
   if (!lines.length) return "MCP: no hay herramientas conectadas; no inventes datos de integraciones.";
 
   return [
@@ -295,6 +300,40 @@ export async function executeAgiMcpToolCalls(
       }
       continue;
     }
+    // Local Hocker ONE proposal, never forwarded to the remote read-only GitHub MCP.
+    // The outer /api/nova/chat role gate and the existing Owner Gate control
+    // materialization and eventual execution in the governed GitHub worker.
+    if (call.provider === "github" && call.tool === NOVA_GITHUB_PROPOSAL_TOOL) {
+      if (!options.allow_actions || !hasGitHubRuntimeToken()) {
+        results.push({
+          id: call.id, name: call.qualified_name, executed: false, needs_approval: false,
+          result: { ok: false, error: "NOVA_GITHUB_PROPOSAL_NOT_AUTHORIZED" },
+        });
+        continue;
+      }
+      try {
+        const proposal = parseNovaGithubCodeProposal(call.args);
+        results.push({
+          id: call.id, name: call.qualified_name, executed: false, needs_approval: true,
+          result: {
+            ok: false, error: "GITHUB_CHANGE_REQUIRES_OWNER_GATE",
+            data: {
+              ...ownerGateDraft(call),
+              tool_key: "github",
+              action_type: "github.propose_code_change",
+              args: proposal,
+            },
+          },
+        });
+      } catch (error) {
+        results.push({
+          id: call.id, name: call.qualified_name, executed: false, needs_approval: false,
+          result: { ok: false, error: error instanceof Error ? error.message : "NOVA_GITHUB_PROPOSAL_REJECTED" },
+        });
+      }
+      continue;
+    }
+
     const providerState = status.providers.find((item) => item.id === call.provider);
     const toolExists = (status.tools[call.provider] ?? []).some((tool) => tool.name === call.tool);
     if (!providerState?.configured || !providerState.connected || !toolExists) {
@@ -445,7 +484,7 @@ function nativeToolDefinitionsFromStatus(status: ReturnType<ReturnType<typeof ge
   return definitions.slice(0, 96);
 }
 
-export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeTool[]> {
+export async function buildAgiNativeMcpTools(query?: string, allow_actions = false): Promise<AgiNativeTool[]> {
   const registry = await ensureRegistry();
   const status = registry.getStatus();
   const all = nativeToolDefinitionsFromStatus(status);
@@ -455,6 +494,31 @@ export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeT
   const words = clean.split(/\s+/).filter(Boolean).slice(0, 8);
   const engineeringIntent =
     /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(clean);
+
+  if (engineeringIntent && allow_actions && hasGitHubRuntimeToken()) {
+    all.unshift({
+      name: "hocker__github__propose_code_change",
+      qualified_name: "github.propose_code_change",
+      description: "Hocker ONE LOCAL Owner-Gated code change proposal. Only after reading the REAL GitHub main commit SHA and target file SHA. Requires full replacement file content (max 12 KiB), explicit authorized repository, a NEW nova/ branch, and PR details. This never executes a GitHub write; only requests Owner-Gated branch -> file update -> draft PR.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          repository: { type: "string", description: "Exact: HockerAGI/hocker.one, HockerAGI/nova.agi, or HockerAGI/hocker-node-agent" },
+          branch: { type: "string", description: "A fresh nova/ branch. Never main." },
+          expected_base_sha: { type: "string", description: "Real 40-character Git commit SHA of main obtained from GitHub list_commits." },
+          path: { type: "string", description: "Existing src/ or docs/ file path." },
+          expected_file_sha: { type: "string", description: "Real blob SHA from GitHub get_file_contents for main." },
+          content: { type: "string", description: "COMPLETE revised file source, not a diff, under 12 KiB." },
+          commit_message: { type: "string" },
+          pr_title: { type: "string" },
+          pr_body: { type: "string", description: "Summary, risk, tests, and rollback details." },
+        },
+        required: ["repository", "branch", "expected_base_sha", "path", "expected_file_sha", "content", "commit_message", "pr_title", "pr_body"],
+      },
+      metadata: ownershipForProvider("github"),
+    });
+  }
 
   const matching = all.filter((tool) => {
     const haystack = `${tool.qualified_name} ${tool.name} ${tool.description ?? ""}`.toLowerCase();
@@ -477,6 +541,7 @@ export async function buildAgiNativeMcpTools(query?: string): Promise<AgiNativeT
     "create_or_update_file",
     "update_file",
     "create_pull_request",
+    "propose_code_change",
   ];
 
   const preferredVercelDiagnostics = [
