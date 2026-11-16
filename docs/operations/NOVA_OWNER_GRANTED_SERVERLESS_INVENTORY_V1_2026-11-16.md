@@ -44,6 +44,20 @@ unrestricted tools, or a dedicated persistent runtime.
    authorization key, updates just its task to `canceled` and inserts
    independent audit evidence; the Cron cannot race that revocation.
 
+## Staged SQL is NOT an applied migration
+
+The SQL source currently lives at `supabase/proposals/owner_granted_serverless_inventory_v1.sql`,
+NOT in `supabase/migrations/`. This keeps the strict migration ledger
+matching actual production on both pull-request and main push CI.
+The endpoints remain fail-closed while the feature is OFF.
+
+Before activating the feature: obtain the exact committed SQL after review,
+apply through the Supabase migration tool, read back the provider-generated
+migration version, and move the proposal into `supabase/migrations/<actual_version>_...sql`.
+Add the actual recorded `(version,name)` to the production ledger test,
+then run CI/CodeQL/review on that exact revision. Never create a fake
+ledger entry or claim the migration was applied before verification.
+
 ## Rollout gates
 
 - **GitHub:** tests, TypeScript, lint, build, audit, CodeQL and Codex review
