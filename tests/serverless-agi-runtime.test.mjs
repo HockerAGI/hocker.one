@@ -27,7 +27,9 @@ test("NOVA ordinary chat uses the unified runtime before the dedicated compatibi
 
 test("unified worker evidence records the provider and route that actually answered", async () => {
   const runtime = await read("src/lib/unified-agi-runtime.ts");
-  assert.match(runtime, /kind: "verified_model_completion"/);
+  // Generic worker completion keeps the original verifier kind; the bounded
+  // Free-only proof is deliberately not accepted as delegation readiness.
+  assert.match(runtime, /kind: freeOnlyHostia \? "verified_free_unified_model_completion" : "verified_model_completion"/);
   assert.match(runtime, /provider: finalCompletion\.provider/);
   assert.match(runtime, /model: finalCompletion\.model/);
   assert.match(runtime, /route: finalCompletion\.route/);
@@ -128,8 +130,10 @@ test("verified run startup and completion remain service-only atomic contracts",
   const completeMigration = await read("supabase/migrations/20260803003709_atomic_serverless_agi_completion.sql");
 
   const runStartPosition = runtime.indexOf("runId = await startVerifiedRun");
-  const completionPosition = runtime.indexOf("const completion = await completeAgi");
+  const completionPosition = runtime.indexOf("const completion = freeOnlyHostia");
   assert.ok(runStartPosition >= 0 && completionPosition > runStartPosition);
+  assert.match(runtime, /: await completeAgi\(/);
+  assert.match(runtime, /cloudflareWorkersAiProvider\.complete\(/);
   assert.match(runtime, /complete_serverless_agi_execution/);
   assert.doesNotMatch(runtime, /from\("agi_runs"\)\s*\.insert/);
   assert.match(startMigration, /VERIFIED_WORKER_ID_REQUIRED/);
