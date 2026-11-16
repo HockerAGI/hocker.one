@@ -81,8 +81,11 @@ ledger entry or claim the migration was applied before verification.
   a demonstration pass.
 - **Failure:** keep the new inventory flag OFF if any gate fails; the existing
   observation path stays operational. If necessary restore prior Cloudflare
-  Worker version without changing read credentials. A lost scheduled Cron
-  results in a single canceled authorization after 20 minutes, no job retry.
+  Worker version without changing read credentials. The authorization
+  becomes ineligible 20 minutes after approval; the reserved DB row is
+  marked canceled only on the next working Cron tick or by explicit Owner
+  revocation. If Cron stays unavailable, no automatic cleanup can be claimed.
+  The exact daily idempotency key prevents repeated approval for the same day.
 
 ## Costs and limitations
 
