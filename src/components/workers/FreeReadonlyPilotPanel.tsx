@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 type PilotTask = {
   id?: string; status?: string; created_at?: string;
   result_hash?: string | null; error?: string | null;
+  output?: { summary?: string } | null;
 };
 type PilotState = {
   ok?: boolean; configured?: boolean; ready_for_single_owner_pilot?: boolean;
@@ -15,6 +16,38 @@ type PilotRun = {
   ok?: boolean; error?: string; task_id?: string; run_id?: string;
   result_hash?: string; summary?: string; model?: string;
 };
+
+/**
+ * Render model-authored Markdown as escaped React text, never HTML.
+ * A persisted response is evidence of inference, not a verified diagnosis.
+ */
+function inlineEmphasis(value: string) {
+  return value.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={index} className="font-semibold text-white">{part.slice(2, -2)}</strong>
+      : part,
+  );
+}
+
+function PilotSummary({ summary }: { summary: string }) {
+  return (
+    <div className="mt-3 space-y-2 break-words text-sm leading-6 text-slate-200">
+      {summary.split(/\r?\n/).map((raw, index) => {
+        const line = raw.trim();
+        if (!line) return null;
+        const heading = /^#{1,5}\s+(.+)$/.exec(line);
+        if (heading) {
+          return <h3 key={index} className="pt-2 font-bold text-white">{inlineEmphasis(heading[1] ?? "")}</h3>;
+        }
+        const bullet = /^[-*]\s+(.+)$/.exec(line);
+        if (bullet) {
+          return <p key={index} className="pl-4">• {inlineEmphasis(bullet[1] ?? "")}</p>;
+        }
+        return <p key={index}>{inlineEmphasis(line)}</p>;
+      })}
+    </div>
+  );
+}
 
 async function queryPilot(): Promise<PilotState> {
   const response = await fetch("/api/agi/free-pilot", {
@@ -34,6 +67,8 @@ export default function FreeReadonlyPilotPanel() {
   const [state, setState] = useState<PilotState | null>(null);
   const [run, setRun] = useState<PilotRun | null>(null);
   const [busy, setBusy] = useState(false);
+  const summary = run?.summary ||
+    (state?.task?.status === "completed" ? state.task.output?.summary : undefined);
   const refresh = useCallback(async () => setState(await queryPilot()), []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -75,6 +110,12 @@ export default function FreeReadonlyPilotPanel() {
         Análisis de conteos actuales de Supabase, con modelo fijo, sin herramientas
         y sin ejecuciones externas. No es autonomía permanente.
       </p>
+      <p className="mt-2 text-xs leading-5 text-amber-200">
+        Nota: el texto generado por NOVA no es un diagnóstico operativo certificado.
+        Una cola vacía no significa que las 16 AGIs estén apagadas, y
+        allow_actions=false es una protección para acciones materiales.
+        No lo habilites globalmente por recomendación de este análisis.
+      </p>
       {!state ? (
         <p className="mt-3 text-sm text-slate-400">Comprobando controles reales…</p>
       ) : (
@@ -102,11 +143,17 @@ export default function FreeReadonlyPilotPanel() {
           </button>
         </div>
       )}
-      {run ? (
+      {run || summary ? (
         <div className="mt-4 rounded-lg border border-white/10 p-3 text-sm text-slate-200">
-          <p className="font-semibold">{run.ok ? "Ejecución persistida" : run.error || "Bloqueado"}</p>
-          {run.summary ? <p className="mt-2 whitespace-pre-wrap break-words">{run.summary}</p> : null}
-          {run.result_hash ? <p className="mt-2 break-all text-xs text-slate-400">SHA256: {run.result_hash}</p> : null}
+          <p className="font-semibold">
+            {run && !run.ok ? run.error || "Bloqueado" : "Inferencia real persistida"}
+          </p>
+          {summary ? <PilotSummary summary={summary} /> : null}
+          {(run?.result_hash || state?.task?.result_hash) ? (
+            <p className="mt-3 break-all text-xs text-slate-400">
+              SHA256: {run?.result_hash || state?.task?.result_hash}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </section>

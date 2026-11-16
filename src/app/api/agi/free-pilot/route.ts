@@ -39,7 +39,7 @@ export async function GET() {
   if (!owner.ok) return owner.response;
   const { data, error } = await createAdminSupabase()
     .from("agi_tasks")
-    .select("id,status,created_at,completed_at,result_hash,error")
+    .select("id,status,created_at,completed_at,result_hash,error,output")
     .eq("project_id", PROJECT_ID)
     .eq("idempotency_key", todayKey())
     .maybeSingle();
@@ -123,7 +123,14 @@ export async function POST(request: NextRequest) {
           "Eres NOVA del ecosistema HOCKER. Analiza solo los datos del snapshot proporcionado. " +
           "Separa lo comprobado de lo no verificado. No atribuyas capacidades de ejecución, " +
           "runtime dedicado ni Context Bridge completo por estos conteos. " +
-          "No tienes herramientas, navegador ni acceso de escritura. Responde en español." },
+          "No tienes herramientas, navegador ni acceso de escritura. " +
+          "Una cola sin tareas pendientes NO demuestra que las AGIs estén apagadas, " +
+          "fallando o inoperativas; solo muestra ausencia de tareas en ese instante. " +
+          "La política allow_actions=false protege acciones materiales: NO implica " +
+          "incapacidad para análisis de solo lectura ni exige habilitarla globalmente. " +
+          "Nunca recomiendes cambiar allow_actions a true para reactivar agentes. " +
+          "Explica el alcance limitado de este snapshot y separa hechos de inferencias. " +
+          "Responde en español." },
         { role: "user", content:
           "Analiza este snapshot real de Supabase, sin inventar datos. " +
           "Entrega hallazgos, riesgos y una recomendación de siguiente paso: " +
