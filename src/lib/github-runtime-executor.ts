@@ -204,6 +204,28 @@ function trimContent(content: string): { content: string; truncated: boolean; by
 }
 
 
+/** Read the exact GitHub branch tip using the configured REST executor token. */
+export async function readGitHubBranchHeadSha(repository: string, branch: string): Promise<string | null> {
+  const { owner, repo } = parseRepository({ repository });
+  if (!/^(main|nova\/[a-z0-9/_-]+)$/i.test(branch) ||
+      branch.includes("..") || branch.includes("//")) {
+    throw new Error("GITHUB_BRANCH_REF_NOT_ALLOWED");
+  }
+  try {
+    const ref = await githubRequest<{ object: { sha: string } }>(
+      "/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repo) +
+      "/git/ref/heads/" + encodeSegment(branch),
+    );
+    if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i.test(ref.object.sha)) {
+      throw new Error("GITHUB_REF_MISSING_VERIFIABLE_SHA");
+    }
+    return ref.object.sha;
+  } catch (error) {
+    if ((error as Error & { status?: number }).status === 404) return null;
+    throw error;
+  }
+}
+
 export async function executeGitHubCreateRepository(input: GitHubRuntimeInput) {
   return createRepository(input);
 }

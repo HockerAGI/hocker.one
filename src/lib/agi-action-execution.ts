@@ -522,6 +522,10 @@ async function executeCreateBranch(payload: JsonRecord) {
 
 
   const baseRef = await githubRequest<GitHubRefResponse>(`/repos/${owner}/${repo}/git/ref/heads/${encodeSegment(base)}`);
+  const expectedBaseSha = stringValue(payload.expected_base_sha);
+  if (expectedBaseSha && baseRef.object.sha !== expectedBaseSha) {
+    throw new Error("GITHUB_BASE_SHA_DRIFT: main cambió desde la inspección de NOVA.");
+  }
 
   try {
     const created = await githubRequest<GitHubRefResponse>(`/repos/${owner}/${repo}/git/refs`, {
@@ -543,6 +547,9 @@ async function executeCreateBranch(payload: JsonRecord) {
   } catch (error) {
     const status = (error as Error & { status?: number }).status;
     if (status !== 422) throw error;
+    if (payload.require_new_branch === true) {
+      throw new Error("GITHUB_PROPOSED_BRANCH_ALREADY_EXISTS");
+    }
 
     const existing = await githubRequest<GitHubRefResponse>(`/repos/${owner}/${repo}/git/ref/heads/${encodeSegment(target)}`);
     return {
