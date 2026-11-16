@@ -58,7 +58,7 @@ function db(): UntypedSupabase {
 async function loadTasks(projectId: string) {
   const { data, error } = await db()
     .from("agi_tasks")
-    .select("id,project_id,agi_id,title,details,status,priority,task_type,assigned_to,request_id,trace_id,write_policy,attempt_count,max_attempts,locked_at,lock_owner,started_at,last_heartbeat_at,completed_at,result_hash,error,output,evidence,created_at,updated_at")
+    .select("id,project_id,agi_id,idempotency_key,title,details,status,priority,task_type,assigned_to,request_id,trace_id,write_policy,attempt_count,max_attempts,locked_at,lock_owner,started_at,last_heartbeat_at,completed_at,result_hash,error,output,evidence,created_at,updated_at")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(60);
@@ -68,7 +68,18 @@ async function loadTasks(projectId: string) {
     const schemaMissing = message.includes("request_id") || message.includes("schema cache");
     return { tasks: [], schema_query_ready: false, error: schemaMissing ? "AGI_WORKER_SCHEMA_NOT_READY" : message };
   }
-  return { tasks: data ?? [], schema_query_ready: true, error: null };
+  // The general GET is accessible to viewer/operator roles without Owner MFA.
+  // Free delegation model text and its evidence must never be exposed here.
+  const tasks = (data ?? []).map((row) => {
+    const privateDelegation = String(row.idempotency_key ?? "").startsWith("free-nova-hostia-v1:");
+    return {
+      ...row,
+      idempotency_key: undefined,
+      output: privateDelegation ? { redacted: true, result_hash: row.result_hash } : row.output,
+      evidence: privateDelegation ? [] : row.evidence,
+    };
+  });
+  return { tasks, schema_query_ready: true, error: null };
 }
 
 type WorkerQueueStatus = "queued" | "pending" | "working" | "completed" | "failed";
