@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   MCP_PROVIDER_IDS,
   assertMcpReadToolPolicy,
@@ -11,6 +11,10 @@ import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 import { NOVA_GITHUB_PROPOSAL_TOOL, parseNovaGithubCodeProposal, serializeNovaGithubProposalArgs } from "@/lib/nova-github-proposal";
 import { normalizeGitHubListCommitsArguments } from "@/lib/mcp/mcp-github-read-arguments";
 import { createServerlessAgiTask } from "@/lib/serverless-agi-runtime";
+import {
+  inspectNovaDelegationReadiness,
+  novaDelegationDispatchConfigured,
+} from "@/lib/nova-agi-delegation-gate";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
 import { getHockerCapabilitiesContract } from "@/lib/hocker-capabilities-contract";
 
@@ -253,7 +257,12 @@ export async function buildAgiMcpPromptBlock(allow_actions = false): Promise<str
 
 export async function executeAgiMcpToolCalls(
   calls: AgiMcpToolCall[],
-  options: { project_id: string; allow_actions: boolean; parent_run_id?: string | null; source_agi_id?: string | null },
+  options: {
+    project_id: string; allow_actions: boolean;
+    parent_run_id?: string | null; source_agi_id?: string | null;
+    oidc_token?: string | null; delegation_block_reason?: string | null;
+    created_by?: string | null;
+  },
 ): Promise<AgiMcpToolResult[]> {
   const registry = await ensureRegistry();
   const status = registry.getStatus();
@@ -268,8 +277,20 @@ export async function executeAgiMcpToolCalls(
       const depth = Number(call.args.delegation_depth ?? 0);
       const fanout = Number(call.args.delegation_fanout ?? 0);
       const writePolicy = String(call.args.write_policy ?? "read_only").trim();
-      if (!parentRunId) {
-        results.push({ id: call.id, name: call.qualified_name, executed: false, needs_approval: false, result: { ok: false, error: "AGI_DELEGATION_PARENT_RUN_REQUIRED" } });
+      // Queue insertion is a material database change even for read-only
+      // specialist work. Do not let a viewer or an unverified worker dispatch.
+      const blocked = !options.allow_actions
+        ? "AGI_DELEGATION_OWNER_ACTION_REQUIRED"
+        : options.delegation_block_reason
+          ? options.delegation_block_reason
+          : !parentRunId
+            ? "AGI_DELEGATION_PARENT_RUN_REQUIRED"
+            : !novaDelegationDispatchConfigured()
+              ? "AGI_DELEGATION_DISPATCH_DISABLED"
+              : null;
+      if (blocked) {
+        results.push({ id: call.id, name: call.qualified_name, executed: false,
+          needs_approval: false, result: { ok: false, error: blocked } });
         continue;
       }
       if (!target || !subject || !body) {
@@ -285,10 +306,17 @@ export async function executeAgiMcpToolCalls(
         continue;
       }
       try {
+        const readiness = await inspectNovaDelegationReadiness(options.project_id, options.oidc_token);
+        if (!readiness.ready) throw new Error(readiness.reason);
         const delegated = await createServerlessAgiTask({
           project_id: options.project_id, to_agi: target, subject, body,
+          // Reuse the existing (project_id,idempotency_key) unique constraint
+          // to prevent a retried tool call from creating duplicate AGI tasks.
+          idempotency_key: "nova-delegate:" + createHash("sha256")
+            .update(JSON.stringify([parentRunId, call.id, target])).digest("hex"),
           intent: String(call.args.intent ?? "analysis"), priority: String(call.args.priority ?? "normal"),
           write_policy: writePolicy,
+          created_by: options.created_by ?? null,
           context: { ...(asRecord(call.args.context)), parent_run_id: parentRunId, source_agi_id: options.source_agi_id ?? "nova",
             target_agi_ids: Array.isArray(call.args.target_agi_ids) ? call.args.target_agi_ids.slice(0,12) : [target],
             delegation_depth: depth + 1, delegation_fanout: fanout + 1 },
@@ -487,7 +515,11 @@ function nativeToolDefinitionsFromStatus(status: ReturnType<ReturnType<typeof ge
 export async function buildAgiNativeMcpTools(query?: string, allow_actions = false): Promise<AgiNativeTool[]> {
   const registry = await ensureRegistry();
   const status = registry.getStatus();
-  const all = nativeToolDefinitionsFromStatus(status);
+  // A queued specialist task is a REAL DB write, not a read-only tool call.
+  // Hide the capability unless explicitly enabled and Owner-authorized.
+  const all = nativeToolDefinitionsFromStatus(status).filter((tool) =>
+    tool.qualified_name !== "agi.delegate" ||
+    (allow_actions && novaDelegationDispatchConfigured()));
   const clean = String(query ?? "").trim().toLowerCase();
   if (!clean) return all;
 
@@ -538,7 +570,14 @@ export async function buildAgiNativeMcpTools(query?: string, allow_actions = fal
     return words.some((word) => haystack.includes(word));
   });
 
-  if (!engineeringIntent) return matching.slice(0, 32);
+  if (!engineeringIntent) {
+    // Specialist requests are not necessarily engineering prompts. Expose
+    // authorized delegation alongside relevant reads, never to AAL1/viewers.
+    const delegate = all.find((tool) => tool.qualified_name === "agi.delegate");
+    return delegate
+      ? [delegate, ...matching.filter((tool) => tool.qualified_name !== "agi.delegate")].slice(0, 32)
+      : matching.slice(0, 32);
+  }
 
   const preferredEngineeringTools = [
     "get_repository",
@@ -573,6 +612,7 @@ export async function buildAgiNativeMcpTools(query?: string, allow_actions = fal
   ];
 
   const preferred = [
+    all.find((tool) => tool.qualified_name === "agi.delegate"),
     ...preferredEngineeringTools.map((name) => all.find((tool) => tool.qualified_name === `github.${name}`)),
     ...preferredVercelDiagnostics.map((name) => all.find((tool) => tool.qualified_name === `vercel.${name}`)),
     ...preferredSupabaseDiagnostics.map((name) => all.find((tool) => tool.qualified_name === `supabase.${name}`)),

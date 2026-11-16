@@ -25,6 +25,10 @@ import {
 } from "@/lib/agi-session-store";
 import { extractLearningCandidate } from "@/lib/agi-learning-extractor";
 import { createAdminSupabase } from "@/lib/supabase-admin";
+import {
+  inspectNovaDelegationReadiness,
+  persistVerifiedNovaDelegationParent,
+} from "@/lib/nova-agi-delegation-gate";
 import type { AgiCompletionResult, AgiModelMessage, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
 
 type JsonRecord = Record<string, unknown>;
@@ -234,18 +238,46 @@ export async function runToolEnabledUnifiedNovaChat(params: {
     phase: "initial",
   });
   const allToolResults: AgiMcpToolResult[] = [];
+  let verifiedNovaParentRunId: string | null = null;
 
   for (let followUp = 0; followUp <= maxFollowUps; followUp += 1) {
     const resolvedCalls = freeOnlyChat ? [] : currentNativeCalls.length > 0
       ? toLegacyAgiMcpToolCalls(currentNativeCalls)
       : currentEnvelope.tool_calls;
 
+    const delegationRequested = resolvedCalls.some((call) =>
+      call.provider === "agi" && call.tool === "delegate");
+    let delegationBlockReason: string | null = null;
+    if (delegationRequested && !verifiedNovaParentRunId && params.allow_actions) {
+      // Only a real provider completion can be the parent of specialist work.
+      // Fail closed BEFORE any root run insert if the existing worker has not
+      // demonstrated recent real execution or dispatch is not approved.
+      const readiness = await inspectNovaDelegationReadiness(params.project_id, params.oidc_token);
+      if (!readiness.ready) {
+        delegationBlockReason = readiness.reason;
+      } else {
+        try {
+          verifiedNovaParentRunId = await persistVerifiedNovaDelegationParent({
+            project_id: params.project_id,
+            trace_id: traceId,
+            session_id: session.session_id,
+            user_message_id: userMessage.id,
+            completion: first,
+          });
+        } catch {
+          delegationBlockReason = "AGI_DELEGATION_PARENT_PROVENANCE_PERSIST_FAILED";
+        }
+      }
+    }
     const roundResults = resolvedCalls.length
       ? await executeAgiMcpToolCalls(resolvedCalls, {
           project_id: params.project_id,
           allow_actions: Boolean(params.allow_actions),
-          parent_run_id: null,
+          parent_run_id: verifiedNovaParentRunId,
           source_agi_id: "nova",
+          created_by: params.user_id,
+          oidc_token: params.oidc_token,
+          delegation_block_reason: delegationBlockReason,
         })
       : [];
 
