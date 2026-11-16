@@ -102,7 +102,7 @@ test("Malformed credentials, protected redirects, upstream errors and oversized 
 });
 
 test("SQL one-time Owner grant and execution use atomic, service-role-only, exact-task gates", async () => {
-  const sql = await read("supabase/migrations/20261116211500_owner_granted_serverless_inventory_v1.sql");
+  const sql = await read("supabase/proposals/owner_granted_serverless_inventory_v1.sql");
   assert.match(sql, /CREATE OR REPLACE FUNCTION public.owner_schedule_free_inventory_v1/);
   assert.match(sql, /CREATE OR REPLACE FUNCTION public.run_owner_free_inventory_v1/);
   assert.match(sql, /SECURITY DEFINER/);
