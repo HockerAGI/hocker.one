@@ -119,6 +119,7 @@ const REMOTE_PRODUCTION_MIGRATIONS = [
   { version: "20261115044903", name: "owner_cancel_stale_agi_task_v1" },
   { version: "20261115093001", name: "free_readonly_agi_pilot_v1" },
   { version: "20261116045906", name: "free_readonly_hostia_specialist_v1" },
+  { version: "20261116235003", name: "owner_granted_serverless_inventory_v1" },
 ];
 
 test("Hocker One migration ledger matches production version/name multiplicity exactly", async () => {
