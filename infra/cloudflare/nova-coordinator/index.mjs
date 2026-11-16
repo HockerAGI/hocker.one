@@ -160,6 +160,111 @@ export function safeCoordinatorErrorCode(error) {
   return "COORDINATOR_REQUEST_FAILED";
 }
 
+
+/**
+ * Optional execution pathway. Its Bearer token is separate from the existing
+ * observation secret. It can only ask Hocker One to complete a single
+ * previously Owner AAL2-authorized count-only snapshot, never an LLM request.
+ */
+export async function processOneApprovedInventory(env, fetcher = fetch) {
+  if (env.NOVA_FREE_INVENTORY_ENABLED !== "true") {
+    return { ok: true, processed: false, code: "FREE_INVENTORY_DISABLED" };
+  }
+  if (typeof env.NOVA_FREE_INVENTORY_TOKEN !== "string" ||
+      env.NOVA_FREE_INVENTORY_TOKEN.length < 40 ||
+      env.NOVA_FREE_INVENTORY_TOKEN.length > 256) {
+    throw new Error("COORDINATOR_INVENTORY_TOKEN_INVALID");
+  }
+  // The Vercel bypass is ONLY a deployment-protection bypass; the distinct
+  // inventory Bearer is the narrowly scoped service authorization.
+  if (typeof env.NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN !== "string" ||
+      !/^[A-Za-z0-9]{32}$/.test(env.NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN)) {
+    throw new Error("COORDINATOR_INVENTORY_BYPASS_MISSING");
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const response = await fetcher(
+      "https://hockerone.vercel.app/api/internal/nova-free-inventory",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + env.NOVA_FREE_INVENTORY_TOKEN,
+          "x-vercel-protection-bypass": env.NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN,
+          Accept: "application/json", "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+        body: JSON.stringify({
+          contract_version: 1, project_id: "hocker-one",
+          action: "process_one_owner_approved_inventory",
+        }),
+        redirect: "manual",
+        signal: controller.signal,
+      },
+    );
+    if (response.status !== 200) {
+      throw new Error("COORDINATOR_INVENTORY_HTTP_" + response.status);
+    }
+    if (!(response.headers.get("content-type") || "").includes("application/json")) {
+      throw new Error("COORDINATOR_INVENTORY_RESPONSE_TYPE");
+    }
+    const declared = response.headers.get("content-length");
+    if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > 2048)) {
+      throw new Error("COORDINATOR_INVENTORY_RESPONSE_TOO_LARGE");
+    }
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("COORDINATOR_INVENTORY_EMPTY_RESPONSE");
+    const chunks = [];
+    let size = 0;
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        size += part.value.byteLength;
+        if (size > 2048) throw new Error("COORDINATOR_INVENTORY_RESPONSE_TOO_LARGE");
+        chunks.push(part.value);
+      }
+    } finally {
+      await reader.cancel().catch(() => {});
+    }
+    const bytes = new Uint8Array(size);
+    let off = 0;
+    for (const part of chunks) { bytes.set(part, off); off += part.byteLength; }
+    let result;
+    try { result = JSON.parse(new TextDecoder().decode(bytes)); }
+    catch { throw new Error("COORDINATOR_INVENTORY_RESPONSE_NOT_JSON"); }
+
+    if (result?.ok !== true || typeof result.processed !== "boolean" ||
+        result.model_requests !== 0) {
+      throw new Error("COORDINATOR_INVENTORY_CONTRACT_INVALID");
+    }
+    if (result.processed) {
+      if (result.status !== "completed" ||
+          !/^[a-f0-9-]{36}$/i.test(result.task_id || "") ||
+          !/^[a-f0-9-]{36}$/i.test(result.run_id || "") ||
+          !/^[a-f0-9]{64}$/.test(result.result_hash || "") ||
+          result.source !== "supabase_live_count_only" ||
+          result.tools_executed !== 0 ||
+          result.external_writes_executed !== false ||
+          result.no_paid_fallback !== true) {
+        throw new Error("COORDINATOR_INVENTORY_CONTRACT_INVALID");
+      }
+      return {
+        ok: true, code: "FREE_INVENTORY_COMPLETED", processed: true,
+        task_id: result.task_id, run_id: result.run_id,
+        model_requests: 0, no_paid_fallback: true,
+      };
+    }
+    if (!["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED"].includes(result.reason) ||
+        result.task_claims !== 0) {
+      throw new Error("COORDINATOR_INVENTORY_CONTRACT_INVALID");
+    }
+    return { ok: true, code: result.reason, processed: false, model_requests: 0 };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -182,6 +287,12 @@ export default {
     try {
       const status = await observe(env);
       console.log(JSON.stringify({ event: "coordinator_observation", ...status }));
+      // The existing read-only observation must pass before a previously
+      // authorized inventory can run. No model or arbitrary task routes.
+      if (env.NOVA_FREE_INVENTORY_ENABLED === "true") {
+        const result = await processOneApprovedInventory(env);
+        console.log(JSON.stringify({ event: "owner_approved_free_inventory_tick", ...result }));
+      }
     } catch (error) {
       // Never log upstream responses, prompts or authorization headers.
       const code = safeCoordinatorErrorCode(error);
