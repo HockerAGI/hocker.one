@@ -147,3 +147,22 @@ export function parseNovaGithubCodeProposal(input: unknown): NovaGithubCodePropo
     changes,
   };
 }
+
+/**
+ * Serialize a verified proposal into ONE canonical (batch) argument form.
+ * The model-facing legacy fields are deliberately excluded to allow a
+ * second strict validation before any row is enqueued by Hocker One.
+ */
+export function serializeNovaGithubProposalArgs(proposal: NovaGithubCodeProposal) {
+  return {
+    repository: proposal.repository,
+    branch: proposal.branch,
+    expected_base_sha: proposal.expected_base_sha,
+    changes: proposal.changes.map((file) => ({
+      path: file.path, expected_file_sha: file.expected_file_sha, content: file.content,
+    })),
+    commit_message: proposal.commit_message,
+    pr_title: proposal.pr_title,
+    pr_body: proposal.pr_body,
+  };
+}

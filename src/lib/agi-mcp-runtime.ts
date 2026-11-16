@@ -8,7 +8,7 @@ import {
 } from "@/lib/mcp/mcp-policy";
 import { getMcpRegistry } from "@/lib/mcp/mcp-registry";
 import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
-import { NOVA_GITHUB_PROPOSAL_TOOL, parseNovaGithubCodeProposal } from "@/lib/nova-github-proposal";
+import { NOVA_GITHUB_PROPOSAL_TOOL, parseNovaGithubCodeProposal, serializeNovaGithubProposalArgs } from "@/lib/nova-github-proposal";
 import { normalizeGitHubListCommitsArguments } from "@/lib/mcp/mcp-github-read-arguments";
 import { createServerlessAgiTask } from "@/lib/serverless-agi-runtime";
 import type { AgiNativeTool, AgiToolCall, AgiToolResult } from "@/lib/agi-model-providers/types";
@@ -321,7 +321,7 @@ export async function executeAgiMcpToolCalls(
               ...ownerGateDraft(call),
               tool_key: "github",
               action_type: "github.propose_code_change",
-              args: proposal,
+              args: serializeNovaGithubProposalArgs(proposal),
             },
           },
         });

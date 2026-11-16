@@ -23,7 +23,9 @@ async function parser() {
       throw new Error("Unexpected dependency: " + id);
     },
   });
-  return compiledModule.exports.parseNovaGithubCodeProposal;
+  const parse = compiledModule.exports.parseNovaGithubCodeProposal;
+  parse.serialize = compiledModule.exports.serializeNovaGithubProposalArgs;
+  return parse;
 }
 
 const valid = () => ({
@@ -204,4 +206,54 @@ test("guided Owner review surfaces ALL file writes in sequence, not just the lat
   assert.equal(chain.nextAction.id, "step-0");
   actions[0].status = "executed";
   assert.equal(testModule.exports.buildGuidedGitHubChain(actions).nextAction.id, "step-1");
+});
+
+test("native NOVA proposal survives serialized deferred-draft reparsing, legacy and multi-file", async () => {
+  const parse = await parser();
+  const one = parse(valid());
+  const canonicalOne = parse.serialize(one);
+  assert.equal(Object.hasOwn(canonicalOne, "path"), false);
+  assert.equal(Object.hasOwn(canonicalOne, "expected_file_sha"), false);
+  assert.equal(Object.hasOwn(canonicalOne, "content"), false);
+  assert.equal(parse(canonicalOne).changes.length, 1);
+  assert.equal(parse(canonicalOne).changes[0].path, valid().path);
+
+  const { path, expected_file_sha, content, ...base } = valid();
+  const files = [
+    { path: "src/lib/a.ts", expected_file_sha: "b".repeat(40), content: "export const a = 1;\n" },
+    { path: "src/lib/b.ts", expected_file_sha: "c".repeat(40), content: "export const b = 2;\n" },
+  ];
+  const canonicalMulti = parse.serialize(parse({ ...base, changes: files }));
+  assert.equal(parse(canonicalMulti).changes.length, 2);
+  assert.equal(parse(canonicalMulti).changes[1].path, files[1].path);
+  const runtime = await read("src/lib/agi-mcp-runtime.ts");
+  assert.match(runtime, /args: serializeNovaGithubProposalArgs\(proposal\)/);
+});
+
+test("guided GitHub worker prevents subsequent writes after rejecting a preceding file", async () => {
+  const src = await read("src/lib/agi-action-execution.ts");
+  const start = src.indexOf("export function findGuidedGithubBlockingPredecessor");
+  const end = src.indexOf("async function assertGuidedGithubApprovalOrder", start);
+  assert.ok(start >= 0 && end > start);
+  const fnSource = src.slice(start, end);
+  const compiled = ts.transpileModule(fnSource, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const testModule = { exports: {} };
+  vm.runInNewContext(compiled, { module: testModule, exports: testModule.exports });
+  const find = testModule.exports.findGuidedGithubBlockingPredecessor;
+  const rows = [
+    { id: "branch", status: "executed", action_type: "github.create_branch" },
+    { id: "first-file", status: "rejected", action_type: "github.upsert_file" },
+    { id: "second-file", status: "needs_approval", action_type: "github.upsert_file" },
+    { id: "pr", status: "needs_approval", action_type: "github.create_pr" },
+  ];
+  assert.equal(find(rows, "second-file").id, "first-file", "rejected first file must stop second");
+  assert.equal(find(rows, "pr").id, "first-file", "rejected first file must stop PR");
+  rows[1].status = "executed";
+  assert.equal(find(rows, "second-file"), null, "executed predecessor permits next file");
+  rows[2].status = "executed";
+  assert.equal(find(rows, "pr"), null, "every completed file permits draft PR");
+  assert.match(src, /findGuidedGithubBlockingPredecessor\(chain\.siblings, item\.id\)/);
+  assert.equal(src.split("findGuidedGithubBlockingPredecessor(chain.siblings, item.id)").length - 1, 2);
 });
