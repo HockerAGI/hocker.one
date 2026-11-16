@@ -17,19 +17,32 @@ unrestricted tools, or a dedicated persistent runtime.
    real project ownership, exactly 16 registered AGIs, zero material action grants,
    zero active tasks and zero blocked material actions. One idempotency key per
    **UTC date** prevents repeat approval or automatic replays.
+   The authorization stores the exact Vercel `VERCEL_GIT_COMMIT_SHA` and a
+   fixed execution contract version. On a revision change, it is canceled
+   with audit instead of being silently carried over.
 3. The existing Cloudflare coordinator's **separate inventory Bearer token**
    is scoped to one internal endpoint, not the observation token. The existing
    Vercel protection bypass is just a frontend protection control, NOT an
    action authorization or provider key.
-4. The endpoint only invokes `public.run_owner_free_inventory_v1`, which
+4. The approved task is held in a distinct `owner_approved_inventory` status,
+   **not queued or pending**. Live database inspection confirms both generic
+   workers claim only `queued` and the dispatch shim advances only
+   `pending/review`. Neither can capture this one-time approval.
+   The scheduled RPC selects the oldest reserved grant **across UTC midnight**
+   and always applies its 20-minute expiration check.
+5. The endpoint only invokes `public.run_owner_free_inventory_v1`, which
    requires the single exact approved task, expected owner, 20-minute TTL,
    `draft_only` policy, no tools, no model, one attempt and a clear
    material-action queue. It uses a project advisory transaction lock.
-5. In ONE SQL transaction the RPC captures genuine count-only Supabase
+6. In ONE SQL transaction the RPC captures genuine count-only Supabase
    metrics, completes the task, creates a no-model run, computes SHA-256 from
    canonical PostgreSQL JSONB text, persists evidence, and writes the audit
    event. No external network call, model, MCP tool or GitHub operation occurs.
    An empty approval queue returns a verified no-work response.
+7. At any time before execution, Owner MFA AAL2 can use the panel to revoke
+   this approval. `public.owner_cancel_free_inventory_v1` locks the same
+   authorization key, updates just its task to `canceled` and inserts
+   independent audit evidence; the Cron cannot race that revocation.
 
 ## Rollout gates
 
