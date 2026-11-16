@@ -4,6 +4,7 @@ import VerifiableWorkersConsole from "@/components/workers/VerifiableWorkersCons
 import FreeReadonlyPilotPanel from "@/components/workers/FreeReadonlyPilotPanel";
 import FreeUnifiedWorkerCanaryPanel from "@/components/workers/FreeUnifiedWorkerCanaryPanel";
 import FreeNovaHostiaDelegationPanel from "@/components/workers/FreeNovaHostiaDelegationPanel";
+import FreeScheduledInventoryPanel from "@/components/workers/FreeScheduledInventoryPanel";
 
 export const metadata: Metadata = {
   title: "Trabajadores AGI · Hocker ONE",
@@ -22,6 +23,7 @@ export default function WorkersPage() {
       <FreeReadonlyPilotPanel />
       <FreeUnifiedWorkerCanaryPanel />
       <FreeNovaHostiaDelegationPanel />
+      <FreeScheduledInventoryPanel />
     </PageShell>
   );
 }
