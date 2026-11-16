@@ -10,6 +10,15 @@ const good = {
   project_id: "hocker-one",
   owner_gate_bypassed: false, material_actions_executed: 0, model_requests: 0,
   agi_tasks_claimed: 0,
+  serverless_free_preflight: {
+    contract_version: 1, mode: "read_only_capacity_observation", checked: true,
+    provider: "cloudflare-workers-ai", fixed_model: "@cf/zai-org/glm-4.7-flash",
+    provider_configured: false, cost_attestation: "operator_flag_not_billing_api",
+    billing_api_verified: false, globally_enabled_material_agents: 0,
+    owner_authorization_required: true, candidate_for_owner_review: false,
+    automatic_dispatch: false, model_requests_per_tick: 0,
+    task_claims_per_tick: 0, dedicated_runtime: false,
+  },
   event_preflight: {contract_version: 1, mode: "event_preflight_only",
     checked: true, stale_agi_tasks: 0, blocked: false,
     ready_for_dispatch: false, task_executor: false, dedicated_runtime: false},
@@ -51,6 +60,9 @@ test("one GET to fixed Hocker One origin, with scoped token and no payload", asy
   assert.equal(result.event_preflight_verified,true);
   assert.equal(result.stale_agi_tasks,0);
   assert.equal(result.ready_for_dispatch,false);
+  assert.equal(result.automatic_dispatch,false);
+  assert.equal(result.billing_api_verified,false);
+  assert.equal(result.model_requests_per_tick,0);
   assert.equal(JSON.stringify(result).includes(token),false);
   assert.equal(JSON.stringify(result).includes(bypass),false);
 });
@@ -90,6 +102,16 @@ test("stale and forged preflight evidence fails closed", async()=>{
     {...good,event_preflight:{...good.event_preflight,task_executor:true}},
     {...good,event_preflight:{...good.event_preflight,dedicated_runtime:true}},
     {...good,agi_tasks_claimed:1},
+    {...good,serverless_free_preflight:undefined},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,automatic_dispatch:true}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,model_requests_per_tick:1}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,task_claims_per_tick:1}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,owner_authorization_required:false}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,fixed_model:"wrong-model"}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,billing_api_verified:true}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,globally_enabled_material_agents:1,candidate_for_owner_review:true}},
+    {...good,metrics:{...good.metrics,queued_agi_tasks:0},serverless_free_preflight:{...good.serverless_free_preflight,provider_configured:true,candidate_for_owner_review:false}},
+    {...good,serverless_free_preflight:{...good.serverless_free_preflight,provider_configured:true,candidate_for_owner_review:true},metrics:{...good.metrics,queued_agi_tasks:1}},
   ];
   for(const payload of bad){
     await assert.rejects(observe(env,()=>okResponse(payload)),/COORDINATOR_RESPONSE_CONTRACT_INVALID/);
@@ -145,6 +167,14 @@ test("public Worker only provides minimal health; routes do not execute tools",a
   assert.match(route,/timingSafeEqual/);
   assert.match(route,/inspectAgiBacklog\(PROJECT_ID\)/);
   assert.match(route,/event_preflight:/);
+  assert.match(route,/serverless_free_preflight:/);
+  assert.match(route,/cloudflareFreePilotConfigured/);
+  assert.match(route,/candidate_for_owner_review: candidateForOwnerReview/);
+  assert.match(route,/globally_enabled_material_agents: actionGrants.count/);
+  assert.match(route,/\.eq\("allow_actions", true\)/);
+  assert.match(route,/billing_api_verified: false/);
+  assert.match(route,/model_requests_per_tick: 0/);
+  assert.match(route,/automatic_dispatch: false/);
   assert.match(route,/ready_for_dispatch: false/);
   assert.match(route,/from\("agi_agents"\)\.select\("agi_id", \{ head: true, count: "exact" \}\)/);
   assert.doesNotMatch(route,/from\("agi_agents"\)\.select\("id"/);
@@ -152,4 +182,17 @@ test("public Worker only provides minimal health; routes do not execute tools",a
   assert.doesNotMatch(route,/\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(|executeCommand\(|runUnifiedAgiWorkerOnce\(/);
   assert.match(config,/NOVA_COORDINATOR_ENABLED = "false"/);
   assert.doesNotMatch(config,/^crons\s*=/m);
+});
+
+test("a clear candidate remains Owner-only and cannot dispatch automatically",async()=>{
+  const env={NOVA_COORDINATOR_ENABLED:"true",NOVA_COORDINATOR_READ_TOKEN:token,
+    NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN:bypass};
+  const eligible={...good,metrics:{...good.metrics,queued_agi_tasks:0},
+    serverless_free_preflight:{...good.serverless_free_preflight,
+      provider_configured:true,candidate_for_owner_review:true}};
+  const result=await observe(env,()=>okResponse(eligible));
+  assert.equal(result.owner_review_preflight_clear,true);
+  assert.equal(result.automatic_dispatch,false);
+  assert.equal(result.model_requests_per_tick,0);
+  assert.equal(result.ready_for_dispatch,false);
 });
