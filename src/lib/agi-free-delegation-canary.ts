@@ -35,7 +35,9 @@ export async function readFreeNovaHostiaDelegation() {
         .eq("project_id", PROJECT).eq("idempotency_key", key).maybeSingle(),
     ),
   );
-  if (parent.error || child.error) throw new Error("FREE_DELEGATION_STATUS_UNAVAILABLE");
+  if (!parent || !child || parent.error || child.error) {
+    throw new Error("FREE_DELEGATION_STATUS_UNAVAILABLE");
+  }
   return { parent: parent.data, child: child.data, already_started: Boolean(parent.data || child.data) };
 }
 
@@ -207,12 +209,15 @@ async function performStep(step: Step, ownerId: string, parentRunId?: string) {
         p_output: output, p_evidence: evidence, p_result_hash: hash,
       },
     );
-    if (endError || !ended?.length || ended[0].run_id !== runId ||
-      ended[0].result_hash !== hash) throw new Error("FREE_DELEGATION_COMPLETION_UNVERIFIED");
+    const completed = ended?.[0];
+    if (endError || !completed || completed.run_id !== runId ||
+      completed.result_hash !== hash) throw new Error("FREE_DELEGATION_COMPLETION_UNVERIFIED");
     return { task_id: task.id, run_id: runId, status: "completed", result_hash: hash,
       agi_id: step, provider: PROVIDER, model: CF_FREE_MODEL, parent_run_id: parentRunId ?? null };
   } catch (failure) {
-    const code = failure instanceof Error ? failure.message.split(":")[0] : "FREE_DELEGATION_RUN_FAILED";
+    const code = failure instanceof Error
+      ? (failure.message.split(":")[0] ?? "FREE_DELEGATION_RUN_FAILED")
+      : "FREE_DELEGATION_RUN_FAILED";
     const safe = code.startsWith("FREE_DELEGATION_") ? code : "FREE_DELEGATION_RUN_FAILED";
     await rpc.rpc("fail_agi_task", { p_task_id: task.id, p_worker_id: workerId,
       p_error: safe, p_evidence: [{ kind: "free_delegation_failure", worker_id: workerId, task_id: task.id, run_id: runId }] });
