@@ -190,3 +190,17 @@ test("Vercel checkpoint freshness comes from existing REST credentials and exact
   assert.match(code, /vercel_production_rest_verification_unavailable/);
   assert.doesNotMatch(code, /VERCEL_TOKEN\s*=/);
 });
+
+test("continuity focuses PR tracking on exactly the three HOCKER core repos", async () => {
+  const code = await source("src/lib/project-continuity.ts");
+  const declaration = code.match(/const FOCUS_REPOSITORIES = new Set\(\[([^\]]+)\]\);/);
+  assert.ok(declaration, "explicit core repo allowlist must exist");
+  const repositories = [...declaration[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(repositories.sort(), [
+    "hocker-node-agent",
+    "hocker.one",
+    "nova.agi",
+  ]);
+  assert.match(code, /\.filter\(\(repo\) => FOCUS_REPOSITORIES\.has\(repo\.name\)\)/);
+  assert.match(code, /const pulls = await listOpenPulls\(owner, repo\.name\)/);
+});
