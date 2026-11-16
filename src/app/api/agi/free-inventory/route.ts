@@ -10,7 +10,12 @@ const PROJECT = "hocker-one";
 const prefix = "owner-free-inventory-v1:";
 const Body = z.object({ project_id: z.literal(PROJECT), confirm: z.literal(true) }).strict();
 
-const configured = () => process.env.NOVA_FREE_INVENTORY_ENABLED === "true";
+const configured = () =>
+  process.env.NOVA_FREE_INVENTORY_ENABLED === "true" &&
+  process.env.NOVA_COORDINATOR_OBSERVE_ENABLED === "true" &&
+  typeof process.env.NOVA_FREE_INVENTORY_TOKEN === "string" &&
+  process.env.NOVA_FREE_INVENTORY_TOKEN.length >= 40 &&
+  process.env.NOVA_FREE_INVENTORY_TOKEN.length <= 256;
 
 function reply(value: Record<string, unknown>, status = 200) {
   return NextResponse.json(value, {
