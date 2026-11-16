@@ -47,3 +47,20 @@ test("default browser CORS does not allow shared secret gate headers", async () 
   assert.doesNotMatch(cors, /DEFAULT_HEADERS[^\n]*Hocker-Owner-Key/i);
   assert.doesNotMatch(cors, /DEFAULT_HEADERS[^\n]*Hocker-Internal-Key/i);
 });
+
+test("NOVA status requires dedicated runtime readiness evidence, never a generic HTTP response", async () => {
+  const route = await read("src/app/api/system/status/route.ts");
+  const nova = route.slice(route.indexOf("function novaReadyUrl("), route.indexOf("async function checkAgentByUrl("));
+  assert.match(nova, /url\.pathname = url\.pathname/);
+  assert.match(nova, /"\/health\/ready"/);
+  assert.match(nova, /response\.status !== 200/);
+  assert.match(nova, /data\.ok !== true/);
+  assert.match(nova, /data\.status !== "ready"/);
+  assert.match(nova, /data\.service !== "nova\.agi"/);
+  for (const requirement of ["database", "inference_configuration", "worker", "heartbeat"]) {
+    assert.ok(nova.includes(`hasPassed("${requirement}")`));
+  }
+  assert.match(nova, /Readiness no verificada/);
+  assert.doesNotMatch(nova, /await probe\(\`\$\{base\}/);
+  assert.doesNotMatch(nova, /return res\.status > 0 && res\.status < 500/);
+});

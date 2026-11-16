@@ -92,8 +92,58 @@ async function checkSupabase(): Promise<Check> {
   };
 }
 
+// NOVA dedicated readiness is not proven by a reachable URL or a 401/403/404.
+// The dedicated runtime contract requires its own fresh heartbeat and worker tick.
+function novaReadyUrl(configured: string): string {
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    url.pathname = url.pathname
+      .replace(/\/(?:api\/)?health(?:\/ready)?\/?$/, "")
+      .replace(/\/+$/, "") + "/health/ready";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function probeNovaReady(url: string, headers: HeadersInit): Promise<boolean> {
+  if (!url) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers: { ...headers, accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (response.status !== 200) return false;
+    const payload: unknown = await response.json().catch(() => null);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    const data = payload as Record<string, unknown>;
+    if (data.ok !== true || data.status !== "ready" || data.service !== "nova.agi") return false;
+    const checks = data.checks;
+    if (!checks || typeof checks !== "object" || Array.isArray(checks)) return false;
+    const proof = checks as Record<string, unknown>;
+    const hasPassed = (name: string) => {
+      const row = proof[name];
+      return row && typeof row === "object" && !Array.isArray(row) &&
+        (row as Record<string, unknown>).ok === true;
+    };
+    return Boolean(hasPassed("database") && hasPassed("inference_configuration") &&
+      hasPassed("worker") && hasPassed("heartbeat"));
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function checkNova(): Promise<Check> {
-  const url = env("NOVA_AGI_HEALTH_URL", "NOVA_HEALTH_URL", "NOVA_AGI_URL", "NOVA_URL");
+  const url = env("NOVA_AGI_URL", "NOVA_URL", "NOVA_AGI_HEALTH_URL", "NOVA_HEALTH_URL");
   const key = env("NOVA_ORCHESTRATOR_KEY", "NOVA_API_KEY");
 
   if (!url) {
@@ -104,18 +154,13 @@ async function checkNova(): Promise<Check> {
     };
   }
 
-  const base = cleanUrl(url);
   const headers: HeadersInit = key ? { authorization: `Bearer ${key}` } : {};
-
-  const active =
-    (await probe(`${base}/api/health`, headers)) ||
-    (await probe(`${base}/health`, headers)) ||
-    (await probe(base, headers));
+  const active = await probeNovaReady(novaReadyUrl(url), headers);
 
   return {
     active,
     label: "NOVA",
-    detail: active ? "Online" : "Sin respuesta",
+    detail: active ? "Runtime dedicado listo" : "Readiness no verificada",
   };
 }
 
