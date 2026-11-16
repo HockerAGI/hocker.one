@@ -7,7 +7,7 @@ import ts from "typescript";
 const read = (path) => readFile(new URL("../" + path, import.meta.url), "utf8");
 
 test("HOSTIA Free-only canary starts atomically under Owner scope, daily uniqueness and queue lock", async () => {
-  const sql = await read("supabase/migrations/20261116053001_free_readonly_hostia_specialist_v1.sql");
+  const sql = await read("supabase/migrations/20261116045906_free_readonly_hostia_specialist_v1.sql");
   assert.match(sql, /CREATE OR REPLACE FUNCTION public\.start_free_readonly_hostia_pilot_v1/);
   assert.match(sql, /p_owner_id uuid/);
   assert.match(sql, /m\.role = 'owner'/);
