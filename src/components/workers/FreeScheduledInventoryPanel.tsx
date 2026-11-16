@@ -8,7 +8,7 @@ type Task = {
 };
 type InventoryState = {
   ok?: boolean; configured?: boolean; can_authorize?: boolean;
-  already_authorized_today?: boolean; task?: Task | null;
+  already_authorized_today?: boolean; can_cancel?: boolean; task?: Task | null;
   code?: string;
 };
 type Authorization = { ok?: boolean; approved?: boolean; task_id?: string; code?: string };
@@ -59,6 +59,35 @@ export default function FreeScheduledInventoryPanel() {
     }
   }
 
+
+  async function cancel() {
+    if (busy || !status?.can_cancel || !status.task?.id) return;
+    const taskId = status.task.id;
+    if (!window.confirm(
+      "¿Revocar esta autorización programada antes de que Cloudflare la procese? " +
+      "La cancelación es definitiva, queda auditada y no inicia ninguna inferencia."
+    )) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/agi/free-inventory", {
+        method: "DELETE", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: "hocker-one", confirm: true, task_id: taskId,
+        }),
+      });
+      const data = await response.json().catch(() => ({})) as Authorization & { canceled?: boolean };
+      setResult(response.ok && data.canceled
+        ? { ok: true, code: "Autorización revocada y auditada." }
+        : { ok: false, code: data.code || "FREE_INVENTORY_CANCEL_UNVERIFIED" });
+    } catch {
+      setResult({ ok: false, code: "FREE_INVENTORY_CANCEL_NETWORK_UNAVAILABLE" });
+    } finally {
+      await refresh();
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="hocker-panel-pro p-5" aria-label="Autorización de inventario serverless">
       <h2 className="text-lg font-bold text-white">
@@ -97,6 +126,12 @@ export default function FreeScheduledInventoryPanel() {
           className="hocker-button-primary disabled:cursor-not-allowed disabled:opacity-50">
           {busy ? "Registrando aprobación…" : "Autorizar inventario NOVA (MFA)"}
         </button>
+        {status?.can_cancel ? (
+          <button type="button" onClick={() => { void cancel(); }} disabled={busy}
+            className="rounded-lg border border-amber-300/50 px-4 py-2 text-sm text-amber-100 disabled:opacity-50">
+            Revocar aprobación (MFA)
+          </button>
+        ) : null}
         <button type="button" onClick={() => { void refresh(); }}
           className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white">
           Actualizar evidencia
