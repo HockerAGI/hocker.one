@@ -16,7 +16,21 @@ type DbResult<T> = { data: T | null; error: { message: string } | null };
 type RpcDb = { rpc<T>(name: string, args: Record<string, unknown>): PromiseLike<DbResult<T>> };
 type TaskRow = { id: string; project_id: string; agi_id: string; title: string; details: string; input: Record<string, unknown>; payload: Record<string, unknown> };
 type RunRow = { id: string; task_id: string; agi_id: string; project_id: string; status: string; worker_id: string; provider: string; model: string; result_hash: string | null; output: Record<string, unknown>; evidence: Record<string, unknown>[] };
-const sha256 = (data: unknown): string => createHash("sha256").update(JSON.stringify(data)).digest("hex");
+// Recompute the same digest after a JSONB round-trip: object key order must
+// not affect the hash used to authorize the child. JSON arrays preserve order.
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+        .map(([key, item]) => [key, canonicalize(item)]),
+    );
+  }
+  return value;
+}
+const sha256 = (data: unknown): string =>
+  createHash("sha256").update(JSON.stringify(canonicalize(data))).digest("hex");
 export const FREE_NOVA_HOSTIA_PARENT_KEY = "free-nova-hostia-v1:parent:one-time";
 export const FREE_NOVA_HOSTIA_CHILD_KEY = "free-nova-hostia-v1:child:one-time";
 const keyFor = (step: Step) => step === "nova" ? FREE_NOVA_HOSTIA_PARENT_KEY : FREE_NOVA_HOSTIA_CHILD_KEY;
@@ -41,7 +55,7 @@ export async function readFreeNovaHostiaDelegation() {
   return { parent: parent.data, child: child.data, already_started: Boolean(parent.data || child.data) };
 }
 
-async function reserveStep(input: { step: Step; ownerId: string; workerId: string; parentRunId?: string }) {
+async function reserveStep(input: { step: Step; ownerId: string; workerId: string; parentRunId?: string; parentExpectedHash?: string }) {
   if (!freeNovaHostiaDelegationConfigured()) throw new Error("FREE_DELEGATION_CONFIG_DISABLED");
   if (!/^hocker-one-unified:[a-z0-9-]+:[0-9a-f-]{36}$/i.test(input.workerId)) {
     throw new Error("FREE_DELEGATION_WORKER_INVALID");
@@ -88,7 +102,9 @@ async function reserveStep(input: { step: Step; ownerId: string; workerId: strin
     const r = parent.data as RunRow;
     const parentOut = r.output ?? {};
     const proof = Array.isArray(r.evidence) ? r.evidence[0] : null;
-    if (r.task_id !== parentTask.data.id || parentTask.data.status !== "completed" ||
+    if (!input.parentExpectedHash || r.result_hash !== input.parentExpectedHash ||
+      !r.result_hash || sha256(parentOut) !== r.result_hash ||
+      r.task_id !== parentTask.data.id || parentTask.data.status !== "completed" ||
       parentTask.data.agi_id !== "nova" || r.agi_id !== "nova" ||
       r.status !== "completed" || r.provider !== PROVIDER || r.model !== CF_FREE_MODEL ||
       !r.worker_id.startsWith("hocker-one-unified:") ||
@@ -100,7 +116,10 @@ async function reserveStep(input: { step: Step; ownerId: string; workerId: strin
       !r.result_hash || parentTask.data.result_hash !== r.result_hash ||
       !proof || proof.kind !== "verified_free_delegation_parent_completion" ||
       proof.output_sha256 !== r.result_hash || proof.task_id !== r.task_id ||
-      proof.worker_id !== r.worker_id || proof.provider !== PROVIDER || proof.model !== CF_FREE_MODEL) {
+      proof.run_id !== r.id || proof.agi_id !== "nova" ||
+      proof.worker_id !== r.worker_id || proof.provider !== PROVIDER ||
+      proof.model !== CF_FREE_MODEL || proof.no_tools !== true ||
+      proof.external_writes_executed !== false) {
       throw new Error("FREE_DELEGATION_PARENT_EVIDENCE_INVALID");
     }
     parentSummary = String(parentOut.summary).slice(0, 1000);
@@ -141,9 +160,9 @@ async function reserveStep(input: { step: Step; ownerId: string; workerId: strin
   return data as TaskRow;
 }
 
-async function performStep(step: Step, ownerId: string, parentRunId?: string) {
+async function performStep(step: Step, ownerId: string, parentRunId?: string, parentExpectedHash?: string) {
   const workerId = "hocker-one-unified:" + (process.env.VERCEL_REGION || "unknown") + ":" + randomUUID();
-  const task = await reserveStep({ step, ownerId, workerId, parentRunId });
+  const task = await reserveStep({ step, ownerId, workerId, parentRunId, parentExpectedHash });
   const sb = createAdminSupabase();
   const rpc = sb as unknown as RpcDb;
   let runId: string | null = null;
@@ -238,7 +257,7 @@ export async function runOneFreeNovaHostiaDelegation(ownerId: string) {
   // Two authentic, distinct provider calls, both bounded to Workers Free.
   // Parent completion MUST be persisted before the child can be reserved.
   const parent = await performStep("nova", ownerId);
-  const child = await performStep("hostia", ownerId, parent.run_id);
+  const child = await performStep("hostia", ownerId, parent.run_id, parent.result_hash);
   return { ok: true, parent, child, no_autonomous_dispatch: true,
     no_tools: true, no_paid_fallback: true, delegation_verified_as: "readonly_parent_child_only" };
 }
