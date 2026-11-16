@@ -13,7 +13,7 @@ import {
 
 const PROJECT_ID = "hocker-one";
 const DEFAULT_GITHUB_OWNER = "HockerAGI";
-const FOCUS_REPOSITORIES = new Set(["hocker.one", "nova.agi"]);
+const FOCUS_REPOSITORIES = new Set(["hocker.one", "nova.agi", "hocker-node-agent"]);
 // Existing production project; the Vercel REST client uses already configured
 // server-only VERCEL_TOKEN and VERCEL_TEAM_ID. No new provider or credentials.
 const HOCKER_ONE_VERCEL_PROJECT_ID = "prj_QoUSRUZj4LQmB3qoRF3bnoFOFQPz";
