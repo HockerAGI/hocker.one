@@ -54,3 +54,32 @@ test("worker UI exposes only an explicit human-confirmed pilot", async () => {
   assert.match(code, /\/api\/agi\/free-pilot/);
   assert.doesNotMatch(code, /setInterval|autoRun|onMount.*POST/);
 });
+
+test("NOVA read-only pilot distinguishes empty queue from inactive AGIs and protects allow_actions", async () => {
+  const route = await read("src/app/api/agi/free-pilot/route.ts");
+  assert.match(route, /cola sin tareas pendientes NO demuestra/);
+  assert.match(route, /allow_actions=false protege acciones materiales/);
+  assert.match(route, /Nunca recomiendes cambiar allow_actions a true/);
+  assert.match(route, /separa hechos de inferencias/);
+  assert.match(route, /verified_facts_only: false/);
+  assert.match(route, /tools_executed: 0/);
+  assert.match(route, /no_paid_fallback: true/);
+  assert.match(route, /autonomous_dispatch_enabled: false/);
+});
+
+test("Owner re-opening Workers sees the existing real pilot response, with escaped mobile formatting", async () => {
+  const route = await read("src/app/api/agi/free-pilot/route.ts");
+  const ui = await read("src/components/workers/FreeReadonlyPilotPanel.tsx");
+  assert.match(route, /\.select\("id,status,created_at,completed_at,result_hash,error,output"\)/);
+  assert.match(route, /await requireOwnerAal2Api\(PROJECT_ID\)/);
+  assert.match(ui, /state\?\.task\?\.status === "completed"/);
+  assert.match(ui, /state\.task\.output\?\.summary/);
+  assert.match(ui, /function PilotSummary/);
+  assert.match(ui, /summary\.split\(\/\\r\?\\n\/\)/);
+  assert.match(ui, /inlineEmphasis/);
+  assert.match(ui, /el texto generado por NOVA no es un diagnóstico operativo certificado/);
+  assert.match(ui, /No lo habilites globalmente/);
+  assert.doesNotMatch(ui, /dangerouslySetInnerHTML|innerHTML|<iframe/);
+  assert.match(ui, /window\.confirm/);
+  assert.doesNotMatch(ui, /setInterval|autoRun|onMount.*POST/);
+});
