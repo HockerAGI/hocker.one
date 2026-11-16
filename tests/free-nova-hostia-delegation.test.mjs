@@ -15,6 +15,10 @@ test("Free NOVA-HOSTIA parent/child are unique, durable and linked", async () =>
   assert.match(s, /delegation_depth: isChild \? 1 : 0/);
   assert.match(s, /parentOut\.verified_execution !== true/);
   assert.match(s, /proof\.output_sha256 !== r\.result_hash/);
+  assert.match(s, /sha256\(parentOut\) !== r\.result_hash/);
+  assert.match(s, /r\.result_hash !== input\.parentExpectedHash/);
+  assert.match(s, /proof\.run_id !== r\.id/);
+  assert.match(s, /function canonicalize\(value: unknown\)/);
   assert.match(s, /parentTask\.data\.result_hash !== r\.result_hash/);
   assert.match(s, /parentOut\.requested_by !== input\.ownerId/);
   assert.match(s, /attempt_count: 1, max_attempts: 1/);
@@ -45,7 +49,7 @@ test("Two actual direct Cloudflare model calls are parent first and child second
   assert.match(s, /result\.model !== CF_FREE_MODEL/);
   assert.match(s, /!result\.text\.trimEnd\(\)\.endsWith\(TERMINATOR\)/);
   assert.match(s, /const parent = await performStep\("nova", ownerId\)/);
-  assert.match(s, /const child = await performStep\("hostia", ownerId, parent\.run_id\)/);
+  assert.match(s, /const child = await performStep\("hostia", ownerId, parent\.run_id, parent\.result_hash\)/);
   assert.match(s, /no_autonomous_dispatch: true/);
   assert.doesNotMatch(s, /completeAgi\(|AGI_DELEGATION_DISPATCH_ENABLED|allow_actions: true/);
 });
@@ -59,4 +63,13 @@ test("UI requires one manual confirmation and never repeats on mount", async () 
   assert.match(s, /confirm: true/);
   assert.match(p, /FreeNovaHostiaDelegationPanel/);
   assert.doesNotMatch(s, /setInterval|setTimeout|autoRun|dangerouslySetInnerHTML/);
+});
+
+test("General Workers API redacts both sensitive model outputs and evidence for Free delegation tasks", async () => {
+  const route = await read("src/app/api/agi/workers/route.ts");
+  assert.match(route, /idempotency_key/);
+  assert.match(route, /startsWith\("free-nova-hostia-v1:"\)/);
+  assert.match(route, /output: privateDelegation \? \{ redacted: true, result_hash: row\.result_hash \} : row\.output/);
+  assert.match(route, /evidence: privateDelegation \? \[\] : row\.evidence/);
+  assert.match(route, /idempotency_key: undefined/);
 });
