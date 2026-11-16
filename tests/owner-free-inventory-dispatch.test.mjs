@@ -57,7 +57,7 @@ test("Cron dispatch uses one fixed POST endpoint, distinct token, bounded payloa
 });
 
 test("No approved task, expired authorization and arbitrary data cannot trigger inference", async () => {
-  for (const reason of ["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED"]) {
+  for (const reason of ["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED", "OWNER_REVISION_CHANGED_CANCELED"]) {
     const r = await processOneApprovedInventory(env, () => json({
       ok: true, processed: false, reason, model_requests: 0, task_claims: 0,
     }));
@@ -107,10 +107,25 @@ test("SQL one-time Owner grant and execution use atomic, service-role-only, exac
   assert.match(sql, /CREATE OR REPLACE FUNCTION public.run_owner_free_inventory_v1/);
   assert.match(sql, /SECURITY DEFINER/);
   assert.match(sql, /SET search_path TO 'pg_catalog','public','extensions','pg_temp'/);
-  assert.match(sql, /REVOKE ALL ON FUNCTION public.owner_schedule_free_inventory_v1\(text,uuid\)/);
-  assert.match(sql, /REVOKE ALL ON FUNCTION public.run_owner_free_inventory_v1\(text,text\)/);
-  assert.match(sql, /GRANT EXECUTE ON FUNCTION public.run_owner_free_inventory_v1\(text,text\)/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION public.owner_schedule_free_inventory_v1\(text,uuid,text\)/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION public.run_owner_free_inventory_v1\(text,text,text\)/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION public.run_owner_free_inventory_v1\(text,text,text\)/);
   assert.match(sql, /idempotency_key=v_key/);
+  assert.match(sql, /CREATE OR REPLACE FUNCTION public.owner_cancel_free_inventory_v1/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION public.owner_cancel_free_inventory_v1\(text,uuid,uuid\)/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION public.owner_cancel_free_inventory_v1\(text,uuid,uuid\)/);
+  assert.match(sql, /status='owner_approved_inventory'/);
+  assert.match(sql, /p_deployment_sha !~ '\^\[a-f0-9\]\{40\}\$'/);
+  assert.match(sql, /approved_deployment_sha/);
+  assert.match(sql, /OWNER_REVISION_CHANGED_CANCELED/);
+  assert.match(sql, /FOR UPDATE SKIP LOCKED LIMIT 1/);
+  const runBlock = sql.split("CREATE OR REPLACE FUNCTION public.run_owner_free_inventory_v1")[1]
+    .split("CREATE OR REPLACE FUNCTION public.owner_cancel_free_inventory_v1")[0];
+  assert.match(runBlock, /idempotency_key LIKE 'owner-free-inventory-v1:%'/);
+  assert.doesNotMatch(runBlock, /idempotency_key=v_key/);
+  assert.match(runBlock, /v_busy<>0/);
+  assert.match(runBlock, /status='owner_approved_inventory'/);
+
   assert.match(sql, /FOR UPDATE/);
   assert.match(sql, /pg_advisory_xact_lock/);
   assert.match(sql, /v_task\.max_attempts IS DISTINCT FROM 1/);
@@ -136,6 +151,15 @@ test("Both HTTP gates require Owner MFA or independent authenticated Cron, never
   assert.match(owner, /validOrigin/);
   assert.match(owner, /confirm: z\.literal\(true\)/);
   assert.match(owner, /owner_schedule_free_inventory_v1/);
+  assert.match(owner, /p_deployment_sha: sha\(\)/);
+  assert.match(owner, /export async function DELETE\(request: NextRequest\)/);
+  assert.match(owner, /owner_cancel_free_inventory_v1/);
+  assert.match(owner, /CancelBody/);
+  assert.match(owner, /can_cancel:/);
+  assert.match(cron, /p_deployment_sha: deploymentSha/);
+  assert.match(cron, /OWNER_REVISION_CHANGED_CANCELED/);
+  assert.match(panel, /Revocar aprobación \(MFA\)/);
+
   assert.match(cron, /NOVA_FREE_INVENTORY_TOKEN/);
   assert.match(cron, /timingSafeEqual/);
   assert.match(cron, /process_one_owner_approved_inventory/);
