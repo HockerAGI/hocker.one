@@ -11,10 +11,10 @@ async function parser() {
   const compiled = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   }).outputText;
-  const module = { exports: {} };
+  const compiledModule = { exports: {} };
   vm.runInNewContext(compiled, {
-    module,
-    exports: module.exports,
+    module: compiledModule,
+    exports: compiledModule.exports,
     Buffer,
     require(id) {
       if (id === "@/lib/github-repository-governance") {
@@ -23,7 +23,7 @@ async function parser() {
       throw new Error("Unexpected dependency: " + id);
     },
   });
-  return module.exports.parseNovaGithubCodeProposal;
+  return compiledModule.exports.parseNovaGithubCodeProposal;
 }
 
 const valid = () => ({
