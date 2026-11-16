@@ -1,4 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
+import { CF_FREE_MODEL } from "@/lib/cloudflare-zero-credit-policy";
+import { cloudflareWorkersAiProvider } from "@/lib/agi-model-providers/cloudflare-workers-ai";
+import { reserveOneFreeUnifiedHostiaTask } from "@/lib/agi-free-unified-canary";
 import { HOCKER_AGI_CANON_VERSION, type HockerAgiCanonRecord } from "@/lib/hocker-agi-canon";
 import {
   buildCanonicalProfilePrompt,
@@ -98,6 +101,7 @@ async function startVerifiedRun(args: {
   worker_id: string;
   provider: string;
   model: string;
+  free_only_canary?: boolean;
 }): Promise<string> {
   const { data, error } = await rpcDb().rpc<Array<{ run_id: string }>>(
     "start_serverless_agi_execution",
@@ -115,7 +119,8 @@ async function startVerifiedRun(args: {
         payload: args.task.payload,
         input: args.task.input,
         canon_version: HOCKER_AGI_CANON_VERSION,
-        provider_independent_router: true,
+        provider_independent_router: args.free_only_canary !== true,
+        free_only_canary: args.free_only_canary === true,
       },
       p_trace_id: randomUUID(),
       p_attempt: Math.max(1, Number(args.task.attempt_count || 1)),
@@ -173,22 +178,34 @@ export async function runUnifiedAgiWorkerOnce(params: {
   assigned_agi?: string | null;
   requested_by?: string | null;
   oidc_token?: string | null;
+  free_only_hostia_canary?: boolean;
 }): Promise<JsonRecord> {
   // Count-only guard before ANY claim RPC, including runtime tokens and run-once.
   await assertAgiBacklogReviewed(params.project_id);
+  const freeOnlyHostia = params.free_only_hostia_canary === true;
   const workerId = `hocker-one-unified:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
-  const assignedAgi = params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
-  const { data: claimed, error: claimError } = await rpcDb().rpc<AgiTask[]>(
-    "claim_next_agi_task",
-    {
-      p_project_id: params.project_id,
-      p_worker_id: workerId,
-      p_assigned_agi: assignedAgi,
-    },
-  );
-  if (claimError) throw new Error(`AGI_TASK_CLAIM_FAILED: ${claimError.message}`);
-
-  const task = claimed?.[0];
+  const assignedAgi = freeOnlyHostia ? "hostia"
+    : params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;
+  let task: AgiTask | undefined;
+  if (freeOnlyHostia) {
+    // One exact task INSERT with a unique one-time key and worker lock.
+    // NEVER claim a pre-existing or unrelated task in this bounded mode.
+    task = await reserveOneFreeUnifiedHostiaTask({
+      project_id: params.project_id, requested_by: params.requested_by,
+      worker_id: workerId,
+    }) as AgiTask;
+  } else {
+    const { data: claimed, error: claimError } = await rpcDb().rpc<AgiTask[]>(
+      "claim_next_agi_task",
+      {
+        p_project_id: params.project_id,
+        p_worker_id: workerId,
+        p_assigned_agi: assignedAgi,
+      },
+    );
+    if (claimError) throw new Error(`AGI_TASK_CLAIM_FAILED: ${claimError.message}`);
+    task = claimed?.[0];
+  }
   if (!task) {
     return {
       ok: true,
@@ -218,18 +235,50 @@ export async function runUnifiedAgiWorkerOnce(params: {
       worker_id: workerId,
       provider: "hocker-model-router",
       model: "auto",
+      free_only_canary: freeOnlyHostia,
     });
 
-    const nativeTools = await buildAgiNativeMcpTools(task.title);
-    const completion = await completeAgi({
-      messages: [
-        { role: "system", content: buildCanonicalProfilePrompt(profile.canon) },
-        { role: "user", content: taskPrompt(task) },
-      ],
-      timeout_ms: 42_000,
-      oidc_token: params.oidc_token,
-      tools: nativeTools,
-    });
+    const nativeTools = freeOnlyHostia ? [] : await buildAgiNativeMcpTools(task.title);
+    const systemPrompt = freeOnlyHostia
+      ? [
+          buildCanonicalProfilePrompt(profile.canon),
+          "Canario de worker unificado: analiza únicamente el snapshot suministrado. " +
+          "No uses herramientas, web, credenciales o acciones. No diagnostiques " +
+          "nodos, servidores ni autonomía. Máximo 100 palabras. " +
+          "Termina exactamente con FIN_CANARIO.",
+        ].join("\n")
+      : buildCanonicalProfilePrompt(profile.canon);
+    const userPrompt = freeOnlyHostia
+      ? "Resume hechos, límites y siguiente verificación a partir de: " +
+        JSON.stringify(task.input?.snapshot ?? {})
+      : taskPrompt(task);
+    const completion = freeOnlyHostia
+      ? {
+          ...(await cloudflareWorkersAiProvider.complete({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            timeout_ms: 20_000, free_only: true, tools: [], web_search: false,
+          })),
+          attempts: [{ route: "cloudflare-workers-ai" as const, configured: true, ok: true }],
+        }
+      : await completeAgi({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          timeout_ms: 42_000,
+          oidc_token: params.oidc_token,
+          tools: nativeTools,
+        });
+    if (freeOnlyHostia &&
+        (completion.route !== "cloudflare-workers-ai" ||
+         completion.provider !== "cloudflare-workers-ai" ||
+         completion.model !== CF_FREE_MODEL || completion.tool_calls.length > 0 ||
+         !completion.text.trimEnd().endsWith("FIN_CANARIO"))) {
+      throw new Error("FREE_UNIFIED_INFERENCE_CONTRACT_REJECTED");
+    }
 
     const nativeCalls = completion.tool_calls ?? [];
     const toolResults = nativeCalls.length
@@ -282,11 +331,14 @@ export async function runUnifiedAgiWorkerOnce(params: {
       completed_at: completedAt,
       external_writes_executed: false,
       owner_gate_required_for_actions: true,
+      free_only_canary: freeOnlyHostia,
+      no_paid_fallback: freeOnlyHostia,
+      tools_executed: freeOnlyHostia ? 0 : nativeCalls.length,
     };
     const resultHash = sha256(output);
     const evidence: JsonRecord[] = [
       {
-        kind: "verified_model_completion",
+        kind: freeOnlyHostia ? "verified_free_unified_model_completion" : "verified_model_completion",
         canon_version: HOCKER_AGI_CANON_VERSION,
         provider: finalCompletion.provider,
         model: finalCompletion.model,
@@ -299,6 +351,8 @@ export async function runUnifiedAgiWorkerOnce(params: {
         output_sha256: resultHash,
         completed_at: completedAt,
         external_writes_executed: false,
+        free_only: freeOnlyHostia,
+        no_tools: freeOnlyHostia,
       },
     ];
 
@@ -322,8 +376,9 @@ export async function runUnifiedAgiWorkerOnce(params: {
     const delegatedTargets = Array.isArray(taskContext?.target_agi_ids)
       ? (taskContext.target_agi_ids as unknown[]).filter((id): id is string => typeof id === "string").slice(0, 12)
       : [];
-    try {
-      await extractLearningCandidate({
+    if (!freeOnlyHostia) {
+      try {
+        await extractLearningCandidate({
         project_id: task.project_id,
         session_id: task.id,
         agi_id: profile.id,
@@ -332,8 +387,9 @@ export async function runUnifiedAgiWorkerOnce(params: {
         trace_id: runId,
         target_agi_ids: delegatedTargets,
       });
-    } catch (learningError) {
-      evidence.push({ kind: "syntia_learning_proposal_error", message: safeError(learningError) });
+      } catch (learningError) {
+        evidence.push({ kind: "syntia_learning_proposal_error", message: safeError(learningError) });
+      }
     }
 
     return {
@@ -341,6 +397,7 @@ export async function runUnifiedAgiWorkerOnce(params: {
       processed: true,
       canon_version: HOCKER_AGI_CANON_VERSION,
       worker_id: workerId,
+      free_only_canary: freeOnlyHostia,
       task: {
         id: task.id,
         agi_id: profile.id,
