@@ -172,6 +172,8 @@ test("NOVA genuine parent lineage is bound to the tool call and delegated task, 
   assert.match(chat, /parent_run_id: verifiedNovaParentRunId/);
   assert.doesNotMatch(chat, /parent_run_id: null/);
   assert.match(runtime, /AGI_DELEGATION_OWNER_ACTION_REQUIRED/);
+  assert.match(runtime, /created_by: options\.created_by \?\? null/);
+  assert.match(chat, /created_by: params\.user_id/);
   assert.ok(runtime.includes('idempotency_key: "nova-delegate:" + createHash("sha256")'));
   assert.match(runtime, /delegation_block_reason/);
   assert.match(runtime, /inspectNovaDelegationReadiness\(options\.project_id, options\.oidc_token\)/);
@@ -180,7 +182,7 @@ test("NOVA genuine parent lineage is bound to the tool call and delegated task, 
   assert.match(tasks, /parent_run_id: parentRunId/);
   assert.match(tasks, /if \(delegationDepth > 0 && !parentRunId\)/);
   assert.match(owner, /requireOwnerAal2Api\(projectId\)/);
-  assert.match(owner, /isVerifiedSpecialistWorkerRun(last)/);
+  assert.ok(owner.includes("isVerifiedSpecialistWorkerRun(last)"));
 });
 
 test("worker readiness recognizes real unified and serverless completions, never eval or chat-root evidence", async () => {

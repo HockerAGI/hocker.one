@@ -261,6 +261,7 @@ export async function executeAgiMcpToolCalls(
     project_id: string; allow_actions: boolean;
     parent_run_id?: string | null; source_agi_id?: string | null;
     oidc_token?: string | null; delegation_block_reason?: string | null;
+    created_by?: string | null;
   },
 ): Promise<AgiMcpToolResult[]> {
   const registry = await ensureRegistry();
@@ -315,6 +316,7 @@ export async function executeAgiMcpToolCalls(
             .update(JSON.stringify([parentRunId, call.id, target])).digest("hex"),
           intent: String(call.args.intent ?? "analysis"), priority: String(call.args.priority ?? "normal"),
           write_policy: writePolicy,
+          created_by: options.created_by ?? null,
           context: { ...(asRecord(call.args.context)), parent_run_id: parentRunId, source_agi_id: options.source_agi_id ?? "nova",
             target_agi_ids: Array.isArray(call.args.target_agi_ids) ? call.args.target_agi_ids.slice(0,12) : [target],
             delegation_depth: depth + 1, delegation_fanout: fanout + 1 },

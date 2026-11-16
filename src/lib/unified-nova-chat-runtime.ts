@@ -275,6 +275,7 @@ export async function runToolEnabledUnifiedNovaChat(params: {
           allow_actions: Boolean(params.allow_actions),
           parent_run_id: verifiedNovaParentRunId,
           source_agi_id: "nova",
+          created_by: params.user_id,
           oidc_token: params.oidc_token,
           delegation_block_reason: delegationBlockReason,
         })
