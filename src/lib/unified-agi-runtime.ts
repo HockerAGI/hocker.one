@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { CF_FREE_MODEL } from "@/lib/cloudflare-zero-credit-policy";
 import { cloudflareWorkersAiProvider } from "@/lib/agi-model-providers/cloudflare-workers-ai";
 import { reserveOneFreeUnifiedHostiaTask } from "@/lib/agi-free-unified-canary";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { HOCKER_AGI_CANON_VERSION, type HockerAgiCanonRecord } from "@/lib/hocker-agi-canon";
 import {
   buildCanonicalProfilePrompt,
@@ -183,6 +184,12 @@ export async function runUnifiedAgiWorkerOnce(params: {
   // Count-only guard before ANY claim RPC, including runtime tokens and run-once.
   await assertAgiBacklogReviewed(params.project_id);
   const freeOnlyHostia = params.free_only_hostia_canary === true;
+  if (freeOnlyHostia) {
+    const owner = await requireOwnerAal2Api(params.project_id);
+    if (!owner.ok || owner.userId !== params.requested_by) {
+      throw new Error("FREE_UNIFIED_OWNER_AAL2_REQUIRED");
+    }
+  }
   const workerId = `hocker-one-unified:${process.env.VERCEL_REGION || "unknown"}:${randomUUID()}`;
   const assignedAgi = freeOnlyHostia ? "hostia"
     : params.assigned_agi ? canonicalAgiId(params.assigned_agi) : null;

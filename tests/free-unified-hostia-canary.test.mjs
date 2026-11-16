@@ -42,6 +42,8 @@ test("bounded one-time canary uses the existing unified worker, never provider r
   const canary = unified.slice(unified.indexOf("export async function runUnifiedAgiWorkerOnce("));
   assert.match(canary, /free_only_hostia_canary\?: boolean/);
   assert.match(canary, /reserveOneFreeUnifiedHostiaTask/);
+  assert.match(canary, /await requireOwnerAal2Api\(params\.project_id\)/);
+  assert.match(canary, /owner\.userId !== params\.requested_by/);
   assert.match(canary, /cloudflareWorkersAiProvider\.complete/);
   assert.match(canary, /free_only: true/);
   assert.match(canary, /tools: \[\]/);
