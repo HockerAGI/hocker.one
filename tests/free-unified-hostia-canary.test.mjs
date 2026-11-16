@@ -16,6 +16,12 @@ test("free unified worker exact reservation uses existing unique key and does no
   assert.match(canary, /\.eq\("role", "owner"\)/);
   assert.match(canary, /agents\.data\.length !== 16/);
   assert.match(canary, /agent\.allow_actions !== false/);
+  assert.match(canary, /AGI_QUEUE_BLOCKING_STATUSES/);
+  assert.match(canary, /\.in\("status", \[\.\.\.AGI_QUEUE_BLOCKING_STATUSES\]\)/);
+  const lock = await read("src/lib/agi-queue-lock.ts");
+  for (const status of ["needs_approval","queued","dry_run_queued","running","executing","failed","needs_fix"]) {
+    assert.ok(lock.includes('"' + status + '"'), "canonical Queue Lock must cover " + status);
+  }
   assert.match(canary, /tasks\.count !== 0 \|\| actions\.count !== 0/);
   assert.match(canary, /status: "working"/);
   assert.match(canary, /attempt_count: 1, max_attempts: 1/);
