@@ -76,6 +76,7 @@ export async function observe(env, fetcher = fetch) {
     catch { throw new Error("COORDINATOR_RESPONSE_NOT_JSON"); }
     const m = payload?.metrics;
     const p = payload?.event_preflight;
+    const f = payload?.serverless_free_preflight;
     if (payload?.ok !== true || payload?.service !== "hocker-one" ||
         payload?.coordinator_mode !== "observe_only" ||
         payload?.project_id !== "hocker-one" ||
@@ -91,7 +92,32 @@ export async function observe(env, fetcher = fetch) {
         p.stale_agi_tasks < 0 || typeof p.blocked !== "boolean" ||
         p.blocked !== (p.stale_agi_tasks > 0) ||
         p.ready_for_dispatch !== false || p.task_executor !== false ||
-        p.dedicated_runtime !== false) {
+        p.dedicated_runtime !== false ||
+        !f || f.contract_version !== 1 ||
+        f.mode !== "read_only_capacity_observation" ||
+        f.checked !== true ||
+        f.provider !== "cloudflare-workers-ai" ||
+        f.fixed_model !== "@cf/zai-org/glm-4.7-flash" ||
+        typeof f.provider_configured !== "boolean" ||
+        f.cost_attestation !== "operator_flag_not_billing_api" ||
+        f.billing_api_verified !== false ||
+        !Number.isSafeInteger(f.globally_enabled_material_agents) ||
+        f.globally_enabled_material_agents < 0 ||
+        f.globally_enabled_material_agents > m.registered_agi_profiles ||
+        f.owner_authorization_required !== true ||
+        typeof f.candidate_for_owner_review !== "boolean" ||
+        f.candidate_for_owner_review !== Boolean(
+          f.provider_configured &&
+          m.registered_agi_profiles === 16 &&
+          f.globally_enabled_material_agents === 0 &&
+          m.queued_agi_tasks === 0 &&
+          m.blocked_or_pending_material_actions === 0 &&
+          p.blocked === false
+        ) ||
+        f.automatic_dispatch !== false ||
+        f.model_requests_per_tick !== 0 ||
+        f.task_claims_per_tick !== 0 ||
+        f.dedicated_runtime !== false) {
       throw new Error("COORDINATOR_RESPONSE_CONTRACT_INVALID");
     }
     return {
@@ -105,6 +131,12 @@ export async function observe(env, fetcher = fetch) {
       stale_agi_tasks: p.stale_agi_tasks,
       stale_backlog_blocked: p.blocked,
       ready_for_dispatch: false,
+      free_only_configured_for_owner_review: f.provider_configured,
+      owner_review_preflight_clear: f.candidate_for_owner_review,
+      material_agent_permissions_enabled: f.globally_enabled_material_agents,
+      billing_api_verified: false,
+      automatic_dispatch: false,
+      model_requests_per_tick: 0,
     };
   } finally {
     clearTimeout(timeout);
