@@ -32,7 +32,7 @@ async function loadGate(overrides = {}) {
     ready: true, schema_ready: true, provider_configured: true,
     last_verified_run: {
       status: "completed",
-      provider: "vercel-ai-gateway",
+      provider: "vercel-ai-gateway", model: "google/gemini-2.5-flash",
       worker_id: "hocker-one-serverless:iad1:123",
       finished_at: new Date().toISOString(),
       result_hash: "a".repeat(64),
@@ -172,7 +172,7 @@ test("NOVA genuine parent lineage is bound to the tool call and delegated task, 
   assert.match(chat, /parent_run_id: verifiedNovaParentRunId/);
   assert.doesNotMatch(chat, /parent_run_id: null/);
   assert.match(runtime, /AGI_DELEGATION_OWNER_ACTION_REQUIRED/);
-  assert.match(runtime, /idempotency_key: "nova-delegate:" + createHash("sha256")/);
+  assert.ok(runtime.includes('idempotency_key: "nova-delegate:" + createHash("sha256")'));
   assert.match(runtime, /delegation_block_reason/);
   assert.match(runtime, /inspectNovaDelegationReadiness\(options\.project_id, options\.oidc_token\)/);
   assert.match(runtime, /parent_run_id: parentRunId, delegation_depth: depth \+ 1/);
