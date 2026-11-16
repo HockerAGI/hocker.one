@@ -22,7 +22,9 @@ DECLARE
   v_held integer;
 BEGIN
   IF p_project_id IS DISTINCT FROM 'hocker-one'
-     OR p_deployment_sha IS NULL OR p_deployment_sha !~ '^[a-f0-9]{40}
+     OR p_owner_id IS NULL
+     OR p_deployment_sha IS NULL
+     OR p_deployment_sha !~ '^[a-f0-9]{40}$'
      OR NOT EXISTS (
        SELECT 1 FROM public.project_members m
        WHERE m.project_id=p_project_id AND m.user_id=p_owner_id AND m.role='owner'
@@ -112,8 +114,10 @@ DECLARE
   v_run_id uuid;
 BEGIN
   IF p_project_id IS DISTINCT FROM 'hocker-one'
-     OR p_deployment_sha IS NULL OR p_deployment_sha !~ '^[a-f0-9]{40}
-     OR p_worker_id !~ '^hocker-free-inventory:[a-f0-9-]{36}$' THEN
+     OR p_worker_id IS NULL
+     OR p_worker_id !~ '^hocker-free-inventory:[a-f0-9-]{36}$'
+     OR p_deployment_sha IS NULL
+     OR p_deployment_sha !~ '^[a-f0-9]{40}$' THEN
     RAISE EXCEPTION 'FREE_INVENTORY_WORKER_SCOPE_REJECTED';
   END IF;
 
