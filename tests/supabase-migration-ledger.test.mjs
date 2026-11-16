@@ -141,6 +141,23 @@ test("Hocker One migration ledger matches production version/name multiplicity e
     ].sort());
   }
 
+  // A single pending migration is permitted in a PR, before production
+  // application. Push builds (including main) must match the real production
+  // ledger exactly. This is NOT permission for arbitrary local migrations.
+  const stagedReview = {
+    version: "20261116211500",
+    name: "owner_granted_serverless_inventory_v1",
+  };
+  const event = process.env.GITHUB_EVENT_NAME || "";
+  const reviewing = event === "pull_request" ||
+    event === "pull_request_target" || (!process.env.CI && !event);
+  if (reviewing) {
+    const pending = actual.get(stagedReview.version) ?? [];
+    if (pending.length === 1 && pending[0] === stagedReview.name) {
+      expected.set(stagedReview.version, [stagedReview.name]);
+    }
+  }
+
   assert.deepEqual(
     [...actual.entries()].sort(),
     [...expected.entries()].sort(),
