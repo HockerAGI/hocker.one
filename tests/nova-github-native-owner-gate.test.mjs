@@ -156,7 +156,10 @@ test("the existing GitHub materializer preflights every file before the first qu
   assert.match(bridge, /observedFile\.sha !== file\.expected_file_sha/);
   assert.match(bridge, /\.\.\.proposal\.changes\.map/);
   assert.match(bridge, /sequence_index: stepIndex/);
-  assert.ok(bridge.indexOf("for (const file of proposal.changes)") < bridge.indexOf("const row = await enqueueAgiAction("));
+  const nativeHelper = bridge.slice(bridge.indexOf("async function materializeNativeGithubProposal("));
+  assert.ok(nativeHelper.indexOf("for (const file of proposal.changes)") >= 0);
+  assert.ok(nativeHelper.indexOf("for (const file of proposal.changes)") <
+    nativeHelper.indexOf("const row = await enqueueAgiAction("));
   assert.match(worker, /aPayload\.source === "nova_native_github_proposal"/);
   assert.match(worker, /Number\.isInteger\(aPayload\.sequence_index\)/);
   assert.match(ownerUi, /const isNativeBatch = group\.some/);
