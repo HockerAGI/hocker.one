@@ -136,11 +136,14 @@ export function parseNovaGithubCodeProposal(input: unknown): NovaGithubCodePropo
     throw new Error("NOVA_GITHUB_PROPOSAL_INCOMPLETE");
   }
 
+  const first = changes[0];
+  if (!first) throw new Error("NOVA_GITHUB_PROPOSAL_INVALID_FILES_COUNT");
+
   return {
     repository, branch, expected_base_sha,
     // Preserve the existing caller contract for one-file and test consumers.
-    path: changes[0].path, expected_file_sha: changes[0].expected_file_sha,
-    content: changes[0].content, commit_message, pr_title, pr_body,
+    path: first.path, expected_file_sha: first.expected_file_sha,
+    content: first.content, commit_message, pr_title, pr_body,
     changes,
   };
 }
