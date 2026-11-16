@@ -255,7 +255,7 @@ export async function processOneApprovedInventory(env, fetcher = fetch) {
         model_requests: 0, no_paid_fallback: true,
       };
     }
-    if (!["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED"].includes(result.reason) ||
+    if (!["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED", "OWNER_REVISION_CHANGED_CANCELED"].includes(result.reason) ||
         result.task_claims !== 0) {
       throw new Error("COORDINATOR_INVENTORY_CONTRACT_INVALID");
     }
