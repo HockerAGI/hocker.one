@@ -44,19 +44,21 @@ unrestricted tools, or a dedicated persistent runtime.
    authorization key, updates just its task to `canceled` and inserts
    independent audit evidence; the Cron cannot race that revocation.
 
-## Staged SQL is NOT an applied migration
+## Migration reconciliation — applied and verified
 
-The SQL source currently lives at `supabase/proposals/owner_granted_serverless_inventory_v1.sql`,
-NOT in `supabase/migrations/`. This keeps the strict migration ledger
-matching actual production on both pull-request and main push CI.
-The endpoints remain fail-closed while the feature is OFF.
+The reviewed SQL from PR #450 was applied once using Supabase's migration
+tool to the existing production project `yvuibbcuntqpyqiuqggd`.
+**Actual provider-recorded migration:**
+`20261116235003_owner_granted_serverless_inventory_v1`.
+Canonical SQL: `supabase/migrations/20261116235003_owner_granted_serverless_inventory_v1.sql`.
+The old proposal was removed; the ledger test was updated with exactly the
+recorded version and name (not a guessed version).
 
-Before activating the feature: obtain the exact committed SQL after review,
-apply through the Supabase migration tool, read back the provider-generated
-migration version, and move the proposal into `supabase/migrations/<actual_version>_...sql`.
-Add the actual recorded `(version,name)` to the production ledger test,
-then run CI/CodeQL/review on that exact revision. Never create a fake
-ledger entry or claim the migration was applied before verification.
+Verified by SQL introspection: three `SECURITY DEFINER` RPCs exist,
+`anon` and `authenticated` have no EXECUTE, `service_role` has EXECUTE.
+No Owner approvals or inventory tasks were inserted by the migration.
+**The runtime feature flag is still OFF:** installing the database functions
+does not authorize any inventory or invoke AI.
 
 ## Rollout gates
 
@@ -64,9 +66,9 @@ ledger entry or claim the migration was applied before verification.
   must pass on one exact SHA; Preview must be READY. Do not merge otherwise.
 - **Production:** deploy exact SHA to Hocker One and verify READY, postmerge
   CI and alias before changing Cloudflare code.
-- **Migration:** apply the versioned SQL file only through Supabase migration
-  protocol, verify RPC signatures, role grants and no anonymous/authenticated
-  EXECUTE permission.
+- **Migration:** completed using Supabase migration protocol. Actual version
+  `20261116235003` and RPC EXECUTE grants verified. Keep migration in the
+  canonical ledger and do not reapply.
 - **Credentials:** create one cryptographically random >=40-character token
   with production-only environment scopes in Hocker One and Cloudflare. It
   must never be printed, put in a PR, transmitted in chat or reused as
