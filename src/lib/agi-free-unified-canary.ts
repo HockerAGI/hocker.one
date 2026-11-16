@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { assertAgiBacklogReviewed } from "@/lib/agi-stale-backlog-gate";
 import { cloudflareFreePilotConfigured } from "@/lib/cloudflare-zero-credit-policy";
+import { AGI_QUEUE_BLOCKING_STATUSES } from "@/lib/agi-queue-lock";
 
 export const FREE_UNIFIED_HOSTIA_KEY = "free-unified-hostia-v1:one-time";
 const PROJECT = "hocker-one";
@@ -35,7 +36,7 @@ export async function reserveOneFreeUnifiedHostiaTask(params: {
     admin.from("agi_tasks").select("id", { head: true, count: "exact" })
       .eq("project_id", PROJECT).in("status", ["queued", "pending", "working"]),
     admin.from("agi_action_queue").select("id", { head: true, count: "exact" })
-      .eq("project_id", PROJECT).in("status", ["draft", "pending_review", "approved", "executing"]),
+      .eq("project_id", PROJECT).in("status", [...AGI_QUEUE_BLOCKING_STATUSES]),
     admin.from("agi_tasks").select("id")
       .eq("project_id", PROJECT).eq("idempotency_key", FREE_UNIFIED_HOSTIA_KEY)
       .maybeSingle(),
