@@ -65,115 +65,6 @@ function isNativeGithubProposalDraft(raw: unknown): boolean {
     draft.action_type === "github.propose_code_change";
 }
 
-/**
- * Bridge the model's verified local proposal to the EXISTING GitHub worker.
- * The GitHub MCP provider remains read-only; no MCP mutation is dispatched.
- */
-async function materializeNativeGithubProposal(
-  params: { project_id: string; created_by: string; original_message: string; trace_id?: string | null },
-  raw: unknown,
-): Promise<MaterializedMcpAction[]> {
-  const draft = asRecord(raw);
-  if (draft.tool_key !== "github" ||
-      draft.requires_approval !== true ||
-      draft.execution_target !== "hocker.one.owner-gate") {
-    throw new Error("NOVA_GITHUB_PROPOSAL_INVALID_OWNER_GATE_ENVELOPE");
-  }
-  if (!hasGitHubRuntimeToken()) throw new Error("NOVA_GITHUB_EXECUTOR_NOT_CONFIGURED");
-
-  const proposal = parseNovaGithubCodeProposal(draft.args);
-  const observedBaseSha = await readGitHubBranchHeadSha(proposal.repository, "main");
-  if (!observedBaseSha || observedBaseSha !== proposal.expected_base_sha) {
-    throw new Error("NOVA_GITHUB_BASE_SHA_NOT_CURRENT");
-  }
-  const existingBranch = await readGitHubBranchHeadSha(proposal.repository, proposal.branch);
-  if (existingBranch) throw new Error("NOVA_GITHUB_BRANCH_ALREADY_EXISTS");
-
-  // The SHA is independently checked against GitHub REST, not trusted merely
-  // because the model supplied it. A truncated file must never be overwritten.
-  const observedFile = asRecord(await executeGitHubReadOperation("read_file", {
-    repository: proposal.repository, ref: "main", path: proposal.path,
-  }));
-  if (observedFile.truncated === true || observedFile.sha !== proposal.expected_file_sha ||
-      typeof observedFile.content !== "string") {
-    throw new Error("NOVA_GITHUB_FILE_SHA_NOT_VERIFIED");
-  }
-  if (observedFile.content === proposal.content) {
-    throw new Error("NOVA_GITHUB_NO_ACTUAL_FILE_CHANGE");
-  }
-
-  const common = {
-    repository: proposal.repository,
-    base: "main",
-    base_branch: "main",
-    branch: proposal.branch,
-    target_branch: proposal.branch,
-    expected_base_sha: proposal.expected_base_sha,
-    require_new_branch: true,
-  };
-
-  const steps: Array<{ operation: "create_branch" | "upsert_file" | "create_pr"; payload: Record<string, unknown> }> = [
-    { operation: "create_branch", payload: { ...common, message: "NOVA prepare " + proposal.branch } },
-    { operation: "upsert_file", payload: {
-      ...common, path: proposal.path, expected_sha: proposal.expected_file_sha,
-      content: proposal.content, message: proposal.commit_message,
-    } },
-    { operation: "create_pr", payload: {
-      ...common, head: proposal.branch, title: proposal.pr_title, body: proposal.pr_body,
-    } },
-  ];
-
-  // Prevalidate the ENTIRE sequence before the first queue insert.
-  const planned = steps.map(({ operation, payload }) => {
-    const plan = createGitHubWriteGatePlan(operation as GitHubRuntimeWriteOperation, payload);
-    if (!plan.valid) throw new Error("NOVA_GITHUB_WRITE_PLAN_INCOMPLETE");
-    return { operation, payload, plan };
-  });
-
-  const actions: MaterializedMcpAction[] = [];
-  for (const { operation, payload, plan } of planned) {
-    const row = await enqueueAgiAction({
-      project_id: params.project_id,
-      agi_id: "nova",
-      tool_key: "github",
-      action_type: "github." + operation,
-      title: "NOVA · " + (operation === "create_branch" ? "Crear rama" :
-        operation === "upsert_file" ? "Aplicar cambio a " + proposal.path : "Abrir PR draft"),
-      payload: {
-        ...payload,
-        materializer_version: NOVA_GITHUB_GUIDED_CHAIN_VERSION,
-        source: "nova_native_github_proposal",
-        trace_id: params.trace_id ?? null,
-        request_preview: compact(params.original_message),
-        write_plan: plan,
-        safety: {
-          executed_now: false, owner_gate_required: true, no_direct_main_write: true,
-          verified_main_sha: proposal.expected_base_sha,
-          verified_file_sha: proposal.expected_file_sha,
-          git_mcp_read_only: true,
-        },
-      },
-      risk_level: plan.risk_level,
-      dry_run: true,
-      requires_approval: true,
-      created_by: params.created_by,
-    });
-    const record = asRecord(row);
-    actions.push({
-      id: typeof record.id === "string" ? record.id : null,
-      status: String(record.status ?? "needs_approval"),
-      tool_key: "github",
-      action_type: ("github." + operation) as MaterializedMcpAction["action_type"],
-      title: String(record.title ?? "NOVA GitHub " + operation),
-      risk_level: plan.risk_level,
-      provider: "github",
-      tool: NOVA_GITHUB_PROPOSAL_TOOL,
-      qualified_name: "github." + NOVA_GITHUB_PROPOSAL_TOOL,
-    });
-  }
-  return actions;
-}
-
 export async function materializeNovaMcpActionsFromUpstream(params: {
   project_id: string;
   created_by: string;
@@ -284,4 +175,113 @@ export async function materializeNovaMcpActionsFromUpstream(params: {
   }
 
   return { actions, rejected };
+}
+
+/**
+ * Bridge the model's verified local proposal to the EXISTING GitHub worker.
+ * The GitHub MCP provider remains read-only; no MCP mutation is dispatched.
+ */
+async function materializeNativeGithubProposal(
+  params: { project_id: string; created_by: string; original_message: string; trace_id?: string | null },
+  raw: unknown,
+): Promise<MaterializedMcpAction[]> {
+  const draft = asRecord(raw);
+  if (draft.tool_key !== "github" ||
+      draft.requires_approval !== true ||
+      draft.execution_target !== "hocker.one.owner-gate") {
+    throw new Error("NOVA_GITHUB_PROPOSAL_INVALID_OWNER_GATE_ENVELOPE");
+  }
+  if (!hasGitHubRuntimeToken()) throw new Error("NOVA_GITHUB_EXECUTOR_NOT_CONFIGURED");
+
+  const proposal = parseNovaGithubCodeProposal(draft.args);
+  const observedBaseSha = await readGitHubBranchHeadSha(proposal.repository, "main");
+  if (!observedBaseSha || observedBaseSha !== proposal.expected_base_sha) {
+    throw new Error("NOVA_GITHUB_BASE_SHA_NOT_CURRENT");
+  }
+  const existingBranch = await readGitHubBranchHeadSha(proposal.repository, proposal.branch);
+  if (existingBranch) throw new Error("NOVA_GITHUB_BRANCH_ALREADY_EXISTS");
+
+  // The SHA is independently checked against GitHub REST, not trusted merely
+  // because the model supplied it. A truncated file must never be overwritten.
+  const observedFile = asRecord(await executeGitHubReadOperation("read_file", {
+    repository: proposal.repository, ref: "main", path: proposal.path,
+  }));
+  if (observedFile.truncated === true || observedFile.sha !== proposal.expected_file_sha ||
+      typeof observedFile.content !== "string") {
+    throw new Error("NOVA_GITHUB_FILE_SHA_NOT_VERIFIED");
+  }
+  if (observedFile.content === proposal.content) {
+    throw new Error("NOVA_GITHUB_NO_ACTUAL_FILE_CHANGE");
+  }
+
+  const common = {
+    repository: proposal.repository,
+    base: "main",
+    base_branch: "main",
+    branch: proposal.branch,
+    target_branch: proposal.branch,
+    expected_base_sha: proposal.expected_base_sha,
+    require_new_branch: true,
+  };
+
+  const steps: Array<{ operation: "create_branch" | "upsert_file" | "create_pr"; payload: Record<string, unknown> }> = [
+    { operation: "create_branch", payload: { ...common, message: "NOVA prepare " + proposal.branch } },
+    { operation: "upsert_file", payload: {
+      ...common, path: proposal.path, expected_sha: proposal.expected_file_sha,
+      content: proposal.content, message: proposal.commit_message,
+    } },
+    { operation: "create_pr", payload: {
+      ...common, head: proposal.branch, title: proposal.pr_title, body: proposal.pr_body,
+    } },
+  ];
+
+  // Prevalidate the ENTIRE sequence before the first queue insert.
+  const planned = steps.map(({ operation, payload }) => {
+    const plan = createGitHubWriteGatePlan(operation as GitHubRuntimeWriteOperation, payload);
+    if (!plan.valid) throw new Error("NOVA_GITHUB_WRITE_PLAN_INCOMPLETE");
+    return { operation, payload, plan };
+  });
+
+  const actions: MaterializedMcpAction[] = [];
+  for (const { operation, payload, plan } of planned) {
+    const row = await enqueueAgiAction({
+      project_id: params.project_id,
+      agi_id: "nova",
+      tool_key: "github",
+      action_type: "github." + operation,
+      title: "NOVA · " + (operation === "create_branch" ? "Crear rama" :
+        operation === "upsert_file" ? "Aplicar cambio a " + proposal.path : "Abrir PR draft"),
+      payload: {
+        ...payload,
+        materializer_version: NOVA_GITHUB_GUIDED_CHAIN_VERSION,
+        source: "nova_native_github_proposal",
+        trace_id: params.trace_id ?? null,
+        request_preview: compact(params.original_message),
+        write_plan: plan,
+        safety: {
+          executed_now: false, owner_gate_required: true, no_direct_main_write: true,
+          verified_main_sha: proposal.expected_base_sha,
+          verified_file_sha: proposal.expected_file_sha,
+          git_mcp_read_only: true,
+        },
+      },
+      risk_level: plan.risk_level,
+      dry_run: true,
+      requires_approval: true,
+      created_by: params.created_by,
+    });
+    const record = asRecord(row);
+    actions.push({
+      id: typeof record.id === "string" ? record.id : null,
+      status: String(record.status ?? "needs_approval"),
+      tool_key: "github",
+      action_type: ("github." + operation) as MaterializedMcpAction["action_type"],
+      title: String(record.title ?? "NOVA GitHub " + operation),
+      risk_level: plan.risk_level,
+      provider: "github",
+      tool: NOVA_GITHUB_PROPOSAL_TOOL,
+      qualified_name: "github." + NOVA_GITHUB_PROPOSAL_TOOL,
+    });
+  }
+  return actions;
 }
