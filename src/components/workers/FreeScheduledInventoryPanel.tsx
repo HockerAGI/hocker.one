@@ -139,9 +139,11 @@ export default function FreeScheduledInventoryPanel() {
       </div>
       {result ? (
         <p role="status" className="mt-3 break-all text-sm text-slate-200">
-          {result.approved && result.task_id
-            ? "Aprobación real guardada. Task: " + result.task_id
-            : "No autorizado: " + (result.code ?? "verificar registros")}
+          {result.ok && result.code === "Autorización revocada y auditada."
+            ? result.code
+            : result.approved && result.task_id
+              ? "Aprobación real guardada. Task: " + result.task_id
+              : "No autorizado: " + (result.code ?? "verificar registros")}
         </p>
       ) : null}
     </section>
