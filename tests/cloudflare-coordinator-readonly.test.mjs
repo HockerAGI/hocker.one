@@ -180,8 +180,13 @@ test("public Worker only provides minimal health; routes do not execute tools",a
   assert.doesNotMatch(route,/from\("agi_agents"\)\.select\("id"/);
   assert.match(route,/from\("agi_tasks"\)\.select\("id", \{ head: true, count: "exact" \}\)/);
   assert.doesNotMatch(route,/\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(|executeCommand\(|runUnifiedAgiWorkerOnce\(/);
-  assert.match(config,/NOVA_COORDINATOR_ENABLED = "false"/);
-  assert.doesNotMatch(config,/^crons\s*=/m);
+  // Production bindings and Cron already exist: avoid Wrangler redeploy
+  // reverting them to a stale false/empty local configuration.
+  assert.match(config,/^NOVA_COORDINATOR_ENABLED\s*=\s*"true"$/m);
+  assert.match(config,/^NOVA_FREE_INVENTORY_ENABLED\s*=\s*"true"$/m);
+  assert.match(config,/^crons\s*=\s*\["\*\/5 \* \* \* \*"\]$/m);
+  assert.doesNotMatch(config,/(NOVA_COORDINATOR_READ_TOKEN|NOVA_FREE_INVENTORY_TOKEN|NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN)\s*=/);
+  assert.match(config,/^name\s*=\s*"hocker-nova-coordinator"$/m);
 });
 
 test("a clear candidate remains Owner-only and cannot dispatch automatically",async()=>{
