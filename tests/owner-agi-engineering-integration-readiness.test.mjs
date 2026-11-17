@@ -79,6 +79,10 @@ test("AAL2 Owner Gate must precede any real provider read and never exposes secr
   const vercelProbe = route.indexOf("getVercelProject({ project_id: vercelProjectId })");
   assert.ok(gate >= 0 && githubProbe > gate && vercelProbe > gate);
   assert.match(route, /hasGitHubRuntimeToken\(\)/);
+  assert.match(route, /"HockerAGI\\/nova\\.agi"/);
+  assert.match(route, /"HockerAGI\\/hocker-node-agent"/);
+  assert.match(route, /results\\.every\\(Boolean\\)/);
+
   assert.match(route, /hasVercelRuntimeToken\(\)/);
   assert.match(route, /project\.id === vercelProjectId/);
   assert.match(route, /vercelConfigured && vercelProjectId/);
