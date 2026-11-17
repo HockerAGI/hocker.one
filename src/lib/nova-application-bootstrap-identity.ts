@@ -37,3 +37,89 @@ export function githubBootstrapParentState(input: {
   const eligible = validId && ["needs_approval", "approved", "executed", "completed"].includes(status);
   return { eligible, id: validId ? id : null, status };
 }
+
+
+type QueueAction = Record<string, unknown>;
+type QueueLockEvidence = {
+  source?: unknown;
+  locked?: unknown;
+  blocking_count?: unknown;
+  active_actions?: Array<{ id?: unknown; status?: unknown }>;
+};
+
+function actionPayload(row: QueueAction): Record<string, unknown> | null {
+  return row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+    ? row.payload as Record<string, unknown>
+    : null;
+}
+
+/**
+ * Narrow exception to Queue Lock: inspection of an existing bootstrap owned
+ * by the current actor. Nothing unrelated may be pending, DB snapshots must
+ * agree, and only expected Owner-Gated states can be continued. This does not
+ * approve, execute or create any action.
+ */
+export function canResumeOwnApplicationBootstrap(input: {
+  project_id: string;
+  created_by: string;
+  bootstrap_id: string;
+  repository_name: string;
+  queue_lock: QueueLockEvidence | null | undefined;
+  all_blocking_rows: QueueAction[];
+  own_bootstrap_rows: QueueAction[];
+}): boolean {
+  const lock = input.queue_lock;
+  if (!lock || lock.source !== "supabase" || lock.locked !== true ||
+      !Number.isSafeInteger(lock.blocking_count) ||
+      typeof lock.blocking_count !== "number" ||
+      lock.blocking_count < 1 || lock.blocking_count > 8 ||
+      !Array.isArray(lock.active_actions) ||
+      lock.active_actions.length !== lock.blocking_count ||
+      input.all_blocking_rows.length !== lock.blocking_count ||
+      input.own_bootstrap_rows.length < 1 || input.own_bootstrap_rows.length > 2) {
+    return false;
+  }
+
+  const expectedRepo = "HockerAGI/" + input.repository_name;
+  const githubRows = input.own_bootstrap_rows.filter((row) =>
+    row.action_type === "github.create_repository" && row.tool_key === "github");
+  const vercelRows = input.own_bootstrap_rows.filter((row) =>
+    row.action_type === "vercel.create_project" && row.tool_key === "vercel");
+  if (githubRows.length !== 1 || vercelRows.length > 1 ||
+      githubRows.length + vercelRows.length !== input.own_bootstrap_rows.length) {
+    return false;
+  }
+
+  for (const row of input.own_bootstrap_rows) {
+    const payload = actionPayload(row);
+    if (!payload || row.project_id !== input.project_id ||
+        row.created_by !== input.created_by || row.agi_id !== "hostia" ||
+        payload.bootstrap_id !== input.bootstrap_id ||
+        !githubBootstrapParentState(row).eligible) return false;
+    if (row.action_type === "github.create_repository") {
+      if (payload.owner !== "HockerAGI" || payload.name !== input.repository_name) return false;
+    } else if (payload.repository !== expectedRepo ||
+               payload.project_name !== input.repository_name) {
+      return false;
+    }
+  }
+
+  const parentId = githubBootstrapParentState(githubRows[0]).id;
+  if (!parentId) return false;
+  if (vercelRows.length === 1 &&
+      actionPayload(vercelRows[0])?.depends_on_action_id !== parentId) return false;
+
+  const priorById = new Map(input.own_bootstrap_rows.map((row) => [row.id, row]));
+  const currentById = new Map(input.all_blocking_rows.map((row) => [row.id, row]));
+  if (currentById.size !== input.all_blocking_rows.length) return false;
+
+  for (const blocked of input.all_blocking_rows) {
+    const prior = priorById.get(blocked.id);
+    if (!prior || prior.status !== blocked.status ||
+        !["needs_approval", "approved"].includes(String(blocked.status))) return false;
+  }
+  return lock.active_actions.every((item) => {
+    const current = currentById.get(item.id);
+    return current && current.status === item.status;
+  });
+}
