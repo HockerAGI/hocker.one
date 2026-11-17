@@ -164,21 +164,65 @@ async function checkNova(): Promise<Check> {
   };
 }
 
+// A reachable /health page, a 401, or a 404 cannot establish that the
+// physical command executor is alive and able to process authorized work.
+function nodeReadyUrl(configured: string): string {
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    url.pathname = url.pathname
+      .replace(/\/(?:health|ready)\/?$/, "")
+      .replace(/\/+$/, "") + "/ready";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function probeNodeReady(url: string): Promise<boolean> {
+  if (!url) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers: { accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (response.status !== 200) return false;
+    const payload: unknown = await response.json().catch(() => null);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    const state = payload as Record<string, unknown>;
+    return state.ok === true && state.status === "ready" &&
+      state.heartbeat_fresh === true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function checkAgentByUrl(): Promise<Check | null> {
-  const url = env("HOCKER_NODE_AGENT_HEALTH_URL", "HOCKER_NODE_AGENT_URL");
+  const configured = env("HOCKER_NODE_AGENT_HEALTH_URL", "HOCKER_NODE_AGENT_URL");
+  if (!configured) return null;
 
-  if (!url) return null;
+  const remoteReady = await probeNodeReady(nodeReadyUrl(configured));
+  if (!remoteReady) {
+    return { active: false, label: "Agente", detail: "Readiness no verificada" };
+  }
 
-  const base = cleanUrl(url);
-  const active =
-    (await probe(`${base}/health`)) ||
-    (await probe(`${base}/ready`)) ||
-    (await probe(base));
-
+  // The remote HTTP endpoint cannot prove its own node/project identity.
+  // Require an independent, fresh, persisted heartbeat for this exact node.
+  const persisted = await checkAgentBySupabase();
   return {
-    active,
+    active: persisted.active,
     label: "Agente",
-    detail: active ? "Online" : "Sin respuesta",
+    detail: persisted.active
+      ? "Runtime /ready y heartbeat verificados"
+      : `/ready OK; ${persisted.detail}`,
   };
 }
 
@@ -235,9 +279,9 @@ async function checkAgentBySupabase(): Promise<Check> {
       };
     }
 
-    const age = secondsSince(node.last_seen_at || node.updated_at);
+    const age = secondsSince(node.last_seen_at);
     const fresh = age !== null && age <= 120;
-    const online = node.status === "online" || node.status === "degraded";
+    const online = node.status === "online";
 
     return {
       active: Boolean(fresh && online),
