@@ -70,8 +70,8 @@ export function canResumeOwnApplicationBootstrap(input: {
 }): boolean {
   const lock = input.queue_lock;
   if (!lock || lock.source !== "supabase" || lock.locked !== true ||
-      !Number.isSafeInteger(lock.blocking_count) ||
       typeof lock.blocking_count !== "number" ||
+      !Number.isSafeInteger(lock.blocking_count) ||
       lock.blocking_count < 1 || lock.blocking_count > 8 ||
       !Array.isArray(lock.active_actions) ||
       lock.active_actions.length !== lock.blocking_count ||
