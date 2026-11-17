@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -63,4 +65,52 @@ test("NOVA status requires dedicated runtime readiness evidence, never a generic
   assert.match(nova, /Readiness no verificada/);
   assert.doesNotMatch(nova, /await probe\(\`\$\{base\}/);
   assert.doesNotMatch(nova, /return res\.status > 0 && res\.status < 500/);
+});
+
+test("Node Agent status rejects HTTP health pages, 401/404 and stale heartbeat", async () => {
+  const source = await read("src/app/api/system/status/route.ts");
+  const start = source.indexOf("function nodeReadyUrl(");
+  const end = source.indexOf("async function checkAgentByUrl(", start);
+  assert.ok(start >= 0 && end > start);
+  const compiled = ts.transpileModule(source.slice(start, end), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const evaluate = async (status, payload, url = "https://node.example/health") => {
+    const moduleForTest = { exports: {} };
+    vm.runInNewContext(compiled + "\nmodule.exports = {nodeReadyUrl, probeNodeReady};", {
+      module: moduleForTest,
+      exports: moduleForTest.exports,
+      URL,
+      AbortController,
+      setTimeout,
+      clearTimeout,
+      fetch: async () => ({ status, json: async () => payload }),
+    });
+    const { nodeReadyUrl, probeNodeReady } = moduleForTest.exports;
+    return {
+      normalizedUrl: nodeReadyUrl(url),
+      ready: await probeNodeReady(nodeReadyUrl(url)),
+    };
+  };
+
+  for (const httpStatus of [200, 401, 403, 404, 500]) {
+    const result = await evaluate(httpStatus, { ok: true, service: "hocker-node-agent" });
+    assert.equal(result.ready, false, "health-only or HTTP error is never readiness");
+  }
+  const authentic = { ok: true, status: "ready", heartbeat_fresh: true };
+  assert.equal((await evaluate(200, authentic)).ready, true);
+  assert.equal((await evaluate(200, { ...authentic, heartbeat_fresh: false })).ready, false);
+  assert.equal((await evaluate(503, authentic)).ready, false);
+  assert.equal((await evaluate(200, authentic, "https://node.example/ready?debug=1")).normalizedUrl,
+    "https://node.example/ready");
+  assert.equal((await evaluate(200, authentic, "ftp://node.example/ready")).ready, false);
+
+  const direct = source.slice(source.indexOf("async function checkAgentByUrl("),
+    source.indexOf("async function checkAgentBySupabase("));
+  assert.match(direct, /probeNodeReady\(nodeReadyUrl\(configured\)\)/);
+  assert.match(direct, /await checkAgentBySupabase\(\)/);
+  assert.doesNotMatch(direct, /await probe\(/);
+  assert.match(source, /secondsSince\(node\.last_seen_at\)/);
+  assert.doesNotMatch(source, /secondsSince\(node\.last_seen_at \|\| node\.updated_at\)/);
+  assert.match(source, /const online = node\.status === "online"/);
 });
