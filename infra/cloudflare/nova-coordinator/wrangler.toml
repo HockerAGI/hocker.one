@@ -3,10 +3,12 @@ main = "index.mjs"
 compatibility_date = "2026-11-13"
 workers_dev = true
 
+# Mirrors settings already configured in Cloudflare Production.
+# Keep all credentials in Cloudflare Secrets, NEVER in this file.
 [vars]
-NOVA_COORDINATOR_ENABLED = "false"
+NOVA_COORDINATOR_ENABLED = "true"
+NOVA_FREE_INVENTORY_ENABLED = "true"
 
-# Intentionally NO crons in the initial deployment. Add one bounded schedule
-# only after Workers Free + both secrets + Owner Gate/read-only E2E are verified.
-# [triggers]
-# crons = ["*/5 * * * *"]
+# The ONE existing production cron; do not add another scheduled Worker.
+[triggers]
+crons = ["*/5 * * * *"]
