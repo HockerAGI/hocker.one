@@ -280,4 +280,6 @@ test("bootstrap recovery never bypasses Queue Lock without verified DB readback"
   assert.match(materializer, /canResumeOwnApplicationBootstrap\(\{/);
   assert.match(materializer, /if \(!preview\.can_enqueue && !\(await isOwnBootstrapResume\(\{/);
   assert.match(materializer, /if \(blocking\.error \|\| own\.error/);
+  assert.equal((materializer.match(/materialized: false,\s*can_enqueue: false,\s*enqueued: false/g) || []).length, 2);
+  assert.match(materializer, /materialized: true,\s*can_enqueue: true,\s*enqueued: true/);
 });
