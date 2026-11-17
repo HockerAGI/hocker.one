@@ -268,7 +268,7 @@ test("guided GitHub queue isolates the same branch across different application 
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   }).outputText;
   const moduleForScope = { exports: {} };
-  vm.runInNewContext(compiled + "\\nmodule.exports.key = guidedGithubBranchKey;", {
+  vm.runInNewContext(compiled + "\nmodule.exports.key = guidedGithubBranchKey;", {
     module: moduleForScope,
     exports: moduleForScope.exports,
     asRecord(value) { return value && typeof value === "object" && !Array.isArray(value) ? value : {}; },
