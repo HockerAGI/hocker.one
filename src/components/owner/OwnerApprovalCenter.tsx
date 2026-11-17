@@ -30,6 +30,20 @@ type RuntimeAction = {
 type ApiListResponse = { ok?: boolean; actions?: RuntimeAction[]; error?: string };
 type MutateResponse = { ok?: boolean; item?: RuntimeAction; error?: string; message?: string };
 
+type IntegrationProbe = { configured: boolean; verified_read: boolean; state: "missing" | "verification_failed" | "verified_read" };
+type EngineeringIntegrations = {
+  ok: true;
+  checked_at: string;
+  github: IntegrationProbe;
+  vercel: IntegrationProbe;
+  node_agent_required: false;
+  owner_gate_required_for_writes: true;
+  github_write_scope_verified: false;
+  can_prepare_existing_app_proposal: boolean;
+  can_prepare_new_app_bootstrap: boolean;
+  blockers: string[];
+};
+
 type ActionView = "needs_approval" | "approved" | "history";
 const PAGE_SIZE = 30;
 
@@ -59,8 +73,37 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [integrations, setIntegrations] = useState<EngineeringIntegrations | null>(null);
+  const [integrationsLoading, setIntegrationsLoading] = useState(true);
 
   const pendingCount = view === "needs_approval" ? actions.length : null;
+
+  const checkIntegrations = useCallback(async () => {
+    setIntegrationsLoading(true);
+    try {
+      const params = new URLSearchParams({ project_id: projectId });
+      const response = await fetch(`/api/agi/runtime/integrations/readiness?${params}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("No se pudo verificar el runtime.");
+      const result: unknown = await response.json();
+      if (!result || typeof result !== "object" ||
+          (result as Record<string, unknown>).ok !== true) {
+        throw new Error("Contrato de verificación inválido.");
+      }
+      setIntegrations(result as EngineeringIntegrations);
+    } catch {
+      // Never show a previous green connection after auth expires or a
+      // provider/API check fails. The absence of proof stays explicit.
+      setIntegrations(null);
+    } finally {
+      setIntegrationsLoading(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    void checkIntegrations();
+  }, [checkIntegrations]);
 
   const load = useCallback(async () => {
     queueMicrotask(() => setLoading(true));
@@ -128,6 +171,36 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
           {loading ? "Leyendo..." : "Actualizar"}
         </button>
       </div>
+
+      <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4" aria-label="Preparación de integraciones de ingeniería AGI">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-100">Ingeniería AGI sin nodo físico</h3>
+            <p className="mt-1 text-xs text-slate-400">Identidades de ejecución configuradas en Hocker One Production, verificadas mediante lectura autenticada.</p>
+          </div>
+          <button type="button" className="min-h-10 rounded-xl border border-white/15 px-3 text-xs text-slate-200 disabled:opacity-50"
+            onClick={() => void checkIntegrations()} disabled={integrationsLoading}>
+            {integrationsLoading ? "Verificando…" : "Verificar conexiones"}
+          </button>
+        </div>
+        {integrations ? (
+          <div className="mt-3 space-y-2 text-sm text-slate-200" role="status">
+            <p>GitHub: {integrations.github.state === "verified_read" ? "lectura autenticada verificada" :
+              integrations.github.state === "missing" ? "sin identidad de runtime en Production" : "conexión sin verificar"}</p>
+            <p>Vercel: {integrations.vercel.state === "verified_read" ? "lectura autenticada verificada" :
+              integrations.vercel.state === "missing" ? "sin identidad de runtime en Production" : "conexión sin verificar"}</p>
+            <p className="text-xs text-slate-400">
+              Propuestas para apps existentes: {integrations.can_prepare_existing_app_proposal ? "preparación habilitada" : "bloqueada"}.
+              {" "}Creación de nuevas apps: {integrations.can_prepare_new_app_bootstrap ? "preparación habilitada" : "bloqueada"}.
+            </p>
+            <p className="text-xs text-slate-400">La lectura autenticada no certifica permisos de escritura. Toda mutación sigue requiriendo Owner Gate y revisión. No se requiere Node Agent físico.</p>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-amber-200" role="status">
+            {integrationsLoading ? "Comprobando conexiones de runtime…" : "Estado no verificable. No se autoriza ingeniería AGI por este indicador."}
+          </p>
+        )}
+      </section>
 
       <div className="hko-approval-metrics">
         <div><span>{view === "needs_approval" ? "Pendientes visibles" : "Vista actual"}</span><strong>{pendingCount ?? (view === "approved" ? "Aprobadas" : "Historial")}</strong></div>
