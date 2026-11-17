@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { executeGitHubReadOperation, hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
-import { hasVercelRuntimeToken, verifyVercelConnection } from "@/lib/vercel-runtime-executor";
+import { getVercelProject, hasVercelRuntimeToken } from "@/lib/vercel-runtime-executor";
 import { summarizeEngineeringReadiness } from "@/lib/agi-engineering-integration-readiness";
 
 export const runtime = "nodejs";
@@ -24,6 +24,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const githubConfigured = hasGitHubRuntimeToken();
   const vercelConfigured = hasVercelRuntimeToken();
+  const vercelProjectId = String(process.env.VERCEL_PROJECT_ID ?? "").trim();
   // Separate read-only probes: a failing provider must not obscure the
   // other's status or leak HTTP error payloads / authorization headers.
   const [githubRead, vercelRead] = await Promise.all([
@@ -32,7 +33,11 @@ export async function GET(request: Request): Promise<Response> {
           .then((result) => result.repository === "HockerAGI/hocker.one")
           .catch(() => false)
       : Promise.resolve(false),
-    vercelConfigured ? verifyVercelConnection().catch(() => false) : Promise.resolve(false),
+    vercelConfigured && vercelProjectId
+      ? getVercelProject({ project_id: vercelProjectId })
+          .then((project) => project.id === vercelProjectId)
+          .catch(() => false)
+      : Promise.resolve(false),
   ]);
   const readiness = summarizeEngineeringReadiness({
     github_configured: githubConfigured,
