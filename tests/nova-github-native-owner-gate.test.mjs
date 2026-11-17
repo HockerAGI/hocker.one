@@ -261,14 +261,18 @@ test("guided GitHub worker prevents subsequent writes after rejecting a precedin
 
 test("guided GitHub queue isolates the same branch across different application repositories", async () => {
   const source = await read("src/lib/agi-action-execution.ts");
+  const identityStart = source.indexOf("function githubRepositoryIdentity");
+  const identityEnd = source.indexOf("function parseRepository", identityStart);
   const start = source.indexOf("function guidedGithubBranchKey");
   const end = source.indexOf("async function getGuidedGithubChain", start);
-  assert.ok(start >= 0 && end > start, "guided chain scope function exists");
-  const compiled = ts.transpileModule(source.slice(start, end), {
+  assert.ok(identityStart >= 0 && identityEnd > identityStart && start >= 0 && end > start,
+    "shared repository identity and guided chain scope functions exist");
+  const compiled = ts.transpileModule(source.slice(identityStart, identityEnd) + "\n" +
+    source.slice(start, end), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   }).outputText;
   const moduleForScope = { exports: {} };
-  vm.runInNewContext(compiled + "\nmodule.exports.key = guidedGithubBranchKey;", {
+  vm.runInNewContext(compiled + "\nmodule.exports = { key: guidedGithubBranchKey, identity: githubRepositoryIdentity, possibly: guidedGithubPossiblyTargetsKey };", {
     module: moduleForScope,
     exports: moduleForScope.exports,
     asRecord(value) { return value && typeof value === "object" && !Array.isArray(value) ? value : {}; },
@@ -287,4 +291,17 @@ test("guided GitHub queue isolates the same branch across different application 
   assert.throws(() => key(action("")), /GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID/);
   assert.throws(() => key(action("HockerAGI/hocker.one", "")), /GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID/);
   assert.equal(key({ tool_key: "mcp", action_type: "mcp.execute", payload: {} }), null);
+  assert.equal(key(action("HockerAGI/hocker.one")),
+    key({ ...action("HockerAGI/hocker.one"), payload: { ...action("HockerAGI/hocker.one").payload, owner: "HockerAGI", repo: "hocker.one" } }));
+  assert.throws(() => key({ ...action("HockerAGI/nova.agi"),
+    payload: { ...action("HockerAGI/nova.agi").payload, owner: "HockerAGI", repo: "hocker.one" } }),
+    /GITHUB_REPOSITORY_CONFLICTING_IDENTITY/);
+  const possibly = moduleForScope.exports.possibly;
+  const target = key(action("HockerAGI/hocker.one"));
+  assert.equal(possibly({ ...action("HockerAGI/nova.agi"),
+    payload: { ...action("HockerAGI/nova.agi").payload, owner: "HockerAGI", repo: "hocker.one" } }, target), true);
+  assert.equal(possibly(action(""), target), false,
+    "invalid row without an actual repository cannot block every other application");
+  assert.equal(possibly(action("HockerAGI/nova.agi"), target), false,
+    "invalid or unrelated identities must not block another repository");
 });
