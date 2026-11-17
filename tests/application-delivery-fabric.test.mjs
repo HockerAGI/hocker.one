@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { createRequire } from "node:module";
+import vm from "node:vm";
+import ts from "typescript";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -132,4 +135,151 @@ test("engineering tool loop is bounded and fits the chat execution window", asyn
 test("all GitHub file lifecycle mutations remain ordered before PR creation", async () => {
   const materializer = await read("src/lib/nova-mcp-action-materializer.ts");
   assert.match(materializer, /create_branch.*create_or_update_file.*create_file.*update_file.*create_pull_request/s);
+});
+
+async function bootstrapIdentity() {
+  const source = await read("src/lib/nova-application-bootstrap-identity.ts");
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const mod = { exports: {} };
+  vm.runInNewContext(compiled, {
+    module: mod,
+    exports: mod.exports,
+    require: createRequire(import.meta.url),
+  });
+  return mod.exports;
+}
+
+test("repeating the same new-app request reuses a stable bootstrap identity", async () => {
+  const { stableNovaApplicationBootstrapId } = await bootstrapIdentity();
+  const input = {
+    project_id: "hocker-one",
+    created_by: "owner-123-private",
+    repository_name: "app-portal-cliente",
+  };
+  const first = stableNovaApplicationBootstrapId(input);
+  assert.match(first, /^bootstrap_v2_[0-9a-f]{24}$/);
+  assert.equal(stableNovaApplicationBootstrapId({ ...input }), first);
+  assert.equal(stableNovaApplicationBootstrapId({ ...input, repository_name: "APP-PORTAL-CLIENTE" }), first);
+  assert.notEqual(stableNovaApplicationBootstrapId({ ...input, repository_name: "app-portal-diferente" }), first);
+  assert.notEqual(stableNovaApplicationBootstrapId({ ...input, created_by: "other-owner" }), first);
+  assert.notEqual(stableNovaApplicationBootstrapId({ ...input, project_id: "other-project" }), first);
+  assert.equal(first.includes("owner-123-private"), false);
+  assert.throws(() => stableNovaApplicationBootstrapId({ ...input, created_by: "" }), /IDENTITY_INCOMPLETE/);
+});
+
+test("a rejected, failed or invalid GitHub parent cannot enqueue a Vercel child", async () => {
+  const { githubBootstrapParentState } = await bootstrapIdentity();
+  const id = "009a7e15-10d4-4a4e-9f08-acfe2bcd712e";
+  for (const status of ["needs_approval", "approved", "executed", "completed"]) {
+    const state = githubBootstrapParentState({ id, status });
+    assert.equal(state.eligible, true, status);
+    assert.equal(state.id, id);
+  }
+  for (const status of ["rejected", "cancelled", "failed", "execution_failed", "dead_letter",
+    "needs_fix", "running", "queued", "", "unknown"]) {
+    assert.equal(githubBootstrapParentState({ id, status }).eligible, false, status);
+  }
+  assert.equal(githubBootstrapParentState({ id: "", status: "approved" }).eligible, false);
+  assert.equal(githubBootstrapParentState({ id: "forged-id", status: "executed" }).eligible, false);
+});
+
+test("GitHub -> Vercel chain uses the stable identity and checks its persisted parent", async () => {
+  const materializer = await read("src/lib/nova-application-delivery-materializer.ts");
+  const queue = await read("src/lib/agi-runtime-core.ts");
+  assert.match(materializer, /stableNovaApplicationBootstrapId\(\{/);
+  assert.match(materializer, /githubBootstrapParentState\(githubRow\)/);
+  assert.match(materializer, /if \(!githubParent\.eligible \|\| !githubParent\.id\)/);
+  assert.match(materializer, /depends_on_action_id: githubParent\.id/);
+  assert.match(materializer, /GITHUB_BOOTSTRAP_PARENT_NOT_ELIGIBLE/);
+  assert.match(materializer, /const vercelState = githubBootstrapParentState\(vercelRow\)/);
+  assert.match(materializer, /VERCEL_BOOTSTRAP_ACTION_NOT_ELIGIBLE/);
+  assert.match(materializer, /requires_approval: true/);
+  assert.doesNotMatch(materializer, /Date\.now\(\)/);
+  assert.doesNotMatch(materializer, /randomUUID\(/);
+  const parentCheck = materializer.indexOf("if (!githubParent.eligible");
+  const vercelEnqueue = materializer.indexOf("const vercel = await enqueueVercelProject");
+  assert.ok(parentCheck >= 0 && vercelEnqueue > parentCheck);
+  assert.match(queue, /function buildAgiActionIdempotencyKey/);
+  assert.match(queue, /\.eq\("idempotency_key", idempotencyKey\)/);
+});
+
+
+test("Queue Lock permits only a persisted, exclusively own bootstrap replay", async () => {
+  const { stableNovaApplicationBootstrapId, canResumeOwnApplicationBootstrap } = await bootstrapIdentity();
+  const project_id = "hocker-one";
+  const created_by = "owner-123";
+  const repository_name = "app-portal-cliente";
+  const bootstrap_id = stableNovaApplicationBootstrapId({ project_id, created_by, repository_name });
+  const githubId = "009a7e15-10d4-4a4e-9f08-acfe2bcd712e";
+  const vercelId = "009a7e15-10d4-4a4e-9f08-acfe2bcd712f";
+  const github = {
+    id: githubId, project_id, created_by, agi_id: "hostia", tool_key: "github",
+    action_type: "github.create_repository", status: "needs_approval",
+    payload: { owner: "HockerAGI", name: repository_name, bootstrap_id },
+  };
+  const vercel = {
+    id: vercelId, project_id, created_by, agi_id: "hostia", tool_key: "vercel",
+    action_type: "vercel.create_project", status: "needs_approval",
+    payload: { project_name: repository_name, repository: "HockerAGI/" + repository_name,
+      bootstrap_id, depends_on_action_id: githubId },
+  };
+  const lockFor = (rows) => ({
+    source: "supabase", locked: true, blocking_count: rows.length,
+    active_actions: rows.map((x) => ({ id: x.id, status: x.status })),
+  });
+  const base = {
+    project_id, created_by, repository_name, bootstrap_id,
+    queue_lock: lockFor([github]),
+    all_blocking_rows: [github],
+    own_bootstrap_rows: [github],
+  };
+  assert.equal(canResumeOwnApplicationBootstrap(base), true, "a partial same-owner GitHub parent can resume");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, queue_lock: lockFor([github, vercel]),
+    all_blocking_rows: [github, vercel],
+    own_bootstrap_rows: [github, vercel],
+  }), true, "already queued same-bootstrap child is idempotently recognized");
+
+  const unrelated = { ...github, id: "a09a7e15-10d4-4a4e-9f08-acfe2bcd712e",
+    payload: { ...github.payload, bootstrap_id: "another-bootstrap" } };
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, queue_lock: lockFor([github, unrelated]),
+    all_blocking_rows: [github, unrelated],
+  }), false, "any unrelated blocking action prevents resumption");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, queue_lock: { ...base.queue_lock, source: "safe_fallback" },
+  }), false, "database/read failure never bypasses Queue Lock");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, queue_lock: { ...base.queue_lock, active_actions: [] },
+  }), false, "incomplete lock snapshot fails closed");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, own_bootstrap_rows: [{ ...github, created_by: "different-owner" }],
+  }), false, "a foreign Owner cannot resume this bootstrap");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, own_bootstrap_rows: [{ ...github, status: "rejected" }],
+  }), false, "rejected actions cannot be revived");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, queue_lock: lockFor([github, vercel]),
+    all_blocking_rows: [github, vercel],
+    own_bootstrap_rows: [github, { ...vercel, payload: {
+      ...vercel.payload, depends_on_action_id: "different-id" } }],
+  }), false, "a child with an unrelated dependency is not a valid replay");
+  assert.equal(canResumeOwnApplicationBootstrap({
+    ...base, queue_lock: lockFor([github]), all_blocking_rows: [],
+  }), false, "the full database blocking count must match the lock snapshot");
+});
+
+test("bootstrap recovery never bypasses Queue Lock without verified DB readback", async () => {
+  const materializer = await read("src/lib/nova-application-delivery-materializer.ts");
+  assert.match(materializer, /async function isOwnBootstrapResume/);
+  assert.match(materializer, /lock\.source !== "supabase"/);
+  assert.match(materializer, /\.in\("status", \[\.\.\.AGI_QUEUE_BLOCKING_STATUSES\]\)/);
+  assert.match(materializer, /blocking\.count !== blocking\.data\?\.length/);
+  assert.match(materializer, /canResumeOwnApplicationBootstrap\(\{/);
+  assert.match(materializer, /if \(!preview\.can_enqueue && !\(await isOwnBootstrapResume\(\{/);
+  assert.match(materializer, /if \(blocking\.error \|\| own\.error/);
+  assert.equal((materializer.match(/materialized: false,\s*can_enqueue: false,\s*enqueued: false/g) || []).length, 2);
+  assert.match(materializer, /materialized: true,\s*can_enqueue: true,\s*enqueued: true/);
 });
