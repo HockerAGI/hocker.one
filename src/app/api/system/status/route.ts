@@ -205,9 +205,13 @@ async function probeNodeReady(url: string): Promise<boolean> {
   }
 }
 
-async function checkAgentByUrl(): Promise<Check | null> {
+async function checkAgentByUrl(): Promise<Check> {
   const configured = env("HOCKER_NODE_AGENT_HEALTH_URL", "HOCKER_NODE_AGENT_URL");
-  if (!configured) return null;
+  if (!configured) {
+    // A fresh presence record alone cannot prove /ready; never bypass
+    // the joint live-readiness requirement through missing configuration.
+    return { active: false, label: "Agente", detail: "Sin endpoint /ready configurado" };
+  }
 
   const remoteReady = await probeNodeReady(nodeReadyUrl(configured));
   if (!remoteReady) {
@@ -300,10 +304,7 @@ async function checkAgentBySupabase(): Promise<Check> {
 }
 
 async function checkAgent(): Promise<Check> {
-  const direct = await checkAgentByUrl();
-  if (direct) return direct;
-
-  return checkAgentBySupabase();
+  return checkAgentByUrl();
 }
 
 async function checkPwa(request: Request): Promise<Check> {
