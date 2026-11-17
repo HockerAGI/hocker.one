@@ -187,6 +187,10 @@ test("public Worker only provides minimal health; routes do not execute tools",a
   assert.match(config,/^crons\s*=\s*\["\*\/5 \* \* \* \*"\]$/m);
   assert.doesNotMatch(config,/(NOVA_COORDINATOR_READ_TOKEN|NOVA_FREE_INVENTORY_TOKEN|NOVA_COORDINATOR_VERCEL_BYPASS_TOKEN)\s*=/);
   assert.match(config,/^name\s*=\s*"hocker-nova-coordinator"$/m);
+  assert.match(config,/^\[observability\]$/m);
+  assert.match(config,/^enabled\s*=\s*true$/m);
+  assert.match(config,/^head_sampling_rate\s*=\s*1$/m);
+  assert.match(config,/^redact_query_string\s*=\s*true$/m);
 });
 
 test("a clear candidate remains Owner-only and cannot dispatch automatically",async()=>{

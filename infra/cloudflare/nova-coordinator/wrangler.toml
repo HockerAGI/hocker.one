@@ -12,3 +12,10 @@ NOVA_FREE_INVENTORY_ENABLED = "true"
 # The ONE existing production cron; do not add another scheduled Worker.
 [triggers]
 crons = ["*/5 * * * *"]
+
+# Free Workers Logs: bounded existing Cron, no extra provider.
+# Logs contain only safe Worker event/status fields; no bindings/secrets.
+[observability]
+enabled = true
+head_sampling_rate = 1
+redact_query_string = true
