@@ -10,7 +10,7 @@ Preflight para Hocker One / NOVA, independiente de `hocker-node-agent` físico y
 - Haber conectado GitHub y Vercel en ChatGPT NO configura una identidad dentro de las funciones server-side de Hocker One.
 
 ## Nuevo endpoint operativo
-`GET /api/agi/runtime/integrations/readiness?project_id=hocker-one` (Owner autenticado con MFA AAL2): devuelve únicamente booleanos y códigos de preparación, jamás credenciales, payloads upstream, prompts ni encabezados de autorización. Realiza solo `GET /repos/HockerAGI/hocker.one` y `GET /v9/projects/{VERCEL_PROJECT_ID}` cuando existen tokens de runtime. Las pruebas son read-only; la API nunca autoriza ni ejecuta mutaciones. El centro Owner Actions muestra el resultado y jamás retiene un verde anterior si la consulta falla.
+`GET /api/agi/runtime/integrations/readiness?project_id=hocker-one` (Owner autenticado con MFA AAL2): devuelve únicamente booleanos y códigos de preparación, jamás credenciales, payloads upstream, prompts ni encabezados de autorización. Realiza solo lecturas autenticadas `GET /repos/HockerAGI/{hocker.one,nova.agi,hocker-node-agent}` y `GET /v9/projects/{VERCEL_PROJECT_ID}` cuando existen tokens de runtime. Las pruebas son read-only; la API nunca autoriza ni ejecuta mutaciones. El centro Owner Actions muestra el resultado y jamás retiene un verde anterior si la consulta falla.
 
 **Semántica:** `configured` acredita presencia de variable, `verified_read` lectura autenticada real, `can_prepare_existing_app_proposal` y `can_prepare_new_app_bootstrap` permiten planificar acciones en cola pero NO acreditan `Contents:write`, `Pull requests:write`, `Repository creation:write` ni permisos Vercel. El Owner Gate AAL2 permanece obligatorio para cada ejecución material, siempre con review y CI.
 
