@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { evaluateServerlessCoreHealth, type RuntimeHealthCheck } from "@/lib/hocker-health-boundaries";
 
 type HealthState = {
   overall: "healthy" | "degraded" | "down" | "loading" | "unknown";
-  checks: { label: string; active: boolean }[];
+  checks: RuntimeHealthCheck[];
+  coreActive: number;
+  coreTotal: number;
+  optionalUnavailable: number;
   lastChecked: number;
 };
 
-const STORAGE_KEY = "hocker-health-cache";
+const STORAGE_KEY = "hocker-core-health-cache-v2";
 const POLL_INTERVAL = 30_000; // 30 seconds
 
 function readCache(): HealthState | null {
@@ -37,7 +41,7 @@ export default function HealthIndicator() {
     if (cached && Date.now() - cached.lastChecked < POLL_INTERVAL * 2) {
       return cached;
     }
-    return { overall: "loading", checks: [], lastChecked: 0 };
+    return { overall: "loading", checks: [], coreActive: 0, coreTotal: 0, optionalUnavailable: 0, lastChecked: 0 };
   });
 
   useEffect(() => {
@@ -57,23 +61,14 @@ export default function HealthIndicator() {
         }
 
         const body = await res.json();
-        if (cancelled || !body?.checks) return;
-
-        const checks = Object.values(body.checks) as { label: string; active: boolean }[];
-        const activeCount = checks.filter((c) => c.active).length;
-        const criticalActive = checks
-          .filter((c) => c.label === "Supabase" || c.label === "NOVA")
-          .every((c) => c.active);
-
-        const overall: HealthState["overall"] =
-          activeCount === checks.length
-            ? "healthy"
-            : criticalActive
-              ? "degraded"
-              : "down";
-
+        if (cancelled || !body || body.health_scope !== "hocker_one_serverless_core") return;
+        const rawChecks = body.checks as Record<string, RuntimeHealthCheck> | null;
+        const summary = evaluateServerlessCoreHealth(rawChecks);
+        const checks = rawChecks && typeof rawChecks === "object" && !Array.isArray(rawChecks)
+          ? Object.values(rawChecks)
+          : [];
         const newState: HealthState = {
-          overall,
+          ...summary,
           checks,
           lastChecked: Date.now(),
         };
@@ -114,20 +109,23 @@ export default function HealthIndicator() {
 
   const label =
     state.overall === "healthy"
-      ? "Sistema saludable"
+      ? "Núcleo Hocker One operativo"
       : state.overall === "degraded"
         ? "Sistema degradado"
         : state.overall === "down"
-          ? "Sistema caído"
+          ? "Núcleo Hocker One no disponible"
           : state.overall === "loading"
             ? "Verificando…"
             : "Estado desconocido";
 
-  const activeCount = state.checks.filter((c) => c.active).length;
-  const totalCount = state.checks.length;
+  const activeCount = state.coreActive;
+  const totalCount = state.coreTotal;
+  const tooltip = state.optionalUnavailable > 0
+    ? `${label}; ${state.optionalUnavailable} capacidades opcionales no verificadas`
+    : label;
 
   return (
-    <div className="flex items-center gap-2" title={label}>
+    <div className="flex items-center gap-2" title={tooltip}>
       <span className={`h-2.5 w-2.5 rounded-full transition-colors ${dotClass}`} />
       {totalCount > 0 && (
         <span className="hidden text-[10px] font-bold text-slate-500 xl:inline">
