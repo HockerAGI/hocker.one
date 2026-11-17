@@ -193,6 +193,8 @@ test("GitHub -> Vercel chain uses the stable identity and checks its persisted p
   assert.match(materializer, /if \(!githubParent\.eligible \|\| !githubParent\.id\)/);
   assert.match(materializer, /depends_on_action_id: githubParent\.id/);
   assert.match(materializer, /GITHUB_BOOTSTRAP_PARENT_NOT_ELIGIBLE/);
+  assert.match(materializer, /const vercelState = githubBootstrapParentState\(vercelRow\)/);
+  assert.match(materializer, /VERCEL_BOOTSTRAP_ACTION_NOT_ELIGIBLE/);
   assert.match(materializer, /requires_approval: true/);
   assert.doesNotMatch(materializer, /Date\.now\(\)/);
   assert.doesNotMatch(materializer, /randomUUID\(/);
