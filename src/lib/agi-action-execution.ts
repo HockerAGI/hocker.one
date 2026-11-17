@@ -419,11 +419,11 @@ function guidedGithubBranchKey(item: AgiActionQueueRow): string | null {
     payload.repository ??
       (payload.owner && payload.repo ? `${payload.owner}/${payload.repo}` : ""),
   ).trim().toLowerCase();
-  if (!/^[a-z0-9_.-]+\\/[a-z0-9_.-]+$/.test(repository) || !branch) {
+  if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(repository) || !branch) {
     // A malformed guided payload must not silently bypass the Owner Gate.
     throw new Error("GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID");
   }
-  return repository + "\\n" + branch;
+  return repository + "::" + branch;
 }
 
 async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow): Promise<{ key: string; siblings: AgiActionQueueRow[] } | null> {
