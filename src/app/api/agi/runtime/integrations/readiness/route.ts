@@ -35,7 +35,8 @@ export async function GET(request: Request): Promise<Response> {
       : Promise.resolve(false),
     vercelConfigured && vercelProjectId
       ? getVercelProject({ project_id: vercelProjectId })
-          .then((project) => project.id === vercelProjectId)
+          .then((project) => Boolean(project && typeof project === "object" &&
+            "id" in project && project.id === vercelProjectId))
           .catch(() => false)
       : Promise.resolve(false),
   ]);
