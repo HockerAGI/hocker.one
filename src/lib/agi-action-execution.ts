@@ -129,13 +129,24 @@ function allowedRepositories(): Set<string> {
   return new Set(raw.split(",").map((item) => item.trim()).filter(Boolean));
 }
 
+/** One canonical identity for Owner Gate sequencing AND GitHub execution. */
+function githubRepositoryIdentity(payload: JsonRecord): string {
+  const explicit = stringValue(payload.repository).trim();
+  const owner = stringValue(payload.owner).trim();
+  const repo = stringValue(payload.repo).trim();
+  if (Boolean(owner) !== Boolean(repo)) {
+    throw new Error("GITHUB_REPOSITORY_PARTIAL_IDENTITY_REJECTED");
+  }
+  const combined = owner && repo ? `${owner}/${repo}` : "";
+  if (explicit && combined && explicit.toLowerCase() !== combined.toLowerCase()) {
+    throw new Error("GITHUB_REPOSITORY_CONFLICTING_IDENTITY");
+  }
+  return combined || explicit;
+}
+
 function parseRepository(payload: JsonRecord): { owner: string; repo: string; fullName: string } {
-  const ownerInput = stringValue(payload.owner);
-  const repoInput = stringValue(payload.repo);
-  const raw =
-    ownerInput && repoInput
-      ? `${ownerInput}/${repoInput}`
-      : stringValue(payload.repository) || envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one";
+  const raw = githubRepositoryIdentity(payload) ||
+    envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one";
 
   const [owner, repo] = raw.split("/").map((item) => item.trim()).filter(Boolean);
   if (!owner || !repo) throw new Error("Repositorio inválido. Usa formato owner/repo.");
@@ -412,8 +423,30 @@ function guidedGithubBranchKey(item: AgiActionQueueRow): string | null {
   if (!GUIDED_GITHUB_ACTION_ORDER.includes(item.action_type)) return null;
   if (payload.materializer_version !== GUIDED_GITHUB_MATERIALIZER_VERSION) return null;
 
-  const branch = stringValue(payload.target_branch ?? payload.branch ?? payload.head);
-  return branch || null;
+  const branch = stringValue(payload.target_branch ?? payload.branch ?? payload.head).trim();
+  // Branches may share the same name across HOCKER apps. Never use a bare
+  // branch as a cross-repository approval/execution identity.
+  const repository = githubRepositoryIdentity(payload).toLowerCase();
+  if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(repository) || !branch) {
+    // A malformed guided payload must not silently bypass the Owner Gate.
+    throw new Error("GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID");
+  }
+  return repository + "::" + branch;
+}
+
+/** An invalid sibling may block only the scope it could actually affect. */
+function guidedGithubPossiblyTargetsKey(item: AgiActionQueueRow, key: string): boolean {
+  const payload = asRecord(item.payload);
+  if (item.tool_key !== "github" ||
+      !GUIDED_GITHUB_ACTION_ORDER.includes(item.action_type) ||
+      payload.materializer_version !== GUIDED_GITHUB_MATERIALIZER_VERSION) return false;
+  const branch = stringValue(payload.target_branch ?? payload.branch ?? payload.head).trim();
+  if (!branch) return false;
+  const explicit = stringValue(payload.repository).trim().toLowerCase();
+  const owner = stringValue(payload.owner).trim();
+  const repo = stringValue(payload.repo).trim();
+  const combined = owner && repo ? `${owner}/${repo}`.toLowerCase() : "";
+  return [explicit, combined].some((candidate) => candidate && candidate + "::" + branch === key);
 }
 
 async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow): Promise<{ key: string; siblings: AgiActionQueueRow[] } | null> {
@@ -432,7 +465,17 @@ async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow):
   if (error) throw new Error(error.message);
 
   const siblings = ((data ?? []) as AgiActionQueueRow[])
-    .filter((row) => guidedGithubBranchKey(row) === key)
+    .filter((row) => {
+      if (row.id === item.id) return true; // item identity validated above
+      try {
+        return guidedGithubBranchKey(row) === key;
+      } catch {
+        if (guidedGithubPossiblyTargetsKey(row, key)) {
+          throw new Error("GITHUB_GUIDED_SIBLING_IDENTITY_CONFLICT");
+        }
+        return false; // A malformed unrelated/terminal row cannot lock every app.
+      }
+    })
     .sort((a, b) => {
       const aPayload = asRecord(a.payload);
       const bPayload = asRecord(b.payload);
