@@ -22,8 +22,14 @@ export async function GET(request: Request): Promise<Response> {
   const owner = await requireOwnerAal2Api(PROJECT_ID);
   if (!owner.ok) return owner.response;
 
-  const githubConfigured = hasGitHubRuntimeToken();
-  const vercelConfigured = hasVercelRuntimeToken();
+  const rawEnvironment = String(process.env.VERCEL_ENV ?? "").trim();
+  const checkedEnvironment = (["production", "preview", "development"].includes(rawEnvironment)
+    ? rawEnvironment : "unknown") as "production" | "preview" | "development" | "unknown";
+  // A Preview token must NEVER be presented as Production readiness.
+  // No provider probe runs outside the actual Production deployment.
+  const productionScope = checkedEnvironment === "production";
+  const githubConfigured = productionScope && hasGitHubRuntimeToken();
+  const vercelConfigured = productionScope && hasVercelRuntimeToken();
   const vercelProjectId = String(process.env.VERCEL_PROJECT_ID ?? "").trim();
   // Separate read-only probes: a failing provider must not obscure the
   // other's status or leak HTTP error payloads / authorization headers.
@@ -57,7 +63,11 @@ export async function GET(request: Request): Promise<Response> {
     ok: true,
     project_id: PROJECT_ID,
     checked_at: new Date().toISOString(),
+    checked_environment: checkedEnvironment,
+    production_scope_verified: productionScope,
     ...readiness,
+    blockers: productionScope ? readiness.blockers
+      : [...readiness.blockers, "NON_PRODUCTION_SCOPE_NOT_CERTIFIED"],
     authentication_scope: "read_only_verified_no_write_attestation",
     message: "Verificación de conexión sin escritura. Las mutaciones requieren Owner Gate.",
   }, { headers: { "Cache-Control": "no-store, max-age=0" } });
