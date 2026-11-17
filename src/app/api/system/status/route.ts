@@ -10,6 +10,8 @@ type Check = {
   active: boolean;
   label: string;
   detail: string;
+  /** Only the serverless control-plane core may be required. */
+  required?: boolean;
 };
 
 type NodePresence = {
@@ -55,7 +57,7 @@ async function probe(url: string, headers?: HeadersInit): Promise<boolean> {
       signal: controller.signal,
     });
 
-    return res.status > 0 && res.status < 500;
+    return res.ok;
   } catch {
     return false;
   } finally {
@@ -371,30 +373,38 @@ export async function GET(request: NextRequest) {
         node: process.version,
         environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown",
       },
+      health_scope: "hocker_one_serverless_core",
+      // Dedicated NOVA and local/physical Node Agent are expansion features.
+      // They remain visibly unverified but cannot mark the primary cloud
+      // control plane down when absent.
       checks: {
         web: {
           active: true,
           label: "Web",
           detail: "Online",
+          required: true,
         },
         vercel: {
           active: vercelActive,
           label: "Vercel",
           detail: vercelActive ? "Activo" : "Local",
+          required: true,
         },
-        supabase,
-        nova,
-        agent,
-        pwa,
+        supabase: { ...supabase, required: true },
+        nova: { ...nova, label: "NOVA dedicada", required: false },
+        agent: { ...agent, label: "Node Agent físico", required: false },
+        pwa: { ...pwa, required: false },
         android: {
           active: androidShellReady,
           label: "Android",
           detail: androidShellReady ? "Shell listo" : "No detectado",
+          required: false,
         },
         api: {
           active: true,
           label: "API",
           detail: "Online",
+          required: true,
         },
       },
     },
