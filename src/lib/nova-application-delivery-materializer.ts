@@ -2,6 +2,7 @@ import { enqueueAgiAction } from "@/lib/agi-runtime-core";
 import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 import { hasVercelRuntimeToken, verifyVercelConnection } from "@/lib/vercel-runtime-executor";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
+import { githubBootstrapParentState, stableNovaApplicationBootstrapId } from "@/lib/nova-application-bootstrap-identity";
 
 export const NOVA_APPLICATION_DELIVERY_VERSION = "12.8A-1";
 
@@ -127,9 +128,15 @@ export async function materializeNovaApplicationDeliveryFromChat(params: {
     };
   }
 
-  const bootstrapId = `bootstrap_${Date.now()}_${slug(params.message)}`;
   const repositoryName = `app-${slug(params.message)}`;
   const projectName = repositoryName;
+  // The same Owner request/repository always reuses the same queue actions.
+  // A failed second enqueue can be resumed without creating another repo.
+  const bootstrapId = stableNovaApplicationBootstrapId({
+    project_id: params.project_id,
+    created_by: params.created_by,
+    repository_name: repositoryName,
+  });
   const github = await enqueueGitHubRepository({
     project_id: params.project_id,
     created_by: params.created_by,
@@ -137,6 +144,22 @@ export async function materializeNovaApplicationDeliveryFromChat(params: {
     bootstrap_id: bootstrapId,
   });
   const githubRow = github as Record<string, unknown>;
+  const githubParent = githubBootstrapParentState(githubRow);
+  if (!githubParent.eligible || !githubParent.id) {
+    return {
+      ...preview,
+      version: NOVA_APPLICATION_DELIVERY_VERSION,
+      materialized: false,
+      enqueued: true,
+      executed: false,
+      reason: "El paso GitHub está rechazado, incompleto o no es aprobable. No se encoló Vercel.",
+      current_limit: "GITHUB_BOOTSTRAP_PARENT_NOT_ELIGIBLE",
+      next_step: "Revisar la acción GitHub existente en Owner Gate; no duplicar el bootstrap.",
+      bootstrap: { id: bootstrapId, repository: `HockerAGI/${repositoryName}`,
+        actions: [{ id: githubParent.id, action_type: "github.create_repository",
+          status: githubParent.status || "unknown" }] },
+    };
+  }
 
   const vercel = await enqueueVercelProject({
     project_id: params.project_id,
@@ -144,7 +167,7 @@ export async function materializeNovaApplicationDeliveryFromChat(params: {
     projectName,
     repository: `HockerAGI/${repositoryName}`,
     bootstrap_id: bootstrapId,
-    depends_on_action_id: String(githubRow.id ?? ""),
+    depends_on_action_id: githubParent.id,
   });
   const vercelRow = vercel as Record<string, unknown>;
 
