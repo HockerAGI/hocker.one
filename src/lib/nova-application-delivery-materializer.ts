@@ -39,7 +39,7 @@ async function isOwnBootstrapResume(params: {
   const lock = params.queue_lock;
   if (!lock || lock.locked !== true || lock.can_start_new_task !== false ||
       lock.source !== "supabase" || !Array.isArray(lock.active_actions) ||
-      !Number.isSafeInteger(lock.blocking_count) ||
+      typeof lock.blocking_count !== "number" || !Number.isSafeInteger(lock.blocking_count) ||
       (lock.blocking_count ?? 0) > 8 || (lock.blocking_count ?? 0) < 1) return false;
 
   try {
