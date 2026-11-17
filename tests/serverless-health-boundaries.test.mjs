@@ -85,3 +85,16 @@ test("private system status distinguishes the cloud core from the optional physi
   assert.match(legacyHealth, /payload\.status === "online" \? 200 : 503/);
   assert.match(legacyHealth, /readiness_scope: "serverless_control_plane"/);
 });
+
+
+test("rollback or incompatible API response invalidates cached healthy status", async () => {
+  const indicator = await read("src/components/HealthIndicator.tsx");
+  assert.match(indicator, /function invalidateHealth\(\)/);
+  assert.match(indicator, /overall: "unknown"/);
+  assert.match(indicator, /checks: \[\]/);
+  assert.match(indicator, /setState\(unknown\)/);
+  assert.match(indicator, /writeCache\(unknown\)/);
+  assert.match(indicator, /if \(!body \|\| body\.health_scope !== "hocker_one_serverless_core"\) \{/);
+  assert.match(indicator, /invalidateHealth\(\);\s*return;/);
+  assert.doesNotMatch(indicator, /if \(cancelled \|\| !body \|\| body\.health_scope/);
+});
