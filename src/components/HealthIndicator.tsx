@@ -47,6 +47,20 @@ export default function HealthIndicator() {
   useEffect(() => {
     let cancelled = false;
 
+    function invalidateHealth() {
+      if (cancelled) return;
+      const unknown: HealthState = {
+        overall: "unknown",
+        checks: [],
+        coreActive: 0,
+        coreTotal: 0,
+        optionalUnavailable: 0,
+        lastChecked: Date.now(),
+      };
+      setState(unknown);
+      writeCache(unknown);
+    }
+
     async function fetchHealth() {
       try {
         const res = await fetch("/api/system/status", {
@@ -54,14 +68,18 @@ export default function HealthIndicator() {
         });
 
         if (!res.ok) {
-          if (!cancelled) {
-            setState((prev) => ({ ...prev, overall: "unknown" }));
-          }
+          invalidateHealth();
           return;
         }
 
         const body = await res.json();
-        if (cancelled || !body || body.health_scope !== "hocker_one_serverless_core") return;
+        if (cancelled) return;
+        if (!body || body.health_scope !== "hocker_one_serverless_core") {
+          // A rollback to an older response contract must not retain a cached
+          // green indicator from a previously healthy deployment.
+          invalidateHealth();
+          return;
+        }
         const rawChecks = body.checks as Record<string, RuntimeHealthCheck> | null;
         const summary = evaluateServerlessCoreHealth(rawChecks);
         const checks = rawChecks && typeof rawChecks === "object" && !Array.isArray(rawChecks)
@@ -77,9 +95,7 @@ export default function HealthIndicator() {
           writeCache(newState);
         }
       } catch {
-        if (!cancelled) {
-          setState((prev) => ({ ...prev, overall: "unknown" }));
-        }
+        invalidateHealth();
       }
     }
 
