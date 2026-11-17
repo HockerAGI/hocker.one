@@ -104,10 +104,14 @@ export function canResumeOwnApplicationBootstrap(input: {
     }
   }
 
-  const parentId = githubBootstrapParentState(githubRows[0]).id;
+  const parentRow = githubRows[0];
+  if (!parentRow) return false;
+  const parentId = githubBootstrapParentState(parentRow).id;
   if (!parentId) return false;
-  if (vercelRows.length === 1 &&
-      actionPayload(vercelRows[0])?.depends_on_action_id !== parentId) return false;
+  if (vercelRows.length === 1) {
+    const childRow = vercelRows[0];
+    if (!childRow || actionPayload(childRow)?.depends_on_action_id !== parentId) return false;
+  }
 
   const priorById = new Map(input.own_bootstrap_rows.map((row) => [row.id, row]));
   const currentById = new Map(input.all_blocking_rows.map((row) => [row.id, row]));
