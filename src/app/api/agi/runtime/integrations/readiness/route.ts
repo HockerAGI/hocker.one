@@ -29,9 +29,15 @@ export async function GET(request: Request): Promise<Response> {
   // other's status or leak HTTP error payloads / authorization headers.
   const [githubRead, vercelRead] = await Promise.all([
     githubConfigured
-      ? executeGitHubReadOperation("get_repo", { repository: "HockerAGI/hocker.one" })
-          .then((result) => result.repository === "HockerAGI/hocker.one")
-          .catch(() => false)
+      ? Promise.all([
+          "HockerAGI/hocker.one",
+          "HockerAGI/nova.agi",
+          "HockerAGI/hocker-node-agent",
+        ].map((repository) =>
+          executeGitHubReadOperation("get_repo", { repository })
+            .then((result) => result.repository === repository)
+            .catch(() => false),
+        )).then((results) => results.every(Boolean))
       : Promise.resolve(false),
     vercelConfigured && vercelProjectId
       ? getVercelProject({ project_id: vercelProjectId })
