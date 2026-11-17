@@ -34,6 +34,8 @@ type IntegrationProbe = { configured: boolean; verified_read: boolean; state: "m
 type EngineeringIntegrations = {
   ok: true;
   checked_at: string;
+  checked_environment: "production" | "preview" | "development" | "unknown";
+  production_scope_verified: boolean;
   github: IntegrationProbe;
   vercel: IntegrationProbe;
   node_agent_required: false;
@@ -176,7 +178,7 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-slate-100">Ingeniería AGI sin nodo físico</h3>
-            <p className="mt-1 text-xs text-slate-400">Identidades de ejecución configuradas en Hocker One Production, verificadas mediante lectura autenticada.</p>
+            <p className="mt-1 text-xs text-slate-400">Estado real de las identidades del runtime serverless, sin secretos ni escritura.</p>
           </div>
           <button type="button" className="min-h-10 rounded-xl border border-white/15 px-3 text-xs text-slate-200 disabled:opacity-50"
             onClick={() => void checkIntegrations()} disabled={integrationsLoading}>
@@ -185,6 +187,16 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
         </div>
         {integrations ? (
           <div className="mt-3 space-y-2 text-sm text-slate-200" role="status">
+            <p className="text-xs font-semibold text-slate-300">
+              Entorno comprobado: {integrations.checked_environment === "production" ? "Production" :
+                integrations.checked_environment === "preview" ? "Preview" :
+                  integrations.checked_environment === "development" ? "Development" : "desconocido"}.
+            </p>
+            {!integrations.production_scope_verified ? (
+              <p className="text-xs text-amber-200">
+                Este despliegue NO acredita Production. Para comprobar las identidades productivas utiliza hockerone.vercel.app.
+              </p>
+            ) : null}
             <p>GitHub: {integrations.github.state === "verified_read" ? "lectura autenticada verificada" :
               integrations.github.state === "missing" ? "sin identidad de runtime en Production" : "conexión sin verificar"}</p>
             <p>Vercel: {integrations.vercel.state === "verified_read" ? "lectura autenticada verificada" :
