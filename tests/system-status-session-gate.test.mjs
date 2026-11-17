@@ -110,6 +110,20 @@ test("Node Agent status rejects HTTP health pages, 401/404 and stale heartbeat",
   assert.match(direct, /probeNodeReady\(nodeReadyUrl\(configured\)\)/);
   assert.match(direct, /await checkAgentBySupabase\(\)/);
   assert.doesNotMatch(direct, /await probe\(/);
+  assert.match(direct, /Sin endpoint \/ready configurado/);
+  assert.doesNotMatch(source, /return checkAgentBySupabase\(\)/);
+  const missingUrlModule = { exports: {} };
+  const isolatedCheck = ts.transpileModule(direct, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  vm.runInNewContext(isolatedCheck + "\nmodule.exports.check = checkAgentByUrl;", {
+    module: missingUrlModule, exports: missingUrlModule.exports,
+    env: () => "", nodeReadyUrl: () => "",
+    probeNodeReady: async () => true,
+    checkAgentBySupabase: async () => ({ active: true, label: "Agente", detail: "Online" }),
+  });
+  const withoutUrl = await missingUrlModule.exports.check();
+  assert.equal(withoutUrl.active, false, "fresh Supabase heartbeat without /ready must fail closed");
   assert.match(source, /secondsSince\(node\.last_seen_at\)/);
   assert.doesNotMatch(source, /secondsSince\(node\.last_seen_at \|\| node\.updated_at\)/);
   assert.match(source, /const online = node\.status === "online"/);
