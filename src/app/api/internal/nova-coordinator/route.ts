@@ -53,6 +53,12 @@ export async function GET(req: Request): Promise<NextResponse> {
     if (!preflight.checked || [agents, tasks, actions, nodes, actionGrants].some((result) =>
       result.error || typeof result.count !== "number" ||
       !Number.isSafeInteger(result.count) || result.count < 0)) {
+      // Only reached after Bearer validation. Never log request headers or SQL.
+      console.warn(JSON.stringify({
+        event: "nova_coordinator_authenticated_observation",
+        outcome: "evidence_unavailable", project_id: PROJECT_ID,
+        model_requests: 0, task_claims: 0,
+      }));
       return NextResponse.json({ ok: false, code: "COORDINATOR_EVIDENCE_UNAVAILABLE" },
         { status: 503 });
     }
@@ -63,6 +69,16 @@ export async function GET(req: Request): Promise<NextResponse> {
     const candidateForOwnerReview = providerConfigured &&
       agents.count === 16 && actionGrants.count === 0 &&
       tasks.count === 0 && actions.count === 0 && preflight.blocked === false;
+    // Actual authenticated HTTP execution evidence. Counts only; no secrets,
+    // task payloads, TOTP, prompts, model calls or writes. One event per request.
+    console.info(JSON.stringify({
+      event: "nova_coordinator_authenticated_observation",
+      outcome: "ok", project_id: PROJECT_ID,
+      agents: agents.count, queue: tasks.count,
+      material_actions: actions.count, active_grants: actionGrants.count,
+      fresh_nodes: nodes.count, backlog_blocked: preflight.blocked,
+      model_requests: 0, task_claims: 0,
+    }));
     return NextResponse.json({
       ok: true,
       service: "hocker-one",
@@ -109,6 +125,11 @@ export async function GET(req: Request): Promise<NextResponse> {
       owner_gate_bypassed: false,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch {
+    console.warn(JSON.stringify({
+      event: "nova_coordinator_authenticated_observation",
+      outcome: "unavailable", project_id: PROJECT_ID,
+      model_requests: 0, task_claims: 0,
+    }));
     return NextResponse.json({ ok: false, code: "COORDINATOR_OBSERVATION_FAILED" },
       { status: 503 });
   }

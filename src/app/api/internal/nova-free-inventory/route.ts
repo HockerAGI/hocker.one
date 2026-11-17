@@ -46,6 +46,11 @@ export async function POST(request: NextRequest) {
 
   const deploymentSha = String(process.env.VERCEL_GIT_COMMIT_SHA ?? "").trim();
   if (!/^[a-f0-9]{40}$/.test(deploymentSha)) {
+    console.warn(JSON.stringify({
+      event: "nova_free_inventory_authenticated_tick",
+      outcome: "deployment_sha_unavailable",
+      model_requests: 0, task_claims: 0,
+    }));
     return response({ ok: false, code: "FREE_INVENTORY_DEPLOYMENT_SHA_UNAVAILABLE" }, 503);
   }
   const workerId = "hocker-free-inventory:" + randomUUID();
@@ -59,6 +64,11 @@ export async function POST(request: NextRequest) {
     if (error || !data || data.ok !== true ||
       typeof data.processed !== "boolean" ||
       data.model_requests !== 0) {
+      console.warn(JSON.stringify({
+        event: "nova_free_inventory_authenticated_tick",
+        outcome: "atomic_execution_unverified",
+        model_requests: 0, task_claims: 0,
+      }));
       return response({
         ok: false, code: "FREE_INVENTORY_ATOMIC_EXECUTION_UNVERIFIED",
         no_model: true,
@@ -66,8 +76,18 @@ export async function POST(request: NextRequest) {
     }
     if (!data.processed) {
       if (!["NO_OWNER_APPROVED_INVENTORY", "OWNER_APPROVAL_EXPIRED", "OWNER_REVISION_CHANGED_CANCELED"].includes(data.reason)) {
+        console.warn(JSON.stringify({
+          event: "nova_free_inventory_authenticated_tick",
+          outcome: "noop_contract_invalid",
+          model_requests: 0, task_claims: 0,
+        }));
         return response({ ok: false, code: "FREE_INVENTORY_NOOP_CONTRACT_INVALID" }, 503);
       }
+      console.info(JSON.stringify({
+        event: "nova_free_inventory_authenticated_tick",
+        outcome: data.reason,
+        processed: false, model_requests: 0, task_claims: 0,
+      }));
       return response({
         ok: true, processed: false, reason: data.reason,
         model_requests: 0, task_claims: 0,
@@ -81,8 +101,18 @@ export async function POST(request: NextRequest) {
         data.external_writes_executed !== false ||
         data.no_paid_fallback !== true ||
         data.source !== "supabase_live_count_only") {
+      console.warn(JSON.stringify({
+        event: "nova_free_inventory_authenticated_tick",
+        outcome: "completion_contract_unverified",
+        model_requests: 0, task_claims: 0,
+      }));
       return response({ ok: false, code: "FREE_INVENTORY_RESULT_CONTRACT_UNVERIFIED" }, 503);
     }
+    console.info(JSON.stringify({
+      event: "nova_free_inventory_authenticated_tick",
+      outcome: "one_inventory_completed",
+      processed: true, model_requests: 0, tools_executed: 0,
+    }));
     return response({
       ok: true, processed: true, status: "completed",
       task_id: data.task_id, run_id: data.run_id, result_hash: data.result_hash,
@@ -91,6 +121,11 @@ export async function POST(request: NextRequest) {
       external_writes_executed: false, no_paid_fallback: true,
     });
   } catch {
+    console.warn(JSON.stringify({
+      event: "nova_free_inventory_authenticated_tick",
+      outcome: "request_unavailable",
+      model_requests: 0, task_claims: 0,
+    }));
     return response({ ok: false, code: "FREE_INVENTORY_REQUEST_FAILED" }, 503);
   }
 }
