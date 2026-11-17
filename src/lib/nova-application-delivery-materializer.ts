@@ -170,6 +170,24 @@ export async function materializeNovaApplicationDeliveryFromChat(params: {
     depends_on_action_id: githubParent.id,
   });
   const vercelRow = vercel as Record<string, unknown>;
+  const vercelState = githubBootstrapParentState(vercelRow);
+  if (!vercelState.eligible) {
+    return {
+      ...preview,
+      version: NOVA_APPLICATION_DELIVERY_VERSION,
+      materialized: false,
+      enqueued: true,
+      executed: false,
+      reason: "La acción Vercel existente no es aprobable. No se duplicó ni se ejecutó.",
+      current_limit: "VERCEL_BOOTSTRAP_ACTION_NOT_ELIGIBLE",
+      next_step: "Revisar el historial de la acción Vercel en Owner Gate.",
+      bootstrap: { id: bootstrapId, repository: `HockerAGI/${repositoryName}`,
+        actions: [{ id: githubParent.id, action_type: "github.create_repository",
+          status: githubParent.status },
+        { id: vercelState.id, action_type: "vercel.create_project",
+          status: vercelState.status, depends_on_action_id: githubParent.id }] },
+    };
+  }
 
   return {
     ...preview,
