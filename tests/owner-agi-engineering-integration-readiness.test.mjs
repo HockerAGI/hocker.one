@@ -76,10 +76,12 @@ test("AAL2 Owner Gate must precede any real provider read and never exposes secr
   const route = await read("src/app/api/agi/runtime/integrations/readiness/route.ts");
   const gate = route.indexOf("await requireOwnerAal2Api(PROJECT_ID)");
   const githubProbe = route.indexOf('executeGitHubReadOperation("get_repo"');
-  const vercelProbe = route.indexOf("verifyVercelConnection()");
+  const vercelProbe = route.indexOf("getVercelProject({ project_id: vercelProjectId })");
   assert.ok(gate >= 0 && githubProbe > gate && vercelProbe > gate);
   assert.match(route, /hasGitHubRuntimeToken\(\)/);
   assert.match(route, /hasVercelRuntimeToken\(\)/);
+  assert.match(route, /project\.id === vercelProjectId/);
+  assert.match(route, /vercelConfigured && vercelProjectId/);
   assert.match(route, /Cache-Control": "no-store/);
   assert.match(route, /authentication_scope: "read_only_verified_no_write_attestation"/);
   assert.doesNotMatch(route, /getGitHubRuntimeToken|getVercelRuntimeToken/);
