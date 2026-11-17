@@ -412,8 +412,18 @@ function guidedGithubBranchKey(item: AgiActionQueueRow): string | null {
   if (!GUIDED_GITHUB_ACTION_ORDER.includes(item.action_type)) return null;
   if (payload.materializer_version !== GUIDED_GITHUB_MATERIALIZER_VERSION) return null;
 
-  const branch = stringValue(payload.target_branch ?? payload.branch ?? payload.head);
-  return branch || null;
+  const branch = stringValue(payload.target_branch ?? payload.branch ?? payload.head).trim();
+  // Branches may share the same name across HOCKER apps. Never use a bare
+  // branch as a cross-repository approval/execution identity.
+  const repository = stringValue(
+    payload.repository ??
+      (payload.owner && payload.repo ? `${payload.owner}/${payload.repo}` : ""),
+  ).trim().toLowerCase();
+  if (!/^[a-z0-9_.-]+\\/[a-z0-9_.-]+$/.test(repository) || !branch) {
+    // A malformed guided payload must not silently bypass the Owner Gate.
+    throw new Error("GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID");
+  }
+  return repository + "\\n" + branch;
 }
 
 async function getGuidedGithubChain(projectId: string, item: AgiActionQueueRow): Promise<{ key: string; siblings: AgiActionQueueRow[] } | null> {
