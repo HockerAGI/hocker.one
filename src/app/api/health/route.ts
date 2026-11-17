@@ -21,6 +21,7 @@ type HealthChecks = {
 type HealthPayload = {
   status: "online" | "degraded";
   infrastructure: string;
+  readiness_scope: "serverless_control_plane";
   checks: HealthChecks;
   message?: string;
   error?: string;
@@ -66,11 +67,14 @@ function buildPayload(
   error?: string,
   details?: string,
 ): HealthPayload {
-  const online = Object.values(checks).every(Boolean);
+  // Optional dedicated NOVA, HMAC and Langfuse configuration do not
+  // determine availability of the serverless control plane.
+  const online = checks.db && checks.supabaseUrl && checks.supabaseAnon;
 
   return {
     status: online ? "online" : "degraded",
     infrastructure: "Hocker ONE Control Plane",
+    readiness_scope: "serverless_control_plane",
     checks,
     ...(message ? { message } : {}),
     ...(error ? { error } : {}),
@@ -103,10 +107,10 @@ export async function GET(req: NextRequest) {
 
     const payload = buildPayload(
       { ...envChecks, db: true },
-      "Sistemas operativos bajo parámetros nominales.",
+      "Estado del núcleo serverless de Hocker One; las capacidades opcionales se verifican por separado.",
     );
 
-    return NextResponse.json(payload, { status: 200 });
+    return NextResponse.json(payload, { status: payload.status === "online" ? 200 : 503 });
   } catch (err: unknown) {
     log.error("Health check critical failure", { route: "/api/health", detail: sanitizePublicError(err) });
     const payload = buildPayload(
