@@ -257,3 +257,34 @@ test("guided GitHub worker prevents subsequent writes after rejecting a precedin
   assert.match(src, /findGuidedGithubBlockingPredecessor\(chain\.siblings, item\.id\)/);
   assert.equal(src.split("findGuidedGithubBlockingPredecessor(chain.siblings, item.id)").length - 1, 2);
 });
+
+
+test("guided GitHub queue isolates the same branch across different application repositories", async () => {
+  const source = await read("src/lib/agi-action-execution.ts");
+  const start = source.indexOf("function guidedGithubBranchKey");
+  const end = source.indexOf("async function getGuidedGithubChain", start);
+  assert.ok(start >= 0 && end > start, "guided chain scope function exists");
+  const compiled = ts.transpileModule(source.slice(start, end), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const moduleForScope = { exports: {} };
+  vm.runInNewContext(compiled + "\\nmodule.exports.key = guidedGithubBranchKey;", {
+    module: moduleForScope,
+    exports: moduleForScope.exports,
+    asRecord(value) { return value && typeof value === "object" && !Array.isArray(value) ? value : {}; },
+    stringValue(value) { return String(value ?? ""); },
+    GUIDED_GITHUB_ACTION_ORDER: ["github.create_branch", "github.upsert_file", "github.create_pr"],
+    GUIDED_GITHUB_MATERIALIZER_VERSION: "12.7K-2A",
+  });
+  const key = moduleForScope.exports.key;
+  const action = (repository, branch = "nova/shared-branch") => ({
+    tool_key: "github", action_type: "github.create_branch",
+    payload: { repository, branch, materializer_version: "12.7K-2A" },
+  });
+  assert.notEqual(key(action("HockerAGI/hocker.one")), key(action("HockerAGI/nova.agi")));
+  assert.equal(key(action(" HOCKERAGI/Hocker.One ")), key(action("HockerAGI/hocker.one")));
+  assert.notEqual(key(action("HockerAGI/hocker.one")), key(action("HockerAGI/hocker.one", "nova/other-branch")));
+  assert.throws(() => key(action("")), /GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID/);
+  assert.throws(() => key(action("HockerAGI/hocker.one", "")), /GITHUB_GUIDED_REPOSITORY_OR_BRANCH_INVALID/);
+  assert.equal(key({ tool_key: "mcp", action_type: "mcp.execute", payload: {} }), null);
+});
