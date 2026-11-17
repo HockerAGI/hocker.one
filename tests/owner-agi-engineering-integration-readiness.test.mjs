@@ -79,6 +79,12 @@ test("AAL2 Owner Gate must precede any real provider read and never exposes secr
   const vercelProbe = route.indexOf("getVercelProject({ project_id: vercelProjectId })");
   assert.ok(gate >= 0 && githubProbe > gate && vercelProbe > gate);
   assert.match(route, /hasGitHubRuntimeToken\(\)/);
+  assert.match(route, /process\.env\.VERCEL_ENV/);
+  assert.match(route, /const productionScope = checkedEnvironment === "production"/);
+  assert.match(route, /githubConfigured = productionScope && hasGitHubRuntimeToken\(\)/);
+  assert.match(route, /vercelConfigured = productionScope && hasVercelRuntimeToken\(\)/);
+  assert.match(route, /production_scope_verified: productionScope/);
+  assert.match(route, /NON_PRODUCTION_SCOPE_NOT_CERTIFIED/);
   assert.match(route, /"HockerAGI\/nova\.agi"/);
   assert.match(route, /"HockerAGI\/hocker-node-agent"/);
   assert.match(route, /results\.every\(Boolean\)/);
@@ -94,5 +100,8 @@ test("AAL2 Owner Gate must precede any real provider read and never exposes secr
   assert.match(ui, /\/api\/agi\/runtime\/integrations\/readiness/);
   assert.match(ui, /setIntegrations\(null\)/);
   assert.match(ui, /Node Agent físico/);
+  assert.match(ui, /Entorno comprobado/);
+  assert.match(ui, /!integrations\.production_scope_verified/);
+  assert.match(ui, /NO acredita Production/);
   assert.doesNotMatch(ui, /type=["']password["']/);
 });
