@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createContextBridgeCheckpoint } from "@/lib/context-bridge";
-import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";
+import { getGitHubRuntimeAccessToken } from "@/lib/github-runtime-identity";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { CHATGPT_REVIEW_SOURCE_ID, parseHockerChatgptHandoffUrl } from "@/lib/chatgpt-handoff-review";
@@ -35,8 +35,7 @@ function sameOrigin(req: NextRequest): boolean {
 }
 
 async function githubRead<T>(path: string): Promise<T> {
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GITHUB_READ_UNAVAILABLE");
+  const token = await getGitHubRuntimeAccessToken().catch(() => { throw new Error("GITHUB_READ_UNAVAILABLE"); });
   const response = await fetch("https://api.github.com" + path, {
     headers: {
       Accept: "application/vnd.github+json",
