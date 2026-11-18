@@ -16,6 +16,25 @@ export type EngineeringReadiness = {
   blockers: string[];
 };
 
+/** Only these repositories may count toward the Owner's initial engineering
+ * read proof. The scope of a GitHub App may be a strict subset; failing on
+ * an unrelated sibling repository is not a valid signal of this App's health.
+ * A zero-match scope must NEVER be treated as verified.
+ */
+const READINESS_REPOSITORIES = [
+  "HockerAGI/hocker.one",
+  "HockerAGI/nova.agi",
+  "HockerAGI/hocker-node-agent",
+] as const;
+
+export function selectGitHubReadinessProbeRepositories(
+  configuredRepoNames: readonly string[],
+): string[] {
+  const names = new Set(configuredRepoNames.map((name) => name.trim().toLowerCase()));
+  return READINESS_REPOSITORIES.filter((fullName) =>
+    names.has(fullName.split("/")[1]!.toLowerCase()));
+}
+
 function providerReadiness(configured: boolean, verified_read: boolean): ProviderReadiness {
   return {
     configured,
