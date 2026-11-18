@@ -41,6 +41,8 @@ type EngineeringIntegrations = {
   node_agent_required: false;
   owner_gate_required_for_writes: true;
   github_write_scope_verified: false;
+  github_identity_kind?: "pat" | "github_app" | "missing" | "not_checked";
+  github_repo_creation_identity_configured?: boolean;
   can_prepare_existing_app_proposal: boolean;
   can_prepare_new_app_bootstrap: boolean;
   blockers: string[];
@@ -199,6 +201,10 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
             ) : null}
             <p>GitHub: {integrations.github.state === "verified_read" ? "lectura autenticada verificada" :
               integrations.github.state === "missing" ? "sin identidad de runtime en Production" : "conexión sin verificar"}</p>
+            <p className="text-xs text-slate-400">Identidad GitHub runtime: {integrations.github_identity_kind === "github_app"
+              ? "GitHub App temporal, limitada a repos autorizados" : integrations.github_identity_kind === "pat"
+                ? "token estático configurado (permisos de escritura NO certificados)" : "no verificada"}.
+              {" "}Creación de repos nuevos: {integrations.github_repo_creation_identity_configured ? "identidad presente; permiso sin certificar" : "requiere identidad de organización específica"}.</p>
             <p>Vercel: {integrations.vercel.state === "verified_read" ? "lectura autenticada verificada" :
               integrations.vercel.state === "missing" ? "sin identidad de runtime en Production" : "conexión sin verificar"}</p>
             <p className="text-xs text-slate-400">
