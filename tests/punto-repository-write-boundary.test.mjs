@@ -45,10 +45,10 @@ test("NOVA/AGI writes require an exact allowlisted repository, not organization-
   }
 
   const check = policy();
-  for (const repository of ["HockerAGI/hocker.one", "HockerAGI/nova.agi", "HockerAGI/hocker-node-agent"]) {
+  for (const repository of ["HockerAGI/hocker.one", "HockerAGI/nova.agi", "HockerAGI/hocker-node-agent", "HockerAGI/chido.casino", "HockerAGI/hocker.agi", "HockerAGI/hocker.ads"]) {
     assert.doesNotThrow(() => check(repository));
   }
-  for (const repository of ["HockerAGI/chido.casino", "HockerAGI/new-private-app", "HockerAGI/punto.g", "OtherOrg/hocker.one", "HockerAGI/hocker.one/extra"]) {
+  for (const repository of ["HockerAGI/chido.games", "HockerAGI/new-private-app", "HockerAGI/punto.g", "OtherOrg/hocker.one", "HockerAGI/hocker.one/extra"]) {
     assert.throws(() => check(repository), /GITHUB_AGI_WRITE_REPOSITORY_NOT_ALLOWED|solo lectura/);
   }
   const configured = policy({

@@ -20,6 +20,9 @@ const DEFAULT_AGI_WRITE_REPOSITORIES = [
   "hockeragi/hocker.one",
   "hockeragi/nova.agi",
   "hockeragi/hocker-node-agent",
+  "hockeragi/chido.casino",
+  "hockeragi/hocker.agi",
+  "hockeragi/hocker.ads",
 ] as const;
 
 export function assertGithubAgiExecutionRepositoryAllowed(repository: string): void {
