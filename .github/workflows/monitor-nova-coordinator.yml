@@ -1,0 +1,43 @@
+name: HOCKER NOVA Cron independent monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Inspect only; no incident issue changes'
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hocker-nova-cron-monitor
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: ${{ vars.HOCKER_CRON_MONITOR_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout (credentials not persisted)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22'
+      - name: Check Cloudflare coordinator observations
+        env:
+          HOCKER_CRON_MONITOR_ENABLED: ${{ vars.HOCKER_CRON_MONITOR_ENABLED }}
+          HOCKER_CLOUDFLARE_ACCOUNT_ID: ${{ vars.HOCKER_CLOUDFLARE_ACCOUNT_ID }}
+          HOCKER_CLOUDFLARE_MONITOR_TOKEN: ${{ secrets.HOCKER_CLOUDFLARE_MONITOR_TOKEN }}
+          HOCKER_CRON_MONITOR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ops/monitor-nova-cron.mjs
