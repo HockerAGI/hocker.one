@@ -8,18 +8,19 @@ Live NOVA Developer E2E evidence and Owner signoff: **https://github.com/HockerA
 Historical September handoff: `HANDOFF_2026-09-05-R2.md`; historical August platform closure: `PLATFORM_CLOSURE_2026-08-30.md`.
 This recovery card is dated, not an independent production certification.
 
-## Current verified pointers (2026-11-18 snapshot; re-query before action)
+## Current verified pointers (2026-11-18 release snapshot; re-query before action)
 
-- Hocker One `main=f187257873f44e3b8053cc3308471cefa1c8e9ee` and Vercel Production `dpl_AcCdDXzD3AdWEHfYjrPf6z74Cvop` READY.
-- PR #460 is the single OPEN PR across `hocker.one`, `nova.agi` and `hocker-node-agent` at evidence cut; it stages GitHub App identity, Owner-gated engineering, and a disabled independent Cron monitor. Read live HEAD rather than assuming a dated commit remains current.
-- Candidate regressions, TypeScript, lint, build and exact-SHA Preview have been verified on successive revisions; **mandatory `npm audit` still fails with 19 high `picomatch` findings, GHSA-fc5q-39xc-vjpf**. No merge or Production deployment is authorized.
-- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, 16/16 profiles, 48/48 evaluations; historical evidence only, NOT autonomous developer E2E. Do not repeat.
+- Hocker One `main=f9b34f77b9b056a99cda31199adfe963060a5a41` and Vercel Production `dpl_4GXPTL9X5GEXjo4H6vShUF3vcJ2t` READY, with `hockerone.vercel.app` assigned to this deployment.
+- **MERGED PR #460** (2026-11-18): GitHub App support and disabled independent Cron monitor are deployed as code. Last checked: **0 open PRs** across `hocker.one`, `nova.agi`, `hocker-node-agent`.
+- Candidate SHA `0d70e10d3fa61694683480f6b6cb39b1450530bb` completed CI rerun 44263124722 successfully: regressions, TypeScript, lint, build and **mandatory `npm audit --audit-level=high` PASS**; Codex reviewed last SHA with 0 outstanding threads; exact Preview was READY. GHSA-fc5q-39xc-vjpf was officially withdrawn, but no picomatch patch is claimed.
+- GitHub App server-side Production credentials have **not** been configured; ChatGPT's connected GitHub App is not the NOVA runtime identity. `VERCEL_TOKEN` remains Preview-only; a declared `AI_GATEWAY_API_KEY` is not itself a live provider certification.
+- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, 16/16 profiles, 48/48 evaluations; existing scope evidence only, **not** autonomous developer E2E. Do not repeat.
 - Read-only tool assignment baseline: 19/19 verified; no material writes were certified by that contract.
-- Global material capability baseline: `allow_actions=false` across all 16 AGIs until separately authorized by Owner Gate. Re-query before claiming current status.
-- Historical sources remain preserved for audit; dated September/August documents are archival context, not current provider state.
-- Supabase recent evidence: global material privileges absent and no active material queue; re-query before asserting current status.
-- Cloudflare Cron has logged real scheduled successful observations; this is NOT an AGI coding runtime. Independent absence detection is staged but not activated.
-- `nova.agi/main`, `hocker-node-agent/main`, Vercel variables, Supabase migrations and incidents are mutable: query them directly.
+- Global material capability: `allow_actions=false` across all 16 AGIs at last SQL verification. Owner Gate remains required for each applicable material action.
+- Cloudflare Cron historical successful observations exist. Independent absence detection is included in `main` but **not enabled** or certified for real alert delivery.
+- Supabase was ACTIVE_HEALTHY at release cut; no isolated restore drill is certified and no paid branch was created.
+- Historical sources remain preserved; dated September/August documents are archival context, not present-day live provider truth.
+- `nova.agi/main`, `hocker-node-agent/main`, provider secrets, migrations, alerts and runtime state are mutable; query them directly.
 
 ## Current architecture
 
@@ -57,11 +58,11 @@ Registry presence is not liveness. Re-query `agi_runs`, integration checks and n
 
 ## Remaining NOVA Developer release gates (scope-aware)
 
-1. Official `picomatch` remediation and full candidate CI green; exact-head Codex/Preview, reviewed merge, verified Production.
-2. One consolidated Owner final session for minimum server identities, AAL2 and task-scoped approvals; real external Cron alert delivery.
-3. One genuine NOVA/AGI-origin PR: authenticated repository inspection, reversible code change, Owner Gate, CI/Codex and controlled deploy.
-4. Independent missed-Cron notification and isolated Supabase restore drill with evidence; costs approved before new branch.
-5. Physical Node Agent is optional for serverless scope. Do not claim full 24/7 dedicated runtimes or broad voice/browser/tool parity without separate evidence.
+1. **Completed code gate:** PR #460 had mandatory audit and exact-head CI green, Codex/Preview reviewed, merged with SHA check and deployed to Production; do not reopen the retired picomatch advisory as an unresolved gate without new evidence.
+2. **Owner identity and readiness:** install/configure a least-privilege GitHub App or approved alternative directly in the Vercel Production secrets manager, separately validate Vercel service credentials; new environment variables require a new deployment. Do not copy tokens from ChatGPT or paste them into issues.
+3. **Genuine NOVA/AGI-origin PR:** Owner AAL2, authenticated GitHub repo reads, specialist proposal, Owner Gate, branch/file/PR, CI/Codex, rollback and durable evidence; no artificial AGI actions or permissive global `allow_actions`.
+4. **SRE/recovery:** activate and validate independent missed-Cron alert delivery using controlled observation checks, then complete an isolated Supabase database + Storage restore drill with explicit cost authorization before creating billable resources.
+5. Physical Node Agent is optional for the serverless scope. Do not claim 24/7 dedicated runtimes or broad voice/browser/tool parity without separate evidence.
 
 ## Release rule
 
