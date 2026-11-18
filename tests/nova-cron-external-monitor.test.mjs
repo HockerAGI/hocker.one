@@ -27,7 +27,7 @@ test("queries authentic Cloudflare events without exposing the read token", asyn
   };
   const result = await queryTelemetry({ accountId: "a".repeat(32), token, now: NOW, fetcher });
   assert.equal(result.ok, true);
-  assert.match(calls[0].url, /api.cloudflare.com\/client\/v4\/accounts\/a{32}\/workers\/observability\/telemetry\/query/);
+  assert.equal(calls[0].url, "https://api.cloudflare.com/client/v4/accounts/" + "a".repeat(32) + "/workers/observability/telemetry/query");
   assert.equal(JSON.parse(calls[0].opts.body).parameters.filters[0].value, SERVICE);
   assert.equal(JSON.stringify(result).includes(token), false);
   await assert.rejects(() => queryTelemetry({ accountId: "a".repeat(32), token,
