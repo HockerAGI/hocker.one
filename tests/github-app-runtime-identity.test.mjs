@@ -195,7 +195,9 @@ test("Owner credential guide aligns with GitHub App runtime identity without cla
   assert.match(guide, /PR #460/);
   assert.match(guide, /Owner Gate/);
   assert.doesNotMatch(guide, /ejecutor actual solo soporta token Bearer/);
-  assert.match(guide, /todavía no está en Production/);
+  assert.match(guide, /PR #460 \*\*MERGED\*\*/);
+  assert.match(guide, /runtime aún NO tiene GitHub App\/PAT/);
+  assert.doesNotMatch(guide, /todavía no está en Production/);
 });
 
 
