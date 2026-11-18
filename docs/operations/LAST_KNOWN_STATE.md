@@ -13,7 +13,10 @@ This recovery card is dated, not an independent production certification.
 - Hocker One `main=f187257873f44e3b8053cc3308471cefa1c8e9ee` and Vercel Production `dpl_AcCdDXzD3AdWEHfYjrPf6z74Cvop` READY.
 - PR #460 is the single OPEN PR across `hocker.one`, `nova.agi` and `hocker-node-agent` at evidence cut; it stages GitHub App identity, Owner-gated engineering, and a disabled independent Cron monitor. Read live HEAD rather than assuming a dated commit remains current.
 - Candidate regressions, TypeScript, lint, build and exact-SHA Preview have been verified on successive revisions; **mandatory `npm audit` still fails with 19 high `picomatch` findings, GHSA-fc5q-39xc-vjpf**. No merge or Production deployment is authorized.
-- Historical AGI scope: 16/16 profiles, 48/48 evaluations, 19/19 read-only tool assignments. Do not repeat to certify autonomous development.
+- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, 16/16 profiles, 48/48 evaluations; historical evidence only, NOT autonomous developer E2E. Do not repeat.
+- Read-only tool assignment baseline: 19/19 verified; no material writes were certified by that contract.
+- Global material capability baseline: `allow_actions=false` across all 16 AGIs until separately authorized by Owner Gate. Re-query before claiming current status.
+- Historical sources remain preserved for audit; dated September/August documents are archival context, not current provider state.
 - Supabase recent evidence: global material privileges absent and no active material queue; re-query before asserting current status.
 - Cloudflare Cron has logged real scheduled successful observations; this is NOT an AGI coding runtime. Independent absence detection is staged but not activated.
 - `nova.agi/main`, `hocker-node-agent/main`, Vercel variables, Supabase migrations and incidents are mutable: query them directly.
