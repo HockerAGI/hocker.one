@@ -145,7 +145,7 @@ test("both real GitHub API consumers use async identity without bypassing Owner 
     read("src/lib/nova-application-delivery-materializer.ts"),
     read("src/app/api/context-bridge/chatgpt/handoff-review/route.ts"),
   ]);
-  assert.match(executor, /const token = await getGitHubRuntimeAccessToken\(\)/);
+  assert.match(executor, /const token = overrideToken \?\? await getGitHubRuntimeAccessToken\(\)/);
   assert.match(worker, /const token = await getGitHubRuntimeAccessToken\(\)/);
   assert.match(worker, /claimApprovedQueueItem/);
   assert.match(materializer, /requiresStaticGitHubIdentityForRepositoryCreation/);
@@ -239,7 +239,7 @@ test("new repository bootstrap identifies GitHub User vs Organization owner and 
   const unknown = make("Enterprise");
   await assert.rejects(() => unknown.fn("HockerAGI", "creation-only-token"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
 
-  assert.match(source, /repositoryCreationEndpoint\(owner\)/);
+  assert.match(source, /repositoryCreationEndpoint\(owner, creationToken\)/);
   assert.match(source, /endpoint === "\/user\/repos"/);
   assert.match(source, /requiresStaticGitHubIdentityForRepositoryCreation/);
 });
