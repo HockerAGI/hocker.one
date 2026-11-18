@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { executeGitHubReadOperation, hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 import { getVercelProject, hasVercelRuntimeToken } from "@/lib/vercel-runtime-executor";
-import { summarizeEngineeringReadiness } from "@/lib/agi-engineering-integration-readiness";
+import { selectGitHubReadinessProbeRepositories, summarizeEngineeringReadiness } from "@/lib/agi-engineering-integration-readiness";
+import { getGitHubRuntimeIdentityKind, getGitHubRuntimeReadProbeRepositoryNames, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,17 +32,19 @@ export async function GET(request: Request): Promise<Response> {
   const githubConfigured = productionScope && hasGitHubRuntimeToken();
   const vercelConfigured = productionScope && hasVercelRuntimeToken();
   const vercelProjectId = String(process.env.VERCEL_PROJECT_ID ?? "").trim();
+  // Read only the intersection of the configured App scope and the three
+  // approved engineering repositories. Never claim verified on an empty set.
+  // The PAT fallback retains the historical three-repository readiness check.
+  const githubProbeRepositories = githubConfigured
+    ? selectGitHubReadinessProbeRepositories(getGitHubRuntimeReadProbeRepositoryNames())
+    : [];
   // Separate read-only probes: a failing provider must not obscure the
   // other's status or leak HTTP error payloads / authorization headers.
   const [githubRead, vercelRead] = await Promise.all([
-    githubConfigured
-      ? Promise.all([
-          "HockerAGI/hocker.one",
-          "HockerAGI/nova.agi",
-          "HockerAGI/hocker-node-agent",
-        ].map((repository) =>
+    githubConfigured && githubProbeRepositories.length > 0
+      ? Promise.all(githubProbeRepositories.map((repository) =>
           executeGitHubReadOperation("get_repo", { repository })
-            .then((result) => result.repository === repository)
+            .then((result) => result.repository.toLowerCase() === repository.toLowerCase())
             .catch(() => false),
         )).then((results) => results.every(Boolean))
       : Promise.resolve(false),
@@ -55,6 +58,7 @@ export async function GET(request: Request): Promise<Response> {
   const readiness = summarizeEngineeringReadiness({
     github_configured: githubConfigured,
     github_verified_read: githubRead,
+    github_repo_creation_identity_configured: productionScope && requiresStaticGitHubIdentityForRepositoryCreation(),
     vercel_configured: vercelConfigured,
     vercel_verified_read: vercelRead,
   });
@@ -65,6 +69,8 @@ export async function GET(request: Request): Promise<Response> {
     checked_at: new Date().toISOString(),
     checked_environment: checkedEnvironment,
     production_scope_verified: productionScope,
+    github_identity_kind: productionScope ? getGitHubRuntimeIdentityKind() : "not_checked",
+    github_read_probe_repositories: githubProbeRepositories,
     ...readiness,
     blockers: productionScope ? readiness.blockers
       : [...readiness.blockers, "NON_PRODUCTION_SCOPE_NOT_CERTIFIED"],

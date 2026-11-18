@@ -1,5 +1,5 @@
 import { enqueueAgiAction } from "@/lib/agi-runtime-core";
-import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
+import { requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 import { hasVercelRuntimeToken, verifyVercelConnection } from "@/lib/vercel-runtime-executor";
 import { buildNovaChatActionDraftPreview } from "@/lib/nova-chat-action-drafts";
 import { canResumeOwnApplicationBootstrap, githubBootstrapParentState, stableNovaApplicationBootstrapId } from "@/lib/nova-application-bootstrap-identity";
@@ -176,7 +176,7 @@ export async function materializeNovaApplicationDeliveryFromChat(params: {
   }))) return preview;
 
   const blockers: string[] = [];
-  if (!hasGitHubRuntimeToken()) blockers.push("GitHub: falta token de runtime.");
+  if (!requiresStaticGitHubIdentityForRepositoryCreation()) blockers.push("GitHub: creación de repositorios requiere identidad org específica; GitHub App acotada permite ingeniería en repos existentes.");
   if (!hasVercelRuntimeToken()) {
     blockers.push("Vercel: falta VERCEL_TOKEN de runtime.");
   } else if (!(await verifyVercelConnection())) {

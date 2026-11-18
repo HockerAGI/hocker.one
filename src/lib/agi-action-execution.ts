@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
+import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
 import {
   executeGitHubCreateRepository,
-  getGitHubRuntimeToken,
 } from "@/lib/github-runtime-executor";
+import { getGitHubRuntimeAccessToken } from "@/lib/github-runtime-identity";
 import {
   createVercelProject,
   getVercelRuntimeToken,
@@ -120,15 +120,6 @@ function encodeSegment(value: string): string {
   return encodeURIComponent(value).replace(/%2F/g, "/");
 }
 
-function allowedRepositories(): Set<string> {
-  const raw =
-    envValue("HOCKER_GITHUB_ALLOWED_REPOS") ||
-    envValue("GITHUB_ALLOWED_REPOS") ||
-    "HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi,HockerAGI/hocker.ads";
-
-  return new Set(raw.split(",").map((item) => item.trim()).filter(Boolean));
-}
-
 /** One canonical identity for Owner Gate sequencing AND GitHub execution. */
 function githubRepositoryIdentity(payload: JsonRecord): string {
   const explicit = stringValue(payload.repository).trim();
@@ -148,17 +139,18 @@ function parseRepository(payload: JsonRecord): { owner: string; repo: string; fu
   const raw = githubRepositoryIdentity(payload) ||
     envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one";
 
-  const [owner, repo] = raw.split("/").map((item) => item.trim()).filter(Boolean);
-  if (!owner || !repo) throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  const parts = raw.trim().split("/").map((item) => item.trim());
+  if (parts.length !== 2) throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  const owner = parts[0] ?? "";
+  const repo = parts[1] ?? "";
+  if (!/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo) ||
+      [".", ".."].includes(owner) || [".", ".."].includes(repo)) {
+    throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  }
 
   const fullName = `${owner}/${repo}`;
   assertGithubRepositoryWriteAuthorized(fullName);
-  const allowedOrg = envValue("HOCKER_GITHUB_ORG") || "HockerAGI";
-  const exactAllowed = allowedRepositories().has(fullName);
-  const orgAllowed = owner === allowedOrg;
-  if (!exactAllowed && !orgAllowed) {
-    throw new Error(`Repositorio no permitido para ejecución AGI: ${fullName}`);
-  }
+  assertGithubAgiExecutionRepositoryAllowed(fullName);
 
   return { owner, repo, fullName };
 }
@@ -315,8 +307,7 @@ async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promi
     throw new Error(`Blocked real GitHub write while HOCKER_GITHUB_EXECUTION_MODE=mock: ${method}`);
   }
 
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GitHub no configurado: falta HOCKER_GITHUB_TOKEN, GITHUB_TOKEN o GH_TOKEN.");
+  const token = await getGitHubRuntimeAccessToken();
 
   const response = await fetch(`https://api.github.com${endpoint}`, {
     ...init,

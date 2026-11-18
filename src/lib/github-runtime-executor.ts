@@ -1,7 +1,9 @@
-import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
+import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
+import { getGitHubRuntimeAccessToken, getGitHubRepositoryCreationAccessToken, getGitHubRuntimeIdentityKind, isGitHubRuntimeIdentityConfigured, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 
 export type GitHubRuntimeReadOperation =
   | "get_repo"
+  | "list_commits"
   | "list_tree"
   | "read_file"
   | "compare_refs"
@@ -96,7 +98,7 @@ export function getGitHubRuntimeToken(): string {
 }
 
 export function hasGitHubRuntimeToken(): boolean {
-  return getGitHubRuntimeToken().length > 0;
+  return isGitHubRuntimeIdentityConfigured();
 }
 
 export function isGitHubWriteOperation(operation: string): operation is GitHubRuntimeWriteOperation {
@@ -104,7 +106,7 @@ export function isGitHubWriteOperation(operation: string): operation is GitHubRu
 }
 
 export function isGitHubReadOperation(operation: string): operation is GitHubRuntimeReadOperation {
-  return ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"].includes(operation);
+  return ["get_repo", "list_commits", "list_tree", "read_file", "compare_refs", "audit_paths"].includes(operation);
 }
 
 
@@ -131,9 +133,14 @@ function defaultRepository(): string {
 
 function parseRepository(input: GitHubRuntimeInput): { owner: string; repo: string; fullName: string } {
   const raw = input.repository || (input.owner && input.repo ? `${input.owner}/${input.repo}` : defaultRepository());
-  const [owner, repo] = String(raw).split("/").map((part) => part.trim()).filter(Boolean);
-
-  if (!owner || !repo) {
+  const parts = String(raw).trim().split("/").map((part) => part.trim());
+  if (parts.length !== 2) {
+    throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  }
+  const owner = parts[0] ?? "";
+  const repo = parts[1] ?? "";
+  if (!/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo) ||
+      [".", ".."].includes(owner) || [".", ".."].includes(repo)) {
     throw new Error("Repositorio inválido. Usa formato owner/repo.");
   }
 
@@ -158,9 +165,8 @@ function encodeSegment(value: string): string {
   return encodeURIComponent(value).replace(/%2F/g, "/");
 }
 
-async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GitHub no configurado: falta HOCKER_GITHUB_TOKEN, GITHUB_TOKEN o GH_TOKEN.");
+async function githubRequest<T>(endpoint: string, init: RequestInit = {}, overrideToken?: string): Promise<T> {
+  const token = overrideToken ?? await getGitHubRuntimeAccessToken();
 
   const response = await fetch(`https://api.github.com${endpoint}`, {
     ...init,
@@ -226,6 +232,31 @@ export async function readGitHubBranchHeadSha(repository: string, branch: string
   }
 }
 
+/**
+ * GitHub exposes different creation endpoints for User and Organization owners.
+ * Never create in the authenticated token holder's account without confirming
+ * it is the specifically allowed HOCKER account.
+ */
+async function repositoryCreationEndpoint(owner: string, creationToken: string): Promise<string> {
+  const profile = await githubRequest<{ login?: string; type?: string }>(
+    `/users/${encodeSegment(owner)}`, {}, creationToken,
+  );
+  if (String(profile?.login ?? "").toLowerCase() !== owner.toLowerCase()) {
+    throw new Error("GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED");
+  }
+  if (profile.type === "Organization") {
+    return `/orgs/${encodeSegment(owner)}/repos`;
+  }
+  if (profile.type !== "User") {
+    throw new Error("GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED");
+  }
+  const authenticated = await githubRequest<{ login?: string }>("/user", {}, creationToken);
+  if (String(authenticated?.login ?? "").toLowerCase() !== owner.toLowerCase()) {
+    throw new Error("GITHUB_REPOSITORY_OWNER_SESSION_MISMATCH");
+  }
+  return "/user/repos";
+}
+
 export async function executeGitHubCreateRepository(input: GitHubRuntimeInput) {
   return createRepository(input);
 }
@@ -234,8 +265,9 @@ async function createRepository(input: GitHubRuntimeInput) {
   const owner = String(input.owner ?? (defaultRepository().split("/")[0] || "HockerAGI")).trim();
   ensureHockerOrganization(owner);
   const name = safeRepositoryName(input.name ?? input.repo);
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GitHub no configurado: falta token real.");
+  if (!requiresStaticGitHubIdentityForRepositoryCreation()) {
+    throw new Error("GITHUB_REPOSITORY_CREATION_REQUIRES_EXPLICIT_ORG_IDENTITY");
+  }
 
   const body = {
     name,
@@ -248,9 +280,18 @@ async function createRepository(input: GitHubRuntimeInput) {
     auto_init: true,
   };
 
+  const creationToken = getGitHubRepositoryCreationAccessToken();
+  if (!creationToken) throw new Error("GITHUB_REPOSITORY_CREATION_REQUIRES_EXPLICIT_ORG_IDENTITY");
+  const endpoint = await repositoryCreationEndpoint(owner, creationToken);
   const response = await githubRequest<Record<string, unknown>>(
-    `/orgs/${encodeSegment(owner)}/repos`,
-    { method: "POST", body: JSON.stringify(body) },
+    endpoint,
+    {
+      method: "POST",
+      body: JSON.stringify(endpoint === "/user/repos"
+        ? { ...body, visibility: undefined }
+        : body),
+    },
+    creationToken,
   );
 
   return {
@@ -276,6 +317,31 @@ async function getRepo(input: GitHubRuntimeInput) {
     pushed_at: data.pushed_at,
     updated_at: data.updated_at,
   };
+}
+
+async function listCommits(input: GitHubRuntimeInput) {
+  const { owner, repo, fullName } = parseRepository(input);
+  const ref = safeRef(input.ref ?? "main", "main");
+  if (!/^(main|nova\/[a-z0-9/_-]+)$/i.test(ref) ||
+      ref.includes("..") || ref.includes("//")) {
+    throw new Error("GITHUB_BRANCH_REF_NOT_ALLOWED");
+  }
+  const limit = Math.max(1, Math.min(Number(input.limit ?? 3) || 3, 5));
+  const entries = await githubRequest<Array<{
+    sha: string;
+    html_url?: string;
+    commit?: { message?: string };
+  }>>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?sha=${encodeURIComponent(ref)}&per_page=${limit}`);
+  if (!Array.isArray(entries)) throw new Error("GITHUB_COMMITS_RESPONSE_INVALID");
+  const commits = entries.map((entry) => {
+    if (!/^[a-f0-9]{40}$/i.test(String(entry.sha ?? ""))) throw new Error("GITHUB_COMMITS_SHA_INVALID");
+    return {
+      sha: entry.sha,
+      html_url: entry.html_url ?? null,
+      message: String(entry.commit?.message ?? "").slice(0, 240),
+    };
+  });
+  return { repository: fullName, ref, commits, count: commits.length };
 }
 
 async function listTree(input: GitHubRuntimeInput) {
@@ -475,6 +541,7 @@ export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation
     ? { fullName: rawRepository }
     : parseRepository(input);
   if (operation !== "create_repository") assertGithubRepositoryWriteAuthorized(fullName);
+  if (operation !== "create_repository") assertGithubAgiExecutionRepositoryAllowed(fullName);
   if (operation === "create_repository") {
     const owner = String(input.owner ?? rawRepository.split("/")[0] ?? "HockerAGI");
     ensureHockerOrganization(owner);
@@ -582,6 +649,8 @@ export async function executeGitHubReadOperation(operation: GitHubRuntimeReadOpe
   switch (operation) {
     case "get_repo":
       return getRepo(input);
+    case "list_commits":
+      return listCommits(input);
     case "list_tree":
       return listTree(input);
     case "read_file":
@@ -600,9 +669,11 @@ export function getGitHubExecutorStatus() {
     ok: hasGitHubRuntimeToken(),
     provider: "GitHub",
     token_present: hasGitHubRuntimeToken(),
-    accepted_env: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"],
+    identity_type: getGitHubRuntimeIdentityKind(),
+    accepted_env: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN", "HOCKER_GITHUB_APP_ID", "HOCKER_GITHUB_APP_INSTALLATION_ID", "HOCKER_GITHUB_APP_PRIVATE_KEY", "HOCKER_GITHUB_APP_REPOSITORIES"],
+    github_app_repo_creation_supported: false,
     default_repository: defaultRepository(),
-    read_operations: ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"],
+    read_operations: ["get_repo", "list_commits", "list_tree", "read_file", "compare_refs", "audit_paths"],
     write_operations_guarded: ["create_repository", "create_branch", "upsert_file", "create_pr"],
     safety: {
       read_operations_execute_now: true,

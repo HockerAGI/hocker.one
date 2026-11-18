@@ -8,9 +8,11 @@ Status: **ACTIVE INDEX**
 
 | Purpose | Current source | Rule |
 | --- | --- | --- |
-| Detailed cross-session continuity | `HANDOFF_2026-09-05-R2.md` | Source for current state, closed incidents, evidence and next gate. |
+| Current NOVA Developer E2E continuity | [GitHub issue #306](https://github.com/HockerAGI/hocker.one/issues/306) | Active mutable evidence for Hocker One, NOVA and the scoped repos; re-query exact PR HEAD, CI and Production. |
+| Historical September handoff | `HANDOFF_2026-09-05-R2.md` | Archival baseline, **not** present-day production or engineering readiness. |
 | Emergency recovery card | `LAST_KNOWN_STATE.md` | Compact pointers only; re-query mutable facts before action. |
-| Current production-readiness closure | `PLATFORM_CLOSURE_2026-08-30.md` | Single gate for post-Core-certification `production_ready`. |
+| NOVA Developer launch acceptance | [GitHub issue #306](https://github.com/HockerAGI/hocker.one/issues/306) + exact candidate CI/Codex/Preview/Production | Never close without real Owner Gate AGI-origin PR, security gate and recovery evidence. |
+| Historical general platform closure | `PLATFORM_CLOSURE_2026-08-30.md` | Prior scope; preserve the August baseline, not current live status. |
 | Core AGI certification evidence | GitHub issue `#303` + Supabase durable evidence | Completed scope certificate; do not reopen unless evidence/contracts change materially. |
 | Canon/document drift | `DOC_ALIGNMENT_2026-08-19.md` | Historical alignment reference until a newer reconciliation is created. |
 | Context Bridge architecture | `CONTEXT_BRIDGE_V1.md` | Shared context architecture/security contract. |
@@ -31,10 +33,10 @@ Status: **ACTIVE INDEX**
 
 ## New-session startup
 
-`AGENTS.md` → this index → `HANDOFF_2026-09-05-R2.md` → `LAST_KNOWN_STATE.md` → `PLATFORM_CLOSURE_2026-08-30.md` → `DOC_ALIGNMENT_2026-08-19.md` → re-query GitHub/Vercel/Supabase/providers.
+`AGENTS.md` → this index → **GitHub issue #306** (current E2E) → `LAST_KNOWN_STATE.md` (dated pointers) → applicable canon/policies → re-query GitHub, Vercel, Supabase and Cloudflare. Historical September/August handoffs are references only.
 
 ## Current milestone
 
-The latest code milestone is the first Hocker Operating Loop contract slice (PR #368, main `0994e6df5cba44c2929605a21f01eac595a721d5`). It adds orchestration contracts only; persistence/executable orchestration remains a subsequent gated slice.
+At the 2026-11-18 evidence cut, Hocker One Production remains at `main=f187257873f44e3b8053cc3308471cefa1c8e9ee` (Vercel READY). NOVA Developer GitHub App + independent inert Cron monitor is in OPEN PR #460, unmerged because mandatory `picomatch` full audit fails. Completed 16/16 AGI evaluations, 48/48 evidence cases and 19/19 read-only assignments are valid historical scope evidence, **not** autonomous developer E2E certification. Consult issue #306 and live providers for current HEAD and next gate. PR #368 was an earlier contract milestone.
 
-Older dated handoffs and closure snapshots remain historical evidence.
+Older handoffs and closure snapshots remain historical evidence.

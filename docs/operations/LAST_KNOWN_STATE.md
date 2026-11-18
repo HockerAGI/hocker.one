@@ -1,24 +1,25 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-09-13 16:41 UTC-07:00**
+Evidence cut: **2026-11-18 (verified GitHub/Vercel snapshot; re-query mutable facts)**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
-Live operational source: `docs/operations/HANDOFF_2026-09-05-R2.md`.
-Current production-readiness gate: `docs/operations/PLATFORM_CLOSURE_2026-08-30.md`.
-Historical sources remain preserved for audit and are not live pointers.
+Live NOVA Developer E2E evidence and Owner signoff: **https://github.com/HockerAGI/hocker.one/issues/306**.
+Historical September handoff: `HANDOFF_2026-09-05-R2.md`; historical August platform closure: `PLATFORM_CLOSURE_2026-08-30.md`.
+This recovery card is dated, not an independent production certification.
 
-## Current verified pointers
+## Current verified pointers (2026-11-18 snapshot; re-query before action)
 
-- Hocker One `main`: `0994e6df5cba44c2929605a21f01eac595a721d5`.
-- Latest merged milestone: Operating Loop v1 contract slice, PR #368.
-- Prior unified NOVA streaming milestone: PR #365 -> `2ab17d56468ba47ca980f138b3679bcc99367f30`.
-- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, 16/16 AGIs, 48/48 PASS; durable baseline only.
-- Tool certification baseline: 19/19 read-only PASS; no external writes.
-- All 16 AGIs remain `allow_actions=false` unless current evidence proves otherwise.
-- `nova.agi/main`: re-query before mutation.
-- `hocker-node-agent/main`: re-query before mutation.
-- Supabase production project: re-query before mutation.
+- Hocker One `main=f187257873f44e3b8053cc3308471cefa1c8e9ee` and Vercel Production `dpl_AcCdDXzD3AdWEHfYjrPf6z74Cvop` READY.
+- PR #460 is the single OPEN PR across `hocker.one`, `nova.agi` and `hocker-node-agent` at evidence cut; it stages GitHub App identity, Owner-gated engineering, and a disabled independent Cron monitor. Read live HEAD rather than assuming a dated commit remains current.
+- Candidate regressions, TypeScript, lint, build and exact-SHA Preview have been verified on successive revisions; **mandatory `npm audit` still fails with 19 high `picomatch` findings, GHSA-fc5q-39xc-vjpf**. No merge or Production deployment is authorized.
+- Core AGI certification baseline: `2026.08.21-8` + `score-v5`, 16/16 profiles, 48/48 evaluations; historical evidence only, NOT autonomous developer E2E. Do not repeat.
+- Read-only tool assignment baseline: 19/19 verified; no material writes were certified by that contract.
+- Global material capability baseline: `allow_actions=false` across all 16 AGIs until separately authorized by Owner Gate. Re-query before claiming current status.
+- Historical sources remain preserved for audit; dated September/August documents are archival context, not current provider state.
+- Supabase recent evidence: global material privileges absent and no active material queue; re-query before asserting current status.
+- Cloudflare Cron has logged real scheduled successful observations; this is NOT an AGI coding runtime. Independent absence detection is staged but not activated.
+- `nova.agi/main`, `hocker-node-agent/main`, Vercel variables, Supabase migrations and incidents are mutable: query them directly.
 
 ## Current architecture
 
@@ -54,15 +55,13 @@ Not yet implemented by this slice:
 
 Registry presence is not liveness. Re-query `agi_runs`, integration checks and node signals before current AGI/runtime claims.
 
-## Remaining hard gates
+## Remaining NOVA Developer release gates (scope-aware)
 
-- Fresh 16/16 AGI runtime certification.
-- Dedicated `nova.agi` physical runtime certification.
-- Node Agent physical heartbeat.
-- Owner AAL1/AAL2 ceremony and negative-path evidence.
-- Backup/restore and measured RPO/RTO.
-- Full files/artifacts/voice/browser/code-execution parity.
-- Supabase leaked-password protection provider-plan gate.
+1. Official `picomatch` remediation and full candidate CI green; exact-head Codex/Preview, reviewed merge, verified Production.
+2. One consolidated Owner final session for minimum server identities, AAL2 and task-scoped approvals; real external Cron alert delivery.
+3. One genuine NOVA/AGI-origin PR: authenticated repository inspection, reversible code change, Owner Gate, CI/Codex and controlled deploy.
+4. Independent missed-Cron notification and isolated Supabase restore drill with evidence; costs approved before new branch.
+5. Physical Node Agent is optional for serverless scope. Do not claim full 24/7 dedicated runtimes or broad voice/browser/tool parity without separate evidence.
 
 ## Release rule
 

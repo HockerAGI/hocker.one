@@ -581,6 +581,8 @@ export async function buildAgiNativeMcpTools(query?: string, allow_actions = fal
 
   const preferredEngineeringTools = [
     "get_repository",
+    "list_commits",
+    "list_tree",
     "get_file_contents",
     "search_code",
     "list_branches",

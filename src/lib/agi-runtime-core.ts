@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isGitHubRuntimeIdentityConfigured } from "@/lib/github-runtime-identity";
 import { HOCKER_AGI_CANON, HOCKER_AGI_CANON_VERSION, HOCKER_AGI_IDS } from "@/lib/hocker-agi-canon";
 import {
   HOCKER_AGI_ALIASES,
@@ -143,12 +144,16 @@ const TOOL_CATALOG: RuntimeTool[] = [
     name: "GitHub",
     provider: "GitHub",
     category: "code",
-    required_env: ["HOCKER_GITHUB_TOKEN"],
+    required_env: [],
+    env_groups: [{
+      label: "GitHub runtime identity",
+      any_of: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN", "HOCKER_GITHUB_APP_ID"],
+      required: true,
+    }],
     optional_env: [
-      "GITHUB_TOKEN",
-      "GH_TOKEN",
-      "GITHUB_APP_ID",
-      "GITHUB_INSTALLATION_ID",
+      "HOCKER_GITHUB_APP_INSTALLATION_ID",
+      "HOCKER_GITHUB_APP_PRIVATE_KEY",
+      "HOCKER_GITHUB_APP_REPOSITORIES",
       "HOCKER_GITHUB_REPO",
       "GITHUB_REPOSITORY",
     ],
@@ -446,7 +451,11 @@ function statusFor(tool: RuntimeTool): RuntimeToolStatus {
     if ((group.required ?? true) && hits.length === 0) missingGroups.push(group.label);
   }
 
-  const hasCredentials = missing.length === 0 && missingGroups.length === 0;
+  // GitHub App requires app ID + installation ID + valid PEM together;
+  // a single ID must never enable assignments or execution.
+  const hasCredentials = tool.tool_key === "github"
+    ? isGitHubRuntimeIdentityConfigured()
+    : missing.length === 0 && missingGroups.length === 0;
   const hasAnySignal =
     configuredRequired > 0 || optionalHits.length > 0 || configuredGroupSignals > 0;
 
