@@ -141,7 +141,8 @@ function parseRepository(payload: JsonRecord): { owner: string; repo: string; fu
 
   const parts = raw.trim().split("/").map((item) => item.trim());
   if (parts.length !== 2) throw new Error("Repositorio inválido. Usa formato owner/repo.");
-  const [owner, repo] = parts;
+  const owner = parts[0] ?? "";
+  const repo = parts[1] ?? "";
   if (!/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo) ||
       [".", ".."].includes(owner) || [".", ".."].includes(repo)) {
     throw new Error("Repositorio inválido. Usa formato owner/repo.");
