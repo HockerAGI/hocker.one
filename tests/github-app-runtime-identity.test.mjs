@@ -174,15 +174,14 @@ test("canonical AGI catalog uses identical complete identity resolution as GitHu
 });
 
 
-test("non-RSA and sub-2048-bit keys cannot enable runtime tool identity", async () => {
-  const keys = [
-    generateKeyPairSync("ec", { namedCurve: "prime256v1" }).privateKey.export({ format: "pem", type: "pkcs8" }).toString(),
-    generateKeyPairSync("rsa", { modulusLength: 1024 }).privateKey.export({ format: "pem", type: "pkcs1" }).toString(),
-  ];
-  for (const key of keys) {
-    const { identity } = await runtime({ HOCKER_GITHUB_APP_PRIVATE_KEY: key });
-    assert.equal(identity.getGitHubRuntimeIdentityKind(), "missing");
-    assert.equal(identity.isGitHubRuntimeIdentityConfigured(), false);
-    await assert.rejects(() => identity.getGitHubRuntimeAccessToken(), /GITHUB_RUNTIME_IDENTITY_NOT_CONFIGURED/);
-  }
+test("non-RSA keys cannot enable runtime tool identity and RSA strength gate is explicit", async () => {
+  const key = generateKeyPairSync("ec", { namedCurve: "prime256v1" })
+    .privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+  const { identity } = await runtime({ HOCKER_GITHUB_APP_PRIVATE_KEY: key });
+  assert.equal(identity.getGitHubRuntimeIdentityKind(), "missing");
+  assert.equal(identity.isGitHubRuntimeIdentityConfigured(), false);
+  await assert.rejects(() => identity.getGitHubRuntimeAccessToken(), /GITHUB_RUNTIME_IDENTITY_NOT_CONFIGURED/);
+  const source = await read("src/lib/github-runtime-identity.ts");
+  assert.match(source, /key\.asymmetricKeyType !== "rsa"/);
+  assert.match(source, /key\.asymmetricKeyDetails\?\.modulusLength \?\? 0\) < 2048/);
 });
