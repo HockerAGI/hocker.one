@@ -62,12 +62,14 @@ test("NOVA/AGI writes require an exact allowlisted repository, not organization-
   assert.throws(() => protectedRepo("HockerAGI/punto.g"), /solo lectura/);
 });
 
-test("both GitHub mutation executors enforce the AGI allowlist before provider calls", async () => {
-  const [worker, executor] = await Promise.all([
+test("all GitHub mutation paths enforce the AGI allowlist before provider calls", async () => {
+  const [worker, executor, policy] = await Promise.all([
     read("src/lib/agi-action-execution.ts"),
     read("src/lib/github-runtime-executor.ts"),
+    read("src/lib/mcp/mcp-policy.ts"),
   ]);
   assert.match(worker, /assertGithubAgiExecutionRepositoryAllowed\(fullName\)/);
   assert.match(executor, /operation !== "create_repository"\) assertGithubAgiExecutionRepositoryAllowed\(fullName\)/);
+  assert.match(policy, /assertGithubAgiExecutionRepositoryAllowed\(repository\)/);
   assert.doesNotMatch(worker, /orgAllowed|!exactAllowed && !orgAllowed/);
 });
