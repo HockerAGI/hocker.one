@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 
 export const SERVICE = "hocker-nova-coordinator";
 export const TITLE = "[HOCKER] NOVA Cron observation missing";
+export const MARKER = "<!-- hocker-nova-cron-monitor:v1 -->";
 const LOOKBACK_MS = 50 * 60_000;
 const FRESH_MS = 45 * 60_000;
 
@@ -68,7 +69,10 @@ export async function syncIncident({ assessment, token, repo, dryRun = true, fet
   for (let page = 1; page <= 10; page += 1) {
     const issues = await request("GET", "/issues?state=open&per_page=100&page=" + page);
     if (!Array.isArray(issues)) throw Error("CRON_GITHUB_SCHEMA_INVALID");
-    current = issues.find((x) => x && !x.pull_request && x.title === TITLE);
+    // Only manage incidents explicitly created by this monitor. Never close
+    // a human-owned issue just because its title happens to match.
+    current = issues.find((x) => x && !x.pull_request && x.title === TITLE &&
+      typeof x.body === "string" && x.body.includes(MARKER));
     if (current || issues.length < 100) { complete = true; break; }
   }
   if (!complete) throw Error("CRON_GITHUB_ISSUES_PAGINATION_LIMIT");
@@ -77,7 +81,7 @@ export async function syncIncident({ assessment, token, repo, dryRun = true, fet
     if (current) return { code: "CRON_INCIDENT_EXISTS", issueNumber: current.number };
     const result = await request("POST", "/issues", {
       title: TITLE,
-      body: "Missing independent coordinator telemetry (not proof of a stopped Worker)." +
+      body: MARKER + "\n\n" + "Missing independent coordinator telemetry (not proof of a stopped Worker)." +
         "\n\nStatus: " + assessment.code +
         "\n\nLast observation: " + (assessment.lastObservedAt ?? "None in last 50 minutes") +
         "\n\nCheck Cloudflare cron schedule, observability ingestion and Hocker One logs." +

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assess, queryTelemetry, syncIncident, run, SERVICE, TITLE } from "../scripts/ops/monitor-nova-cron.mjs";
+import { assess, queryTelemetry, syncIncident, run, SERVICE, TITLE, MARKER } from "../scripts/ops/monitor-nova-cron.mjs";
 
 const NOW = Date.parse("2026-11-18T06:40:00Z");
 const event = (n = 5, service = SERVICE) => ({
@@ -42,8 +42,10 @@ test("creates one incident, no duplicate; recovery closes it; dry-run performs n
     calls.push(opts.method + " " + path);
     if (opts.method === "GET") return res(current ? [current] : []);
     if (opts.method === "POST" && path.endsWith("/issues")) {
-      assert.equal(JSON.parse(opts.body).title, TITLE);
-      current = { title: TITLE, number: 3061 };
+      const body = JSON.parse(opts.body);
+      assert.equal(body.title, TITLE);
+      assert.ok(body.body.startsWith(MARKER));
+      current = { title: TITLE, body: body.body, number: 3061 };
       return res(current, 201);
     }
     if (opts.method === "POST" && path.endsWith("/comments")) return res({}, 201);
@@ -80,7 +82,7 @@ test("incident lookup checks subsequent GitHub pages before creating another iss
       if (page === 1) return res(Array.from({ length: 100 }, (_, i) => ({
         title: "Unrelated issue " + i, number: i + 1,
       })));
-      if (page === 2) return res([{ title: TITLE, number: 4130 }]);
+      if (page === 2) return res([{ title: TITLE, body: MARKER, number: 4130 }]);
     }
     if (options.method === "POST") postCount += 1;
     throw Error("unexpected GitHub write");
@@ -95,4 +97,28 @@ test("incident lookup checks subsequent GitHub pages before creating another iss
   assert.equal(result.code, "CRON_INCIDENT_EXISTS");
   assert.deepEqual(pages, [1, 2]);
   assert.equal(postCount, 0);
+});
+
+
+test("unmarked human-owned issues with the same title are never modified", async () => {
+  const calls = [];
+  const human = { number: 77, title: TITLE, body: "Human-authored investigation" };
+  const fetcher = async (url, opts) => {
+    calls.push(opts.method);
+    if (opts.method === "GET") return res([human]);
+    if (opts.method === "POST" && new URL(url).pathname.endsWith("/issues")) {
+      const created = JSON.parse(opts.body);
+      assert.ok(created.body.includes(MARKER));
+      return res({ number: 720 }, 201);
+    }
+    throw Error("attempt to modify human issue");
+  };
+  const common = { repo: "HockerAGI/hocker.one", token, fetcher, dryRun: false };
+  assert.equal((await syncIncident({
+    ...common, assessment: { ok: true, code: "CRON_OBSERVED", lastObservedAt: "2026-11-18T06:35:00Z" },
+  })).code, "CRON_HEALTHY");
+  assert.equal((await syncIncident({
+    ...common, assessment: { ok: false, code: "CRON_OBSERVATION_MISSING", lastObservedAt: null },
+  })).code, "CRON_INCIDENT_CREATED");
+  assert.deepEqual(calls, ["GET", "GET", "POST"]);
 });
