@@ -291,3 +291,78 @@ test("App-only model-facing GitHub reads use a canonical authenticated REST brid
   assert.match(policy, /assertMcpReadToolPolicy/);
   assert.match(runtime, /registry\.executeTool\(call\.provider, call\.tool, authorizedArgs\)/);
 });
+
+
+test("App-only REST connector performs authenticated reads and keeps model tools read-only", async () => {
+  const source = await read("src/lib/mcp/mcp-github-runtime-read.ts");
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const seen = [];
+  const policies = [];
+  let failProbe = false;
+  const mod = { exports: {} };
+  vm.runInNewContext(compiled, {
+    module: mod, exports: mod.exports, Date,
+    require(id) {
+      if (id === "./mcp-policy") return {
+        assertMcpReadToolPolicy(provider, tool, args) {
+          policies.push({ provider, tool, args });
+          if (String(args.path ?? "").endsWith(".env")) throw new Error("MCP_READ_BLOCKED_BY_POLICY");
+        },
+      };
+      if (id === "./mcp-github-read-arguments") return {
+        normalizeGitHubListCommitsArguments(args) {
+          return { owner: args.owner, repo: args.repo, sha: args.sha ?? "main" };
+        },
+      };
+      if (id === "@/lib/github-runtime-executor") return {
+        async executeGitHubReadOperation(operation, input) {
+          seen.push({ operation, input });
+          if (failProbe && operation === "get_repo") throw new Error("AUTH_UNAVAILABLE");
+          if (operation === "get_repo") return { repository: input.repository };
+          if (operation === "read_file") return { sha: "a".repeat(40), content: "real source from mocked API" };
+          if (operation === "list_commits") return { commits: [{ sha: "b".repeat(40) }] };
+          if (operation === "list_tree") return { tree: [{ path: "src/index.ts" }] };
+          throw new Error("unexpected operation");
+        },
+      };
+      throw new Error("Untrusted module: " + id);
+    },
+  });
+  const Connector = mod.exports.GitHubRuntimeReadConnector;
+  const connector = new Connector();
+  assert.equal(connector.state.status, "disconnected");
+  await assert.rejects(() => connector.executeReadTool("get_repository", { owner: "HockerAGI", repo: "hocker.one" }), /NOT_CONNECTED/);
+  const initialized = await connector.initialize();
+  assert.equal(connector.state.status, "connected");
+  assert.equal(initialized.tools.length, 4);
+  assert.equal(seen.filter((row) => row.operation === "get_repo").length, 3);
+  assert.equal((await connector.executeReadTool("list_commits", {
+    owner: "HockerAGI", repo: "hocker.one", sha: "main",
+  })).commits[0].sha, "b".repeat(40));
+  assert.equal((await connector.executeReadTool("get_file_contents", {
+    owner: "HockerAGI", repo: "hocker.one", path: "src/index.ts", ref: "main",
+  })).sha, "a".repeat(40));
+  assert.equal((await connector.executeReadTool("list_tree", {
+    owner: "HockerAGI", repo: "hocker.one",
+  })).tree[0].path, "src/index.ts");
+  assert.ok(policies.every((row) => row.provider === "github"));
+  await assert.rejects(() => connector.executeReadTool("create_pr", {
+    owner: "HockerAGI", repo: "hocker.one",
+  }), /TOOL_NOT_ALLOWED/);
+  await assert.rejects(() => connector.executeReadTool("get_file_contents", {
+    owner: "HockerAGI", repo: "hocker.one", path: "src/.env",
+  }), /MCP_READ_BLOCKED_BY_POLICY/);
+  assert.ok(seen.every((row) => !["create_pr", "upsert_file", "create_branch"].includes(row.operation)));
+  failProbe = true;
+  const disconnected = new Connector();
+  await assert.rejects(() => disconnected.initialize(), /GITHUB_RUNTIME_AUTHENTICATED_READ_FAILED/);
+  assert.equal(disconnected.state.status, "error");
+});
+
+test("engineering native discovery includes both commit and file SHA reads", async () => {
+  const runtime = await read("src/lib/agi-mcp-runtime.ts");
+  const tools = runtime.slice(runtime.indexOf("const preferredEngineeringTools = ["));
+  assert.match(tools, /"get_repository",[\s\S]*?"list_commits",[\s\S]*?"list_tree",[\s\S]*?"get_file_contents"/);
+});
