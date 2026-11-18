@@ -19,7 +19,7 @@ test("NOVA E2E operational index links live issue instead of stale September han
   assert.match(recovery, /issues\/306/);
   assert.match(recovery, /2026-11-18/);
   assert.match(recovery, /mandatory.*npm audit/);
-  assert.match(recovery, /genuine NOVA\/AGI-origin PR/);
+  assert.match(recovery, /Genuine NOVA\/AGI-origin PR/i);
   assert.match(recovery, /Physical Node Agent is optional/);
   assert.match(recovery, /MERGED PR #460/);
   assert.match(ownerGuide, /PR #460 \*\*MERGED\*\*/);
