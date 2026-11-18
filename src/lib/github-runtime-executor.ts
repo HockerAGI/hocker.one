@@ -1,5 +1,5 @@
 import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
-import { getGitHubRuntimeAccessToken, getGitHubRuntimeIdentityKind, isGitHubRuntimeIdentityConfigured, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
+import { getGitHubRuntimeAccessToken, getGitHubRepositoryCreationAccessToken, getGitHubRuntimeIdentityKind, isGitHubRuntimeIdentityConfigured, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 
 export type GitHubRuntimeReadOperation =
   | "get_repo"
@@ -164,8 +164,8 @@ function encodeSegment(value: string): string {
   return encodeURIComponent(value).replace(/%2F/g, "/");
 }
 
-async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
-  const token = await getGitHubRuntimeAccessToken();
+async function githubRequest<T>(endpoint: string, init: RequestInit = {}, overrideToken?: string): Promise<T> {
+  const token = overrideToken ?? await getGitHubRuntimeAccessToken();
 
   const response = await fetch(`https://api.github.com${endpoint}`, {
     ...init,
@@ -236,9 +236,9 @@ export async function readGitHubBranchHeadSha(repository: string, branch: string
  * Never create in the authenticated token holder's account without confirming
  * it is the specifically allowed HOCKER account.
  */
-async function repositoryCreationEndpoint(owner: string): Promise<string> {
+async function repositoryCreationEndpoint(owner: string, creationToken: string): Promise<string> {
   const profile = await githubRequest<{ login?: string; type?: string }>(
-    `/users/${encodeSegment(owner)}`,
+    `/users/${encodeSegment(owner)}`, {}, creationToken,
   );
   if (String(profile?.login ?? "").toLowerCase() !== owner.toLowerCase()) {
     throw new Error("GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED");
@@ -249,7 +249,7 @@ async function repositoryCreationEndpoint(owner: string): Promise<string> {
   if (profile.type !== "User") {
     throw new Error("GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED");
   }
-  const authenticated = await githubRequest<{ login?: string }>("/user");
+  const authenticated = await githubRequest<{ login?: string }>("/user", {}, creationToken);
   if (String(authenticated?.login ?? "").toLowerCase() !== owner.toLowerCase()) {
     throw new Error("GITHUB_REPOSITORY_OWNER_SESSION_MISMATCH");
   }
@@ -279,7 +279,9 @@ async function createRepository(input: GitHubRuntimeInput) {
     auto_init: true,
   };
 
-  const endpoint = await repositoryCreationEndpoint(owner);
+  const creationToken = getGitHubRepositoryCreationAccessToken();
+  if (!creationToken) throw new Error("GITHUB_REPOSITORY_CREATION_REQUIRES_EXPLICIT_ORG_IDENTITY");
+  const endpoint = await repositoryCreationEndpoint(owner, creationToken);
   const response = await githubRequest<Record<string, unknown>>(
     endpoint,
     {
@@ -288,6 +290,7 @@ async function createRepository(input: GitHubRuntimeInput) {
         ? { ...body, visibility: undefined }
         : body),
     },
+    creationToken,
   );
 
   return {

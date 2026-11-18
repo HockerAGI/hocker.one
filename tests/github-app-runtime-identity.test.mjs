@@ -225,21 +225,44 @@ test("new repository bootstrap identifies GitHub User vs Organization owner and 
   };
 
   const personal = make("User");
-  assert.equal(await personal.fn("HockerAGI"), "/user/repos");
+  assert.equal(await personal.fn("HockerAGI", "creation-only-token"), "/user/repos");
   assert.deepEqual(personal.calls, ["/users/HockerAGI", "/user"]);
 
   const organization = make("Organization");
-  assert.equal(await organization.fn("HockerAGI"), "/orgs/HockerAGI/repos");
+  assert.equal(await organization.fn("HockerAGI", "creation-only-token"), "/orgs/HockerAGI/repos");
   assert.deepEqual(organization.calls, ["/users/HockerAGI"]);
 
   const mismatch = make("User", "HockerAGI", "OtherUser");
-  await assert.rejects(() => mismatch.fn("HockerAGI"), /GITHUB_REPOSITORY_OWNER_SESSION_MISMATCH/);
+  await assert.rejects(() => mismatch.fn("HockerAGI", "creation-only-token"), /GITHUB_REPOSITORY_OWNER_SESSION_MISMATCH/);
   const wrongOwner = make("User", "OtherUser");
-  await assert.rejects(() => wrongOwner.fn("HockerAGI"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
+  await assert.rejects(() => wrongOwner.fn("HockerAGI", "creation-only-token"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
   const unknown = make("Enterprise");
-  await assert.rejects(() => unknown.fn("HockerAGI"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
+  await assert.rejects(() => unknown.fn("HockerAGI", "creation-only-token"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
 
   assert.match(source, /repositoryCreationEndpoint\(owner\)/);
   assert.match(source, /endpoint === "\/user\/repos"/);
   assert.match(source, /requiresStaticGitHubIdentityForRepositoryCreation/);
+});
+
+
+test("dedicated repository-creation token does not override GitHub App writes", async () => {
+  const { identity } = await runtime({ HOCKER_GITHUB_REPO_CREATE_TOKEN: "create_owner_token" }, async () => successResponse());
+  assert.equal(identity.getGitHubRuntimeIdentityKind(), "github_app");
+  assert.equal(identity.getGitHubRepositoryCreationAccessToken(), "create_owner_token");
+  assert.equal(identity.requiresStaticGitHubIdentityForRepositoryCreation(), true);
+  assert.equal(await identity.getGitHubRuntimeAccessToken(), TEST_TOKEN);
+  const old = await runtime({ HOCKER_GITHUB_TOKEN: "existing_static_token", HOCKER_GITHUB_REPO_CREATE_TOKEN: "" });
+  assert.equal(old.identity.getGitHubRepositoryCreationAccessToken(), "existing_static_token");
+  const missing = await runtime({ HOCKER_GITHUB_APP_ID: "", HOCKER_GITHUB_APP_INSTALLATION_ID: "", HOCKER_GITHUB_APP_PRIVATE_KEY: "", HOCKER_GITHUB_REPO_CREATE_TOKEN: "create_owner_token" });
+  assert.equal(missing.identity.getGitHubRuntimeIdentityKind(), "missing");
+  assert.equal(missing.identity.requiresStaticGitHubIdentityForRepositoryCreation(), true);
+});
+
+test("repository creation API uses a separate static token for all probes and POST", async () => {
+  const source = await read("src/lib/github-runtime-executor.ts");
+  assert.match(source, /repositoryCreationEndpoint\(owner, creationToken\)/);
+  assert.match(source, /githubRequest<\{ login\?: string; type\?: string \}>\([\s\S]*?\{\}, creationToken/);
+  assert.match(source, /githubRequest<\{ login\?: string \}>\("\/user", \{\}, creationToken\)/);
+  assert.match(source, /creationToken,\s*\);/);
+  assert.match(source, /getGitHubRepositoryCreationAccessToken\(\)/);
 });

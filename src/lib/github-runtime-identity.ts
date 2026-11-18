@@ -24,6 +24,11 @@ export function getStaticGitHubToken(): string {
   return env("HOCKER_GITHUB_TOKEN") || env("GITHUB_TOKEN") || env("GH_TOKEN");
 }
 
+/** Scoped to repository creation; never overrides the App identity for normal edits. */
+export function getGitHubRepositoryCreationAccessToken(): string {
+  return env("HOCKER_GITHUB_REPO_CREATE_TOKEN") || getStaticGitHubToken();
+}
+
 function appIdentityConfig() {
   const appId = env("HOCKER_GITHUB_APP_ID");
   const installationId = env("HOCKER_GITHUB_APP_INSTALLATION_ID");
@@ -150,5 +155,5 @@ export async function getGitHubRuntimeAccessToken(): Promise<string> {
 }
 
 export function requiresStaticGitHubIdentityForRepositoryCreation(): boolean {
-  return getStaticGitHubToken().length > 0;
+  return getGitHubRepositoryCreationAccessToken().length > 0;
 }
