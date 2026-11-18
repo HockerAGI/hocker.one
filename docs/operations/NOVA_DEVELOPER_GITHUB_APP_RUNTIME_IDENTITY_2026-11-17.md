@@ -46,3 +46,9 @@ Alcance App: los tokens se reducen a los repos expresamente aprobados, con `cont
 **Fuente de consulta GitHub:** https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app y https://docs.github.com/en/rest/apps/apps?apiVersion=2026-03-10.
 
 **Registro operativo:** https://github.com/HockerAGI/hocker.one/issues/306.
+
+### Credencial independiente para creación de repositorios (preparación final Owner)
+
+Para activar el ciclo completo de aplicaciones nuevas y existentes sin otorgar a todas las escrituras el permiso de creación, el ejecutor acepta una variable **opcional y exclusiva de creación**: `HOCKER_GITHUB_REPO_CREATE_TOKEN`. Su uso está restringido a la verificación autenticada del titular GitHub y al POST para crear el repositorio bajo el Owner Gate. La GitHub App de tokens temporales sigue atendiendo lecturas, edición y PR en repositorios existentes, y **no** adopta el PAT de creación como identidad general. Si no se configura este token, el PAT heredado de `HOCKER_GITHUB_TOKEN`/`GITHUB_TOKEN`/`GH_TOKEN` conserva la compatibilidad; el App token por sí solo nunca habilita bootstrap de repos nuevos.
+
+`HockerAGI` figura como cuenta GitHub **User**, no Organization: la creación debe usar `POST /user/repos` solo tras verificar coincidencia exacta de `GET /users/HockerAGI` y `GET /user` con la credencial de creación. Para permisos de creación revisar la documentación oficial del endpoint y la capacidad `Administration:write` del token elegido; no instalar credenciales de alcance amplio si no está justificado. La variable se agrega exclusivamente en secretos de Vercel Production por el Owner durante la sesión final, **después de resolver seguridad y liberar el código**, sin enviarla por chat, GitHub ni archivos. Se conserva `requiresStaticGitHubIdentityForRepositoryCreation()`, sin exigir un token nuevo cuando solo se mantiene software existente.
