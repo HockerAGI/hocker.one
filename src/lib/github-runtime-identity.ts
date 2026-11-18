@@ -1,4 +1,4 @@
-import { createSign } from "node:crypto";
+import { createHash, createSign } from "node:crypto";
 
 /**
  * Server-side GitHub identity for NOVA/AGIs.
@@ -14,7 +14,7 @@ export type GitHubRuntimeIdentity = "pat" | "github_app" | "missing";
 const DEFAULT_REPOS = ["hocker.one", "nova.agi", "hocker-node-agent"] as const;
 const APP_TOKEN_REFRESH_MARGIN_MS = 5 * 60_000;
 let cachedToken: { token: string; validUntil: number; identity: string } | null = null;
-let pendingToken: Promise<string> | null = null;
+let pendingToken: { identity: string; promise: Promise<string> } | null = null;
 
 function env(name: string): string {
   return String(process.env[name] ?? "").trim();
@@ -82,7 +82,7 @@ async function mintAppInstallationToken(config: NonNullable<ReturnType<typeof ap
       },
       body: JSON.stringify({
         repositories: config.repositories,
-        permissions: { contents: "write", pull_requests: "write", metadata: "read" },
+        permissions: { contents: "write", pull_requests: "write" },
       }),
       signal: AbortSignal.timeout(10000),
     },
@@ -96,34 +96,49 @@ async function mintAppInstallationToken(config: NonNullable<ReturnType<typeof ap
   const result = data && typeof data === "object" ? data as Record<string, unknown> : {};
   const token = result.token;
   const expiresAt = result.expires_at;
+  const granted = result.permissions && typeof result.permissions === "object"
+    ? result.permissions as Record<string, unknown> : {};
+  if (granted.contents !== "write" || granted.pull_requests !== "write") {
+    throw new Error("GITHUB_APP_INSTALLATION_PERMISSIONS_NOT_VERIFIED");
+  }
   const expiry = typeof expiresAt === "string" ? Date.parse(expiresAt) : NaN;
   if (typeof token !== "string" || token.length < 24 ||
       !Number.isFinite(expiry) || expiry <= Date.now() + APP_TOKEN_REFRESH_MARGIN_MS) {
     throw new Error("GITHUB_APP_INSTALLATION_TOKEN_RESPONSE_INVALID");
   }
 
-  const identity = config.appId + ":" + config.installationId + ":" + config.repositories.join(",");
+  const identity = appIdentityCacheKey(config);
   cachedToken = { token, validUntil: expiry - APP_TOKEN_REFRESH_MARGIN_MS, identity };
   return token;
 }
 
 /** Returns a short-lived GitHub installation token or the existing PAT. */
+function appIdentityCacheKey(config: NonNullable<ReturnType<typeof appIdentityConfig>>): string {
+  return createHash("sha256").update(JSON.stringify([
+    config.appId, config.installationId, config.repositories, config.privateKey,
+  ])).digest("hex");
+}
+
 export async function getGitHubRuntimeAccessToken(): Promise<string> {
   const pat = getStaticGitHubToken();
   if (pat) return pat;
   const config = appIdentityConfig();
   if (!config) throw new Error("GITHUB_RUNTIME_IDENTITY_NOT_CONFIGURED");
 
-  const identity = config.appId + ":" + config.installationId + ":" + config.repositories.join(",");
+  const identity = appIdentityCacheKey(config);
   if (cachedToken?.identity === identity && cachedToken.validUntil > Date.now()) {
     return cachedToken.token;
   }
   // An install ID/repository allowlist change must never reuse a previous
   // configuration's pending promise or cached access token.
-  if (!pendingToken) {
-    pendingToken = mintAppInstallationToken(config).finally(() => { pendingToken = null; });
+  if (!pendingToken || pendingToken.identity !== identity) {
+    const pending = { identity, promise: Promise.resolve("") };
+    pending.promise = mintAppInstallationToken(config).finally(() => {
+      if (pendingToken === pending) pendingToken = null;
+    });
+    pendingToken = pending;
   }
-  return pendingToken;
+  return pendingToken.promise;
 }
 
 export function requiresStaticGitHubIdentityForRepositoryCreation(): boolean {
