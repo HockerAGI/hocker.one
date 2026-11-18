@@ -153,3 +153,21 @@ test("both real GitHub API consumers use async identity without bypassing Owner 
   assert.match(handoff, /getGitHubRuntimeAccessToken/);
   assert.doesNotMatch(executor, /getGitHubRuntimeAccessToken\(\).*(POST|PUT|PATCH|DELETE)/);
 });
+
+
+test("canonical AGI catalog uses identical complete identity resolution as GitHub executor", async () => {
+  const source = await read("src/lib/agi-runtime-core.ts");
+  assert.match(source, /import \{ isGitHubRuntimeIdentityConfigured \} from "@\/lib\/github-runtime-identity"/);
+  const github = source.indexOf('tool_key: "github"');
+  const vercel = source.indexOf('tool_key: "vercel"', github + 1);
+  assert.ok(github > 0 && vercel > github);
+  const entry = source.slice(github, vercel);
+  assert.match(entry, /required_env: \[\]/);
+  assert.match(entry, /GitHub runtime identity/);
+  assert.match(entry, /HOCKER_GITHUB_APP_ID/);
+  assert.match(entry, /HOCKER_GITHUB_APP_INSTALLATION_ID/);
+  assert.match(entry, /HOCKER_GITHUB_APP_PRIVATE_KEY/);
+  assert.match(source, /tool\.tool_key === "github"\s*\?\s*isGitHubRuntimeIdentityConfigured\(\)/);
+  assert.match(source, /hasCredentials &&\s*tool\.implementation_status === "executor_ready"/);
+  assert.match(source, /enabled: Boolean\(tool\?\.execution_enabled && !planned\)/);
+});
