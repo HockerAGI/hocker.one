@@ -1,10 +1,10 @@
 # NOVA Developer E2E — GitHub App runtime identity (2026-11-17)
 
-> Estado: **implementación lista para revisión**, no aprobación ni ejecución material certificada. Este documento no es la fuente canónica de los 16 AGIs, permisos ni secretos.
+> Estado: **implementación fusionada y desplegada, identidad de escritura aún no configurada, E2E material NO certificado** (corte 18 nov 2026). PR #460 cerró con CI completo en verde y Vercel Production exact SHA READY. Este documento no es la fuente canónica de los 16 AGIs, permisos ni secretos; consultar el expediente vivo #306.
 
 ## Contexto verificado
 
-- `hocker.one/main=f187257873f44e3b8053cc3308471cefa1c8e9ee` al abrir esta intervención; Production `dpl_AcCdDXzD3AdWEHfYjrPf6z74Cvop` READY, 16 AGIs, Queue Lock limpio, cero `allow_actions=true`.
+- **Corte de apertura histórico:** `hocker.one/main=f187257873f44e3b8053cc3308471cefa1c8e9ee`, Production `dpl_AcCdDXzD3AdWEHfYjrPf6z74Cvop`. **Corte postmerge actual (18 nov):** `main=f9b34f77b9b056a99cda31199adfe963060a5a41`, Production `dpl_4GXPTL9X5GEXjo4H6vShUF3vcJ2t` READY. 16 AGIs; 0 `allow_actions=true` en la última consulta SQL.
 - Vercel `hocker-one` Production no contiene `HOCKER_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` ni `HOCKER_GITHUB_APP_*`. Solo `AI_GATEWAY_API_KEY` existe en producción; `VERCEL_TOKEN` aparece para Preview únicamente (metadata, **ningún valor consultado**).
 - La instalación de GitHub que opera este chat no transfiere su token/llave privada al runtime Productivo y NO certifica una operación hecha por NOVA.
 
