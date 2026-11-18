@@ -132,9 +132,13 @@ function defaultRepository(): string {
 
 function parseRepository(input: GitHubRuntimeInput): { owner: string; repo: string; fullName: string } {
   const raw = input.repository || (input.owner && input.repo ? `${input.owner}/${input.repo}` : defaultRepository());
-  const [owner, repo] = String(raw).split("/").map((part) => part.trim()).filter(Boolean);
-
-  if (!owner || !repo) {
+  const parts = String(raw).trim().split("/").map((part) => part.trim());
+  if (parts.length !== 2) {
+    throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  }
+  const [owner, repo] = parts;
+  if (!/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo) ||
+      [".", ".."].includes(owner) || [".", ".."].includes(repo)) {
     throw new Error("Repositorio inválido. Usa formato owner/repo.");
   }
 

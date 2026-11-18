@@ -73,3 +73,37 @@ test("all GitHub mutation paths enforce the AGI allowlist before provider calls"
   assert.match(policy, /assertGithubAgiExecutionRepositoryAllowed\(repository\)/);
   assert.doesNotMatch(worker, /orgAllowed|!exactAllowed && !orgAllowed/);
 });
+
+
+test("GitHub read/write repository parsers reject truncated and extra-slash identities before dispatch", async () => {
+  const files = [
+    "src/lib/github-runtime-executor.ts",
+    "src/lib/agi-action-execution.ts",
+  ];
+  for (const path of files) {
+    const source = await read(path);
+    const ast = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true);
+    const declaration = ast.statements.find((node) =>
+      ts.isFunctionDeclaration(node) && node.name?.text === "parseRepository");
+    assert.ok(declaration, "parseRepository missing: " + path);
+    const js = ts.transpileModule(declaration.getText(ast), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    const parse = vm.runInNewContext(js + "\nparseRepository", {
+      defaultRepository: () => "HockerAGI/hocker.one",
+      githubRepositoryIdentity: (payload) => payload.repository,
+      envValue: () => "",
+      assertGithubRepositoryWriteAuthorized: () => {},
+      assertGithubAgiExecutionRepositoryAllowed: () => {},
+    });
+    assert.equal(parse({ repository: "HockerAGI/hocker.one" }).fullName, "HockerAGI/hocker.one");
+    for (const invalid of [
+      "HockerAGI/hocker.one/extra", "/HockerAGI/hocker.one",
+      "HockerAGI//hocker.one", "HockerAGI/hocker.one/",
+      "HockerAGI", "HockerAGI/../hocker.one",
+      "HockerAGI/hocker.one?other",
+    ]) {
+      assert.throws(() => parse({ repository: invalid }), /Repositorio inválido/, path + ": " + invalid);
+    }
+  }
+});

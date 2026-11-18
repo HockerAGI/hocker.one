@@ -139,8 +139,13 @@ function parseRepository(payload: JsonRecord): { owner: string; repo: string; fu
   const raw = githubRepositoryIdentity(payload) ||
     envValue("HOCKER_GITHUB_REPO") || envValue("GITHUB_REPOSITORY") || "HockerAGI/hocker.one";
 
-  const [owner, repo] = raw.split("/").map((item) => item.trim()).filter(Boolean);
-  if (!owner || !repo) throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  const parts = raw.trim().split("/").map((item) => item.trim());
+  if (parts.length !== 2) throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  const [owner, repo] = parts;
+  if (!/^[A-Za-z0-9_.-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo) ||
+      [".", ".."].includes(owner) || [".", ".."].includes(repo)) {
+    throw new Error("Repositorio inválido. Usa formato owner/repo.");
+  }
 
   const fullName = `${owner}/${repo}`;
   assertGithubRepositoryWriteAuthorized(fullName);
