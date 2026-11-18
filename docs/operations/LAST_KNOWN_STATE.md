@@ -19,7 +19,7 @@ This recovery card is dated, not an independent production certification.
 - Global material capability: `allow_actions=false` across all 16 AGIs at last SQL verification. Owner Gate remains required for each applicable material action.
 - Cloudflare Cron historical successful observations exist. Independent absence detection is included in `main` but **not enabled** or certified for real alert delivery.
 - Supabase was ACTIVE_HEALTHY at release cut; no isolated restore drill is certified and no paid branch was created.
-- Historical sources remain preserved; dated September/August documents are archival context, not present-day live provider truth.
+- Historical sources remain preserved for audit; dated September/August documents are archival context, not present-day live provider truth.
 - `nova.agi/main`, `hocker-node-agent/main`, provider secrets, migrations, alerts and runtime state are mutable; query them directly.
 
 ## Current architecture
