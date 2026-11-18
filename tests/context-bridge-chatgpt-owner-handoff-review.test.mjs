@@ -36,7 +36,7 @@ test("Owner AAL2, origin, confirmation, independent GitHub GET before persistenc
   assert.match(route, /z\.literal\(true\)/);
   assert.match(route, /comment\.issue_url !== "https:\/\/api\.github\.com\/repos\/HockerAGI\/hocker\.one\/issues\/306"/);
   assert.match(route, /comment\.html_url !== url/);
-  assert.match(route, /getGitHubRuntimeToken/);
+  assert.match(route, /getGitHubRuntimeAccessToken/);
   assert.match(route, /source_body_sha256: bodySha/);
   assert.match(route, /chatgpt_provider_session_attested: false/);
   assert.match(route, /status: "partial"/);
