@@ -30,6 +30,8 @@ import {
 } from "./mcp-openai";
 import { log } from "@/lib/logger";
 import { normalizeGitHubListCommitsArguments } from "./mcp-github-read-arguments";
+import { GitHubRuntimeReadConnector } from "./mcp-github-runtime-read";
+import { isGitHubRuntimeIdentityConfigured } from "@/lib/github-runtime-identity";
 import { alertMcpProviderDown } from "@/lib/hocker-alerts";
 
 // ── Base44 MCP Connector ─────────────────────────────────────
@@ -210,6 +212,7 @@ type ProviderEntry = {
     | McpSupabaseConnector
     | McpVercelConnector
     | McpGitHubConnector
+    | GitHubRuntimeReadConnector
     | McpOpenAIConnector
     | McpBase44Connector
     | McpClient
@@ -333,11 +336,18 @@ class McpRegistrySingleton {
     });
 
     // GitHub
-    const githubConfigured = isGitHubMcpConfigured();
+    // An App-only runtime must not depend on a GITHUB_TOKEN for model reads.
+    // Its JWT/installation token is used only with the GitHub REST API, never
+    // forwarded to the remote GitHub Copilot MCP origin.
+    const githubRemoteMcp = isGitHubMcpConfigured();
+    const githubRestIdentity = isGitHubRuntimeIdentityConfigured();
+    const githubConfigured = githubRemoteMcp || githubRestIdentity;
     this.providers.set("github", {
       id: "github",
       type: "github",
-      connector: githubConfigured ? createGitHubMcpConnector() : null,
+      connector: githubRemoteMcp
+        ? createGitHubMcpConnector()
+        : githubRestIdentity ? new GitHubRuntimeReadConnector() : null,
       configured: githubConfigured,
       client: null,
     });
@@ -511,6 +521,8 @@ class McpRegistrySingleton {
       if (providerId === "base44") {
         const base44Connector = entry.connector as { callTool: (name: string, a?: Record<string, unknown>) => Promise<unknown> };
         result = await base44Connector.callTool(toolName, args);
+      } else if (providerId === "github" && entry.connector instanceof GitHubRuntimeReadConnector) {
+        result = await entry.connector.executeReadTool(toolName, args ?? {});
       } else {
         const connector = entry.connector as { getClient: () => McpClient };
         const client = connector.getClient();

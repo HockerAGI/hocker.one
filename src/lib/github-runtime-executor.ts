@@ -3,6 +3,7 @@ import { getGitHubRuntimeAccessToken, getGitHubRepositoryCreationAccessToken, ge
 
 export type GitHubRuntimeReadOperation =
   | "get_repo"
+  | "list_commits"
   | "list_tree"
   | "read_file"
   | "compare_refs"
@@ -105,7 +106,7 @@ export function isGitHubWriteOperation(operation: string): operation is GitHubRu
 }
 
 export function isGitHubReadOperation(operation: string): operation is GitHubRuntimeReadOperation {
-  return ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"].includes(operation);
+  return ["get_repo", "list_commits", "list_tree", "read_file", "compare_refs", "audit_paths"].includes(operation);
 }
 
 
@@ -316,6 +317,31 @@ async function getRepo(input: GitHubRuntimeInput) {
     pushed_at: data.pushed_at,
     updated_at: data.updated_at,
   };
+}
+
+async function listCommits(input: GitHubRuntimeInput) {
+  const { owner, repo, fullName } = parseRepository(input);
+  const ref = safeRef(input.ref ?? "main", "main");
+  if (!/^(main|nova\/[a-z0-9/_-]+)$/i.test(ref) ||
+      ref.includes("..") || ref.includes("//")) {
+    throw new Error("GITHUB_BRANCH_REF_NOT_ALLOWED");
+  }
+  const limit = Math.max(1, Math.min(Number(input.limit ?? 3) || 3, 5));
+  const entries = await githubRequest<Array<{
+    sha: string;
+    html_url?: string;
+    commit?: { message?: string };
+  }>>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?sha=${encodeURIComponent(ref)}&per_page=${limit}`);
+  if (!Array.isArray(entries)) throw new Error("GITHUB_COMMITS_RESPONSE_INVALID");
+  const commits = entries.map((entry) => {
+    if (!/^[a-f0-9]{40}$/i.test(String(entry.sha ?? ""))) throw new Error("GITHUB_COMMITS_SHA_INVALID");
+    return {
+      sha: entry.sha,
+      html_url: entry.html_url ?? null,
+      message: String(entry.commit?.message ?? "").slice(0, 240),
+    };
+  });
+  return { repository: fullName, ref, commits, count: commits.length };
 }
 
 async function listTree(input: GitHubRuntimeInput) {
@@ -623,6 +649,8 @@ export async function executeGitHubReadOperation(operation: GitHubRuntimeReadOpe
   switch (operation) {
     case "get_repo":
       return getRepo(input);
+    case "list_commits":
+      return listCommits(input);
     case "list_tree":
       return listTree(input);
     case "read_file":
@@ -645,7 +673,7 @@ export function getGitHubExecutorStatus() {
     accepted_env: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN", "HOCKER_GITHUB_APP_ID", "HOCKER_GITHUB_APP_INSTALLATION_ID", "HOCKER_GITHUB_APP_PRIVATE_KEY", "HOCKER_GITHUB_APP_REPOSITORIES"],
     github_app_repo_creation_supported: false,
     default_repository: defaultRepository(),
-    read_operations: ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"],
+    read_operations: ["get_repo", "list_commits", "list_tree", "read_file", "compare_refs", "audit_paths"],
     write_operations_guarded: ["create_repository", "create_branch", "upsert_file", "create_pr"],
     safety: {
       read_operations_execute_now: true,

@@ -266,3 +266,28 @@ test("repository creation API uses a separate static token for all probes and PO
   assert.match(source, /creationToken,\s*\);/);
   assert.match(source, /getGitHubRepositoryCreationAccessToken\(\)/);
 });
+
+
+test("App-only model-facing GitHub reads use a canonical authenticated REST bridge", async () => {
+  const [registry, bridge, executor, policy, runtime] = await Promise.all([
+    read("src/lib/mcp/mcp-registry.ts"),
+    read("src/lib/mcp/mcp-github-runtime-read.ts"),
+    read("src/lib/github-runtime-executor.ts"),
+    read("src/lib/mcp/mcp-policy.ts"),
+    read("src/lib/agi-mcp-runtime.ts"),
+  ]);
+  assert.match(registry, /githubRestIdentity = isGitHubRuntimeIdentityConfigured\(\)/);
+  assert.match(registry, /new GitHubRuntimeReadConnector\(\)/);
+  assert.match(registry, /entry\.connector instanceof GitHubRuntimeReadConnector/);
+  assert.match(bridge, /assertMcpReadToolPolicy\("github", tool, args\)/);
+  assert.match(bridge, /get_file_contents/);
+  assert.match(bridge, /list_commits/);
+  assert.match(bridge, /get_repository/);
+  assert.match(bridge, /executeGitHubReadOperation\("read_file"/);
+  assert.match(bridge, /executeGitHubReadOperation\("list_commits"/);
+  assert.match(bridge, /executeGitHubReadOperation\("get_repo"/);
+  assert.doesNotMatch(bridge, /api\.githubcopilot\.com|create_branch|upsert_file|create_pr/);
+  assert.match(executor, /case "list_commits":\s*return listCommits\(input\)/);
+  assert.match(policy, /assertMcpReadToolPolicy/);
+  assert.match(runtime, /registry\.executeTool\(call\.provider, call\.tool, authorizedArgs\)/);
+});
