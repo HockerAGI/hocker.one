@@ -75,9 +75,12 @@ function repoIdentity(args: Record<string, unknown>): string {
       [".", ".."].includes(owner) || [".", ".."].includes(repo)) {
     throw new Error("GITHUB_RUNTIME_READ_REPOSITORY_REQUIRED");
   }
-  if (args.repository !== undefined || args.repository_full_name !== undefined) {
-    const explicit = String(args.repository ?? args.repository_full_name ?? "").trim();
-    if (explicit.toLowerCase() !== `${owner}/${repo}`.toLowerCase()) {
+  // Every caller-provided alias must match the exact outbound owner/repo.
+  // Checking only the first alias lets policy authorize one repo and REST read another.
+  for (const key of ["repository", "repository_full_name", "repo_full_name"] as const) {
+    if (args[key] === undefined) continue;
+    const alias = String(args[key] ?? "").trim();
+    if (alias.toLowerCase() !== `${owner}/${repo}`.toLowerCase()) {
       throw new Error("GITHUB_RUNTIME_READ_REPOSITORY_CONFLICT");
     }
   }
@@ -120,9 +123,23 @@ export class GitHubRuntimeReadConnector {
     if (!READ_TOOLS.some((t) => t.name === tool)) {
       throw new Error("GITHUB_RUNTIME_READ_TOOL_NOT_ALLOWED");
     }
+    // Resolve the original caller identity before the list_commits normalizer
+    // strips aliases; otherwise conflicting aliases could escape enforcement.
+    const requestedRepository = repoIdentity(args);
     const normalized = tool === "list_commits" ? normalizeGitHubListCommitsArguments(args) : args;
-    assertMcpReadToolPolicy("github", tool, normalized);
     const repository = repoIdentity(normalized);
+    if (repository.toLowerCase() !== requestedRepository.toLowerCase()) {
+      throw new Error("GITHUB_RUNTIME_READ_REPOSITORY_CONFLICT");
+    }
+    // The policy and the REST executor now consume the SAME canonical target.
+    assertMcpReadToolPolicy("github", tool, {
+      ...normalized,
+      owner: String(normalized.owner),
+      repo: String(normalized.repo),
+      repository_full_name: repository,
+      repo_full_name: repository,
+      repository,
+    });
     if (tool === "get_repository") return executeGitHubReadOperation("get_repo", { repository });
     if (tool === "get_file_contents") {
       if (typeof args.path !== "string" || !args.path.trim()) throw new Error("GITHUB_RUNTIME_READ_PATH_REQUIRED");

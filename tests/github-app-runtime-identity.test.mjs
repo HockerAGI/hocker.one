@@ -348,6 +348,21 @@ test("App-only REST connector performs authenticated reads and keeps model tools
     owner: "HockerAGI", repo: "hocker.one",
   })).tree[0].path, "src/index.ts");
   assert.ok(policies.every((row) => row.provider === "github"));
+  assert.ok(policies.every((row) => row.args.repository_full_name === "HockerAGI/hocker.one"));
+  // Regression for Codex P1: never validate an allowed alias while fetching
+  // another repo. Check all aliases even when the list_commits normalizer
+  // would otherwise discard conflicting fields.
+  const beforeRejectedReads = seen.length;
+  for (const invalid of [
+    { owner: "OtherOrg", repo: "private-repo", repo_full_name: "HockerAGI/hocker.one" },
+    { owner: "HockerAGI", repo: "hocker.one", repository_full_name: "OtherOrg/private-repo" },
+    { owner: "HockerAGI", repo: "hocker.one", repository: "HockerAGI/hocker.one", repo_full_name: "OtherOrg/private-repo" },
+    { owner: "HockerAGI", repo: "hocker.one", repository_full_name: "HockerAGI/hocker.one", repository: "OtherOrg/private-repo" },
+  ]) {
+    await assert.rejects(() => connector.executeReadTool("get_repository", invalid), /GITHUB_RUNTIME_READ_REPOSITORY_CONFLICT/);
+    await assert.rejects(() => connector.executeReadTool("list_commits", invalid), /GITHUB_RUNTIME_READ_REPOSITORY_CONFLICT/);
+  }
+  assert.equal(seen.length, beforeRejectedReads, "unauthorized alias must never reach GitHub REST");
   await assert.rejects(() => connector.executeReadTool("create_pr", {
     owner: "HockerAGI", repo: "hocker.one",
   }), /TOOL_NOT_ALLOWED/);
