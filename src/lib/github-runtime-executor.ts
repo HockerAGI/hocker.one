@@ -1,4 +1,4 @@
-import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
+import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
 import { getGitHubRuntimeAccessToken, getGitHubRuntimeIdentityKind, isGitHubRuntimeIdentityConfigured, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 
 export type GitHubRuntimeReadOperation =
@@ -476,6 +476,7 @@ export function createGitHubWriteGatePlan(operation: GitHubRuntimeWriteOperation
     ? { fullName: rawRepository }
     : parseRepository(input);
   if (operation !== "create_repository") assertGithubRepositoryWriteAuthorized(fullName);
+  if (operation !== "create_repository") assertGithubAgiExecutionRepositoryAllowed(fullName);
   if (operation === "create_repository") {
     const owner = String(input.owner ?? rawRepository.split("/")[0] ?? "HockerAGI");
     ensureHockerOrganization(owner);

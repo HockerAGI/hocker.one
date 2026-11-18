@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createAdminSupabase } from "@/lib/supabase-admin";
-import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
+import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
 import {
   executeGitHubCreateRepository,
 } from "@/lib/github-runtime-executor";
@@ -120,15 +120,6 @@ function encodeSegment(value: string): string {
   return encodeURIComponent(value).replace(/%2F/g, "/");
 }
 
-function allowedRepositories(): Set<string> {
-  const raw =
-    envValue("HOCKER_GITHUB_ALLOWED_REPOS") ||
-    envValue("GITHUB_ALLOWED_REPOS") ||
-    "HockerAGI/hocker.one,HockerAGI/nova.agi,HockerAGI/hocker-node-agent,HockerAGI/chido.casino,HockerAGI/hocker.agi,HockerAGI/hocker.ads";
-
-  return new Set(raw.split(",").map((item) => item.trim()).filter(Boolean));
-}
-
 /** One canonical identity for Owner Gate sequencing AND GitHub execution. */
 function githubRepositoryIdentity(payload: JsonRecord): string {
   const explicit = stringValue(payload.repository).trim();
@@ -153,12 +144,7 @@ function parseRepository(payload: JsonRecord): { owner: string; repo: string; fu
 
   const fullName = `${owner}/${repo}`;
   assertGithubRepositoryWriteAuthorized(fullName);
-  const allowedOrg = envValue("HOCKER_GITHUB_ORG") || "HockerAGI";
-  const exactAllowed = allowedRepositories().has(fullName);
-  const orgAllowed = owner === allowedOrg;
-  if (!exactAllowed && !orgAllowed) {
-    throw new Error(`Repositorio no permitido para ejecución AGI: ${fullName}`);
-  }
+  assertGithubAgiExecutionRepositoryAllowed(fullName);
 
   return { owner, repo, fullName };
 }
