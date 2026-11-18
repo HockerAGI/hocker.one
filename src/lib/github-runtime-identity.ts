@@ -1,4 +1,4 @@
-import { createHash, createSign } from "node:crypto";
+import { createHash, createPrivateKey, createSign } from "node:crypto";
 
 /**
  * Server-side GitHub identity for NOVA/AGIs.
@@ -33,6 +33,14 @@ function appIdentityConfig() {
       !/^-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(privateKey) ||
       !privateKey.includes("-----END ") ||
       privateKey.length > 24000) return null;
+  try {
+    const key = createPrivateKey(privateKey);
+    if (key.asymmetricKeyType !== "rsa" ||
+        (key.asymmetricKeyDetails?.modulusLength ?? 0) < 2048) return null;
+  } catch {
+    // Header-shaped or truncated PEMs must never enable AGI tool grants.
+    return null;
+  }
 
   const rawRepos = env("HOCKER_GITHUB_APP_REPOSITORIES");
   const repos = rawRepos ? rawRepos.split(",").map((x) => x.trim()) : [...DEFAULT_REPOS];
