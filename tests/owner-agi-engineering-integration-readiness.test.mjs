@@ -105,3 +105,22 @@ test("AAL2 Owner Gate must precede any real provider read and never exposes secr
   assert.match(ui, /NO acredita Production/);
   assert.doesNotMatch(ui, /type=["']password["']/);
 });
+
+
+test("GitHub App read access never implies organization repository-creation capability", async () => {
+  const summarize = await classifier();
+  const status = summarize({
+    github_configured: true,
+    github_verified_read: true,
+    github_repo_creation_identity_configured: false,
+    vercel_configured: true,
+    vercel_verified_read: true,
+  });
+  assert.equal(status.github.state, "verified_read");
+  assert.equal(status.can_prepare_existing_app_proposal, true);
+  assert.equal(status.can_prepare_new_app_bootstrap, false);
+  assert.equal(status.github_repo_creation_identity_configured, false);
+  assert.equal(status.owner_gate_required_for_writes, true);
+  assert.equal(status.github_write_scope_verified, false);
+  assert.ok(Array.from(status.blockers).includes("GITHUB_REPO_CREATION_IDENTITY_NOT_CONFIGURED"));
+});
