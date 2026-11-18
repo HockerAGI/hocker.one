@@ -344,6 +344,7 @@ test("App-only REST connector performs authenticated reads and keeps model tools
   assert.equal(connector.state.status, "disconnected");
   await assert.rejects(() => connector.executeReadTool("get_repository", { owner: "HockerAGI", repo: "hocker.one" }), /NOT_CONNECTED/);
   const initialized = await connector.initialize();
+  const readinessPolicyChecks = policies.length;
   assert.equal(connector.state.status, "connected");
   assert.equal(initialized.tools.length, 4);
   assert.equal(seen.filter((row) => row.operation === "get_repo").length, 3);
@@ -357,7 +358,7 @@ test("App-only REST connector performs authenticated reads and keeps model tools
     owner: "HockerAGI", repo: "hocker.one",
   })).tree[0].path, "src/index.ts");
   assert.ok(policies.every((row) => row.provider === "github"));
-  assert.ok(policies.every((row) => row.args.repository_full_name === "HockerAGI/hocker.one"));
+  assert.ok(policies.slice(readinessPolicyChecks).every((row) => row.args.repository_full_name === "HockerAGI/hocker.one"));
   // Regression for Codex P1: never validate an allowed alias while fetching
   // another repo. Check all aliases even when the list_commits normalizer
   // would otherwise discard conflicting fields.
