@@ -34,6 +34,7 @@ export async function queryTelemetry({ accountId, token, now = Date.now(), fetch
         limit: 180 },
     }),
     signal: AbortSignal.timeout(15_000),
+    redirect: "error",
   });
   if (res.status !== 200) throw Error("CRON_CLOUDFLARE_API_UNAVAILABLE");
   const response = await res.json().catch(() => { throw Error("CRON_SCHEMA_INVALID"); });
@@ -55,13 +56,22 @@ export async function syncIncident({ assessment, token, repo, dryRun = true, fet
     const r = await fetcher(root + path, {
       method, headers, body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(12_000),
+      redirect: "error",
     });
     if (!r.ok) throw Error("CRON_GITHUB_API_UNAVAILABLE");
     return r.json();
   };
-  const issues = await request("GET", "/issues?state=open&per_page=100");
-  if (!Array.isArray(issues)) throw Error("CRON_GITHUB_SCHEMA_INVALID");
-  const current = issues.find((x) => x && !x.pull_request && x.title === TITLE);
+  // GitHub paginates open issues. Never open duplicates because an existing
+  // incident fell outside page one. A very large issue set fails closed.
+  let current;
+  let complete = false;
+  for (let page = 1; page <= 10; page += 1) {
+    const issues = await request("GET", "/issues?state=open&per_page=100&page=" + page);
+    if (!Array.isArray(issues)) throw Error("CRON_GITHUB_SCHEMA_INVALID");
+    current = issues.find((x) => x && !x.pull_request && x.title === TITLE);
+    if (current || issues.length < 100) { complete = true; break; }
+  }
+  if (!complete) throw Error("CRON_GITHUB_ISSUES_PAGINATION_LIMIT");
   if (dryRun) return { code: "CRON_DRY_RUN", open: Boolean(current) };
   if (!assessment.ok) {
     if (current) return { code: "CRON_INCIDENT_EXISTS", issueNumber: current.number };

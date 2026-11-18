@@ -67,3 +67,32 @@ test("disabled monitor performs no external calls", async () => {
   await assert.rejects(() => run({}, async () => { called = true; }, NOW), /CRON_NOT_ENABLED/);
   assert.equal(called, false);
 });
+
+
+test("incident lookup checks subsequent GitHub pages before creating another issue", async () => {
+  const pages = [];
+  let postCount = 0;
+  const fetcher = async (url, options) => {
+    const query = new URL(url).searchParams;
+    if (options.method === "GET") {
+      const page = Number(query.get("page") ?? 1);
+      pages.push(page);
+      if (page === 1) return res(Array.from({ length: 100 }, (_, i) => ({
+        title: "Unrelated issue " + i, number: i + 1,
+      })));
+      if (page === 2) return res([{ title: TITLE, number: 4130 }]);
+    }
+    if (options.method === "POST") postCount += 1;
+    throw Error("unexpected GitHub write");
+  };
+  const result = await syncIncident({
+    repo: "HockerAGI/hocker.one",
+    token,
+    dryRun: false,
+    assessment: { ok: false, code: "CRON_OBSERVATION_MISSING", lastObservedAt: null },
+    fetcher,
+  });
+  assert.equal(result.code, "CRON_INCIDENT_EXISTS");
+  assert.deepEqual(pages, [1, 2]);
+  assert.equal(postCount, 0);
+});
