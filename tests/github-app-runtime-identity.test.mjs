@@ -92,6 +92,7 @@ test("invalid, incomplete or unauthorized App config fails closed and never make
     { HOCKER_GITHUB_APP_ID: "" },
     { HOCKER_GITHUB_APP_INSTALLATION_ID: "not-a-number" },
     { HOCKER_GITHUB_APP_PRIVATE_KEY: "not-a-private-key" },
+    { HOCKER_GITHUB_APP_PRIVATE_KEY: "-----BEGIN RSA PRIVATE KEY-----\n-----END RSA PRIVATE KEY-----" },
     { HOCKER_GITHUB_APP_REPOSITORIES: "hocker.one,../other" },
     { HOCKER_GITHUB_APP_REPOSITORIES: "hocker.one,hocker.one" },
   ]) {
@@ -170,4 +171,18 @@ test("canonical AGI catalog uses identical complete identity resolution as GitHu
   assert.match(source, /tool\.tool_key === "github"\s*\?\s*isGitHubRuntimeIdentityConfigured\(\)/);
   assert.match(source, /hasCredentials &&\s*tool\.implementation_status === "executor_ready"/);
   assert.match(source, /enabled: Boolean\(tool\?\.execution_enabled && !planned\)/);
+});
+
+
+test("non-RSA and sub-2048-bit keys cannot enable runtime tool identity", async () => {
+  const keys = [
+    generateKeyPairSync("ec", { namedCurve: "prime256v1" }).privateKey.export({ format: "pem", type: "pkcs8" }).toString(),
+    generateKeyPairSync("rsa", { modulusLength: 1024 }).privateKey.export({ format: "pem", type: "pkcs1" }).toString(),
+  ];
+  for (const key of keys) {
+    const { identity } = await runtime({ HOCKER_GITHUB_APP_PRIVATE_KEY: key });
+    assert.equal(identity.getGitHubRuntimeIdentityKind(), "missing");
+    assert.equal(identity.isGitHubRuntimeIdentityConfigured(), false);
+    await assert.rejects(() => identity.getGitHubRuntimeAccessToken(), /GITHUB_RUNTIME_IDENTITY_NOT_CONFIGURED/);
+  }
 });
