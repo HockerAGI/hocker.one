@@ -306,6 +306,7 @@ test("App-only REST connector performs authenticated reads and keeps model tools
   const seen = [];
   const policies = [];
   let failProbe = false;
+  let probeScope = ["hocker.one", "nova.agi", "hocker-node-agent"];
   const mod = { exports: {} };
   vm.runInNewContext(compiled, {
     module: mod, exports: mod.exports, Date,
@@ -320,6 +321,9 @@ test("App-only REST connector performs authenticated reads and keeps model tools
         normalizeGitHubListCommitsArguments(args) {
           return { owner: args.owner, repo: args.repo, sha: args.sha ?? "main" };
         },
+      };
+      if (id === "@/lib/github-runtime-identity") return {
+        getGitHubRuntimeReadProbeRepositoryNames() { return probeScope; },
       };
       if (id === "@/lib/github-runtime-executor") return {
         async executeGitHubReadOperation(operation, input) {
@@ -379,10 +383,40 @@ test("App-only REST connector performs authenticated reads and keeps model tools
   const disconnected = new Connector();
   await assert.rejects(() => disconnected.initialize(), /GITHUB_RUNTIME_AUTHENTICATED_READ_FAILED/);
   assert.equal(disconnected.state.status, "error");
+
+  // Codex P2: a repository-scoped App is usable without access to siblings.
+  failProbe = false;
+  probeScope = ["hocker.one"];
+  const beforeNarrowed = seen.length;
+  const narrowed = new Connector();
+  await narrowed.initialize();
+  assert.equal(narrowed.state.status, "connected");
+  assert.deepEqual(seen.slice(beforeNarrowed).map((row) => row.input.repository), ["HockerAGI/hocker.one"]);
+  probeScope = ["unrelated-private-repo"];
+  const denied = new Connector();
+  await assert.rejects(() => denied.initialize(), /GITHUB_RUNTIME_AUTHENTICATED_READ_FAILED/);
+  assert.equal(denied.state.status, "error");
 });
 
 test("engineering native discovery includes both commit and file SHA reads", async () => {
   const runtime = await read("src/lib/agi-mcp-runtime.ts");
   const tools = runtime.slice(runtime.indexOf("const preferredEngineeringTools = ["));
   assert.match(tools, /"get_repository",[\s\S]*?"list_commits",[\s\S]*?"list_tree",[\s\S]*?"get_file_contents"/);
+});
+
+
+test("GitHub App readiness uses only the configured installation repository subset", async () => {
+  const { identity } = await runtime({ HOCKER_GITHUB_APP_REPOSITORIES: "hocker.one" });
+  assert.deepEqual(Array.from(identity.getGitHubRuntimeReadProbeRepositoryNames()), ["hocker.one"]);
+  assert.equal(identity.getGitHubRuntimeIdentityKind(), "github_app");
+  const defaultScope = await runtime();
+  assert.deepEqual(Array.from(defaultScope.identity.getGitHubRuntimeReadProbeRepositoryNames()), [
+    "hocker.one", "nova.agi", "hocker-node-agent",
+  ]);
+  const disabled = await runtime({ HOCKER_GITHUB_APP_ID: "", HOCKER_GITHUB_REPO_CREATE_TOKEN: "creation_only" });
+  assert.deepEqual(Array.from(disabled.identity.getGitHubRuntimeReadProbeRepositoryNames()), []);
+  const legacy = await runtime({ GITHUB_TOKEN: "pat_owner_scoped" });
+  assert.deepEqual(Array.from(legacy.identity.getGitHubRuntimeReadProbeRepositoryNames()), [
+    "hocker.one", "nova.agi", "hocker-node-agent",
+  ]);
 });

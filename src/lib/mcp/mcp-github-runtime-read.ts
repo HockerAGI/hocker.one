@@ -7,6 +7,7 @@ import type { McpProviderState, McpTool } from "./mcp-client";
 import { assertMcpReadToolPolicy } from "./mcp-policy";
 import { normalizeGitHubListCommitsArguments } from "./mcp-github-read-arguments";
 import { executeGitHubReadOperation } from "@/lib/github-runtime-executor";
+import { getGitHubRuntimeReadProbeRepositoryNames } from "@/lib/github-runtime-identity";
 
 const PROJECT_REPOSITORIES = [
   "HockerAGI/hocker.one", "HockerAGI/nova.agi", "HockerAGI/hocker-node-agent",
@@ -95,8 +96,19 @@ export class GitHubRuntimeReadConnector {
 
   async initialize(): Promise<{ capabilities: string[]; version: string; tools: McpTool[] }> {
     try {
-      // Do not claim a connected provider from environment metadata alone.
-      for (const repository of PROJECT_REPOSITORIES) {
+      // Never require unrelated repositories when a GitHub App is scoped to a
+      // subset. Probe only the intersection of this project's allowed repos
+      // and the identity's verified repo scope, then enforce the same MCP
+      // read policy used for every subsequent model-facing invocation.
+      const configuredNames = new Set(getGitHubRuntimeReadProbeRepositoryNames());
+      const probeRepositories = PROJECT_REPOSITORIES.filter((repository) =>
+        configuredNames.has(repository.split("/")[1] ?? ""));
+      if (probeRepositories.length === 0) {
+        throw new Error("GITHUB_RUNTIME_NO_ALLOWED_REPOSITORY");
+      }
+      for (const repository of probeRepositories) {
+        const [owner, repo] = repository.split("/");
+        assertMcpReadToolPolicy("github", "get_repository", { owner, repo, repository });
         const result = await executeGitHubReadOperation("get_repo", { repository });
         if (result.repository.toLowerCase() !== repository.toLowerCase()) {
           throw new Error("GITHUB_RUNTIME_READ_REPOSITORY_MISMATCH");

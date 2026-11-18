@@ -66,6 +66,14 @@ export function isGitHubRuntimeIdentityConfigured(): boolean {
   return getGitHubRuntimeIdentityKind() !== "missing";
 }
 
+/** Safe repository names for authenticated readiness probes. Never reveals credentials. */
+export function getGitHubRuntimeReadProbeRepositoryNames(): string[] {
+  const identity = getGitHubRuntimeIdentityKind();
+  if (identity === "github_app") return [...(appIdentityConfig()?.repositories ?? [])];
+  if (identity === "pat") return [...DEFAULT_REPOS];
+  return [];
+}
+
 function signedAppJwt(appId: string, privateKey: string): string {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
