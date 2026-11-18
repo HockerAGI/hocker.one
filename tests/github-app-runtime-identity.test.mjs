@@ -185,3 +185,15 @@ test("non-RSA keys cannot enable runtime tool identity and RSA strength gate is 
   assert.match(source, /key\.asymmetricKeyType !== "rsa"/);
   assert.match(source, /key\.asymmetricKeyDetails\?\.modulusLength \?\? 0\) < 2048/);
 });
+
+
+test("Owner credential guide aligns with GitHub App runtime identity without claiming Production activation", async () => {
+  const guide = await read("docs/operations/OWNER_AGI_ENGINEERING_CREDENTIAL_SETUP_2026-11-16.md");
+  assert.match(guide, /HOCKER_GITHUB_APP_ID/);
+  assert.match(guide, /HOCKER_GITHUB_APP_INSTALLATION_ID/);
+  assert.match(guide, /HOCKER_GITHUB_APP_PRIVATE_KEY/);
+  assert.match(guide, /PR #460/);
+  assert.match(guide, /Owner Gate/);
+  assert.doesNotMatch(guide, /ejecutor actual solo soporta token Bearer/);
+  assert.match(guide, /todavía no está en Production/);
+});
