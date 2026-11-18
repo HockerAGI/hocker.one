@@ -1,4 +1,5 @@
 import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
+import { getGitHubRuntimeAccessToken, getGitHubRuntimeIdentityKind, isGitHubRuntimeIdentityConfigured, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 
 export type GitHubRuntimeReadOperation =
   | "get_repo"
@@ -96,7 +97,7 @@ export function getGitHubRuntimeToken(): string {
 }
 
 export function hasGitHubRuntimeToken(): boolean {
-  return getGitHubRuntimeToken().length > 0;
+  return isGitHubRuntimeIdentityConfigured();
 }
 
 export function isGitHubWriteOperation(operation: string): operation is GitHubRuntimeWriteOperation {
@@ -159,8 +160,7 @@ function encodeSegment(value: string): string {
 }
 
 async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GitHub no configurado: falta HOCKER_GITHUB_TOKEN, GITHUB_TOKEN o GH_TOKEN.");
+  const token = await getGitHubRuntimeAccessToken();
 
   const response = await fetch(`https://api.github.com${endpoint}`, {
     ...init,
@@ -234,8 +234,9 @@ async function createRepository(input: GitHubRuntimeInput) {
   const owner = String(input.owner ?? (defaultRepository().split("/")[0] || "HockerAGI")).trim();
   ensureHockerOrganization(owner);
   const name = safeRepositoryName(input.name ?? input.repo);
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GitHub no configurado: falta token real.");
+  if (!requiresStaticGitHubIdentityForRepositoryCreation()) {
+    throw new Error("GITHUB_REPOSITORY_CREATION_REQUIRES_EXPLICIT_ORG_IDENTITY");
+  }
 
   const body = {
     name,
@@ -600,7 +601,9 @@ export function getGitHubExecutorStatus() {
     ok: hasGitHubRuntimeToken(),
     provider: "GitHub",
     token_present: hasGitHubRuntimeToken(),
-    accepted_env: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"],
+    identity_type: getGitHubRuntimeIdentityKind(),
+    accepted_env: ["HOCKER_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN", "HOCKER_GITHUB_APP_ID", "HOCKER_GITHUB_APP_INSTALLATION_ID", "HOCKER_GITHUB_APP_PRIVATE_KEY", "HOCKER_GITHUB_APP_REPOSITORIES"],
+    github_app_repo_creation_supported: false,
     default_repository: defaultRepository(),
     read_operations: ["get_repo", "list_tree", "read_file", "compare_refs", "audit_paths"],
     write_operations_guarded: ["create_repository", "create_branch", "upsert_file", "create_pr"],
