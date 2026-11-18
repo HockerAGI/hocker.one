@@ -59,7 +59,7 @@ test("creates one incident, no duplicate; recovery closes it; dry-run performs n
   assert.equal((await syncIncident({ ...input, dryRun: false,
     assessment: { ok: true, code: "CRON_OBSERVED", lastObservedAt: "2026-11-18T06:35:00Z" } })).code,
     "CRON_INCIDENT_RESOLVED");
-  assert.equal(calls.filter((c) => c.endsWith("/issues")).length, 1);
+  assert.equal(calls.filter((c) => c === "POST /repos/HockerAGI/hocker.one/issues").length, 1);
   await assert.rejects(() => syncIncident({ ...input, repo: "OtherOrg/repo" }), /CRON_REPO_INVALID/);
 });
 test("disabled monitor performs no external calls", async () => {
