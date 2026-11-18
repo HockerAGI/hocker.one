@@ -279,7 +279,11 @@ test("App-only model-facing GitHub reads use a canonical authenticated REST brid
   assert.match(registry, /githubRestIdentity = isGitHubRuntimeIdentityConfigured\(\)/);
   assert.match(registry, /new GitHubRuntimeReadConnector\(\)/);
   assert.match(registry, /entry\.connector instanceof GitHubRuntimeReadConnector/);
-  assert.match(bridge, /assertMcpReadToolPolicy\("github", tool, normalized\)/);
+  // Verify the security fix: policy receives the exact canonical REST target.
+  assert.match(bridge, /assertMcpReadToolPolicy\("github", tool, \{/);
+  for (const key of ["owner", "repo", "repository_full_name", "repo_full_name", "repository"]) {
+    assert.match(bridge, new RegExp(key + ": " + (key === "owner" || key === "repo" ? "String\\(normalized\\." + key + "\\)" : "repository") + "[,\\s]"));
+  }
   assert.match(bridge, /get_file_contents/);
   assert.match(bridge, /list_commits/);
   assert.match(bridge, /get_repository/);
