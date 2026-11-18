@@ -3,8 +3,8 @@ import { createAdminSupabase } from "@/lib/supabase-admin";
 import { assertGithubRepositoryWriteAuthorized } from "@/lib/github-repository-governance";
 import {
   executeGitHubCreateRepository,
-  getGitHubRuntimeToken,
 } from "@/lib/github-runtime-executor";
+import { getGitHubRuntimeAccessToken } from "@/lib/github-runtime-identity";
 import {
   createVercelProject,
   getVercelRuntimeToken,
@@ -315,8 +315,7 @@ async function githubRequest<T>(endpoint: string, init: RequestInit = {}): Promi
     throw new Error(`Blocked real GitHub write while HOCKER_GITHUB_EXECUTION_MODE=mock: ${method}`);
   }
 
-  const token = getGitHubRuntimeToken();
-  if (!token) throw new Error("GitHub no configurado: falta HOCKER_GITHUB_TOKEN, GITHUB_TOKEN o GH_TOKEN.");
+  const token = await getGitHubRuntimeAccessToken();
 
   const response = await fetch(`https://api.github.com${endpoint}`, {
     ...init,
