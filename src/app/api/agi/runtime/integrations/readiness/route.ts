@@ -3,6 +3,7 @@ import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { executeGitHubReadOperation, hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 import { getVercelProject, hasVercelRuntimeToken } from "@/lib/vercel-runtime-executor";
 import { summarizeEngineeringReadiness } from "@/lib/agi-engineering-integration-readiness";
+import { getGitHubRuntimeIdentityKind, requiresStaticGitHubIdentityForRepositoryCreation } from "@/lib/github-runtime-identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,7 @@ export async function GET(request: Request): Promise<Response> {
   const readiness = summarizeEngineeringReadiness({
     github_configured: githubConfigured,
     github_verified_read: githubRead,
+    github_repo_creation_identity_configured: productionScope && requiresStaticGitHubIdentityForRepositoryCreation(),
     vercel_configured: vercelConfigured,
     vercel_verified_read: vercelRead,
   });
@@ -65,6 +67,7 @@ export async function GET(request: Request): Promise<Response> {
     checked_at: new Date().toISOString(),
     checked_environment: checkedEnvironment,
     production_scope_verified: productionScope,
+    github_identity_kind: productionScope ? getGitHubRuntimeIdentityKind() : "not_checked",
     ...readiness,
     blockers: productionScope ? readiness.blockers
       : [...readiness.blockers, "NON_PRODUCTION_SCOPE_NOT_CERTIFIED"],
