@@ -197,3 +197,49 @@ test("Owner credential guide aligns with GitHub App runtime identity without cla
   assert.doesNotMatch(guide, /ejecutor actual solo soporta token Bearer/);
   assert.match(guide, /todavía no está en Production/);
 });
+
+
+test("new repository bootstrap identifies GitHub User vs Organization owner and rejects wrong token identity", async () => {
+  const source = await read("src/lib/github-runtime-executor.ts");
+  const ast = ts.createSourceFile("src/lib/github-runtime-executor.ts", source, ts.ScriptTarget.ES2022, true);
+  const functionNode = ast.statements.find((node) =>
+    ts.isFunctionDeclaration(node) && node.name?.text === "repositoryCreationEndpoint");
+  assert.ok(functionNode, "repository creation routing helper missing");
+  const js = ts.transpileModule(functionNode.getText(ast), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+
+  const make = (type, accountLogin = "HockerAGI", tokenLogin = "HockerAGI") => {
+    const calls = [];
+    const handler = async (path) => {
+      calls.push(path);
+      if (path === "/users/HockerAGI") return { type, login: accountLogin };
+      if (path === "/user") return { login: tokenLogin };
+      throw new Error("Unexpected GitHub API endpoint");
+    };
+    const fn = vm.runInNewContext(js + "\nrepositoryCreationEndpoint", {
+      githubRequest: handler,
+      encodeSegment: encodeURIComponent,
+    });
+    return { fn, calls };
+  };
+
+  const personal = make("User");
+  assert.equal(await personal.fn("HockerAGI"), "/user/repos");
+  assert.deepEqual(personal.calls, ["/users/HockerAGI", "/user"]);
+
+  const organization = make("Organization");
+  assert.equal(await organization.fn("HockerAGI"), "/orgs/HockerAGI/repos");
+  assert.deepEqual(organization.calls, ["/users/HockerAGI"]);
+
+  const mismatch = make("User", "HockerAGI", "OtherUser");
+  await assert.rejects(() => mismatch.fn("HockerAGI"), /GITHUB_REPOSITORY_OWNER_SESSION_MISMATCH/);
+  const wrongOwner = make("User", "OtherUser");
+  await assert.rejects(() => wrongOwner.fn("HockerAGI"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
+  const unknown = make("Enterprise");
+  await assert.rejects(() => unknown.fn("HockerAGI"), /GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED/);
+
+  assert.match(source, /repositoryCreationEndpoint\(owner\)/);
+  assert.match(source, /endpoint === "\/user\/repos"/);
+  assert.match(source, /requiresStaticGitHubIdentityForRepositoryCreation/);
+});

@@ -231,6 +231,31 @@ export async function readGitHubBranchHeadSha(repository: string, branch: string
   }
 }
 
+/**
+ * GitHub exposes different creation endpoints for User and Organization owners.
+ * Never create in the authenticated token holder's account without confirming
+ * it is the specifically allowed HOCKER account.
+ */
+async function repositoryCreationEndpoint(owner: string): Promise<string> {
+  const profile = await githubRequest<{ login?: string; type?: string }>(
+    `/users/${encodeSegment(owner)}`,
+  );
+  if (String(profile?.login ?? "").toLowerCase() !== owner.toLowerCase()) {
+    throw new Error("GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED");
+  }
+  if (profile.type === "Organization") {
+    return `/orgs/${encodeSegment(owner)}/repos`;
+  }
+  if (profile.type !== "User") {
+    throw new Error("GITHUB_REPOSITORY_OWNER_TYPE_UNVERIFIED");
+  }
+  const authenticated = await githubRequest<{ login?: string }>("/user");
+  if (String(authenticated?.login ?? "").toLowerCase() !== owner.toLowerCase()) {
+    throw new Error("GITHUB_REPOSITORY_OWNER_SESSION_MISMATCH");
+  }
+  return "/user/repos";
+}
+
 export async function executeGitHubCreateRepository(input: GitHubRuntimeInput) {
   return createRepository(input);
 }
@@ -254,9 +279,15 @@ async function createRepository(input: GitHubRuntimeInput) {
     auto_init: true,
   };
 
+  const endpoint = await repositoryCreationEndpoint(owner);
   const response = await githubRequest<Record<string, unknown>>(
-    `/orgs/${encodeSegment(owner)}/repos`,
-    { method: "POST", body: JSON.stringify(body) },
+    endpoint,
+    {
+      method: "POST",
+      body: JSON.stringify(endpoint === "/user/repos"
+        ? { ...body, visibility: undefined }
+        : body),
+    },
   );
 
   return {
