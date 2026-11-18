@@ -1,5 +1,5 @@
 import { enqueueAgiAction } from "@/lib/agi-runtime-core";
-import { getGitHubRuntimeToken } from "@/lib/github-runtime-executor";
+import { hasGitHubRuntimeToken } from "@/lib/github-runtime-executor";
 import {
   buildNovaChatActionDraftPreview,
   getNovaChatActionDraftPublicContext,
@@ -242,7 +242,7 @@ export async function materializeNovaGitHubActionsFromChat(params: {
     };
   }
 
-  if (!getGitHubRuntimeToken()) {
+  if (!hasGitHubRuntimeToken()) {
     return {
       ...preview,
       materialized: false,
