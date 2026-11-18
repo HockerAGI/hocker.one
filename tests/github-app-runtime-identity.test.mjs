@@ -279,7 +279,7 @@ test("App-only model-facing GitHub reads use a canonical authenticated REST brid
   assert.match(registry, /githubRestIdentity = isGitHubRuntimeIdentityConfigured\(\)/);
   assert.match(registry, /new GitHubRuntimeReadConnector\(\)/);
   assert.match(registry, /entry\.connector instanceof GitHubRuntimeReadConnector/);
-  assert.match(bridge, /assertMcpReadToolPolicy\("github", tool, args\)/);
+  assert.match(bridge, /assertMcpReadToolPolicy\("github", tool, normalized\)/);
   assert.match(bridge, /get_file_contents/);
   assert.match(bridge, /list_commits/);
   assert.match(bridge, /get_repository/);
