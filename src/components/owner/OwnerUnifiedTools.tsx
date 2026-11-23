@@ -38,7 +38,9 @@ export default function OwnerUnifiedTools({ summary }: Props) {
       </div>
 
       <div className="hko-uni-panel-body">
-        <div className="hko-uni-toolgrid">
+        <details className="hko-mirror-details">
+          <summary className="py-2 text-sm font-semibold text-cyan-100">Explorar herramientas adicionales</summary>
+          <div className="hko-uni-toolgrid mt-3">
           {featured.map((tool) => {
             const tag = statusTag(String(tool.status ?? "missing"));
             return (
@@ -57,9 +59,10 @@ export default function OwnerUnifiedTools({ summary }: Props) {
               Sin inventario disponible.
             </p>
           ) : null}
-        </div>
+          </div>
+        </details>
 
-        <p className="mt-3 text-[11px] leading-5 text-slate-500">
+        <p className="mt-3 text-xs leading-5 text-slate-400">
           “Configurada” significa que existen variables o credenciales. “Verificada” exige una comprobación real reciente.
         </p>
 
