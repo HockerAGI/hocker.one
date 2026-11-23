@@ -65,11 +65,13 @@ export default async function OwnerPage() {
       <div className="hko-uni-hero">
         <div>
           <div className="flex items-center gap-2">
-            <span className="relative grid h-9 w-9 place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_28px_rgba(30,200,255,0.18)]">
-              <Image src="/ecosystem/apps/hocker-one/icon.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" priority />
-              <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaIsOnline ? "bg-emerald-400" : novaService.status === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
-            </span>
-            <h1 className="hko-uni-hero-title">Hocker ONE</h1>
+            <h1 className="hko-uni-hero-title">
+              <span className="sr-only">Hocker ONE</span>
+              <span className="relative block h-14 w-[232px] max-w-full" aria-hidden="true">
+                <Image src="/brand/hocker-one-logo.png" alt="" fill sizes="232px"
+                  className="object-contain object-left" priority />
+              </span>
+            </h1>
           </div>
           <p className="hko-uni-hero-sub">
             Centro privado de control. Cada estado distingue configuración, señal reciente y evidencia operativa.
