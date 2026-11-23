@@ -155,6 +155,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
             accessReason === "session" ? "Inicia sesión como Owner para verificar las integraciones." :
             error ? "No se pudo consultar el estado de proveedores. Reintenta." :
             loading && !readiness ? "Consultando conexiones protegidas..." :
+            readiness && !production ? "Vista previa: las conexiones externas se verifican solo en Production." :
             "Consulta de solo lectura · Owner Gate activo"}</span>
         </div>
         <div className="hko-mirror-links">
