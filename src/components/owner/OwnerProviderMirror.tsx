@@ -54,9 +54,10 @@ export default function OwnerProviderMirror({ supabase }: Props) {
       const data = await response.json() as ReadinessResponse;
       if (!response.ok || data.ok !== true) {
         setReadiness(null);
-        setAccessReason(response.status === 401 ? "session" :
-          response.status === 403 && data.owner_gate_reason === "owner_mfa_required" ? "mfa" : null);
-        setError(response.status !== 401 && response.status !== 403);
+        const needsSession = response.status === 401;
+        const needsMfa = response.status === 403 && data.owner_gate_reason === "owner_mfa_required";
+        setAccessReason(needsSession ? "session" : needsMfa ? "mfa" : null);
+        setError(!needsSession && !needsMfa);
         return;
       }
       setReadiness(data);
@@ -142,7 +143,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
             </span>
           </div>
           <h3>Vercel</h3>
-          <p className="hko-mirror-card-value">{vercelVerified ? "Proyecto accesible" : vercelConfigured ? "Pendiente de lectura" : "Conexión pendiente"}</p>
+          <p className="hko-mirror-card-value">{vercelVerified ? "Proyecto accesible" : vercelConfigured ? "Pendiente de lectura" : production ? "Conexión pendiente" : "Sin comprobar"}</p>
           <p className="hko-mirror-card-caption">Acceso del runtime a la API · distinto del despliegue web</p>
         </article>
       </div>
