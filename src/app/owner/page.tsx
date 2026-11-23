@@ -11,6 +11,7 @@ import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
 import type { AgiRuntimeSummaryLike } from "@/types/agi-runtime-summary";
 
 import OwnerUnifiedStatus from "@/components/owner/OwnerUnifiedStatus";
+import OwnerProviderMirror from "@/components/owner/OwnerProviderMirror";
 import OwnerUnifiedApprovals from "@/components/owner/OwnerUnifiedApprovals";
 import OwnerUnifiedTools from "@/components/owner/OwnerUnifiedTools";
 
@@ -57,6 +58,7 @@ export default async function OwnerPage() {
   const novaService = operational.runtime.service_status.nova;
   const pendingCount = operational.metrics.pending_actions;
   const novaIsOnline = novaService.status === "online";
+  const supabaseAgiMetric = liveSummary?.counts.find((item) => item.table === "agis");
 
   return (
     <div className="hko-uni-grid">
@@ -84,6 +86,12 @@ export default async function OwnerPage() {
           ) : null}
         </div>
       </div>
+
+      <OwnerProviderMirror supabase={{
+        verified: supabaseAgiMetric?.ok === true && typeof supabaseAgiMetric.count === "number",
+        agiCount: supabaseAgiMetric?.ok ? supabaseAgiMetric.count : null,
+        checkedAt: liveSummary?.generated_at ?? null,
+      }} />
 
       <section className="hko-uni-panel hko-uni-chat" aria-labelledby="nova-entry-title">
         <div className="hko-uni-panel-head">
