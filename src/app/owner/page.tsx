@@ -64,7 +64,11 @@ export default async function OwnerPage() {
     <div className="hko-uni-grid">
       <div className="hko-uni-hero">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <span className="relative grid h-9 w-9 place-items-center rounded-xl border border-sky-300/25 bg-sky-300/10 text-sky-100">
+              <Image src="/ecosystem/apps/hocker-one/icon.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" priority />
+              <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaIsOnline ? "bg-emerald-400" : novaService.status === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
+            </span>
             <h1 className="hko-uni-hero-title">
               <span className="sr-only">Hocker ONE</span>
               <span className="relative block h-14 w-[232px] max-w-full" aria-hidden="true">
