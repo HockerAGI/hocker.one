@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Cloud, Database, Github, RefreshCw, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Cloud, Database, GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
 
 type ProviderStatus = {
   configured?: boolean;
@@ -124,7 +124,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
 
         <article className="hko-mirror-card">
           <div className="hko-mirror-card-top">
-            <span className="hko-mirror-icon"><Github size={20} aria-hidden="true" /></span>
+            <span className="hko-mirror-icon"><GitBranch size={20} aria-hidden="true" /></span>
             <span className={"hko-mirror-state " + (githubVerified ? "is-verified" : "is-pending")}>
               {loading && !readiness ? "Comprobando" : githubVerified ? "Lectura confirmada" : githubConfigured ? "Configurado" : "Sin verificar"}
             </span>
