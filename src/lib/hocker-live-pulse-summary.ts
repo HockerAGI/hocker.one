@@ -59,10 +59,10 @@ async function safeCount(
     let q: CountQuery = sb.from(table).select("*", { count: "exact", head: true });
     if (apply) q = apply(q);
     const { count, error } = await q;
-    if (error) return 0;
-    return count || 0;
+    if (error || typeof count !== "number") throw new Error("SUPABASE_PULSE_COUNT_UNAVAILABLE");
+    return count;
   } catch {
-    return 0;
+    throw new Error("SUPABASE_PULSE_COUNT_UNAVAILABLE");
   }
 }
 
@@ -101,6 +101,10 @@ export async function getHockerLivePulseSummary(): Promise<HockerLivePulseSummar
         .limit(1)
         .maybeSingle(),
     ]);
+
+    if (learningSeen.error || memorySeen.error || errorSeen.error || latestMemoryRes.error) {
+      throw new Error("SUPABASE_PULSE_READ_UNAVAILABLE");
+    }
 
     const repeatedSeen =
       (learningSeen.data || []).reduce((sum: number, row: { times_seen?: unknown }) => sum + Math.max(0, num(row.times_seen) - 1), 0) +
