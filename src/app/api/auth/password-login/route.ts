@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         ok: false,
         message: "El inicio de sesión no está disponible en este entorno. Intenta nuevamente o usa Production.",
       },
-      { status: 500 },
+      { status: 503 },
     );
   }
 }
