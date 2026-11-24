@@ -78,7 +78,7 @@ export default async function OwnerPage() {
             </h1>
           </div>
           <p className="hko-uni-hero-sub">
-            Centro privado de control. Cada estado distingue configuración, señal reciente y evidencia operativa.
+            El estado de tu ecosistema en un vistazo: NOVA, conexiones y decisiones que necesitan atención.
           </p>
         </div>
         <div className="hko-uni-hero-pills">
@@ -86,7 +86,6 @@ export default async function OwnerPage() {
             <span className="dot" /> {novaLabel(novaService.status)}
           </span>
           <span className="hko-uni-hero-pill is-protect"><span className="dot" /> Owner Gate</span>
-          <span className="hko-uni-hero-pill is-protect"><span className="dot" /> {operational.metrics.verified_services} servicios verificados</span>
           {pendingCount > 0 ? (
             <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por revisar</span>
           ) : null}
