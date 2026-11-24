@@ -14,6 +14,7 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
@@ -21,7 +22,8 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
     if (loading) return;
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
+    // Passwords are exact strings: spaces may be part of the credential.
+    const cleanPassword = password;
 
     if (!cleanEmail || !cleanPassword) {
       setError("Completa correo y contraseña.");
@@ -34,6 +36,8 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
     try {
       const response = await fetch("/api/auth/password-login", {
         method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
       });
@@ -56,8 +60,8 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
   return (
     <section
       className={[
-        "w-full max-w-[30rem] rounded-[24px] border border-white/[0.07] bg-slate-950/82 p-5",
-        "shadow-[0_28px_90px_rgba(0,0,0,0.42)] sm:p-6",
+        "w-full rounded-[26px] border border-white/[0.13] bg-[#0C1729]/95 p-6",
+        "shadow-[0_30px_90px_rgba(0,0,0,0.34)] sm:p-8",
         className,
       ].join(" ")}
     >
@@ -66,8 +70,8 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
           <LockKeyhole className="h-4 w-4" />
         </span>
         <div>
-          <h2 className="text-base font-semibold text-white">Acceso</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Tu espacio privado de Hocker One.</p>
+          <h2 className="text-xl font-semibold tracking-tight text-white">Accede a HOCKER ONE</h2>
+          <p className="mt-1 text-sm text-slate-300">Usa tu cuenta registrada para continuar.</p>
         </div>
       </div>
 
@@ -77,16 +81,18 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
         </div>
       ) : null}
 
-      <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+      <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <label className="block">
           <span className="mb-2 block text-xs font-medium text-slate-400">Correo</span>
           <input
             value={email}
+            type="email"
+            required
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
             inputMode="email"
             placeholder="tu@correo.com"
-            className="min-h-12 w-full rounded-[14px] border border-white/[0.07] bg-white/[0.025] px-4 text-base text-white outline-none transition focus:border-sky-300/25 focus:bg-white/[0.04] placeholder:text-slate-700"
+            className="min-h-12 w-full rounded-[14px] border border-white/[0.07] bg-white/[0.025] px-4 text-base text-white outline-none transition focus:border-cyan-300/50 focus:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-cyan-300/20 placeholder:text-slate-700"
           />
         </label>
 
@@ -94,18 +100,24 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
           <span className="mb-2 block text-xs font-medium text-slate-400">Contraseña</span>
           <input
             value={password}
+            required
             onChange={(event) => setPassword(event.target.value)}
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="••••••••••"
             className="min-h-12 w-full rounded-[14px] border border-white/[0.07] bg-white/[0.025] px-4 text-base text-white outline-none transition focus:border-sky-300/25 focus:bg-white/[0.04] placeholder:text-slate-700"
           />
+          <button type="button" onClick={() => setShowPassword((value) => !value)}
+            className="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-cyan-200 underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-cyan-300"
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>
+            {showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+          </button>
         </label>
 
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-sky-200/20 bg-sky-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-cyan-200/30 bg-[#9BE9FF] px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
           {loading ? "Entrando" : "Entrar"}
@@ -113,7 +125,7 @@ export default function AuthBox({ className = "" }: AuthBoxProps) {
       </form>
 
       <div className="mt-5 flex items-center justify-between border-t border-white/[0.055] pt-4">
-        <span className="text-xs text-slate-600">Acceso protegido</span>
+        <span className="text-xs text-slate-400">Acceso privado y supervisado</span>
         <Link href="/" className="text-xs font-semibold text-sky-300 transition hover:text-sky-200">
           Volver
         </Link>

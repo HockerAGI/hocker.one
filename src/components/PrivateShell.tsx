@@ -19,9 +19,9 @@ export default function PrivateShell({ children }: { children: React.ReactNode }
   const showMobileContextNav = !immersive && section.id !== "inicio" && section.items.length > 1;
 
   return (
-    <div className="hko-cinematic-root relative flex min-h-[100dvh] w-full flex-col overflow-x-hidden bg-[#030711] text-slate-50">
-      <HockerLiveBackground />
-      <HockerVfxLayer />
+    <div className={["hko-cinematic-root relative flex min-h-[100dvh] w-full flex-col overflow-x-hidden text-slate-50", immersive ? "bg-[#030711]" : "hko-refined-shell"].join(" ")}>
+      {immersive ? <HockerLiveBackground /> : null}
+      {immersive ? <HockerVfxLayer /> : null}
       {immersive ? null : <Sidebar />}
 
       <div className={["relative flex min-h-[100dvh] w-full flex-col", immersive ? "" : "lg:pl-[288px]"].join(" ")}>

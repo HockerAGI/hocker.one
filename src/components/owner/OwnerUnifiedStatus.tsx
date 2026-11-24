@@ -37,6 +37,7 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, ch
   const novaLabel = novaService.status === "online" ? "Verificada" : novaService.status === "offline" ? "Sin señal" : "Sin verificar";
 
   const counts = pulse.counts;
+  const countLabel = (count: number) => pulse.ok && pulse.source === "supabase" ? count : "—";
   const events = liveSummary?.recent_events?.slice(0, 6) ?? [];
   const commands = liveSummary?.recent_commands?.slice(0, 4) ?? [];
 
@@ -97,12 +98,12 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, ch
         <div>
           <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Registros en Supabase</p>
           <div className="hko-uni-statgrid">
-            <div className="hko-uni-stat"><span>Memorias registradas</span><strong>{counts.active_memory}</strong></div>
-            <div className="hko-uni-stat"><span>Actualizaciones AGI</span><strong>{counts.active_agi_updates}</strong></div>
-            <div className="hko-uni-stat"><span>Patrones de error</span><strong>{counts.prevented_errors}</strong></div>
-            <div className="hko-uni-stat"><span>Aprendizajes aprobados</span><strong>{counts.approved_learning}</strong></div>
+            <div className="hko-uni-stat"><span>Memorias registradas</span><strong>{countLabel(counts.active_memory)}</strong></div>
+            <div className="hko-uni-stat"><span>Actualizaciones AGI</span><strong>{countLabel(counts.active_agi_updates)}</strong></div>
+            <div className="hko-uni-stat"><span>Patrones de error</span><strong>{countLabel(counts.prevented_errors)}</strong></div>
+            <div className="hko-uni-stat"><span>Aprendizajes aprobados</span><strong>{countLabel(counts.approved_learning)}</strong></div>
           </div>
-          <p className="mt-2 text-[11px] leading-5 text-slate-500">Estos valores son registros persistidos; no prueban actividad en tiempo real.</p>
+          <p className="mt-2 text-[11px] leading-5 text-slate-500">{pulse.ok ? "Estos valores son registros persistidos; no prueban actividad en tiempo real." : "No se pudo verificar el conteo. No se muestran ceros como si fueran datos reales."}</p>
         </div>
 
         {commands.length > 0 ? (

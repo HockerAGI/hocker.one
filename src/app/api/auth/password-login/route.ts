@@ -28,12 +28,15 @@ export async function POST(request: Request) {
     });
 
     if (error || !data.session || !data.user) {
+      const serviceUnavailable = Boolean(error && (error.status ?? 0) >= 500);
       return NextResponse.json(
         {
           ok: false,
-          message: "Correo o contraseña incorrectos.",
+          message: serviceUnavailable
+            ? "No se pudo validar tu acceso en este momento. Intenta nuevamente."
+            : "No se pudo autenticar con esos datos. Verifica tu correo y contraseña.",
         },
-        { status: 401 },
+        { status: serviceUnavailable ? 503 : 401 },
       );
     }
 
@@ -49,9 +52,9 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message: "No se pudo iniciar sesión. Intenta de nuevo.",
+        message: "El inicio de sesión no está disponible en este entorno. Intenta nuevamente o usa Production.",
       },
-      { status: 500 },
+      { status: 503 },
     );
   }
 }

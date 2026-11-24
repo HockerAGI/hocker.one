@@ -1,0 +1,85 @@
+/*
+ HOCKER ONE visual refinement based on DOC-08 and World Class Site Study 2026-11-17.
+ A user-requested font change is candidate-only until owner design acceptance.
+ */
+:root {
+ --font-inter: var(--font-hocker-ui);
+ --font-dm-sans: var(--font-hocker-ui);
+ --font-orbitron: var(--font-hocker-ui);
+ --hko-type: var(--font-hocker-ui), system-ui, sans-serif;
+ --hko-border: rgba(167,180,199,.16);
+ --hko-accent: #55dcff;
+}
+body, button, input, textarea, select { font-family: var(--hko-type); }
+:focus-visible { outline: 2px solid var(--hko-accent); outline-offset: 3px; }
+/* Focused sign in, free of false provider status and decorative KPIs. */
+.hko-login { background: radial-gradient(ellipse 32% 24% at 50% 0%, rgba(85,220,255,.075), transparent 95%), #030711; font-family: var(--hko-type); }
+.hko-login-frame { display:flex; flex-direction:column; min-height:100dvh; max-width:1200px; margin:auto; padding:24px clamp(20px,4vw,55px) 24px; }
+.hko-login-header, .hko-login-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.hko-login-header { min-height:70px; }
+.hko-login-brand { border-radius:8px; display:inline-flex; align-items:center; }
+.hko-login-private { border:1px solid var(--hko-border); border-radius:9px; padding:8px 12px; color:#a7b4c7; font-size:.8rem; }
+.hko-login-center { width:min(100%,450px); margin:auto; padding:55px 0 70px; }
+.hko-login-intro { margin-bottom:30px; }
+.hko-login-overline { font-size:.8rem; font-weight:600; color:#8de5ff; letter-spacing:.035em; }
+.hko-login-overline span { padding:0 6px; color:#708da4; }
+.hko-login-intro h1 { margin:15px 0; font-size:clamp(2.3rem,5vw,3.25rem); line-height:1.1; letter-spacing:-.045em; font-weight:600; }
+.hko-login-intro h1 span { color:#8de5ff; }
+.hko-login-intro > p:last-child { max-width:430px; color:#a7b4c7; font-size:1rem; line-height:1.6; }
+.hko-login .hko-auth-card { border-radius:18px; border:1px solid rgba(167,180,199,.17); background:#0b1526; box-shadow:0 16px 58px rgba(0,0,0,.17); }
+.hko-login .hko-auth-card h2 { font-size:1.35rem; letter-spacing:-.035em; font-weight:650; }
+.hko-login .hko-auth-card input { min-height:52px; border-radius:11px; border-color:rgba(167,180,199,.20); background:rgba(3,7,17,.45); font-size:1rem; }
+.hko-login .hko-auth-card input:focus-visible { outline:2px solid var(--hko-accent); outline-offset:2px; }
+.hko-login .hko-auth-card label > span { color:#e3eaf2; font-size:.9rem; font-weight:550; }
+.hko-login .hko-auth-card button[type="submit"] { border-radius:11px; min-height:52px; font-size:.925rem; font-weight:650; }
+.hko-login-footer { padding-top:18px; border-top:1px solid rgba(167,180,199,.13); color:#a7b4c7; font-size:.78rem; }
+/* Non-immersive private shell: calm, lighter to render, functional data always visible. */
+.hko-refined-shell { background: radial-gradient(circle at 68% -14%,rgba(85,220,255,.05),transparent 34rem), #030711 !important; font-family:var(--hko-type); }
+.hko-refined-shell .hko-sidebar { background:#07101f; border:1px solid var(--hko-border); border-radius:19px; box-shadow:none; backdrop-filter:none; }
+.hko-refined-shell .hko-sidebar nav a { font-size:.9rem; font-weight:550; border-radius:10px; letter-spacing:-.008em; }
+.hko-refined-shell .hko-sidebar a[aria-current="page"] { box-shadow:inset 2px 0 0 rgba(85,220,255,.8); background:rgba(85,220,255,.08); color:#b8efff; }
+.hko-refined-shell > div > header { background:rgba(3,7,17,.95); border-color:var(--hko-border); }
+.hko-refined-shell > div > header p { font-size:.95rem; font-weight:550; }
+.hko-refined-shell .hko-uni-grid { gap:16px; }
+.hko-refined-shell .hko-uni-hero { padding:clamp(20px,3vw,30px); background:#07101f; border-radius:18px; border:1px solid var(--hko-border); }
+.hko-refined-shell .hko-uni-hero::before { display:none; }
+.hko-refined-shell .hko-uni-hero-sub { font-size:.95rem; color:#a7b4c7; line-height:1.6; max-width:58ch; }
+.hko-refined-shell .hko-uni-hero-pill { border-radius:8px; text-transform:none; letter-spacing:0; font-size:.8rem; font-weight:550; padding:8px 11px; }
+.hko-refined-shell .hko-uni-hero-pill .dot { animation:none; box-shadow:none; }
+.hko-refined-shell .hko-uni-panel { background:#07101f; border:1px solid var(--hko-border); border-radius:18px; box-shadow:none; }
+.hko-refined-shell .hko-uni-panel-head { border-bottom-color:rgba(167,180,199,.13); padding:17px 20px; }
+.hko-refined-shell .hko-uni-panel-body { padding:18px 20px; }
+.hko-refined-shell .hko-uni-panel-kicker { font-size:.75rem; letter-spacing:.045em; font-weight:550; color:#89def8; }
+.hko-refined-shell .hko-uni-panel-title { font-size:1.15rem; letter-spacing:-.02em; font-weight:600; }
+.hko-refined-shell .hko-status-row { background:#0b1526; border-radius:11px; border-color:var(--hko-border); }
+.hko-refined-shell .hko-status-label { font-size:.925rem; font-weight:600; }
+.hko-refined-shell .hko-status-detail { color:#a7b4c7; font-size:.82rem; line-height:1.5; }
+.hko-refined-shell .hko-status-val { font-size:.78rem; font-weight:550; letter-spacing:0; text-transform:none; }
+.hko-refined-shell .hko-mirror-title { font-size:clamp(1.3rem,2vw,1.55rem); font-weight:600; }
+.hko-refined-shell .hko-mirror-card { border-radius:13px; background:#0b1526; }
+.hko-refined-shell .hko-mirror-card-value { font-size:clamp(1.08rem,2vw,1.4rem); font-weight:600; }
+.hko-refined-shell .hko-mirror-card-caption,.hko-refined-shell .hko-mirror-description { font-size:.875rem; color:#a7b4c7; }
+.hko-refined-shell .hko-mirror-state { font-size:.78rem; font-weight:550; }
+.hko-refined-shell .hko-uni-quick-card,.hko-refined-shell .hko-uni-stat { background:#0b1526; border-color:var(--hko-border); border-radius:11px; }
+.hko-refined-shell .hko-uni-quick-card-title { font-size:.95rem; font-weight:600; }
+.hko-refined-shell .hko-uni-quick-card-text,.hko-refined-shell .hko-uni-feed-text { font-size:.85rem; color:#a7b4c7; line-height:1.5; }
+.hko-refined-shell .hko-uni-stat span { font-size:.75rem; font-weight:550; letter-spacing:0; text-transform:none; }
+.hko-refined-shell .hko-uni-stat strong { font-size:1.4rem; font-weight:650; }
+.hko-refined-shell .hko-uni-tool { font-size:.8rem; font-weight:550; letter-spacing:0; text-transform:none; border-radius:10px; }
+.hko-refined-shell .hko-uni-chat a.group { min-height:178px; background:#0b1728; border-radius:12px; border-color:rgba(85,220,255,.2); }
+.hko-refined-shell .hko-uni-chat a.group h2 { font-size:1.5rem; font-weight:600; }
+.hko-refined-shell .hko-uni-chat a.group p { font-size:.9rem; }
+.hko-refined-shell .hko-uni-chat a.group p:first-child { font-size:.8rem; letter-spacing:.04em; font-weight:600; }
+.hko-refined-shell .hko-bottom-dock { background:#07101f; border-color:var(--hko-border); }
+.hko-refined-shell .hko-mirror-details summary { min-height:44px; display:flex; align-items:center; }
+@media (max-width:600px) {
+ .hko-login-frame { padding:18px 20px 20px; }
+ .hko-login-center { padding:44px 0 50px; }
+ .hko-login-intro h1 { font-size:2.3rem; }
+ .hko-login-footer { align-items:flex-start; flex-direction:column; }
+ .hko-refined-shell .hko-uni-panel-body,.hko-refined-shell .hko-uni-panel-head { padding:16px; }
+ .hko-refined-shell .hko-uni-hero { padding:18px; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .hko-login *, .hko-refined-shell * { animation:none !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
+}

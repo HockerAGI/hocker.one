@@ -11,6 +11,7 @@ import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
 import type { AgiRuntimeSummaryLike } from "@/types/agi-runtime-summary";
 
 import OwnerUnifiedStatus from "@/components/owner/OwnerUnifiedStatus";
+import OwnerProviderMirror from "@/components/owner/OwnerProviderMirror";
 import OwnerUnifiedApprovals from "@/components/owner/OwnerUnifiedApprovals";
 import OwnerUnifiedTools from "@/components/owner/OwnerUnifiedTools";
 
@@ -57,20 +58,27 @@ export default async function OwnerPage() {
   const novaService = operational.runtime.service_status.nova;
   const pendingCount = operational.metrics.pending_actions;
   const novaIsOnline = novaService.status === "online";
+  const supabaseAgiMetric = liveSummary?.counts.find((item) => item.table === "agis");
 
   return (
     <div className="hko-uni-grid">
       <div className="hko-uni-hero">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="relative grid h-9 w-9 place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-sky-100 shadow-[0_0_28px_rgba(30,200,255,0.18)]">
+          <div className="flex items-center gap-3">
+            <span className="relative grid h-9 w-9 place-items-center rounded-xl border border-sky-300/25 bg-sky-300/10 text-sky-100">
               <Image src="/ecosystem/apps/hocker-one/icon.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" priority />
               <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaIsOnline ? "bg-emerald-400" : novaService.status === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
             </span>
-            <h1 className="hko-uni-hero-title">Hocker ONE</h1>
+            <h1 className="hko-uni-hero-title">
+              <span className="sr-only">Hocker ONE</span>
+              <span className="relative block h-14 w-[232px] max-w-full" aria-hidden="true">
+                <Image src="/brand/hocker-one-logo.png" alt="" fill sizes="232px"
+                  className="object-contain object-left" priority />
+              </span>
+            </h1>
           </div>
           <p className="hko-uni-hero-sub">
-            Centro privado de control. Cada estado distingue configuración, señal reciente y evidencia operativa.
+            El estado de tu ecosistema en un vistazo: NOVA, conexiones y decisiones que necesitan atención.
           </p>
         </div>
         <div className="hko-uni-hero-pills">
@@ -78,12 +86,17 @@ export default async function OwnerPage() {
             <span className="dot" /> {novaLabel(novaService.status)}
           </span>
           <span className="hko-uni-hero-pill is-protect"><span className="dot" /> Owner Gate</span>
-          <span className="hko-uni-hero-pill is-protect"><span className="dot" /> {operational.metrics.verified_services} servicios verificados</span>
           {pendingCount > 0 ? (
             <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por revisar</span>
           ) : null}
         </div>
       </div>
+
+      <OwnerProviderMirror supabase={{
+        verified: supabaseAgiMetric?.ok === true && typeof supabaseAgiMetric.count === "number",
+        agiCount: supabaseAgiMetric?.ok ? supabaseAgiMetric.count : null,
+        checkedAt: liveSummary?.generated_at ?? null,
+      }} />
 
       <section className="hko-uni-panel hko-uni-chat" aria-labelledby="nova-entry-title">
         <div className="hko-uni-panel-head">
