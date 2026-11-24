@@ -554,3 +554,47 @@ test("isolated App readiness API requires Owner AAL2 and refuses Preview", async
   assert.match(src, /"Cache-Control": "no-store/);
   assert.doesNotMatch(src, /allow_actions\s*[:=]\s*true/);
 });
+
+
+test("sanitized App config diagnostics identify malformed values without disclosing them", async () => {
+  const valid = await runtime();
+  const passed = valid.identity.getGitHubAppConfigurationChecks();
+  assert.equal(passed.app_id_valid, true);
+  assert.equal(passed.installation_id_valid, true);
+  assert.equal(passed.private_key_valid, true);
+  assert.equal(passed.repositories_valid, true);
+  assert.equal(passed.repositories_in_approved_scope, true);
+  assert.equal(passed.scope_complete, true);
+  assert.equal(passed.configuration_valid, true);
+  assert.doesNotMatch(JSON.stringify(passed), /BEGIN|PRIVATE KEY|82001510|12345/);
+
+  const missingKey = await runtime({
+    HOCKER_GITHUB_APP_PRIVATE_KEY: "PEM_PLACEHOLDER",
+    HOCKER_GITHUB_APP_REPOSITORIES: "hocker.one",
+  });
+  const failed = missingKey.identity.getGitHubAppConfigurationChecks();
+  assert.equal(failed.private_key_valid, false);
+  assert.equal(failed.repositories_valid, true);
+  assert.equal(failed.scope_complete, false);
+  assert.equal(failed.configuration_valid, false);
+
+  const bad = await runtime({
+    HOCKER_GITHUB_APP_ID: "wrong",
+    HOCKER_GITHUB_APP_INSTALLATION_ID: "0",
+    HOCKER_GITHUB_APP_REPOSITORIES: "HockerAGI/hocker.one",
+  });
+  const invalid = bad.identity.getGitHubAppConfigurationChecks();
+  assert.equal(invalid.app_id_valid, false);
+  assert.equal(invalid.installation_id_valid, false);
+  assert.equal(invalid.repositories_valid, false);
+  assert.equal(invalid.configuration_valid, false);
+  assert.doesNotMatch(JSON.stringify(invalid), /HockerAGI\/hocker.one|PEM_PLACEHOLDER/);
+});
+
+test("independent readiness returns safe App config diagnostics only after Owner Gate", async () => {
+  const route = await read("src/app/api/agi/runtime/integrations/github-app-readiness/route.ts");
+  assert.match(route, /requireOwnerAal2Api\(PROJECT_ID\)/);
+  assert.match(route, /app_configuration_checks: getGitHubAppConfigurationChecks\(\)/);
+  assert.match(route, /NON_PRODUCTION_SCOPE_NOT_CERTIFIED/);
+  assert.doesNotMatch(route, /process\.env\.HOCKER_GITHUB_APP_PRIVATE_KEY|\.value\s*:\s*getStaticGitHubToken/);
+});

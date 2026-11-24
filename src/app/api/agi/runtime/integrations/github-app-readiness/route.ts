@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import {
   getActiveStaticGitHubTokenVariable,
+  getGitHubAppConfigurationChecks,
   getGitHubRuntimeIdentityKind,
   isGitHubAppPreferred,
   probeGitHubAppReadOnly,
@@ -49,6 +50,7 @@ export async function GET(request: Request): Promise<Response> {
     active_pat_variable: getActiveStaticGitHubTokenVariable(),
     app_mode_enabled: isGitHubAppPreferred(),
     github_app: app,
+    app_configuration_checks: getGitHubAppConfigurationChecks(),
     can_switch_runtime_identity: canSwitch,
     approved_repositories_required: [
       "HockerAGI/hocker.one",
