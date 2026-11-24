@@ -6,6 +6,7 @@ import {
   getGitHubRuntimeIdentityKind,
   isGitHubAppPreferred,
   probeGitHubAppReadOnly,
+  probeGitHubAppWriteTokenGrant,
 } from "@/lib/github-runtime-identity";
 
 export const runtime = "nodejs";
@@ -39,8 +40,12 @@ export async function GET(request: Request): Promise<Response> {
     }, { status: 403, headers: noStore });
   }
 
-  const app = await probeGitHubAppReadOnly();
-  const canSwitch = app.verified_read && app.scope_complete;
+  const [app, writeGrant] = await Promise.all([
+    probeGitHubAppReadOnly(),
+    probeGitHubAppWriteTokenGrant(),
+  ]);
+  const canSwitch = app.verified_read && app.scope_complete &&
+    writeGrant.grant_verified && writeGrant.repository_reads_verified;
   return NextResponse.json({
     ok: true,
     project_id: PROJECT_ID,
@@ -50,6 +55,7 @@ export async function GET(request: Request): Promise<Response> {
     active_pat_variable: getActiveStaticGitHubTokenVariable(),
     app_mode_enabled: isGitHubAppPreferred(),
     github_app: app,
+    github_app_write_token_grant: writeGrant,
     app_configuration_checks: getGitHubAppConfigurationChecks(),
     can_switch_runtime_identity: canSwitch,
     approved_repositories_required: [

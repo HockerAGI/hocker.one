@@ -598,3 +598,80 @@ test("independent readiness returns safe App config diagnostics only after Owner
   assert.match(route, /NON_PRODUCTION_SCOPE_NOT_CERTIFIED/);
   assert.doesNotMatch(route, /process\.env\.HOCKER_GITHUB_APP_PRIVATE_KEY|\.value\s*:\s*getStaticGitHubToken/);
 });
+
+
+test("write-grant preflight can mint exact repository-scoped write permission token without any writes", async () => {
+  const calls = [];
+  const { identity } = await runtime({ HOCKER_GITHUB_TOKEN: "existing_pat" }, async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/access_tokens")) return {
+      status: 201,
+      json: async () => ({
+        token: TEST_TOKEN,
+        expires_at: new Date(Date.now() + 3600000).toISOString(),
+        permissions: { contents: "write", pull_requests: "write", metadata: "read" },
+      }),
+    };
+    const repo = url.split("/repos/")[1];
+    return { status: 200, json: async () => ({ full_name: repo }) };
+  });
+  const result = await identity.probeGitHubAppWriteTokenGrant();
+  assert.equal(result.configured, true);
+  assert.equal(result.scope_complete, true);
+  assert.equal(result.grant_verified, true);
+  assert.equal(result.repository_reads_verified, true);
+  assert.equal(result.state, "verified_token_grant");
+  assert.equal(identity.getGitHubRuntimeIdentityKind(), "pat");
+  assert.equal(calls.length, 4);
+  assert.equal(calls[0].options.method, "POST");
+  assert.deepEqual(JSON.parse(calls[0].options.body).permissions, {
+    contents: "write", pull_requests: "write",
+  });
+  assert.deepEqual(JSON.parse(calls[0].options.body).repositories,
+    ["hocker.one", "nova.agi", "hocker-node-agent"]);
+  assert.equal(calls.slice(1).every((call) => call.options.method === "GET" &&
+    call.options.headers.Authorization === "Bearer " + TEST_TOKEN), true);
+  assert.equal(calls.some((call) => JSON.stringify(call).includes("existing_pat")), false);
+});
+
+test("write-grant preflight refuses an App missing requested repository or permissions", async () => {
+  let networkCalls = 0;
+  const restricted = await runtime({
+    HOCKER_GITHUB_APP_REPOSITORIES: "hocker.one",
+  }, async () => { networkCalls++; throw Error("must not call"); });
+  const scope = await restricted.identity.probeGitHubAppWriteTokenGrant();
+  assert.equal(scope.state, "scope_not_approved");
+  assert.equal(scope.grant_verified, false);
+  assert.equal(networkCalls, 0);
+
+  const badPermission = await runtime({}, async (url) => ({
+    status: 201,
+    json: async () => ({
+      token: TEST_TOKEN, expires_at: new Date(Date.now() + 3600000).toISOString(),
+      permissions: { contents: "read", pull_requests: "read" },
+    }),
+  }));
+  const result = await badPermission.identity.probeGitHubAppWriteTokenGrant();
+  assert.equal(result.state, "write_permissions_not_granted");
+  assert.equal(result.grant_verified, false);
+  assert.doesNotMatch(JSON.stringify(result), /TEST_TOKEN|BEGIN RSA PRIVATE KEY/);
+
+  const rejected = await runtime({}, async () => ({ status: 403, json: async () => ({
+    message: "GitHub response with internal details",
+  }) }));
+  const denied = await rejected.identity.probeGitHubAppWriteTokenGrant();
+  assert.equal(denied.state, "write_token_unavailable");
+  assert.equal(denied.grant_verified, false);
+  assert.doesNotMatch(JSON.stringify(denied), /internal details/);
+});
+
+test("Owner AAL2 readiness only permits identity switch after App token grant and read proofs", async () => {
+  const route = await read("src/app/api/agi/runtime/integrations/github-app-readiness/route.ts");
+  assert.match(route, /requireOwnerAal2Api\(PROJECT_ID\)/);
+  assert.match(route, /probeGitHubAppWriteTokenGrant\(\)/);
+  assert.match(route, /writeGrant\.grant_verified && writeGrant\.repository_reads_verified/);
+  assert.match(route, /can_switch_runtime_identity: canSwitch/);
+  assert.match(route, /write_scope_verified: false/);
+  assert.match(route, /owner_gate_required_for_writes: true/);
+  assert.doesNotMatch(route, /allow_actions\s*[:=]\s*true/);
+});

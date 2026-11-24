@@ -308,3 +308,94 @@ export async function probeGitHubAppReadOnly(): Promise<GitHubAppReadinessProbe>
     return result("provider_unavailable");
   }
 }
+
+
+/**
+ * Verify GitHub can ISSUE the exact permission-scoped installation token
+ * required by NOVA. This does not mutate any repo or certify a real write.
+ * Failure never falls back to the PAT or returns upstream/secret payloads.
+ */
+export type GitHubAppWriteGrantProbe = {
+  configured: boolean;
+  grant_verified: boolean;
+  repository_reads_verified: boolean;
+  scope_complete: boolean;
+  state: "app_config_missing" | "scope_not_approved" |
+    "write_token_unavailable" | "write_permissions_not_granted" |
+    "token_invalid" | "repository_read_unverified" | "verified_token_grant" | "provider_unavailable";
+};
+
+export async function probeGitHubAppWriteTokenGrant(): Promise<GitHubAppWriteGrantProbe> {
+  const config = appIdentityConfig();
+  const approved = [...DEFAULT_REPOS];
+  const report = (state: GitHubAppWriteGrantProbe["state"],
+    options: Partial<Pick<GitHubAppWriteGrantProbe, "configured" | "grant_verified" |
+      "repository_reads_verified" | "scope_complete">> = {}): GitHubAppWriteGrantProbe => ({
+      configured: Boolean(config), grant_verified: false, repository_reads_verified: false,
+      scope_complete: false, state, ...options,
+    });
+  if (!config) return report("app_config_missing");
+  const scoped = config.repositories.every((name) =>
+    approved.includes(name as typeof DEFAULT_REPOS[number]));
+  const complete = scoped && approved.every((name) => config.repositories.includes(name));
+  if (!complete) return report("scope_not_approved");
+  try {
+    const jwt = signedAppJwt(config.appId, config.privateKey);
+    const response = await fetch(
+      "https://api.github.com/app/installations/" + config.installationId + "/access_tokens",
+      {
+        method: "POST", cache: "no-store",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: "Bearer " + jwt,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repositories: config.repositories,
+          permissions: { contents: "write", pull_requests: "write" },
+        }),
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+    if (response.status !== 201) return report("write_token_unavailable", { scope_complete: true });
+    const unknownPayload: unknown = await response.json();
+    const body = unknownPayload && typeof unknownPayload === "object"
+      ? unknownPayload as Record<string, unknown> : {};
+    const granted = body.permissions && typeof body.permissions === "object"
+      ? body.permissions as Record<string, unknown> : {};
+    if (granted.contents !== "write" || granted.pull_requests !== "write") {
+      return report("write_permissions_not_granted", { scope_complete: true });
+    }
+    const token = body.token;
+    const expiry = typeof body.expires_at === "string" ? Date.parse(body.expires_at) : NaN;
+    if (typeof token !== "string" || token.length < 24 ||
+        !Number.isFinite(expiry) || expiry <= Date.now() + APP_TOKEN_REFRESH_MARGIN_MS) {
+      return report("token_invalid", { scope_complete: true });
+    }
+    const readChecks = await Promise.all(config.repositories.map(async (name) => {
+      const repo = "HockerAGI/" + name;
+      const result = await fetch(
+        "https://api.github.com/repos/" + repo.split("/").map(encodeURIComponent).join("/"),
+        { method: "GET", cache: "no-store", headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: "Bearer " + token,
+          "X-GitHub-Api-Version": "2022-11-28",
+        }, signal: AbortSignal.timeout(8000) },
+      );
+      if (result.status !== 200) return false;
+      const payload: unknown = await result.json();
+      const found = payload && typeof payload === "object"
+        ? (payload as Record<string, unknown>).full_name : null;
+      return typeof found === "string" && found.toLowerCase() === repo.toLowerCase();
+    }));
+    if (!readChecks.every(Boolean) || readChecks.length !== approved.length) {
+      return report("repository_read_unverified", { scope_complete: true, grant_verified: true });
+    }
+    return report("verified_token_grant", {
+      scope_complete: true, grant_verified: true, repository_reads_verified: true,
+    });
+  } catch {
+    return report("provider_unavailable", { scope_complete: true });
+  }
+}
