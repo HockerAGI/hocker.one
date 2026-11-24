@@ -69,6 +69,48 @@ export function getActiveStaticGitHubTokenVariable(): string | null {
   return null;
 }
 
+/**
+ * Sanitized configuration diagnostics. No App IDs, PEMs, tokens, installed
+ * repository names or upstream HTTP error details ever leave the server.
+ * Use behind an Owner AAL2 endpoint only.
+ */
+export function getGitHubAppConfigurationChecks() {
+  const appIdValid = /^[1-9][0-9]{0,18}$/.test(env("HOCKER_GITHUB_APP_ID"));
+  const installationIdValid = /^[1-9][0-9]{0,18}$/.test(env("HOCKER_GITHUB_APP_INSTALLATION_ID"));
+  const pem = env("HOCKER_GITHUB_APP_PRIVATE_KEY").replace(/\\n/g, "\n");
+  let privateKeyValid = false;
+  if (/^-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(pem) &&
+      pem.includes("-----END ") && pem.length <= 24000) {
+    try {
+      const key = createPrivateKey(pem);
+      privateKeyValid = key.asymmetricKeyType === "rsa" &&
+        (key.asymmetricKeyDetails?.modulusLength ?? 0) >= 2048;
+    } catch {
+      privateKeyValid = false;
+    }
+  }
+  const raw = env("HOCKER_GITHUB_APP_REPOSITORIES");
+  const names = raw ? raw.split(",").map((name) => name.trim()) : [...DEFAULT_REPOS];
+  const repositoriesValid = names.length > 0 && names.length <= 40 &&
+    names.every((name) => /^[A-Za-z0-9_.-]{1,100}$/.test(name) && name !== "." && name !== "..") &&
+    new Set(names).size === names.length;
+  const allowed = [...DEFAULT_REPOS];
+  const repositoriesInApprovedScope = repositoriesValid &&
+    names.every((name) => allowed.includes(name as typeof DEFAULT_REPOS[number]));
+  const scopeComplete = repositoriesInApprovedScope &&
+    allowed.every((name) => names.includes(name));
+  return {
+    app_id_valid: appIdValid,
+    installation_id_valid: installationIdValid,
+    private_key_valid: privateKeyValid,
+    repositories_valid: repositoriesValid,
+    repositories_in_approved_scope: repositoriesInApprovedScope,
+    scope_complete: scopeComplete,
+    configuration_valid: appIdValid && installationIdValid &&
+      privateKeyValid && repositoriesValid && repositoriesInApprovedScope,
+  };
+}
+
 export function getGitHubRuntimeIdentityKind(): GitHubRuntimeIdentity {
   if (isGitHubAppPreferred()) return appIdentityConfig() ? "github_app" : "missing";
   if (getStaticGitHubToken()) return "pat";
