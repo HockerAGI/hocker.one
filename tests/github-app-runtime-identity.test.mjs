@@ -423,3 +423,134 @@ test("GitHub App readiness uses only the configured installation repository subs
     "hocker.one", "nova.agi", "hocker-node-agent",
   ]);
 });
+
+
+test("independent read-only App probe ignores the existing PAT and limits token permissions", async () => {
+  const calls = [];
+  const { identity } = await runtime({
+    HOCKER_GITHUB_TOKEN: "ghp_legacy_existing",
+  }, async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/access_tokens")) {
+      return {
+        status: 201,
+        json: async () => ({
+          token: TEST_TOKEN,
+          expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+          permissions: { contents: "read", metadata: "read" },
+        }),
+      };
+    }
+    const repository = url.split("/repos/")[1];
+    return { status: 200, json: async () => ({ full_name: repository }) };
+  });
+  assert.equal(identity.getGitHubRuntimeIdentityKind(), "pat");
+  assert.equal(identity.getActiveStaticGitHubTokenVariable(), "HOCKER_GITHUB_TOKEN");
+  const check = await identity.probeGitHubAppReadOnly();
+  assert.equal(check.configured, true);
+  assert.equal(check.verified_read, true);
+  assert.equal(check.scope_complete, true);
+  assert.equal(check.state, "verified_read");
+  assert.deepEqual(Array.from(check.repositories_checked), [
+    "HockerAGI/hocker.one",
+    "HockerAGI/nova.agi",
+    "HockerAGI/hocker-node-agent",
+  ]);
+  assert.equal(calls.length, 4, "one scoped token plus three authenticated reads");
+  assert.equal(calls[0].options.method, "POST");
+  const body = JSON.parse(calls[0].options.body);
+  assert.deepEqual({ ...body.permissions }, { contents: "read" });
+  assert.deepEqual(Array.from(body.repositories), ["hocker.one", "nova.agi", "hocker-node-agent"]);
+  assert.equal(calls.slice(1).every((entry) =>
+    entry.options.method === "GET" && entry.options.headers.Authorization === "Bearer " + TEST_TOKEN), true);
+  assert.equal(calls.some((entry) =>
+    JSON.stringify(entry).includes("ghp_legacy_existing")), false, "never forwards PAT in App probe");
+});
+
+test("App probe does not certify partial repository scope for full migration", async () => {
+  const { identity } = await runtime({
+    HOCKER_GITHUB_APP_REPOSITORIES: "hocker.one",
+    GITHUB_TOKEN: "legacy-pat",
+  }, async (url) => {
+    if (url.endsWith("/access_tokens")) {
+      return { status: 201, json: async () => ({
+        token: TEST_TOKEN,
+        expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+        permissions: { contents: "read" },
+      }) };
+    }
+    return { status: 200, json: async () => ({ full_name: "HockerAGI/hocker.one" }) };
+  });
+  const check = await identity.probeGitHubAppReadOnly();
+  assert.equal(check.verified_read, true);
+  assert.equal(check.scope_complete, false);
+  assert.equal(identity.getActiveStaticGitHubTokenVariable(), "GITHUB_TOKEN");
+});
+
+test("App-only probe fails closed on denied installation, repo access and malformed app key", async () => {
+  const badInstallation = await runtime({ GITHUB_TOKEN: "legacy" }, async () => ({
+    status: 403, json: async () => ({ message: "provider diagnostics must not leak" }),
+  }));
+  const failedToken = await badInstallation.identity.probeGitHubAppReadOnly();
+  assert.equal(failedToken.state, "installation_token_unavailable");
+  assert.equal(failedToken.verified_read, false);
+  assert.doesNotMatch(JSON.stringify(failedToken), /provider diagnostics/);
+
+  const deniedRepo = await runtime({}, async (url) => {
+    if (url.endsWith("/access_tokens")) {
+      return { status: 201, json: async () => ({
+        token: TEST_TOKEN,
+        expires_at: new Date(Date.now() + 3600000).toISOString(),
+        permissions: { contents: "read" },
+      }) };
+    }
+    return { status: 404, json: async () => ({ message: "private missing resource" }) };
+  });
+  const failedRead = await deniedRepo.identity.probeGitHubAppReadOnly();
+  assert.equal(failedRead.state, "repository_read_unverified");
+  assert.equal(failedRead.verified_read, false);
+
+  let calls = 0;
+  const invalidApp = await runtime({
+    HOCKER_GITHUB_APP_PRIVATE_KEY: "not-a-key",
+    HOCKER_GITHUB_TOKEN: "pat-still-usable",
+  }, async () => { calls += 1; throw new Error("unexpected"); });
+  assert.equal(invalidApp.identity.getGitHubRuntimeIdentityKind(), "pat");
+  const invalidCheck = await invalidApp.identity.probeGitHubAppReadOnly();
+  assert.equal(invalidCheck.configured, false);
+  assert.equal(invalidCheck.state, "app_config_missing");
+  assert.equal(calls, 0);
+});
+
+test("opt-in App mode selects App before PAT, never silently falls back on invalid App", async () => {
+  const withApp = await runtime({
+    HOCKER_GITHUB_TOKEN: "pat-available",
+    HOCKER_GITHUB_IDENTITY_MODE: "github_app",
+  }, async () => successResponse());
+  assert.equal(withApp.identity.isGitHubAppPreferred(), true);
+  assert.equal(withApp.identity.getGitHubRuntimeIdentityKind(), "github_app");
+  assert.equal(await withApp.identity.getGitHubRuntimeAccessToken(), TEST_TOKEN);
+  assert.equal(withApp.identity.getGitHubRepositoryCreationAccessToken(), "pat-available");
+
+  const invalid = await runtime({
+    HOCKER_GITHUB_TOKEN: "pat-available",
+    HOCKER_GITHUB_IDENTITY_MODE: "github_app",
+    HOCKER_GITHUB_APP_PRIVATE_KEY: "invalid",
+  });
+  assert.equal(invalid.identity.getGitHubRuntimeIdentityKind(), "missing");
+  await assert.rejects(() => invalid.identity.getGitHubRuntimeAccessToken(),
+    /GITHUB_RUNTIME_IDENTITY_NOT_CONFIGURED/);
+});
+
+test("isolated App readiness API requires Owner AAL2 and refuses Preview", async () => {
+  const src = await read("src/app/api/agi/runtime/integrations/github-app-readiness/route.ts");
+  assert.match(src, /requireOwnerAal2Api\(PROJECT_ID\)/);
+  assert.match(src, /environment !== "production"/);
+  assert.match(src, /NON_PRODUCTION_SCOPE_NOT_CERTIFIED/);
+  assert.match(src, /probeGitHubAppReadOnly\(\)/);
+  assert.match(src, /can_switch_runtime_identity: canSwitch/);
+  assert.match(src, /write_scope_verified: false/);
+  assert.match(src, /owner_gate_required_for_writes: true/);
+  assert.match(src, /"Cache-Control": "no-store/);
+  assert.doesNotMatch(src, /allow_actions\s*[:=]\s*true/);
+});
