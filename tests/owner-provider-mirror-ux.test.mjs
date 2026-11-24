@@ -47,7 +47,7 @@ test("Mirror layout follows existing brand and accessible UX constraints", async
   assert.match(css, /prefers-reduced-motion: reduce/);
   assert.match(css, /focus-visible/);
   assert.match(css, /--font-inter/);
-  assert.match(layout, /import \{ Inter \} from "next\/font\/google"/);
+  assert.match(layout, /import \{ Outfit \} from "next\/font\/google"/);
   assert.match(component, /aria-live="polite"/);
   assert.match(component, /<details className="hko-mirror-details">/);
   assert.doesNotMatch(component, /allow_actions\s*=\s*true/);

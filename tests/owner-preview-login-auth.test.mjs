@@ -11,7 +11,9 @@ test("Login visual uses canonical HOCKER wordmark with a responsive and accessib
   ]);
   assert.match(surface, /\/brand\/hocker-one-logo\.png/);
   assert.match(surface, /Bienvenido/);
-  assert.match(surface, /lg:grid-cols/);
+  assert.match(surface, /hko-login-center/);
+  const responsive = await read("src/styles/hocker-refinement.css");
+  assert.match(responsive, /@media \(max-width:600px\)/);
   assert.match(surface, /<AuthBox/);
   assert.match(auth, /min-h-12/);
   assert.match(auth, /role="alert"/);
