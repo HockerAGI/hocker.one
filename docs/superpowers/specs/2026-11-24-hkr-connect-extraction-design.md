@@ -101,6 +101,8 @@ hkr.connect/
 
 Alpha 0 only needs `packages/protocol`, `packages/control`, `packages/proof`, `apps/mcp-server`, and deterministic test fixtures. Local Agent work follows as a separate milestone after the remote MCP contract is green.
 
+Core packages (`protocol`, `control`, `proof`) stay dependency-light and expose explicit runtime parsers/validators. Zod is used at the MCP/network boundary rather than becoming a requirement for every HKR consumer.
+
 ## Extraction map — Hocker One
 
 ### REUSE as product-neutral contract or algorithm
