@@ -6,7 +6,7 @@
 
 **Architecture:** Clean-room TypeScript monorepo. Reuse proven HOCKER algorithms and invariants at contract level, but rebuild storage/auth/provider adapters so no HOCKER service-role, AGI canon, Owner identity or fixed repository list becomes customer authorization. Alpha 0 exposes only non-provider-mutating Work/Proof tools over official MCP Streamable HTTP.
 
-**Tech Stack:** Node.js 22.x, TypeScript, npm workspaces, MCP TypeScript SDK v2 (`@modelcontextprotocol/server` plus `@modelcontextprotocol/node` for Node HTTP adaptation), Zod, Node built-in test runner, PostgreSQL-compatible persistence interface.
+**Tech Stack:** Node.js 22.x, TypeScript, npm workspaces, MCP TypeScript SDK v2 (`@modelcontextprotocol/server` plus `@modelcontextprotocol/node` for Node HTTP adaptation), Zod only at the external MCP schema boundary, Node built-in test runner, PostgreSQL-compatible persistence interface.
 
 **Spec:** `docs/superpowers/specs/2026-11-24-hkr-connect-extraction-design.md`
 
@@ -90,9 +90,10 @@ Commit: `chore: bootstrap HKR Connect alpha`
 
 **Interfaces:**
 - Produces:
-  - `WorkStateSchema`
-  - `WorkRecordSchema`
-  - `WorkEventSchema`
+  - `WorkState`
+  - `WorkRecord`
+  - `WorkEvent`
+  - `parseWorkRecord(value): WorkRecord`
   - `assertWorkTransition(from, to): void`
 
 - [ ] **Step 1: Write failing state-machine tests.**
@@ -104,9 +105,9 @@ Assertions cover planning/researching/ready/awaiting_approval/approved/executing
 Run: `node --test packages/protocol/test/work.test.ts`  
 Expected: FAIL because protocol exports do not exist.
 
-- [ ] **Step 3: Implement the minimal Zod schemas and transition function.**
+- [ ] **Step 3: Implement the minimal dependency-free TypeScript contracts, runtime parser and transition function.**
 
-Use neutral names only; no AGI/NOVA/Hocker project fields.
+Use neutral names only; no AGI/NOVA/Hocker project fields. Do not import Zod into HKR Core.
 
 - [ ] **Step 4: Add workspace/idempotency validation tests.**
 
@@ -138,8 +139,10 @@ Commit: `feat(protocol): add portable HKR Work contracts`
   - `canonicalJson(value): string`
   - `sha256Hex(value): Promise<string>`
   - `containsSecretMaterial(value): boolean`
-  - `CandidateSchema`
-  - `ProofRecordSchema`
+  - `Candidate`
+  - `ProofRecord`
+  - `parseCandidate(value): Candidate`
+  - `parseProofRecord(value): ProofRecord`
   - `candidateHash(candidateWithoutHash): Promise<string>`
 
 - [ ] **Step 1: Write failing deterministic-hash tests.**
@@ -177,8 +180,10 @@ Commit: `feat(proof): add deterministic candidate evidence`
 **Interfaces:**
 - Consumes: candidate hashes from Task 3.
 - Produces:
-  - `CapabilityPolicySchema`
-  - `ApprovalEnvelopeSchema`
+  - `CapabilityPolicy`
+  - `ApprovalEnvelope`
+  - `parseCapabilityPolicy(value): CapabilityPolicy`
+  - `parseApprovalEnvelope(value): ApprovalEnvelope`
   - `authorizeCapability(context, policy): AuthorizationDecision`
   - `assertApprovalMatchesCandidate(approval, candidate): void`
 
@@ -194,9 +199,9 @@ Approval must bind workspace, candidate hash, scope, actor and expiry; altered c
 
 Same workspace + same idempotency key returns the same logical operation; same key in another workspace is independent.
 
-- [ ] **Step 4: Implement minimal policy and approval contracts.**
+- [ ] **Step 4: Implement minimal dependency-free policy, parser and approval contracts.**
 
-Do not implement provider writes.
+Do not implement provider writes. Keep Zod out of HKR Core; the MCP adapter owns external JSON schema parsing.
 
 - [ ] **Step 5: Run tests and verify GREEN.**
 
