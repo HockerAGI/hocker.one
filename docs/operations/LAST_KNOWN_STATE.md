@@ -1,14 +1,29 @@
 # HOCKER — Last Known State
 
 Status: **ACTIVE RECOVERY CARD — REQUERY MUTABLE FACTS BEFORE ACTION**
-Evidence cut: **2026-11-18 (verified GitHub/Vercel snapshot; re-query mutable facts)**
+Evidence cut: **2026-11-25 (candidate handoff; re-query mutable facts)**
 Scope: **Hocker One + NOVA + canonical AGI Core**.
 
 Live NOVA Developer E2E evidence and Owner signoff: **https://github.com/HockerAGI/hocker.one/issues/306**.
 Historical September handoff: `HANDOFF_2026-09-05-R2.md`; historical August platform closure: `PLATFORM_CLOSURE_2026-08-30.md`.
 This recovery card is dated, not an independent production certification.
 
-## Current verified pointers (2026-11-18 release snapshot; re-query before action)
+## Handoff operativo — 2026-11-25 (America/Tijuana)
+
+**Estado candidato, no certificado en producción.** El índice y #306 son las autoridades; este bloque sustituye los punteros de continuación del 18 de noviembre, que se conservan abajo como historia. Reconsultar antes de operar.
+
+- Hocker ONE main: `f79288d17d29ee10afa5afcb14e209e725f1c868`. NOVA main: `8f52a0ad6402085c8a877418996c304491bacefc`. Node Agent main: `6401aad71a5552a6e331d83d8b0b4ab62a967aa2` (lecturas GitHub de esta sesión).
+- PR activo: [#474](https://github.com/HockerAGI/hocker.one/pull/474), rama `fix/owner-nova-ux-reconciliation-20261125`, draft. Consultar su HEAD exacto, CI y Preview. La revisión de Inicio `02a78989` pasó CI [45682676386](https://github.com/HockerAGI/hocker.one/actions/runs/45682676386). Primer commit de NOVA `6ab35df8` detectó cinco regresiones de aserciones de interfaz; se ajustan a la nueva estructura sin retirar las invariantes. No atribuir al siguiente SHA los resultados anteriores.
+- GitHub App: la conversación documenta la autenticación, lectura 3/3, token con permisos y activación en Production el 24 de noviembre; reconsultar el diagnóstico Owner AAL2 antes de certificar estado vigente. PAT retenido para recuperación según evidencia histórica. No repetir pilotos. Escritura real bajo Owner Gate sigue pendiente; verificar IDs, estados, SHA y dependencia antes de cualquier aprobación; no mezclar las tres propuestas anteriores con el PR de UX ni fusionar su PR temporal.
+- Supabase: el catálogo de permisos consultado ahora confirma RLS activa y sin SELECT/INSERT para authenticated en agi_sessions, agi_messages, agi_action_queue, agi_runs y agi_memory_mirror. Preview no usa secretos administrativos ni crea memoria paralela. Chat persistente protegido en Production; pruebas reales con el Owner solo tras publicar candidato aplicable. Inicio/Operación pueden leer datos autorizados de sesión. No inventar métricas ni confundir "sin verificar" con cero.
+- UX: Inicio reorganizado, NOVA separa errores de envío/estado, controles en composer, búsqueda del historial reciente, nuevo hilo, detener recepción de stream y Markdown limitado sin HTML activo. Adjuntos, voz y traslado completo del control VFX a configuración no certificados ni habilitados por apariencia. Preservar capacidades actuales y control de acciones. No se ejecutó inferencia en esta revisión.
+- Inventario al commit `6ab35df8`: 969 blobs, 63 page.tsx, 91 API route.ts, 141 archivos de tests, 113 migraciones SQL, 6 workflows y 102 archivos docs. Inventario de árbol completo, NO auditoría línea por línea ni aceptación de todas las rutas. Módulos Trabajo, Ecosistema, Operación y Más requieren matriz funcional autenticada; los cambios anteriores de Operación tienen evidencia parcial. Revisar además el warning de getSession observado en Preview y la recepción real de OTLP antes de certificar seguridad/observabilidad.
+- Issues activos necesarios: hocker.one #306 y nova.agi #31. Node Agent sin issues. PRs de mantenimiento separados: Hocker ONE #473 (documental HKR Connect), #467/#466/#465; NOVA #72/#71/#70; Node Agent #47. No cerrar sin análisis ni incorporar al rediseño automáticamente.
+- Siguiente paso: CI exacto y Preview del nuevo HEAD, aceptación visual de NOVA sin mutaciones, revisión funcional de módulos restantes, revisión del diff y release gates; publicar solo tras checks aplicables y aceptación. Tras Production READY exacto, validar lectura/continuidad conversacional con sesión real, GitHub/Vercel, Langfuse; luego una ceremonia Owner AAL2 consolidada del #306, certificación de escritura real existente sin repetir pilotos ni evaluaciones. Dedicado #31 y SRE/restauración siguen independientes.
+- Mantener evidencia anterior: 16/16 perfiles evaluados, 48 ejecuciones de evaluación, cinco inferencias Free-only, 19/19 asignaciones read-only; verificar vigencia del alcance, no reejecutar sin cambio material. No afirmar 16 runtimes activos ni autonomía continua.
+- Checkpoint Context Bridge: pendiente de publicación normalizada autorizada. Este archivo es recuperación de emergencia, no activación de manifest ni publicación de memoria. No se almacenó chat crudo, credenciales ni TOTP.
+
+## Historical verified pointers (2026-11-18 release snapshot; not current)
 
 - Hocker One `main=f9b34f77b9b056a99cda31199adfe963060a5a41` and Vercel Production `dpl_4GXPTL9X5GEXjo4H6vShUF3vcJ2t` READY, with `hockerone.vercel.app` assigned to this deployment.
 - **MERGED PR #460** (2026-11-18): GitHub App support and disabled independent Cron monitor are deployed as code. Last checked: **0 open PRs** across `hocker.one`, `nova.agi`, `hocker-node-agent`.

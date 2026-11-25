@@ -99,7 +99,7 @@ test("NOVA status requires verified runtime health while technical telemetry sta
 
   assert.match(chat, /service_status\?\.nova/);
   assert.match(chat, /serviceLabel\(novaStatus\)/);
-  assert.match(chat, /Detalle/);
+  assert.match(chat, /aria-expanded=\{showDetail\}/);
   assert.match(chat, /service_status\?\.nova\?\.detail/);
   assert.doesNotMatch(chat, /verificadas ·|NOVA respondió sin texto visible/);
 

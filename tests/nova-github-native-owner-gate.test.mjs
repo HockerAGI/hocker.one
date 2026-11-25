@@ -112,7 +112,9 @@ test("NOVA file changes go into the existing protected GitHub queue, with verifi
   assert.match(route, /mcpBridge\.actions\.length === expectedCount/);
   assert.match(route, /todavía no se modificó GitHub/);
   assert.match(appContract, /assert\.doesNotMatch\(route, \/materializeNovaGitHubActionsFromChat\//);
-  assert.match(ui, /shouldAllowActionDraft\(prompt\).*sendSingleResponse/);
+  assert.match(ui, /const actionRequest = shouldAllowActionDraft\(prompt\)/);
+  assert.match(ui, /if \(actionRequest\) await sendSingleResponse/);
+  assert.match(ui, /else await sendStream/);
 });
 
 test("NOVA handles 1-3 existing-file changes in one guarded lifecycle, retaining legacy shape", async () => {

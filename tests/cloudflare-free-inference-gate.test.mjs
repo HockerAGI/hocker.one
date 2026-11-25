@@ -108,7 +108,9 @@ test("dedicated runtime health does not incorrectly disable the unified NOVA com
   const ui = await read("src/components/NovaRealtimeChat.tsx");
   assert.match(ui, /Motor dedicado sin señal/);
   assert.doesNotMatch(ui, /NOVA está sin conexión/);
-  assert.match(ui, /placeholder="Escribe a NOVA…"/);
+  assert.match(ui, /placeholder=\{protectedAvailable \? "Escribe a NOVA…"/);
+  assert.match(ui, /disabled=\{!protectedAvailable \|\| !historyReady \|\| !ready\}/);
+  assert.doesNotMatch(ui, /disabled=\{[^}]*novaStatus/);
 });
 
 test("native model call is bounded, request logs off, one attempt, no paid models or model tool execution", async () => {

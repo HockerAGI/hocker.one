@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Bot, ChevronLeft, CircleAlert, Cpu, Info, Loader2, RotateCw, Send, Sparkles, Square, Plus, Copy, Code2, Activity, ShieldCheck } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { DraftCard } from "@/components/DraftCard";
@@ -67,6 +67,7 @@ export default function NovaRealtimeChat({ protectedAvailable = false, preview =
 }
 
 function NovaConversation({ projectId, ready, requestedThreadId, protectedAvailable, preview, toolbar }: { projectId: string; ready: boolean; requestedThreadId: string | null; protectedAvailable: boolean; preview: boolean; toolbar?: ReactNode }) {
+  const router = useRouter();
   const [threadId] = useState(() => requestedThreadId || generateId());
   const [historyReady, setHistoryReady] = useState(!requestedThreadId);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -287,7 +288,7 @@ function NovaConversation({ projectId, ready, requestedThreadId, protectedAvaila
           <Sparkles className="h-4 w-4 text-sky-300" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">NOVA</p><p className="text-xs text-slate-300">{preview ? "Preview · conversación protegida" : "Asistente AGI · " + serviceLabel(novaStatus)}</p></div>
           <Link href="/chat/local" className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-sky-300/20 px-2.5 text-xs font-medium text-sky-200 hover:bg-sky-300/10" title="Preflight WebGPU sin créditos ni ejecución"><Cpu className="h-4 w-4" /><span className="hidden sm:inline">Prueba local</span></Link>
-          {protectedAvailable ? <><Link href={"/chat?new=" + generateId()} aria-label="Nueva conversación" className="inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-xs text-slate-200 hover:bg-white/5"><Plus className="h-4 w-4"/><span className="hidden sm:inline">Nueva</span></Link><NovaHistoryPanel /></> : <a href="https://hockerone.vercel.app/chat" className="text-xs font-semibold text-sky-200">Chat e historial en Producción</a>}
+          {protectedAvailable ? <><button type="button" disabled={sending} onClick={() => router.push("/chat?new=" + generateId())} aria-label="Nueva conversación" className="inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-xs text-slate-200 hover:bg-white/5"><Plus className="h-4 w-4"/><span className="hidden sm:inline">Nueva</span></button><NovaHistoryPanel disabled={sending} /></> : <a href="https://hockerone.vercel.app/chat" className="text-xs font-semibold text-sky-200">Chat e historial en Producción</a>}
            {queueVerified && queueSnapshot.pending > 0 ? <Link href="/owner/actions" className="rounded-lg border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200">{queueSnapshot.pending === 100 ? "100+" : queueSnapshot.pending} por aprobar</Link> : null}
           <button type="button" onClick={() => setShowDetail((value) => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-medium text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-expanded={showDetail}><Info className="h-4 w-4" />Estado</button>
         </div>
@@ -299,7 +300,7 @@ function NovaConversation({ projectId, ready, requestedThreadId, protectedAvaila
         ) : null}
       </header>
       {!protectedAvailable ? <div role="status" className="border-b border-sky-300/15 bg-[#101e2d] px-4 py-3 text-sm text-slate-200"><div className="mx-auto flex max-w-[960px] flex-wrap items-center justify-between gap-2"><span>{preview ? "Preview: conversación, memoria y acciones protegidas en Producción." : "La memoria protegida no está configurada. No se enviarán mensajes sin persistencia."}</span>{preview ? <a className="font-semibold text-sky-200 underline" href="https://hockerone.vercel.app/chat">Abrir NOVA en Producción</a> : null}</div></div> : null}
-      {runtimeError ? <div role="status" className="mx-auto w-full max-w-[960px] px-4 py-2 text-xs text-amber-100">Estado operativo sin verificar. <button type="button" onClick={() => void loadRuntime()} disabled={refreshing} className="underline">Actualizar</button></div> : null}
+      {runtimeError ? <div role="status" className="mx-auto w-full max-w-[960px] px-4 py-2 text-xs text-amber-100">Estado operativo sin verificar. <button type="button" onClick={() => void loadRuntime()} disabled={refreshing} className="underline">Comprobar estado</button></div> : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5">
         <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">

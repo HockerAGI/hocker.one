@@ -31,7 +31,7 @@ test("targeted action review remains authenticated and project scoped", async ()
 });
 test("history and aliases remain connected", async () => {
   const [chat, history, shell, home] = await Promise.all(["src/components/NovaRealtimeChat.tsx", "src/components/NovaHistoryPanel.tsx", "src/components/PrivateShell.tsx", "src/components/owner/OwnerUnifiedApprovals.tsx"].map(read));
-  assert.match(chat, /<NovaHistoryPanel \/>/);
+  assert.match(chat, /<NovaHistoryPanel disabled=\{sending\} \/>/);
   assert.match(chat, /const \[threadId\] = useState\(\(\) => requestedThreadId \|\| generateId\(\)\)/);
   assert.match(history, /router\.push\("\/chat\?thread_id="/);
   assert.match(shell, /pathname === "\/owner\/nova"/);

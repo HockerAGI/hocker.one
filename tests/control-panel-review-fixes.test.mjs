@@ -23,8 +23,8 @@ test("enqueued NOVA actions cannot be dismissed as a local cancellation", async 
 test("NOVA chat preserves its thread and fails closed when approval state is unreadable", async () => {
   const source = await read("src/components/NovaRealtimeChat.tsx");
   assert.match(source, /const \[threadId\] = useState\(\(\) => requestedThreadId \|\| generateId\(\)\)/);
-  assert.match(source, /key=\{projectId \+ ":" \+ \(requestedThreadId \?\? "new"\)\}/);
-  assert.match(source, /!historyReady \|\| abortRef\.current/);
+  assert.match(source, /key=\{projectId \+ ":" \+ \(requestedThreadId \?\? params.get\("new"\) \?\? "new"\)\}/);
+  assert.match(source, /!historyReady \|\| !protectedAvailable \|\| abortRef\.current/);
   assert.equal((source.match(/thread_id: threadId/g) ?? []).length, 2);
   assert.match(source, /unreadableQueueLock/);
   assert.match(source, /can_start_new_task: false/);

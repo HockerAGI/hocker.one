@@ -17,6 +17,7 @@ test("chat status and errors remain distinct; preview has no protected polling",
  assert.match(chat,/\!protectedAvailable \|\| abortRef.current/);
  assert.match(chat,/allow_actions: false/);
  assert.match(chat,/Se detuvo la recepción/);
+ assert.match(chat,/disabled=\{sending\} onClick=\{\(\) => router.push\("\/chat\?new=" \+ generateId\(\)\)\}/);
  assert.match(lazy,/toolbar=\{protectedAvailable \?/);
  assert.doesNotMatch(render,/dangerouslySetInnerHTML|eval\(/);
 });
