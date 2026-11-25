@@ -7,7 +7,7 @@ test("failed admin queries do not become visible zero metrics or uncreated agent
  assert.match(runtime,/databaseOnline \? "online" : "unknown"/);
  assert.match(runtime,/count_verified:/);
  assert.match(op,/databaseOk \? "not_created" : "unknown"/);
- assert.match(home,/pendingCount === null \? "Pendientes sin verificar"/);
+ assert.match(home,/initialPendingCount=\{pendingCount\}/);
  for(const source of [status,dash,map]) assert.match(source,/source === "supabase\+health" \?/);
 });
 test("connections require recent evidence and integration monitoring is read only",async()=>{

@@ -58,8 +58,8 @@ export default function Sidebar() {
           })}
         </div>
 
-        {activeSection.items.length > 1 ? (
-          <details open={activeSection.id === "trabajo" || activeSection.id === "mas"} className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
+        {activeSection.id !== "inicio" && activeSection.items.length > 1 ? (
+          <details open className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-slate-400">
               <ChevronDown className="h-4 w-4" /> En {activeSection.label}
             </summary>

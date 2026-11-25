@@ -54,7 +54,8 @@ async function safeCount(table: string, projectId: string): Promise<CountResult>
   }
 }
 
-export async function getVerifiedAgiRuntimeSummary(projectId: string) {
+export async function getVerifiedAgiRuntimeSummary(projectId: string, options: { allowProtectedReads?: boolean } = {}) {
+  const allowProtectedReads = options.allowProtectedReads !== false;
   const checkedAt = new Date().toISOString();
   const catalog = getRuntimeToolCatalog();
 
@@ -63,6 +64,7 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
   let checks: IntegrationCheckRow[] = [];
 
   try {
+    if (!allowProtectedReads) throw new Error("PROTECTED_READ_NOT_REQUESTED");
     const sb = createAdminSupabase();
     const [agentsRes, checksRes] = await Promise.all([
       sb.from("agi_agents").select("agi_id").eq("project_id", projectId),
@@ -164,12 +166,9 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
     };
   });
 
+  const count = (table: string) => allowProtectedReads ? safeCount(table, projectId) : Promise.resolve({ count: 0, ok: false });
   const [tasks, runs, actions, feedback, threads] = await Promise.all([
-    safeCount("agi_tasks", projectId),
-    safeCount("agi_runs", projectId),
-    safeCount("agi_action_queue", projectId),
-    safeCount("agi_feedback", projectId),
-    safeCount("agi_chat_threads", projectId),
+    count("agi_tasks"), count("agi_runs"), count("agi_action_queue"), count("agi_feedback"), count("agi_chat_threads"),
   ]);
 
   const canonicalAgents = new Set(agentRows.map((row) => canonicalAgiId(row.agi_id)));

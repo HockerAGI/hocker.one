@@ -21,8 +21,8 @@ test("Owner mirror derives service verification from a protected, no-store readi
   assert.match(component, /no una lista de credenciales guardadas/);
   assert.doesNotMatch(component, /process\.env|PRIVATE_KEY|VERCEL_TOKEN|HOCKER_GITHUB_TOKEN/);
 
-  assert.match(page, /supabaseAgiMetric\?\.ok === true/);
-  assert.match(page, /typeof supabaseAgiMetric\.count === "number"/);
+  assert.match(page, /evidence\.nodeCount !== null \|\| evidence\.agiCount !== null/);
+  assert.match(page, /agiCount: evidence\.agiCount, nodeCount: evidence\.nodeCount/);
   assert.match(page, /<OwnerProviderMirror/);
   assert.match(endpoint, /requireOwnerAal2Api\(PROJECT_ID\)/);
   assert.match(endpoint, /authentication_scope: "read_only_verified_no_write_attestation"/);
@@ -33,8 +33,8 @@ test("Unavailable Supabase counts never render as confirmed zero", async () => {
   const status = await read("src/components/owner/OwnerUnifiedStatus.tsx");
   assert.match(source, /SUPABASE_PULSE_COUNT_UNAVAILABLE/);
   assert.match(source, /learningSeen\.error \|\| memorySeen\.error/);
-  assert.match(status, /pulse\.ok && pulse\.source === "supabase" \? count : "—"/);
-  assert.match(status, /No se pudo verificar el conteo/);
+  assert.match(status, /value \?\? "—"/);
+  assert.match(status, /Los valores sin verificar no son cero/);
 });
 
 test("Mirror layout follows existing brand and accessible UX constraints", async () => {

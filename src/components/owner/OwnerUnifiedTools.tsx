@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Bot, PlugZap, ShieldCheck } from "lucide-react";
 import type { AgiRuntimeSummaryLike, IntegrationLike } from "@/types/agi-runtime-summary";
 
-type Props = { summary: AgiRuntimeSummaryLike };
+type Props = { summary: AgiRuntimeSummaryLike; preview?: boolean };
 
 function statusTag(status: string) {
   if (status === "connected") return { cls: "ok", label: "Verificada" };
@@ -11,17 +11,14 @@ function statusTag(status: string) {
   return { cls: "missing", label: "No disponible" };
 }
 
-export default function OwnerUnifiedTools({ summary }: Props) {
+export default function OwnerUnifiedTools({ summary, preview = false }: Props) {
   const integrations: IntegrationLike[] = Array.isArray(summary.integrations)
     ? (summary.integrations as IntegrationLike[])
     : [];
-  const verified = integrations.filter((item) => item.status === "connected");
+  const verified = integrations.filter((item) => item.status === "connected" && item.verified === true);
   const configured = integrations.filter((item) => item.status === "configured");
-  const partial = integrations.filter((item) => item.status === "partial");
-  const missing = integrations.filter((item) =>
-    ["missing", "missing_key", "missing_code", "blocked", "offline"].includes(item.status),
-  );
-  const featured = [...verified, ...configured, ...partial, ...missing].slice(0, 12);
+  const featured = integrations;
+  const remaining = integrations.length - verified.length - configured.length;
 
   return (
     <section className="hko-uni-panel hko-uni-tools">
@@ -29,7 +26,7 @@ export default function OwnerUnifiedTools({ summary }: Props) {
         <div>
           <p className="hko-uni-panel-kicker">Herramientas, APIs y servicios</p>
           <p className="hko-uni-panel-title">
-            {verified.length} verificadas · {configured.length} configuradas · {partial.length + missing.length} pendientes
+            {preview ? `${integrations.length} herramientas del catálogo` : `${verified.length} verificadas · ${configured.length} configuradas · ${remaining} sin verificar`}
           </p>
         </div>
         <span className="hko-status-val info">
@@ -42,12 +39,12 @@ export default function OwnerUnifiedTools({ summary }: Props) {
           <summary className="py-2 text-sm font-semibold text-cyan-100">Explorar herramientas adicionales</summary>
           <div className="hko-uni-toolgrid mt-3">
           {featured.map((tool) => {
-            const tag = statusTag(String(tool.status ?? "missing"));
+            const tag = statusTag(tool.status === "connected" && tool.verified !== true ? "configured" : String(tool.status ?? "missing"));
             return (
               <div key={tool.tool_key ?? tool.name} className="hko-uni-tool" title={tool.status_hint}>
                 <span className="hko-uni-tool-name">
                   <PlugZap className="h-3.5 w-3.5 shrink-0 text-sky-300/70" />
-                  <span>{tool.name ?? tool.tool_key}</span>
+                  <span>{tool.name ?? tool.tool_key}<small className="block text-slate-300">{tool.supports_read ? "Lectura" : ""}{tool.supports_read && tool.supports_write ? " · " : ""}{tool.supports_write ? "Escritura protegida" : ""}{tool.last_verified_at && tool.verified ? " · " + new Date(tool.last_verified_at).toLocaleString("es-MX", {timeZone:"America/Tijuana"}) : ""}</small></span>
                 </span>
                 <span className={`hko-uni-tool-tag ${tag.cls}`}>{tag.label}</span>
               </div>
@@ -63,12 +60,12 @@ export default function OwnerUnifiedTools({ summary }: Props) {
         </details>
 
         <p className="mt-3 text-xs leading-5 text-slate-400">
-          “Configurada” significa que existen variables o credenciales. “Verificada” exige una comprobación real reciente.
+          {preview ? "Catálogo y configuración de esta vista. No representa el inventario de conexiones de Producción." : "Configurada: credenciales presentes. Verificada: lectura reciente comprobada."}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
           <Link href="/integrations" className="hocker-button-primary inline-flex items-center gap-2">
-            Ver herramientas y APIs
+            Ver conexiones
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link href="/chat" className="hocker-button-secondary inline-flex items-center gap-2">
