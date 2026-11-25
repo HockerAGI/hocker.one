@@ -120,7 +120,7 @@ export function decideNovaChatRoutes(input: {
   tools_requested?: string[];
 }): { webSearchRequired: boolean; engineeringTask: boolean; freeOnlyChat: boolean } {
   const specialistId = routeChatProfile(input.message);
-  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(input.message);
+  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar|github|branch|rama|pull request|commit)\b/i.test(input.message);
   // Repository lifecycle requests must use the tool-capable engineering route.
   // "SHA actual" and "auditoría" describe local GitHub verification, not
   // external web research. Otherwise the model router excludes AI Gateway
