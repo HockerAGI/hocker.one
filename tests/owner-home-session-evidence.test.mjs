@@ -22,6 +22,6 @@ test("home uses compact rows and separates dedicated runtime and assistant",asyn
  assert.match(page,/Motor dedicado/);assert.doesNotMatch(page,/hocker-one-logo\.png/);
  assert.match(css,/hko-home-compact \.hko-uni-chat \{ min-height: 0; max-height: none/);
  assert.match(css,/repeat\(4,minmax\(0,1fr\)\)/);
- assert.match(side,/activeSection.id !== "inicio"/);
+ assert.match(side,/secondaryItems.length > 0/);assert.match(side,/item.href !== activeSection.href/);
  assert.match(tools,/No representa el inventario de conexiones de Producción/);
 });

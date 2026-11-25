@@ -24,6 +24,7 @@ function riskLabel(risk: string) {
 export default function OwnerUnifiedApprovals({ projectId, enabled = true, preview = false, initialPendingCount = null }: { projectId: string; enabled?: boolean; preview?: boolean; initialPendingCount?: number | null }) {
   const [actions, setActions] = useState<RuntimeAction[]>([]);
   const [loading, setLoading] = useState(enabled);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   const pending = useMemo(() => actions.filter((a) => a.status === "needs_approval"), [actions]);
@@ -36,6 +37,7 @@ export default function OwnerUnifiedApprovals({ projectId, enabled = true, previ
       if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) throw new Error(data.error || "No se pudo consultar la cola.");
       setLoadError(false);
       setActions(data.actions ?? []);
+      setCheckedAt(new Date().toISOString());
     } catch {
       setLoadError(true);
       setActions([]);
@@ -68,7 +70,7 @@ export default function OwnerUnifiedApprovals({ projectId, enabled = true, previ
           <p className="hko-uni-appr-empty">Leyendo cola…</p>
         ) : loadError ? (
           <p className="hko-uni-appr-empty text-amber-200" role="status">
-            No fue posible consultar la cola. Revisa el centro Owner antes de asumir que no hay pendientes.
+            No se pudo consultar la cola. <button type="button" onClick={() => void load()} className="font-semibold text-sky-200 underline">Reintentar</button>.
           </p>
         ) : pending.length === 0 ? (
           <p className="hko-uni-appr-empty">
@@ -96,6 +98,7 @@ export default function OwnerUnifiedApprovals({ projectId, enabled = true, previ
             </div>
           ))
         )}
+        {enabled && !loadError && checkedAt ? <p className="mt-2 text-xs text-slate-300">Consulta: {new Date(checkedAt).toLocaleTimeString("es-MX", {timeZone:"America/Tijuana"})} · Tijuana{pending.length > 3 ? " · mostrando 3" : ""}</p> : null}
         {preview ? <a href="https://hockerone.vercel.app/owner/actions" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-sky-200">Abrir aprobaciones en Producción</a> : !enabled ? <Link href="/auth/mfa?returnTo=%2Fowner" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-sky-200">Verificar acceso</Link> : <Link href="/owner/actions" className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-sky-200">Ver todas las acciones</Link>}
       </div>
     </section>

@@ -39,7 +39,7 @@ export default async function OwnerPage() {
         </div>
         <div className="hko-uni-hero-pills">
           <span className="hko-uni-hero-pill is-protect">{preview ? "Preview" : evidence.environment === "production" ? "Producción" : "Entorno sin confirmar"}</span>
-          {evidence.ownerRole ? <Link href="/auth/mfa?returnTo=%2Fowner" className="hko-uni-hero-pill is-protect">{evidence.ownerMfa === true ? "MFA verificado" : evidence.ownerMfa === false ? "Verificar MFA" : "MFA sin comprobar"}</Link> : null}
+          {evidence.ownerRole && evidence.ownerMfa === true ? <span className="hko-uni-hero-pill is-live">MFA verificado</span> : evidence.ownerRole ? <Link href="/auth/mfa?returnTo=%2Fowner" className="hko-uni-hero-pill is-protect">{evidence.ownerMfa === false ? "Verificar MFA" : "MFA sin comprobar"}</Link> : null}
           <RefreshDataButton />
         </div>
         {preview ? <p className="w-full rounded-xl border border-sky-300/20 bg-sky-300/5 px-3 py-2 text-sm text-slate-200">Vista de evaluación. Los datos de sesión son reales; las comprobaciones protegidas se realizan en <a className="font-semibold text-sky-200 underline" href="https://hockerone.vercel.app/owner">Producción</a>.</p> : null}
@@ -65,7 +65,7 @@ export default async function OwnerPage() {
         agiCount: evidence.agiCount, nodeCount: evidence.nodeCount, checkedAt: evidence.checkedAt,
       }} />
       <div className="hko-home-operation"><OwnerUnifiedStatus evidence={evidence} novaService={novaService} /><OwnerHomeActivity evidence={evidence} /></div>
-      <OwnerUnifiedTools summary={runtime} preview={preview} />
+      <OwnerUnifiedTools summary={runtime} preview={preview} sessionReadVerified={evidence.nodeCount !== null} />
       <section className="hko-uni-panel hko-uni-quick">
         <div className="hko-uni-panel-head"><h2 className="hko-uni-panel-title">Accesos rápidos</h2></div>
         <div className="hko-uni-quick-grid">

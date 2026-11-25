@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Bot, PlugZap, ShieldCheck } from "lucide-react";
 import type { AgiRuntimeSummaryLike, IntegrationLike } from "@/types/agi-runtime-summary";
 
-type Props = { summary: AgiRuntimeSummaryLike; preview?: boolean };
+type Props = { summary: AgiRuntimeSummaryLike; preview?: boolean; sessionReadVerified?: boolean };
 
 function statusTag(status: string) {
   if (status === "connected") return { cls: "ok", label: "Verificada" };
@@ -11,7 +11,7 @@ function statusTag(status: string) {
   return { cls: "missing", label: "No disponible" };
 }
 
-export default function OwnerUnifiedTools({ summary, preview = false }: Props) {
+export default function OwnerUnifiedTools({ summary, preview = false, sessionReadVerified = false }: Props) {
   const integrations: IntegrationLike[] = Array.isArray(summary.integrations)
     ? (summary.integrations as IntegrationLike[])
     : [];
@@ -39,12 +39,12 @@ export default function OwnerUnifiedTools({ summary, preview = false }: Props) {
           <summary className="py-2 text-sm font-semibold text-cyan-100">Explorar herramientas adicionales</summary>
           <div className="hko-uni-toolgrid mt-3">
           {featured.map((tool) => {
-            const tag = statusTag(tool.status === "connected" && tool.verified !== true ? "configured" : String(tool.status ?? "missing"));
+            const tag = tool.tool_key === "supabase" && sessionReadVerified && tool.verified !== true ? { cls: "partial", label: "Lectura de sesión" } : statusTag(tool.status === "connected" && tool.verified !== true ? "configured" : String(tool.status ?? "missing"));
             return (
               <div key={tool.tool_key ?? tool.name} className="hko-uni-tool" title={tool.status_hint}>
                 <span className="hko-uni-tool-name">
                   <PlugZap className="h-3.5 w-3.5 shrink-0 text-sky-300/70" />
-                  <span>{tool.name ?? tool.tool_key}<small className="block text-slate-300">{tool.supports_read ? "Lectura" : ""}{tool.supports_read && tool.supports_write ? " · " : ""}{tool.supports_write ? "Escritura protegida" : ""}{tool.last_verified_at && tool.verified ? " · " + new Date(tool.last_verified_at).toLocaleString("es-MX", {timeZone:"America/Tijuana"}) : ""}</small></span>
+                  <span>{tool.name ?? tool.tool_key}<small className="block text-slate-300">{tool.supports_read ? "Capacidad: lectura" : ""}{tool.supports_read && tool.supports_write ? " · " : ""}{tool.supports_write ? "Escritura sujeta a aprobación" : ""}{tool.last_verified_at && tool.verified ? " · " + new Date(tool.last_verified_at).toLocaleString("es-MX", {timeZone:"America/Tijuana"}) : ""}</small></span>
                 </span>
                 <span className={`hko-uni-tool-tag ${tag.cls}`}>{tag.label}</span>
               </div>

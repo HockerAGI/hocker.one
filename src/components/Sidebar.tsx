@@ -10,6 +10,7 @@ import { getActiveHockerSection, HOCKER_NAVIGATION, isHockerRouteActive } from "
 export default function Sidebar() {
   const pathname = usePathname() || "/owner";
   const activeSection = getActiveHockerSection(pathname);
+  const secondaryItems = activeSection.items.filter(item => item.href !== activeSection.href);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -58,13 +59,13 @@ export default function Sidebar() {
           })}
         </div>
 
-        {activeSection.id !== "inicio" && activeSection.items.length > 1 ? (
+        {secondaryItems.length > 0 ? (
           <details open className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-slate-400">
               <ChevronDown className="h-4 w-4" /> En {activeSection.label}
             </summary>
             <div className="mt-1 grid gap-0.5">
-              {activeSection.items.map((item) => {
+              {secondaryItems.map((item) => {
                 const Icon = item.icon;
                 const active = isHockerRouteActive(pathname, item.href);
                 return (

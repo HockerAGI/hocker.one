@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Cloud, Database, GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
+import { Cloud, Database, GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
 
 type ProviderStatus = {
   configured?: boolean;
@@ -110,7 +110,7 @@ export default function OwnerProviderMirror({ supabase, preview = false }: Props
         <button className="hko-mirror-refresh" type="button" onClick={() => { router.refresh(); void verify(); }}
           disabled={loading} aria-label="Actualizar estado de integraciones">
           <RefreshCw size={17} aria-hidden="true" className={loading ? "hko-mirror-spin" : ""} />
-          <span>{loading ? "Comprobando" : "Actualizar"}</span>
+          <span>{loading ? "Comprobando" : preview ? "Actualizar datos" : "Actualizar conexiones"}</span>
         </button>
       </div>
 
@@ -175,10 +175,10 @@ export default function OwnerProviderMirror({ supabase, preview = false }: Props
       <details className="hko-mirror-details">
         <summary>Ver fuente y fecha de cada estado</summary>
         <div className="hko-mirror-details-grid">
-          <p><CheckCircle2 size={14} aria-hidden="true" /> Supabase: {supabase.verified ? "conteo consultado desde la base de datos" : "conteo sin verificar"}. {safeTimestamp(supabase.checkedAt)}.</p>
-          <p><CheckCircle2 size={14} aria-hidden="true" /> GitHub: {githubVerified ? "lectura verificada con " + githubKind : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
-          <p><CheckCircle2 size={14} aria-hidden="true" /> Vercel: {vercelVerified ? "lectura verificada" : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
-          {preview ? <p className="hko-mirror-note">Evidencia histórica: <a className="underline" href="https://github.com/HockerAGI/hocker.one/pull/471">GitHub App · PR #471</a>. No acredita conexión actual.</p> : null}
+          <p><Database size={14} aria-hidden="true" /> Supabase: {supabase.verified ? "conteo consultado desde la base de datos" : "conteo sin verificar"}. {safeTimestamp(supabase.checkedAt)}.</p>
+          <p><GitBranch size={14} aria-hidden="true" /> GitHub: {githubVerified ? "lectura verificada con " + githubKind : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
+          <p><Cloud size={14} aria-hidden="true" /> Vercel: {vercelVerified ? "lectura verificada" : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
+          {preview ? <p className="hko-mirror-note">Evidencia histórica: <a className="underline" href="https://github.com/HockerAGI/hocker.one/pull/471">GitHub App · PR #471</a> y <a className="underline" href="https://github.com/HockerAGI/hocker.one/issues/306">registro de certificación #306</a>. No acreditan conexión actual.</p> : null}
           {readiness?.github_identity_kind === "pat" ? <p className="hko-mirror-note">La lectura por PAT no certifica la GitHub App.</p> : null}
         </div>
       </details>
