@@ -93,7 +93,7 @@ export default async function MemoryPage() {
       <HockerPageHeader
         eyebrow="Registros persistidos"
         title="Memoria"
-        text="Consulta decisiones, aprendizajes y registros de memoria. No equivale a actividad en vivo."
+        text="Consulta eventos almacenados en Supabase. No equivalen a actividad en vivo."
       />
 
       <section className="hko-map-panel">
