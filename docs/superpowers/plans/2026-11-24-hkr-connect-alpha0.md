@@ -6,7 +6,7 @@
 
 **Architecture:** Clean-room TypeScript monorepo. Reuse proven HOCKER algorithms and invariants at contract level, but rebuild storage/auth/provider adapters so no HOCKER service-role, AGI canon, Owner identity or fixed repository list becomes customer authorization. Alpha 0 exposes only non-provider-mutating Work/Proof tools over official MCP Streamable HTTP.
 
-**Tech Stack:** Node.js 22.x, TypeScript, npm workspaces, `@modelcontextprotocol/sdk`, Zod, Node built-in test runner, PostgreSQL-compatible persistence interface.
+**Tech Stack:** Node.js 22.x, TypeScript, npm workspaces, MCP TypeScript SDK v2 (`@modelcontextprotocol/server` plus `@modelcontextprotocol/node` for Node HTTP adaptation), Zod, Node built-in test runner, PostgreSQL-compatible persistence interface.
 
 **Spec:** `docs/superpowers/specs/2026-11-24-hkr-connect-extraction-design.md`
 
@@ -15,7 +15,7 @@
 - Existing HOCKER repositories remain unchanged by implementation.
 - New code belongs in private `HockerAGI/hkr.connect`.
 - Node.js 22.x is the runtime floor for Alpha 0.
-- Use the official `@modelcontextprotocol/sdk` server surface.
+- Use the official MCP TypeScript SDK v2 server surface (`@modelcontextprotocol/server`); use `@modelcontextprotocol/node` only for the Node HTTP adapter.
 - MCP public transport is Streamable HTTP at `/mcp`.
 - Authorization is enforced in server code for every request; MCP annotations never grant access.
 - Alpha 0 performs no GitHub, Vercel, Supabase, filesystem, shell, payment, gambling, KYC, surveillance or location mutation.
@@ -256,9 +256,9 @@ Commit: `feat(storage): define HKR persistence boundary`
 - Consumes: `WorkStore`, protocol/control/proof packages.
 - Produces: Streamable HTTP MCP endpoint at `/mcp`.
 
-- [ ] **Step 1: Add official MCP SDK + Zod dependencies and write failing initialization test.**
+- [ ] **Step 1: Add the current stable MCP TypeScript SDK v2 server package, Node HTTP adapter and Zod dependencies, then write the failing initialization test.**
 
-Server identity: `hkr-connect`, semantic version from package.
+Server identity: `hkr-connect`, semantic version from package. Use the modern v2 server APIs (`McpServer` / `createMcpHandler`) and a Node adapter (`toNodeHandler`) rather than the legacy v1 umbrella package.
 
 - [ ] **Step 2: Implement request auth context.**
 
