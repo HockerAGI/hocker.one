@@ -119,9 +119,9 @@ export default async function EcosystemVfxNetwork({ summary }: { summary: Hocker
         </div>
 
         <CoreMetric label="Servicios" value={operational.metrics.verified_services} text="verificados ahora" tone="mint" />
-        <CoreMetric label="Nodos" value={operational.metrics.fresh_nodes} text="heartbeat ≤ 5 min" tone="violet" />
-        <CoreMetric label="Runs" value={operational.metrics.runs_24h} text="registrados en 24 h" tone="cyan" />
-        <CoreMetric label="Aprobaciones" value={operational.metrics.pending_actions} text="acciones pendientes" tone="amber" />
+        <CoreMetric label="Nodos" value={operational.source === "supabase+health" ? operational.metrics.fresh_nodes : "—"} text="heartbeat ≤ 5 min" tone="violet" />
+        <CoreMetric label="Runs" value={operational.source === "supabase+health" ? operational.metrics.runs_24h : "—"} text="registrados en 24 h" tone="cyan" />
+        <CoreMetric label="Aprobaciones" value={operational.source === "supabase+health" ? operational.metrics.pending_actions : "—"} text="acciones pendientes" tone="amber" />
       </div>
 
       <div className="hko-final-route" aria-label="Flujo supervisado documentado">

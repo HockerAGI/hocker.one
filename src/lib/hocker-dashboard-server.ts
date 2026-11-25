@@ -130,17 +130,17 @@ export async function buildDashboardSummary(): Promise<DashboardSummary> {
       },
       {
         label: "Nodos con señal",
-        value: String(operational.metrics.fresh_nodes),
+        value: operational.source === "supabase+health" ? String(operational.metrics.fresh_nodes) : "—",
         hint: "Últimos 5 minutos",
       },
       {
         label: "Ejecuciones 24h",
-        value: String(operational.metrics.runs_24h),
+        value: operational.source === "supabase+health" ? String(operational.metrics.runs_24h) : "—",
         hint: "Runs realmente registrados",
       },
       {
         label: "Por aprobar",
-        value: String(operational.metrics.pending_actions),
+        value: operational.source === "supabase+health" ? String(operational.metrics.pending_actions) : "—",
         hint: "Acciones bloqueantes",
       },
     ],

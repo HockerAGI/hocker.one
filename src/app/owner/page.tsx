@@ -56,7 +56,7 @@ export default async function OwnerPage() {
   const liveSummaryTyped = liveSummary as Awaited<ReturnType<typeof getHockerLiveSummary>> | null;
   const runtimeTyped = operational.runtime as AgiRuntimeSummaryLike;
   const novaService = operational.runtime.service_status.nova;
-  const pendingCount = operational.metrics.pending_actions;
+  const pendingCount = operational.source === "supabase+health" ? operational.metrics.pending_actions : null;
   const novaIsOnline = novaService.status === "online";
   const supabaseAgiMetric = liveSummary?.counts.find((item) => item.table === "agis");
 
@@ -86,7 +86,7 @@ export default async function OwnerPage() {
             <span className="dot" /> {novaLabel(novaService.status)}
           </span>
           <span className="hko-uni-hero-pill is-protect"><span className="dot" /> Owner Gate</span>
-          {pendingCount > 0 ? (
+          {pendingCount !== null && pendingCount > 0 ? (
             <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por revisar</span>
           ) : null}
         </div>
@@ -122,7 +122,7 @@ export default async function OwnerPage() {
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-xs font-semibold text-slate-400">
-                {pendingCount > 0 ? `${pendingCount} acción${pendingCount === 1 ? "" : "es"} por revisar` : "Sin acciones pendientes"}
+                {pendingCount === null ? "Pendientes sin verificar" : pendingCount > 0 ? `${pendingCount} acción${pendingCount === 1 ? "" : "es"} por revisar` : "Sin acciones pendientes"}
               </span>
               <span className="inline-flex items-center gap-2 text-sm font-black text-sky-200 transition-transform group-hover:translate-x-0.5">
                 Entrar <ArrowUpRight className="h-4 w-4" />

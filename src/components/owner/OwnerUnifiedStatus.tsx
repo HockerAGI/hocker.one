@@ -11,7 +11,7 @@ type Props = {
 };
 
 function timeAgo(iso: string | null): string {
-  if (!iso) return "sin fecha";
+  if (!iso || !Number.isFinite(Date.parse(iso)) || Date.parse(iso) > Date.now()) return "sin fecha válida";
   const diff = Date.now() - new Date(iso).getTime();
   if (diff < 60_000) return "hace segundos";
   if (diff < 3_600_000) return `hace ${Math.round(diff / 60_000)} min`;
@@ -27,8 +27,8 @@ function levelTone(level: string | null): "info" | "warn" | "error" {
 
 export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, checkedAt }: Props) {
   const agent = liveSummary?.agent;
-  const agentState = agent?.state_label ?? "Sin señal";
-  const agentTone = agent?.state === "activo" ? "ok" : agent?.state === "sin_senal_reciente" ? "warn" : "err";
+  const agentState = agent?.state_label ?? "Sin verificar";
+  const agentTone = agent?.state === "activo" ? "ok" : agent?.state === "sin_senal_reciente" || !agent ? "warn" : "err";
 
   const security = liveSummary?.security;
   const ownerGate = security?.owner_gate === "activo" ? "ok" : "warn";
@@ -81,7 +81,7 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, ch
               <div className="hko-status-detail">Regla de aprobación en la sesión privada</div>
             </div>
           </div>
-          <span className={`hko-status-val ${ownerGate}`}>{ownerGate === "ok" ? "Configurado" : "Revisar"}</span>
+          <span className={`hko-status-val ${ownerGate}`}>{ownerGate === "ok" ? "Regla declarada" : "Sin verificar"}</span>
         </div>
 
         <div className="hko-status-row">
@@ -92,7 +92,7 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, ch
               <div className="hko-status-detail">Debe permanecer bloqueada sin aprobación</div>
             </div>
           </div>
-          <span className={`hko-status-val ${executionLock}`}>{executionLock === "ok" ? "Bloqueada" : "Revisar"}</span>
+          <span className={`hko-status-val ${executionLock}`}>{executionLock === "ok" ? "Política declarada" : "Sin verificar"}</span>
         </div>
 
         <div>
@@ -127,7 +127,7 @@ export default function OwnerUnifiedStatus({ liveSummary, pulse, novaService, ch
           <p className="hko-uni-panel-kicker" style={{ marginBottom: "0.5rem" }}>Eventos registrados</p>
           <div className="hko-uni-feed">
             {events.length === 0 ? (
-              <p className="hko-uni-feed-empty">Sin eventos disponibles.</p>
+              <p className="hko-uni-feed-empty">{liveSummary?.ok ? "Sin eventos disponibles." : "Consulta sin verificar."}</p>
             ) : (
               events.map((evt) => (
                 <div key={evt.id} className="hko-uni-feed-item">

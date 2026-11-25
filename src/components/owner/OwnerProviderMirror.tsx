@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Cloud, Database, GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
 
@@ -33,10 +34,11 @@ type Props = {
 function safeTimestamp(value: string | null | undefined): string {
   if (!value) return "Sin comprobación";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Sin comprobación" : date.toLocaleString("es-MX");
+  return Number.isNaN(date.getTime()) ? "Sin comprobación" : date.toLocaleString("es-MX", { timeZone: "America/Tijuana" });
 }
 
 export default function OwnerProviderMirror({ supabase }: Props) {
+  const router = useRouter();
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
   const [accessReason, setAccessReason] = useState<"session" | "mfa" | null>(null);
   const [error, setError] = useState(false);
@@ -101,7 +103,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
           <h2 className="hko-mirror-title" id="hko-mirror-heading">Todo lo importante, en un vistazo</h2>
           <p className="hko-mirror-description">Comprobaciones reales, no una lista de credenciales guardadas.</p>
         </div>
-        <button className="hko-mirror-refresh" type="button" onClick={() => void verify()}
+        <button className="hko-mirror-refresh" type="button" onClick={() => { router.refresh(); void verify(); }}
           disabled={loading} aria-label="Actualizar estado de integraciones">
           <RefreshCw size={17} aria-hidden="true" className={loading ? "hko-mirror-spin" : ""} />
           <span>{loading ? "Comprobando" : "Actualizar"}</span>
@@ -168,7 +170,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
       <details className="hko-mirror-details">
         <summary>Ver fuente y fecha de cada estado</summary>
         <div className="hko-mirror-details-grid">
-          <p><CheckCircle2 size={14} aria-hidden="true" /> Supabase: conteo consultado desde la base de datos. {safeTimestamp(supabase.checkedAt)}.</p>
+          <p><CheckCircle2 size={14} aria-hidden="true" /> Supabase: {supabase.verified ? "conteo consultado desde la base de datos" : "conteo sin verificar"}. {safeTimestamp(supabase.checkedAt)}.</p>
           <p><CheckCircle2 size={14} aria-hidden="true" /> GitHub: {githubVerified ? "lectura verificada con " + githubKind : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
           <p><CheckCircle2 size={14} aria-hidden="true" /> Vercel: {vercelVerified ? "lectura verificada" : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
           {readiness?.github_identity_kind === "pat" ? <p className="hko-mirror-note">La lectura por PAT no certifica la GitHub App.</p> : null}

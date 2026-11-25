@@ -70,9 +70,9 @@ export default async function StatusPage() {
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <article className="hko-mini-stat"><span>Servicios verificados</span><strong>{snapshot.metrics.verified_services}</strong></article>
         <article className="hko-mini-stat"><span>Herramientas configuradas</span><strong>{snapshot.metrics.configured_tools}</strong></article>
-        <article className="hko-mini-stat"><span>Nodos con señal</span><strong>{snapshot.metrics.fresh_nodes}</strong></article>
-        <article className="hko-mini-stat"><span>Runs en 24 h</span><strong>{snapshot.metrics.runs_24h}</strong></article>
-        <article className="hko-mini-stat"><span>Acciones pendientes</span><strong>{snapshot.metrics.pending_actions}</strong></article>
+        <article className="hko-mini-stat"><span>Nodos con señal</span><strong>{snapshot.source === "supabase+health" ? snapshot.metrics.fresh_nodes : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Runs en 24 h</span><strong>{snapshot.source === "supabase+health" ? snapshot.metrics.runs_24h : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Acciones pendientes</span><strong>{snapshot.source === "supabase+health" ? snapshot.metrics.pending_actions : "—"}</strong></article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
