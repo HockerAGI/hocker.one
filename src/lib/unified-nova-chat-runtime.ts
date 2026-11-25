@@ -120,11 +120,22 @@ export function decideNovaChatRoutes(input: {
   tools_requested?: string[];
 }): { webSearchRequired: boolean; engineeringTask: boolean; freeOnlyChat: boolean } {
   const specialistId = routeChatProfile(input.message);
+  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(input.message);
+  // Repository lifecycle requests must use the tool-capable engineering route.
+  // "SHA actual" and "auditoría" describe local GitHub verification, not
+  // external web research. Otherwise the model router excludes AI Gateway
+  // and can fail before NOVA proposes any Owner Gate actions.
+  const internalGitHubWorkflow = /\b(github|repo|repositorio|branch|rama|pull request|commit|owner gate)\b/i.test(input.message)
+    && /\b(prepara|preparar|ejecuta|ejecutar|crea|crear|corrige|corregir|modifica|modificar|actualiza|actualizar|verifica|verificar|comprueba|certifica|certificación|certificacion)\b/i.test(input.message);
+  // Explicit research still requires native web-search support, including
+  // when the investigation concerns GitHub. Ambiguous freshness does not.
+  const explicitResearch = /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|latest|research)\b/i.test(input.message);
+  const contextualFreshness = /\b(actual|reciente|hoy|auditoría|auditoria)\b/i.test(input.message);
   const webSearchRequired = input.message.trim().length > 0 && (
     specialistId === "curvewind"
-    || /\b(investiga|investigación|investigacion|compara|benchmark|fuentes|citas|actual|reciente|hoy|latest|research|auditoría|auditoria)\b/i.test(input.message)
+    || explicitResearch
+    || (contextualFreshness && !internalGitHubWorkflow)
   );
-  const engineeringTask = /\b(app|aplicaci[oó]n|plataforma|proyecto|sitio|web|portal|sistema|repo|repositorio|c[oó]digo|codigo|bug|error|issue|fix|corrige|corregir|modifica|modificar|actualiza|actualizar|refactor|integra|integrar|implementa|implementar)\b/i.test(input.message);
   const freeOnlyChat = !engineeringTask && !webSearchRequired && specialistId !== "curvewind" &&
     novaChatFreeOnlyRequest({
       project_id: input.project_id, message: input.message,
