@@ -14,7 +14,7 @@ const HockerVfxLayer = dynamic(() => import("@/components/vfx/HockerVfxLayer"), 
 
 export default function PrivateShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/owner";
-  const immersive = pathname === "/chat";
+  const immersive = pathname === "/chat" || pathname === "/owner/nova" || pathname === "/app/nova";
   const section = getActiveHockerSection(pathname);
   const showMobileContextNav = !immersive && section.id !== "inicio" && section.items.length > 1;
 

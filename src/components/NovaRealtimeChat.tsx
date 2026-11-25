@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Bot, ChevronLeft, CircleAlert, Cpu, Info, Loader2, RotateCw, Send, Sparkles } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { DraftCard } from "@/components/DraftCard";
+import NovaHistoryPanel from "@/components/NovaHistoryPanel";
 import type { ChatActionDraft, Msg, QueueLock, RuntimeAction, RuntimeSummary } from "@/components/nova-chat-types";
 import { BLOCKING_STATUSES } from "@/components/nova-chat-types";
 import { extractActions, extractQueueLock, generateId, pickContent, shouldAllowActionDraft } from "@/components/nova-chat-helpers";
@@ -51,7 +52,7 @@ function readableError(value: unknown): string {
 
 function serviceLabel(status: string): string {
   if (status === "online") return "Listo";
-  if (status === "offline") return "Runtime dedicado sin señal";
+  if (status === "offline") return "Motor dedicado sin señal";
   if (status === "configured") return "Pendiente";
   return "Comprobando";
 }
@@ -60,12 +61,16 @@ export default function NovaRealtimeChat() {
   const { projectId, ready } = useWorkspace();
   const searchParams = useSearchParams();
   const requestedThreadId = searchParams.get("thread_id");
-  const [threadId] = useState(() => requestedThreadId || generateId());
+  const [newThreadId] = useState(() => generateId());
+  const threadId = requestedThreadId || newThreadId;
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [summary, setSummary] = useState<RuntimeSummary | null>(null);
   const [queueLock, setQueueLock] = useState<QueueLock>(EMPTY_LOCK);
+  const [queueSnapshot, setQueueSnapshot] = useState<{ projectId: string; actions: RuntimeAction[]; pending: number; checked: boolean }>({ projectId: "", actions: [], pending: 0, checked: false });
+  const queueVerified = queueSnapshot.projectId === projectId && queueSnapshot.checked;
+  const liveActions = queueVerified ? queueSnapshot.actions : [];
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -77,9 +82,11 @@ export default function NovaRealtimeChat() {
     if (!ready) return;
     setRefreshing(true);
     try {
-      const [summaryResponse, actionsResponse] = await Promise.all([
+      const [summaryResponse, actionsResponse, pendingResponse, approvedResponse] = await Promise.all([
         fetch(`/api/agi/runtime/summary?project_id=${encodeURIComponent(projectId)}`, { cache: "no-store" }),
-        fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}`, { cache: "no-store" }),
+        fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&limit=100`, { cache: "no-store" }),
+        fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&status=needs_approval&limit=100`, { cache: "no-store" }),
+        fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&status=approved&limit=100`, { cache: "no-store" }),
       ]);
       const summaryBody = (await summaryResponse.json().catch(() => ({}))) as SummaryResponse;
       const actionsBody = (await actionsResponse.json().catch(() => ({}))) as ActionResponse;
@@ -87,10 +94,16 @@ export default function NovaRealtimeChat() {
       if (summaryResponse.ok && summaryBody.summary) setSummary(summaryBody.summary);
       else nextError = readableError(summaryBody.error ?? `Estado HTTP ${summaryResponse.status}`);
 
-      const remoteLock = extractQueueLock(actionsBody) ?? actionsBody.queue_lock ?? null;
-      if (actionsResponse.ok && remoteLock) setQueueLock(remoteLock);
-      else if (actionsResponse.ok && Array.isArray(actionsBody.actions)) setQueueLock(buildLocalLock(actionsBody.actions));
-      else {
+      const pendingBody = (await pendingResponse.json().catch(() => ({}))) as ActionResponse;
+      const approvedBody = (await approvedResponse.json().catch(() => ({}))) as ActionResponse;
+      if (actionsResponse.ok && actionsBody.ok === true && Array.isArray(actionsBody.actions) &&
+          pendingResponse.ok && pendingBody.ok === true && Array.isArray(pendingBody.actions) &&
+          approvedResponse.ok && approvedBody.ok === true && Array.isArray(approvedBody.actions)) {
+        const actions = [...new Map([...actionsBody.actions, ...pendingBody.actions, ...approvedBody.actions].map(action => [action.id, action])).values()];
+        setQueueSnapshot({ projectId, actions, pending: pendingBody.actions.length, checked: true });
+        setQueueLock(extractQueueLock(actionsBody) ?? actionsBody.queue_lock ?? buildLocalLock(actions));
+      } else {
+        setQueueSnapshot({ projectId, actions: [], pending: 0, checked: false });
         const actionError = readableError(actionsBody.error ?? `Aprobaciones HTTP ${actionsResponse.status}`);
         setQueueLock((current) => unreadableQueueLock(actionError, current));
         nextError = nextError ? `${nextError} · ${actionError}` : actionError;
@@ -98,6 +111,7 @@ export default function NovaRealtimeChat() {
       setError(nextError);
     } catch (runtimeError) {
       const message = readableError(runtimeError instanceof Error ? runtimeError.message : runtimeError);
+      setQueueSnapshot({ projectId, actions: [], pending: 0, checked: false });
       setQueueLock((current) => unreadableQueueLock(message, current));
       setError(message);
     } finally {
@@ -229,19 +243,23 @@ export default function NovaRealtimeChat() {
     } finally { abortRef.current = null; setSending(false); }
   }, [failNovaMessage, input, loadRuntime, sendSingleResponse, sendStream, sending]);
 
+  const representedIds = new Set(messages.flatMap(message => (message.actions ?? []).map(draft => draft.id).filter(Boolean)));
+  const outstanding = liveActions.filter(action => ["needs_approval", "approved"].includes(action.status) && !representedIds.has(action.id));
+
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); if (canSend) void send(); }
   };
 
   return (
     <div className="relative flex h-[100dvh] min-h-[100dvh] w-full flex-col overflow-hidden bg-[#030711]">
-      <header className="z-10 border-b border-white/[0.06] bg-[#030711]/88 backdrop-blur-xl">
+      <header className="z-10 border-b border-slate-700/60 bg-[#0b1320]">
         <div className="mx-auto flex min-h-14 w-full max-w-[1100px] items-center gap-2 px-3 sm:px-5">
           <Link href="/owner" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-label="Volver a Inicio"><ChevronLeft className="h-5 w-5" /></Link>
           <Sparkles className="h-4 w-4 text-sky-300" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">NOVA</p><p className="text-xs text-slate-500">{serviceLabel(novaStatus)}</p></div>
           <Link href="/chat/local" className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-sky-300/20 px-2.5 text-xs font-medium text-sky-200 hover:bg-sky-300/10" title="Preflight WebGPU sin créditos ni ejecución"><Cpu className="h-4 w-4" /><span className="hidden sm:inline">Local</span></Link>
-          {queueLock.blocking_count > 0 ? <Link href="/owner/actions" className="rounded-full bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">{queueLock.blocking_count} por aprobar</Link> : null}
+          <NovaHistoryPanel />
+           {queueVerified && queueSnapshot.pending > 0 ? <Link href="/owner/actions" className="rounded-lg border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200">{queueSnapshot.pending === 100 ? "100+" : queueSnapshot.pending} por aprobar</Link> : null}
           <button type="button" onClick={() => setShowDetail((value) => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-medium text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-expanded={showDetail}><Info className="h-4 w-4" />Detalle</button>
         </div>
         {showDetail ? (
@@ -253,29 +271,35 @@ export default function NovaRealtimeChat() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5">
-        <div className="mx-auto flex w-full max-w-[860px] flex-col gap-5">
-          {messages.length === 0 ? (
+        <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">
+          {outstanding.length > 0 ? (
+            <section aria-label="Acciones pendientes del proyecto" className="rounded-2xl border border-slate-700 bg-[#0b1320] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">Acciones del proyecto</h2><Link href="/owner/actions" className="text-sm font-medium text-sky-200">Ver todas</Link></div>
+              {outstanding.slice().reverse().map(action => <DraftCard key={action.id} draft={{ id: action.id, title: action.title, tool_key: action.tool_key, risk_level: action.risk_level }} action={action} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => {}} />)}
+            </section>
+          ) : null}
+          {messages.length === 0 && outstanding.length === 0 ? (
             <div className="grid min-h-[52dvh] place-items-center text-center"><div><Bot className="mx-auto h-9 w-9 text-sky-300" /><h1 className="mt-4 text-2xl font-semibold text-white">¿Qué necesitas?</h1><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">NOVA puede analizar, coordinar y preparar acciones. Lo sensible seguirá pidiendo tu aprobación.</p></div></div>
           ) : null}
 
           {messages.map((message) => (
             <div key={message.id} className={message.role === "user" ? "ml-auto w-fit max-w-[88%]" : "mr-auto w-full max-w-[94%]"}>
-              <div className={message.role === "user" ? "rounded-[22px] bg-white/[0.08] px-4 py-3 text-sm leading-7 text-white" : message.role === "system" ? "rounded-[18px] border border-rose-300/15 bg-rose-300/8 px-4 py-3 text-sm leading-7 text-rose-100" : "px-1 py-2 text-sm leading-7 text-slate-100"}>
+              <div className={message.role === "user" ? "rounded-[22px] bg-white/[0.08] px-4 py-3 text-base leading-7 text-white" : message.role === "system" ? "rounded-[18px] border border-rose-300/15 bg-rose-300/8 px-4 py-3 text-base leading-7 text-rose-100" : "px-1 py-2 text-base leading-7 text-slate-100"}>
                 {message.streaming && !message.content ? <Loader2 className="h-4 w-4 animate-spin text-sky-300" /> : null}
                 {message.content ? <p className="whitespace-pre-wrap">{message.content}</p> : null}
               </div>
-              {message.actions?.map((draft, index) => <DraftCard key={`${message.id}-${index}`} draft={draft} onShowSummary={() => void loadRuntime()} onCancel={() => setMessages((current) => current.filter((item) => item.id !== message.id))} />)}
+              {message.actions?.map((draft, index) => <DraftCard key={draft.id || `${message.id}-${index}`} draft={draft} action={liveActions.find(action => action.id === draft.id)} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => setMessages(current => current.map(item => item.id === message.id ? { ...item, actions: item.actions?.filter((_, draftIndex) => draftIndex !== index) } : item))} />)}
             </div>
           ))}
           <div ref={endRef} />
         </div>
       </div>
 
-      {error ? <div className="mx-auto mb-2 flex w-[calc(100%-1.5rem)] max-w-[860px] items-start gap-2 rounded-xl border border-rose-300/15 bg-rose-300/8 px-3 py-2 text-sm text-rose-100"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span></div> : null}
+      {error ? <div className="mx-auto mb-2 flex w-[calc(100%-1.5rem)] max-w-[960px] items-start gap-2 rounded-xl border border-rose-300/15 bg-rose-300/8 px-3 py-2 text-sm text-rose-100"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span></div> : null}
 
       <footer className="border-t border-white/[0.05] bg-[#030711]/94 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-xl sm:px-5">
-        <div className="mx-auto flex w-full max-w-[860px] items-end gap-2 rounded-[22px] border border-white/[0.10] bg-white/[0.04] p-2.5 focus-within:border-sky-300/30">
-          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Escribe a NOVA…" className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base text-white outline-none placeholder:text-slate-600" aria-label="Mensaje para NOVA" />
+        <div className="mx-auto flex w-full max-w-[960px] items-end gap-2 rounded-[22px] border border-white/[0.10] bg-white/[0.04] p-2.5 focus-within:border-sky-300/30">
+          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Escribe a NOVA…" className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base text-white outline-none placeholder:text-slate-400" aria-label="Mensaje para NOVA" />
           <button type="button" onClick={() => void send()} disabled={!canSend} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-300 text-slate-950 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Enviar">{sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}</button>
         </div>
       </footer>

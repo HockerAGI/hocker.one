@@ -30,7 +30,7 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&limit=10`, { cache: "no-store" });
+      const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&status=needs_approval&limit=10`, { cache: "no-store" });
       const data = (await res.json()) as ApiListResponse;
       if (!res.ok || data.error) throw new Error(data.error || "No se pudo consultar la cola.");
       setLoadError(false);
@@ -55,7 +55,7 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
       <div className="hko-uni-panel-head">
         <div>
           <p className="hko-uni-panel-kicker">Aprobaciones</p>
-          <p className="hko-uni-panel-title">Cola AGI · {pending.length} pendientes</p>
+          <p className="hko-uni-panel-title">{loading || loadError ? "Pendientes por verificar" : `${pending.length === 10 ? "10+" : pending.length} por aprobar`}</p>
         </div>
         <span className={`hko-status-val ${loadError || pending.length > 0 ? "warn" : "ok"}`}>
           {loadError ? "Sin verificar" : pending.length > 0 ? "Revisar" : "Limpia"}
@@ -88,7 +88,7 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
               </div>
               <div className="hko-uni-appr-btns">
                 <Link href="/owner/actions" className="hko-uni-appr-btn approve inline-flex min-h-11 items-center justify-center">
-                  Revisar alcance y decidir en Owner Gate
+                  Revisar acción
                 </Link>
               </div>
             </div>

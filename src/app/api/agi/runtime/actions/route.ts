@@ -36,13 +36,17 @@ export async function GET(req: Request): Promise<Response> {
     const projectId = query.get("project_id") || process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
     const status = query.get("status") || undefined;
     const toolKey = query.get("tool_key") || undefined;
+    const actionId = query.get("action_id") || undefined;
+    if (actionId && !z.string().uuid().safeParse(actionId).success) {
+      return json({ ok: false, error: "INVALID_ACTION_ID" }, 400);
+    }
     const limit = Number(query.get("limit") || 30);
     const offset = Number(query.get("offset") || 0);
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000) {
       return json({ ok: false, error: "INVALID_ACTION_QUEUE_OFFSET" }, 400);
     }
     const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
-    const actions = await listAgiActions({ project_id: ctx.project_id, status, tool_key: toolKey, limit, offset });
+    const actions = await listAgiActions({ project_id: ctx.project_id, status, tool_key: toolKey, limit, offset, action_id: actionId });
 
     return json({
       ok: true,

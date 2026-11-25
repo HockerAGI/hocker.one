@@ -365,7 +365,7 @@ async function patchQueueItem(actionId: string, patch: Partial<AgiActionQueueRow
   return data;
 }
 
-export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number; offset?: number }): Promise<AgiActionQueueRow[]> {
+export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number; offset?: number; action_id?: string }): Promise<AgiActionQueueRow[]> {
   const sb = createAdminSupabase();
   const limit = Math.max(1, Math.min(Number(params.limit || 30), 100));
   const offset = params.offset ?? 0;
@@ -383,6 +383,7 @@ export async function listAgiActions(params: { project_id: string; status?: stri
 
   if (params.status) query = query.eq("status", params.status);
   if (params.tool_key) query = query.eq("tool_key", params.tool_key);
+  if (params.action_id) query = query.eq("id", params.action_id);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
