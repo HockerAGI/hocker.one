@@ -1,3 +1,4 @@
+import { novaProtectedAvailability, NOVA_PROTECTED_UNAVAILABLE } from "@/lib/nova-environment";
 import { json, parseQuery, requireProjectRole, toApiError } from "@/app/api/_lib";
 import { loadAgiConversationContext } from "@/lib/agi-session-store";
 import { createAdminSupabase } from "@/lib/supabase-admin";
@@ -13,6 +14,7 @@ export async function GET(req: Request): Promise<Response> {
     const threadId = query.get("thread_id");
     const limit = Math.max(1, Math.min(Number(query.get("limit") || 20), MAX_LIMIT));
     const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
+    if (!novaProtectedAvailability().available) return json({ ok: false, error: NOVA_PROTECTED_UNAVAILABLE }, 503);
     const db = createAdminSupabase();
 
     if (threadId) {

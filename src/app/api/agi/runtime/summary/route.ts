@@ -1,3 +1,4 @@
+import { novaProtectedAvailability } from "@/lib/nova-environment";
 import { getVerifiedAgiRuntimeSummary } from "@/lib/verified-agi-runtime";
 import { json, requireProjectRole, toApiError } from "@/app/api/_lib";
 
@@ -11,7 +12,7 @@ export async function GET(req: Request): Promise<Response> {
       url.searchParams.get("project_id") || process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one",
     ).trim();
     const ctx = await requireProjectRole(projectId, ["owner", "admin", "operator", "viewer"]);
-    const summary = await getVerifiedAgiRuntimeSummary(ctx.project_id);
+    const summary = await getVerifiedAgiRuntimeSummary(ctx.project_id, { allowProtectedReads: novaProtectedAvailability().available });
     return json({ ok: true, summary });
   } catch (error) {
     const apiError = toApiError(error);

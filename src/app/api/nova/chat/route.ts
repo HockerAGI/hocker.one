@@ -1,3 +1,4 @@
+import { novaProtectedAvailability, NOVA_PROTECTED_UNAVAILABLE } from "@/lib/nova-environment";
 import { cloudflareZeroCreditMode } from "@/lib/cloudflare-zero-credit-policy";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -142,6 +143,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json(apiError.payload, { status: apiError.status });
   }
 
+  if (!novaProtectedAvailability().available) return NextResponse.json({ ok: false, error: NOVA_PROTECTED_UNAVAILABLE }, { status: 503, headers: { "Cache-Control": "no-store" } });
   const queueLock = await getAgiQueueLock(chatCtx.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
   const capabilitiesContract = buildNovaChatCapabilitiesContext(parsed.data.message, chatCtx.project_id);

@@ -81,9 +81,9 @@ export default function NovaWorkspaceCapabilities() {
       if (!response.ok || body.ok === false) throw new Error(body.error ?? "No se pudo consultar capacidades.");
       const items = body.meta?.capabilities_contract?.relevant_capabilities ?? [];
       setCapabilities(items.filter((item) => item && typeof item.key === "string"));
-    } catch (loadError) {
+    } catch {
       setCapabilities([]);
-      setError(loadError instanceof Error ? loadError.message : "No se pudo consultar capacidades.");
+      setError("No se pudo consultar capacidades.");
     } finally {
       setLoading(false);
     }
@@ -109,12 +109,12 @@ export default function NovaWorkspaceCapabilities() {
   };
 
   return (
-    <div className="pointer-events-none absolute inset-x-3 bottom-[5.75rem] z-30 flex justify-center sm:inset-x-5">
-      <div className="pointer-events-auto flex w-full max-w-[860px] justify-end">
+    <div className="relative">
+      <div className="flex items-center">
         {open ? (
           <section
             aria-label="Capacidades de NOVA"
-            className="mb-2 w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#07101d]/96 p-3 shadow-2xl backdrop-blur-xl"
+            className="absolute bottom-full left-0 z-40 mb-2 w-[min(86vw,520px)] max-h-[55dvh] overflow-auto rounded-2xl border border-white/[0.10] bg-[#07101d]/96 p-3 shadow-2xl backdrop-blur-xl"
           >
             <div className="flex items-center justify-between gap-3 px-1 pb-2">
               <div>
@@ -158,8 +158,9 @@ export default function NovaWorkspaceCapabilities() {
           </section>
         ) : null}
 
-        <button type="button" onClick={() => setOpen((value) => !value)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.10] bg-[#07101d]/96 text-slate-300 shadow-xl backdrop-blur-xl hover:bg-white/[0.07] hover:text-white" aria-expanded={open} aria-label={open ? "Cerrar capacidades" : "Abrir capacidades"} title="Capacidades de NOVA">
+        <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 bg-[#101b29] px-3 text-xs text-slate-200 hover:bg-white/5" aria-expanded={open} aria-label={open ? "Cerrar capacidades" : "Abrir capacidades"} title="Capacidades de NOVA">
           {open ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+          <span>Capacidades</span>
         </button>
       </div>
     </div>

@@ -17,13 +17,10 @@ const NovaRealtimeChat = dynamic(() => import("@/components/NovaRealtimeChat"), 
   ),
 });
 
-export default function NovaRealtimeChatLazy() {
+export default function NovaRealtimeChatLazy({ protectedAvailable = false, preview = false }: { protectedAvailable?: boolean; preview?: boolean }) {
   return (
     <div className="relative h-full min-h-[100dvh]">
-      <NovaRealtimeChat />
-      <NovaWorkspaceCapabilities />
-      <NovaWorkspaceTools />
-      <NovaRepositoryWorkspace />
+      <NovaRealtimeChat protectedAvailable={protectedAvailable} preview={preview} toolbar={protectedAvailable ? <><NovaWorkspaceCapabilities /><NovaWorkspaceTools /><NovaRepositoryWorkspace /></> : null} />
     </div>
   );
 }

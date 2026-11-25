@@ -60,12 +60,12 @@ export default function NovaWorkspaceTools() {
   const configured = registry?.providers.filter((item) => item.configured).length ?? 0;
 
   return (
-    <div className="pointer-events-none absolute inset-x-3 bottom-[11rem] z-30 flex justify-center sm:inset-x-5">
-      <div className="pointer-events-auto flex w-full max-w-[860px] justify-end">
+    <div className="relative">
+      <div className="flex items-center">
         {open ? (
           <section
             aria-label="Herramientas de NOVA"
-            className="mb-2 w-full max-w-[520px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#07101d]/96 p-3 shadow-2xl backdrop-blur-xl"
+            className="absolute bottom-full left-0 z-40 mb-2 w-[min(86vw,520px)] max-h-[55dvh] overflow-auto rounded-2xl border border-white/[0.10] bg-[#07101d]/96 p-3 shadow-2xl backdrop-blur-xl"
           >
             <div className="flex items-center justify-between gap-3 px-1 pb-2">
               <div>
@@ -134,8 +134,9 @@ export default function NovaWorkspaceTools() {
           </section>
         ) : null}
 
-        <button type="button" onClick={() => { setOpen((value) => !value); }} className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.10] bg-[#07101d]/96 text-slate-300 shadow-xl backdrop-blur-xl hover:bg-white/[0.07] hover:text-white" aria-expanded={open} aria-label={open ? "Cerrar herramientas" : "Abrir herramientas"} title="Herramientas MCP de NOVA">
+        <button type="button" onClick={() => { setOpen((value) => !value); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 bg-[#101b29] px-3 text-xs text-slate-200 hover:bg-white/5" aria-expanded={open} aria-label={open ? "Cerrar herramientas" : "Abrir herramientas"} title="Herramientas MCP de NOVA">
           {open ? <X className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}
+          <span>Herramientas</span>
         </button>
       </div>
     </div>
