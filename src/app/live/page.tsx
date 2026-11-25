@@ -156,7 +156,7 @@ export default async function LivePage() {
 
       <div className="flex flex-wrap gap-2">
         <Link href="/nodes" className="hocker-button-secondary">Ver nodos</Link>
-        <Link href="/commands" className="hocker-button-primary">Revisar aprobaciones</Link>
+        <Link href="/owner/actions" className="hocker-button-primary">Revisar aprobaciones</Link>
       </div>
     </main>
   );

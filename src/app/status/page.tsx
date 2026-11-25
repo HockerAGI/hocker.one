@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Activity, Database, RefreshCw, ShieldCheck } from "lucide-react";
+import RefreshDataButton from "@/components/RefreshDataButton";
+import { Activity, Database, ShieldCheck } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hocker-operational-state";
@@ -63,9 +63,7 @@ export default async function StatusPage() {
             <p className="mt-2 text-sm text-slate-300">{formatDate(snapshot.checked_at)}</p>
             <p className="mt-1 text-xs text-slate-500">Fuente: {snapshot.source === "supabase+health" ? "Supabase + health checks" : "lectura parcial"}</p>
           </div>
-          <Link href="/status" className="hko-action-secondary inline-flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" /> Actualizar
-          </Link>
+          <RefreshDataButton />
         </div>
       </section>
 

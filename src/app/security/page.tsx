@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import RefreshDataButton from "@/components/RefreshDataButton";
 import Link from "next/link";
-import { Database, Lock, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { Database, Lock, ShieldCheck, Users } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { HOCKER_CLIENT_PORTALS } from "@/lib/hocker-client-portals";
@@ -58,7 +59,7 @@ export default async function SecurityPage() {
             <p className="mt-2 text-sm text-slate-300">{new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Tijuana" }).format(new Date(operational.checked_at))}</p>
             <p className="mt-1 text-xs text-slate-500">La lectura de Supabase confirma acceso autenticado; no sustituye una inspección en vivo de todas las políticas RLS.</p>
           </div>
-          <Link href="/security" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
+          <RefreshDataButton />
         </div>
       </section>
 

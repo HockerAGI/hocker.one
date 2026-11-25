@@ -166,12 +166,12 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
 
   return (
     <PageShell
-      title="Herramientas y APIs"
-      subtitle="Inventario real de proveedores, herramientas MCP, módulos conectados, permisos y evidencia."
+      title="Conexiones"
+      subtitle="Herramientas, proveedores y permisos. Consulta su estado real."
       actions={
         <div className="flex flex-wrap gap-2">
           <Link href="/catalog" className="hocker-button-secondary">Buscar ecosistema</Link>
-          <Link href="/commands" className="hocker-button-secondary">Aprobaciones</Link>
+          <Link href="/owner/actions" className="hocker-button-secondary">Aprobaciones</Link>
           <Link href="/chat" className="hocker-button-primary">Pedir acción a NOVA</Link>
         </div>
       }
@@ -331,7 +331,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={integration.dashboard_path} className="hocker-button-primary">Abrir módulo</Link>
-                      <Link href="/commands" className="hocker-button-secondary">Ver aprobaciones</Link>
+                      <Link href="/owner/actions" className="hocker-button-secondary">Ver aprobaciones</Link>
                     </div>
                   </div>
                 </article>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import RefreshDataButton from "@/components/RefreshDataButton";
 import Link from "next/link";
-import { Database, RefreshCw } from "lucide-react";
+import { Database } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { createAdminSupabase } from "@/lib/supabase-admin";
@@ -92,7 +93,7 @@ export default async function MemoryPage() {
       <HockerPageHeader
         eyebrow="Registros persistidos"
         title="Memoria"
-        text="Esta vista muestra eventos almacenados en Supabase. La existencia de registros no prueba que SYNTIA esté ejecutándose en este momento."
+        text="Consulta decisiones, aprendizajes y registros de memoria. No equivale a actividad en vivo."
       />
 
       <section className="hko-map-panel">
@@ -103,7 +104,7 @@ export default async function MemoryPage() {
             <p className="mt-1 text-xs text-slate-500">Último registro: {safeDate(latest?.created_at ?? null)}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/memory" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
+            <RefreshDataButton />
             <Link href="/memory/review" className="hko-action-primary">Revisar aprendizajes</Link>
           </div>
         </div>
@@ -116,11 +117,11 @@ export default async function MemoryPage() {
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <article className="hko-mini-stat"><span>Registros consultados</span><strong>{events.length}</strong></article>
-        <article className="hko-mini-stat"><span>Estados</span><strong>{counts.state}</strong></article>
-        <article className="hko-mini-stat"><span>Decisiones</span><strong>{counts.decisions}</strong></article>
-        <article className="hko-mini-stat"><span>Pendientes</span><strong>{counts.pending}</strong></article>
-        <article className="hko-mini-stat"><span>Interacciones</span><strong>{counts.interactions}</strong></article>
+        <article className="hko-mini-stat"><span>Últimos 80 registros</span><strong>{error ? "—" : events.length}</strong></article>
+        <article className="hko-mini-stat"><span>Estados</span><strong>{error ? "—" : counts.state}</strong></article>
+        <article className="hko-mini-stat"><span>Decisiones</span><strong>{error ? "—" : counts.decisions}</strong></article>
+        <article className="hko-mini-stat"><span>Pendientes</span><strong>{error ? "—" : counts.pending}</strong></article>
+        <article className="hko-mini-stat"><span>Interacciones</span><strong>{error ? "—" : counts.interactions}</strong></article>
       </section>
 
       <section className="hko-map-panel">
