@@ -67,12 +67,14 @@ NOVA may later consume the same HKR MCP surface. NOVA is not embedded in HKR Cor
 
 ## Current external platform requirements
 
-OpenAI's current plugin/MCP documentation requires a real MCP server endpoint for custom plugins and recommends the official MCP SDK. The target server therefore uses the official TypeScript `@modelcontextprotocol/sdk`, exposes Streamable HTTP (normally `/mcp`), and keeps authentication/authorization server-side for every request.
+OpenAI's plugin/MCP documentation requires a real MCP server endpoint for custom plugins and server-side authorization on every request. For implementation, HKR follows the current official MCP TypeScript SDK v2: `@modelcontextprotocol/server` for the server surface and `@modelcontextprotocol/node` when a Node HTTP adapter is needed. MCP SDK v2 is the stable line for the 2026-07-28 protocol; older examples that use the v1 umbrella package `@modelcontextprotocol/sdk` are compatibility/reference material, not the HKR implementation baseline. The target exposes Streamable HTTP (normally `/mcp`).
 
 References:
 - https://developers.openai.com/plugins/build/mcp-server
 - https://developers.openai.com/api/docs/guides/custom-mcp-server
 - https://developers.openai.com/plugins/deploy/connect-chatgpt
+- https://ts.sdk.modelcontextprotocol.io/v2/
+- https://ts.sdk.modelcontextprotocol.io/v2/server/
 
 The existing Hocker One `/api/mcp/execute` route remains an internal HOCKER API and is not promoted as the public HKR MCP endpoint.
 
