@@ -32,8 +32,18 @@ test("targeted action review remains authenticated and project scoped", async ()
 test("history and aliases remain connected", async () => {
   const [chat, history, shell, home] = await Promise.all(["src/components/NovaRealtimeChat.tsx", "src/components/NovaHistoryPanel.tsx", "src/components/PrivateShell.tsx", "src/components/owner/OwnerUnifiedApprovals.tsx"].map(read));
   assert.match(chat, /<NovaHistoryPanel \/>/);
-  assert.match(chat, /threadId = requestedThreadId \|\| newThreadId/);
+  assert.match(chat, /const \[threadId\] = useState\(\(\) => requestedThreadId \|\| generateId\(\)\)/);
   assert.match(history, /router\.push\("\/chat\?thread_id="/);
   assert.match(shell, /pathname === "\/owner\/nova"/);
   assert.match(home, /status=needs_approval&limit=10/);
+});
+
+test("failed tool checks do not automatically retry forever or show stale green results", async () => {
+  const [tools, capabilities, top, home] = await Promise.all(["src/components/NovaWorkspaceTools.tsx", "src/components/NovaWorkspaceCapabilities.tsx", "src/components/Topbar.tsx", "src/components/owner/OwnerUnifiedApprovals.tsx"].map(read));
+  assert.match(tools, /if \(open\) void load\(false\)/);
+  assert.match(tools, /setRegistry\(null\)/);
+  assert.match(capabilities, /if \(open\) void loadCapabilities\(\)/);
+  assert.match(capabilities, /setCapabilities\(\[\]\)/);
+  assert.match(top, /setPendingVerified\(false\)/);
+  assert.match(home, /loading \|\| loadError \|\| pending\.length > 0/);
 });

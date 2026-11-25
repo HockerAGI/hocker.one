@@ -59,10 +59,14 @@ function serviceLabel(status: string): string {
 
 export default function NovaRealtimeChat() {
   const { projectId, ready } = useWorkspace();
-  const searchParams = useSearchParams();
-  const requestedThreadId = searchParams.get("thread_id");
-  const [newThreadId] = useState(() => generateId());
-  const threadId = requestedThreadId || newThreadId;
+  const requestedThreadId = useSearchParams().get("thread_id");
+  return <NovaConversation key={projectId + ":" + (requestedThreadId ?? "new")} projectId={projectId} ready={ready} requestedThreadId={requestedThreadId} />;
+}
+
+function NovaConversation({ projectId, ready, requestedThreadId }: { projectId: string; ready: boolean; requestedThreadId: string | null }) {
+  const [threadId] = useState(() => requestedThreadId || generateId());
+  const [historyReady, setHistoryReady] = useState(!requestedThreadId);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -76,10 +80,12 @@ export default function NovaRealtimeChat() {
   const [showDetail, setShowDetail] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const runtimeRequest = useRef(0);
   const novaStatus = summary?.service_status?.nova?.status ?? "unknown";
 
   const loadRuntime = useCallback(async () => {
     if (!ready) return;
+    const request = ++runtimeRequest.current;
     setRefreshing(true);
     try {
       const [summaryResponse, actionsResponse, pendingResponse, approvedResponse] = await Promise.all([
@@ -90,12 +96,14 @@ export default function NovaRealtimeChat() {
       ]);
       const summaryBody = (await summaryResponse.json().catch(() => ({}))) as SummaryResponse;
       const actionsBody = (await actionsResponse.json().catch(() => ({}))) as ActionResponse;
+      if (request !== runtimeRequest.current) return;
       let nextError: string | null = null;
       if (summaryResponse.ok && summaryBody.summary) setSummary(summaryBody.summary);
-      else nextError = readableError(summaryBody.error ?? `Estado HTTP ${summaryResponse.status}`);
+      else { setSummary(null); nextError = readableError(summaryBody.error ?? `Estado HTTP ${summaryResponse.status}`); }
 
       const pendingBody = (await pendingResponse.json().catch(() => ({}))) as ActionResponse;
       const approvedBody = (await approvedResponse.json().catch(() => ({}))) as ActionResponse;
+      if (request !== runtimeRequest.current) return;
       if (actionsResponse.ok && actionsBody.ok === true && Array.isArray(actionsBody.actions) &&
           pendingResponse.ok && pendingBody.ok === true && Array.isArray(pendingBody.actions) &&
           approvedResponse.ok && approvedBody.ok === true && Array.isArray(approvedBody.actions)) {
@@ -104,25 +112,27 @@ export default function NovaRealtimeChat() {
         setQueueLock(extractQueueLock(actionsBody) ?? actionsBody.queue_lock ?? buildLocalLock(actions));
       } else {
         setQueueSnapshot({ projectId, actions: [], pending: 0, checked: false });
-        const actionError = readableError(actionsBody.error ?? `Aprobaciones HTTP ${actionsResponse.status}`);
+        const actionError = readableError(pendingBody.error ?? approvedBody.error ?? actionsBody.error ?? "No se pudo comprobar la cola de aprobaciones.");
         setQueueLock((current) => unreadableQueueLock(actionError, current));
         nextError = nextError ? `${nextError} · ${actionError}` : actionError;
       }
       setError(nextError);
     } catch (runtimeError) {
+      if (request !== runtimeRequest.current) return;
+      setSummary(null);
       const message = readableError(runtimeError instanceof Error ? runtimeError.message : runtimeError);
       setQueueSnapshot({ projectId, actions: [], pending: 0, checked: false });
       setQueueLock((current) => unreadableQueueLock(message, current));
       setError(message);
     } finally {
-      setRefreshing(false);
+      if (request === runtimeRequest.current) setRefreshing(false);
     }
   }, [projectId, ready]);
 
   useEffect(() => {
     void loadRuntime();
     const timer = window.setInterval(() => void loadRuntime(), 30_000);
-    return () => window.clearInterval(timer);
+    return () => { window.clearInterval(timer); runtimeRequest.current += 1; };
   }, [loadRuntime]);
 
   useEffect(() => {
@@ -132,7 +142,8 @@ export default function NovaRealtimeChat() {
       .then(async (response) => {
         const body = await response.json().catch(() => ({}));
         if (!response.ok || body.ok === false) throw new Error(body.error ?? "No se pudo restaurar la conversación.");
-        if (!active || !Array.isArray(body.messages)) return;
+        if (!active) return;
+        if (!Array.isArray(body.messages)) throw new Error("Historial no disponible.");
         const restored: Msg[] = body.messages.map((item: unknown, index: number) => {
           const value = item as { id?: unknown; role?: unknown; content?: unknown; created_at?: unknown };
           return {
@@ -145,16 +156,18 @@ export default function NovaRealtimeChat() {
           };
         }).filter((item: Msg) => item.content.trim());
         setMessages(restored);
+        setHistoryReady(true);
+        setHistoryError(null);
       })
       .catch((value) => {
-        if (active) setError(value instanceof Error ? value.message : "No se pudo restaurar la conversación.");
+        if (active) setHistoryError(value instanceof Error ? value.message : "No se pudo restaurar la conversación.");
       });
     return () => { active = false; };
   }, [projectId, ready, requestedThreadId]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, sending]);
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const canSend = useMemo(() => Boolean(input.trim()) && !sending && ready, [input, ready, sending]);
+  const canSend = useMemo(() => Boolean(input.trim()) && !sending && ready && historyReady, [input, ready, sending, historyReady]);
   const appendNovaText = useCallback((id: string, chunk: string) => {
     if (!chunk) return;
     setMessages((current) => current.map((message) => message.id === id ? { ...message, content: `${message.content}${chunk}`, streaming: true } : message));
@@ -227,7 +240,7 @@ export default function NovaRealtimeChat() {
 
   const send = useCallback(async () => {
     const prompt = input.trim();
-    if (!prompt || sending) return;
+    if (!prompt || sending || !ready || !historyReady || abortRef.current) return;
     const userMessage: Msg = { id: generateId(), role: "user", content: prompt, createdAt: Date.now() };
     const novaMessage: Msg = { id: generateId(), role: "nova", content: "", createdAt: Date.now(), streaming: true };
     setMessages((current) => [...current, userMessage, novaMessage]);
@@ -241,19 +254,19 @@ export default function NovaRealtimeChat() {
       const message = readableError(sendError instanceof Error ? sendError.message : sendError);
       failNovaMessage(novaMessage.id, message); setError(message); await loadRuntime();
     } finally { abortRef.current = null; setSending(false); }
-  }, [failNovaMessage, input, loadRuntime, sendSingleResponse, sendStream, sending]);
+  }, [failNovaMessage, input, loadRuntime, sendSingleResponse, sendStream, sending, ready, historyReady]);
 
   const representedIds = new Set(messages.flatMap(message => (message.actions ?? []).map(draft => draft.id).filter(Boolean)));
   const outstanding = liveActions.filter(action => ["needs_approval", "approved"].includes(action.status) && !representedIds.has(action.id));
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); if (canSend) void send(); }
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (canSend) void send(); }
   };
 
   return (
     <div className="relative flex h-[100dvh] min-h-[100dvh] w-full flex-col overflow-hidden bg-[#030711]">
       <header className="z-10 border-b border-slate-700/60 bg-[#0b1320]">
-        <div className="mx-auto flex min-h-14 w-full max-w-[1100px] items-center gap-2 px-3 sm:px-5">
+        <div className="mx-auto flex min-h-14 w-full max-w-[1100px] flex-wrap items-center gap-1 px-2 py-1 sm:gap-2 sm:px-5">
           <Link href="/owner" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-white/[0.05] hover:text-white" aria-label="Volver a Inicio"><ChevronLeft className="h-5 w-5" /></Link>
           <Sparkles className="h-4 w-4 text-sky-300" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">NOVA</p><p className="text-xs text-slate-500">{serviceLabel(novaStatus)}</p></div>
@@ -278,7 +291,8 @@ export default function NovaRealtimeChat() {
               {outstanding.slice().reverse().map(action => <DraftCard key={action.id} draft={{ id: action.id, title: action.title, tool_key: action.tool_key, risk_level: action.risk_level }} action={action} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => {}} />)}
             </section>
           ) : null}
-          {messages.length === 0 && outstanding.length === 0 ? (
+          {!historyReady ? <p role="status" className="rounded-xl border border-slate-700 p-4 text-sm">{historyError ?? "Cargando conversación…"} {historyError ? <Link href="/chat" className="ml-2 text-sky-200 underline">Nueva conversación</Link> : null}</p> : null}
+          {historyReady && messages.length === 0 && outstanding.length === 0 ? (
             <div className="grid min-h-[52dvh] place-items-center text-center"><div><Bot className="mx-auto h-9 w-9 text-sky-300" /><h1 className="mt-4 text-2xl font-semibold text-white">¿Qué necesitas?</h1><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">NOVA puede analizar, coordinar y preparar acciones. Lo sensible seguirá pidiendo tu aprobación.</p></div></div>
           ) : null}
 
@@ -299,7 +313,7 @@ export default function NovaRealtimeChat() {
 
       <footer className="border-t border-white/[0.05] bg-[#030711]/94 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-xl sm:px-5">
         <div className="mx-auto flex w-full max-w-[960px] items-end gap-2 rounded-[22px] border border-white/[0.10] bg-white/[0.04] p-2.5 focus-within:border-sky-300/30">
-          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Escribe a NOVA…" className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base text-white outline-none placeholder:text-slate-400" aria-label="Mensaje para NOVA" />
+          <textarea disabled={!historyReady || !ready} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Escribe a NOVA…" className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base text-white outline-none placeholder:text-slate-400" aria-label="Mensaje para NOVA" />
           <button type="button" onClick={() => void send()} disabled={!canSend} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-300 text-slate-950 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Enviar">{sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}</button>
         </div>
       </footer>

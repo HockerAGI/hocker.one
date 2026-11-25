@@ -82,6 +82,7 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
   const requestVersion = useRef(0);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const mutationLock = useRef(false);
   const [message, setMessage] = useState<string>("");
   const [view, setView] = useState<ActionView>("needs_approval");
   const [page, setPage] = useState(0);
@@ -91,10 +92,19 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
   const [integrationsLoading, setIntegrationsLoading] = useState(true);
 
   const pendingCount = view === "needs_approval" && !selectedId && !loadError ? actions.length : null;
+  const groupKey = (action: RuntimeAction) => action.payload?.trace_id && Number.isInteger(action.payload.sequence_index)
+    ? "batch:" + action.payload.trace_id : "action:" + action.id;
+  const groupTimes = new Map<string, number>();
+  for (const action of actions) {
+    const key = groupKey(action);
+    groupTimes.set(key, Math.max(groupTimes.get(key) ?? 0, Date.parse(action.created_at) || 0));
+  }
   const orderedActions = [...actions].sort((a, b) => {
-    const ap = a.payload; const bp = b.payload;
-    if (ap?.trace_id && ap.trace_id === bp?.trace_id && Number.isInteger(ap.sequence_index) && Number.isInteger(bp.sequence_index)) return Number(ap.sequence_index) - Number(bp.sequence_index);
-    return Date.parse(b.created_at) - Date.parse(a.created_at);
+    const ak = groupKey(a); const bk = groupKey(b);
+    if (ak === bk && Number.isInteger(a.payload?.sequence_index) && Number.isInteger(b.payload?.sequence_index)) {
+      return Number(a.payload?.sequence_index) - Number(b.payload?.sequence_index);
+    }
+    return (groupTimes.get(bk) ?? 0) - (groupTimes.get(ak) ?? 0) || ak.localeCompare(bk);
   });
 
   const checkIntegrations = useCallback(async () => {
@@ -163,6 +173,8 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
   }, [load]);
 
   async function mutate(path: string, payload: Record<string, unknown>) {
+    if (mutationLock.current) return;
+    mutationLock.current = true;
     setBusyId(String(payload.action_id ?? ""));
     setMessage("");
     try {
@@ -179,6 +191,7 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Operación no completada.");
     } finally {
+      mutationLock.current = false;
       setBusyId(null);
     }
   }

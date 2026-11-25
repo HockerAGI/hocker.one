@@ -106,7 +106,7 @@ test("streaming chat cannot fall back to uncertified dedicated runtime in strict
 
 test("dedicated runtime health does not incorrectly disable the unified NOVA composer", async () => {
   const ui = await read("src/components/NovaRealtimeChat.tsx");
-  assert.match(ui, /Runtime dedicado sin señal/);
+  assert.match(ui, /Motor dedicado sin señal/);
   assert.doesNotMatch(ui, /NOVA está sin conexión/);
   assert.match(ui, /placeholder="Escribe a NOVA…"/);
 });

@@ -82,6 +82,7 @@ export default function NovaWorkspaceCapabilities() {
       const items = body.meta?.capabilities_contract?.relevant_capabilities ?? [];
       setCapabilities(items.filter((item) => item && typeof item.key === "string"));
     } catch (loadError) {
+      setCapabilities([]);
       setError(loadError instanceof Error ? loadError.message : "No se pudo consultar capacidades.");
     } finally {
       setLoading(false);
@@ -89,8 +90,8 @@ export default function NovaWorkspaceCapabilities() {
   }, [projectId, ready]);
 
   useEffect(() => {
-    if (open && capabilities.length === 0 && !loading) void loadCapabilities();
-  }, [capabilities.length, loadCapabilities, loading, open]);
+    if (open) void loadCapabilities();
+  }, [loadCapabilities, open]);
 
   const actionable = useMemo(() => getVisibleNovaCapabilities(capabilities), [capabilities]);
   const unavailable = useMemo(
@@ -128,7 +129,7 @@ export default function NovaWorkspaceCapabilities() {
             {loading ? (
               <div className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Comprobando capacidades reales…</div>
             ) : error ? (
-              <div className="rounded-xl border border-rose-300/15 bg-rose-300/5 px-3 py-2 text-xs leading-5 text-rose-100">{error}</div>
+              <div className="rounded-xl border border-rose-300/15 bg-rose-300/5 px-3 py-2 text-xs leading-5 text-rose-100">{error} <button type="button" onClick={() => void loadCapabilities()} className="underline">Reintentar</button></div>
             ) : (
               <div className="space-y-3">
                 <div className="grid gap-2 sm:grid-cols-2">

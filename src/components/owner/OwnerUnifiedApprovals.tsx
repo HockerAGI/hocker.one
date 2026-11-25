@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 type RuntimeAction = {
   id: string;
@@ -32,7 +32,7 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
     try {
       const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&status=needs_approval&limit=10`, { cache: "no-store" });
       const data = (await res.json()) as ApiListResponse;
-      if (!res.ok || data.error) throw new Error(data.error || "No se pudo consultar la cola.");
+      if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) throw new Error(data.error || "No se pudo consultar la cola.");
       setLoadError(false);
       setActions(data.actions ?? []);
     } catch {
@@ -57,8 +57,8 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
           <p className="hko-uni-panel-kicker">Aprobaciones</p>
           <p className="hko-uni-panel-title">{loading || loadError ? "Pendientes por verificar" : `${pending.length === 10 ? "10+" : pending.length} por aprobar`}</p>
         </div>
-        <span className={`hko-status-val ${loadError || pending.length > 0 ? "warn" : "ok"}`}>
-          {loadError ? "Sin verificar" : pending.length > 0 ? "Revisar" : "Limpia"}
+        <span className={`hko-status-val ${loading || loadError || pending.length > 0 ? "warn" : "ok"}`}>
+          {loading ? "Consultando" : loadError ? "Sin verificar" : pending.length > 0 ? "Revisar" : "Sin pendientes"}
         </span>
       </div>
       <div className="hko-uni-panel-body">
@@ -71,7 +71,7 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
         ) : pending.length === 0 ? (
           <p className="hko-uni-appr-empty">
             <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-300/60" />
-            Sin acciones pendientes. Todo en orden.
+            Sin acciones pendientes de aprobación.
           </p>
         ) : (
           pending.map((action) => (
@@ -87,18 +87,14 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
                 </div>
               </div>
               <div className="hko-uni-appr-btns">
-                <Link href="/owner/actions" className="hko-uni-appr-btn approve inline-flex min-h-11 items-center justify-center">
+                <Link href={"/owner/actions?action_id=" + encodeURIComponent(action.id)} className="hko-uni-appr-btn approve inline-flex min-h-11 items-center justify-center">
                   Revisar acción
                 </Link>
               </div>
             </div>
           ))
         )}
-        {!loading && pending.length === 0 && actions.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.68rem", color: "rgba(100,116,139,1)", marginTop: "0.3rem" }}>
-            <Clock3 className="h-3 w-3" /> {actions.length} acciones en historial
-          </div>
-        )}
+        <Link href="/owner/actions" className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-sky-200">Ver todas las acciones</Link>
       </div>
     </section>
   );

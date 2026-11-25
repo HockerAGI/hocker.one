@@ -16,11 +16,11 @@ export default function Sidebar() {
     const fetchPending = async () => {
       try {
         const res = await fetch("/api/agi/runtime/actions?status=needs_approval", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json() as { actions?: unknown[] };
-          setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
-        }
+        const data = await res.json() as { ok?: boolean; actions?: unknown[] };
+        if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) throw new Error("Cola no disponible");
+        setPendingCount(data.actions.length);
       } catch {
+        setPendingCount(0);
         // Navigation must remain usable if the counter is offline.
       }
     };
@@ -41,7 +41,7 @@ export default function Sidebar() {
 
       {pendingCount > 0 ? (
         <Link href="/owner/actions" className="mx-3 mt-2 flex min-h-11 items-center gap-2.5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-3.5 py-2.5 text-amber-100">
-          <Bell className="h-4 w-4" /><span className="flex-1 text-xs font-semibold">{pendingCount} por aprobar</span>
+          <Bell className="h-4 w-4" /><span className="flex-1 text-xs font-semibold">{pendingCount === 30 ? "30+" : pendingCount} por aprobar</span>
         </Link>
       ) : null}
 

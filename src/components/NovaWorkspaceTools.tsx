@@ -38,6 +38,7 @@ export default function NovaWorkspaceTools() {
       if (!body.mcp_registry) throw new Error("El registry MCP no devolvió estado.");
       setRegistry({ ...body.mcp_registry, initialized: Boolean(body.initialized ?? initialize) });
     } catch (value) {
+      setRegistry(null);
       setError(value instanceof Error ? value.message : "No se pudo consultar el MCP Registry.");
     } finally {
       setLoading(false);
@@ -45,8 +46,8 @@ export default function NovaWorkspaceTools() {
   }, []);
 
   useEffect(() => {
-    if (open && !registry && !loading) void load(false);
-  }, [loading, load, open, registry]);
+    if (open) void load(false);
+  }, [load, open]);
 
   const tools = useMemo(() => {
     if (!registry) return [];
