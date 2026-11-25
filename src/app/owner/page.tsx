@@ -78,7 +78,7 @@ export default async function OwnerPage() {
             </h1>
           </div>
           <p className="hko-uni-hero-sub">
-            El estado de tu ecosistema en un vistazo: NOVA, conexiones y decisiones que necesitan atención.
+            NOVA, conexiones y decisiones pendientes en un vistazo.
           </p>
         </div>
         <div className="hko-uni-hero-pills">
@@ -101,7 +101,7 @@ export default async function OwnerPage() {
       <section className="hko-uni-panel hko-uni-chat" aria-labelledby="nova-entry-title">
         <div className="hko-uni-panel-head">
           <div>
-            <p className="hko-uni-panel-kicker">Workspace central</p>
+            <p className="hko-uni-panel-kicker">Conversación</p>
             <p className="hko-uni-panel-title" id="nova-entry-title">NOVA</p>
           </div>
           <span className={`hko-status-val ${novaIsOnline ? "ok" : novaService.status === "offline" ? "err" : "warn"}`}>
@@ -114,10 +114,10 @@ export default async function OwnerPage() {
             className="group flex min-h-[180px] flex-col justify-between rounded-2xl border border-sky-300/15 bg-sky-300/[0.04] p-6 transition hover:border-sky-300/35 hover:bg-sky-300/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
           >
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/80">Abrir workspace</p>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/80">Asistente</p>
               <h2 className="mt-3 text-2xl font-black tracking-tight text-white">Habla con NOVA</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Conversación inmersiva, capacidades, herramientas y acciones aprobadas viven en un solo canal.
+                Consulta, crea propuestas y revisa acciones en una conversación.
               </p>
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -140,7 +140,7 @@ export default async function OwnerPage() {
         <div className="hko-uni-panel-head" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: 0, paddingBottom: "0.85rem", marginBottom: "0.85rem" }}>
           <div>
             <p className="hko-uni-panel-kicker">Navegación rápida</p>
-            <p className="hko-uni-panel-title">Vistas de control y evidencia</p>
+            <p className="hko-uni-panel-title">Accesos rápidos</p>
           </div>
         </div>
         <div className="hko-uni-quick-grid">

@@ -288,7 +288,7 @@ function NovaConversation({ projectId, ready, requestedThreadId }: { projectId: 
           {outstanding.length > 0 ? (
             <section aria-label="Acciones pendientes del proyecto" className="rounded-2xl border border-slate-700 bg-[#0b1320] p-4">
               <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">Acciones del proyecto</h2><Link href="/owner/actions" className="text-sm font-medium text-sky-200">Ver todas</Link></div>
-              {outstanding.slice().reverse().map(action => <DraftCard key={action.id} draft={{ id: action.id, title: action.title, tool_key: action.tool_key, risk_level: action.risk_level }} action={action} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => {}} />)}
+              {outstanding.slice().reverse().map(action => <DraftCard projectId={projectId} key={action.id} draft={{ id: action.id, title: action.title, tool_key: action.tool_key, risk_level: action.risk_level }} action={action} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => {}} />)}
             </section>
           ) : null}
           {!historyReady ? <p role="status" className="rounded-xl border border-slate-700 p-4 text-sm">{historyError ?? "Cargando conversación…"} {historyError ? <Link href="/chat" className="ml-2 text-sky-200 underline">Nueva conversación</Link> : null}</p> : null}
@@ -302,7 +302,7 @@ function NovaConversation({ projectId, ready, requestedThreadId }: { projectId: 
                 {message.streaming && !message.content ? <Loader2 className="h-4 w-4 animate-spin text-sky-300" /> : null}
                 {message.content ? <p className="whitespace-pre-wrap">{message.content}</p> : null}
               </div>
-              {message.actions?.map((draft, index) => <DraftCard key={draft.id || `${message.id}-${index}`} draft={draft} action={liveActions.find(action => action.id === draft.id)} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => setMessages(current => current.map(item => item.id === message.id ? { ...item, actions: item.actions?.filter((_, draftIndex) => draftIndex !== index) } : item))} />)}
+              {message.actions?.map((draft, index) => <DraftCard projectId={projectId} key={draft.id || `${message.id}-${index}`} draft={draft} action={liveActions.find(action => action.id === draft.id)} queueVerified={queueVerified} refreshing={refreshing} onShowSummary={() => void loadRuntime()} onCancel={() => setMessages(current => current.map(item => item.id === message.id ? { ...item, actions: item.actions?.filter((_, draftIndex) => draftIndex !== index) } : item))} />)}
             </div>
           ))}
           <div ref={endRef} />

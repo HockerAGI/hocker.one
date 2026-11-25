@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import OwnerInlineActionReview from "@/components/OwnerInlineActionReview";
 
 type RuntimeAction = {
   id: string;
@@ -16,6 +17,7 @@ type RuntimeAction = {
   execution_error?: string | null;
   payload?: {
     trace_id?: string;
+    materializer_version?: string;
     sequence_index?: number;
     expected_base_sha?: string;
     expected_sha?: string;
@@ -79,6 +81,7 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
   const [actions, setActions] = useState<RuntimeAction[]>([]);
   const [selectedId, setSelectedId] = useState(initialActionId);
   const [reviewId, setReviewId] = useState<string | null>(null);
+  const [inlineReviewId, setInlineReviewId] = useState<string | null>(null);
   const requestVersion = useRef(0);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -292,6 +295,7 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
         {orderedActions.map((action) => {
           const plan = action.payload?.write_plan;
           const isPending = action.status === "needs_approval";
+          const guidedReview = action.tool_key === "github" && action.payload?.materializer_version === "12.7K-2A" && ["github.create_branch", "github.upsert_file", "github.create_pr"].includes(action.action_type);
           const isApproved = action.status === "approved";
           const isBusy = loading || Boolean(busyId);
 
@@ -330,7 +334,7 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
               {action.execution_error ? <p className="hko-approval-error">{action.execution_error}</p> : null}
 
               <div className="hko-approval-actions">
-                {isPending ? <button type="button" disabled={isBusy} onClick={() => setReviewId(reviewId === action.id ? null : action.id)}>Revisar y aprobar</button> : null}
+                {isPending ? <button type="button" disabled={isBusy} onClick={() => guidedReview ? setInlineReviewId(action.id) : setReviewId(reviewId === action.id ? null : action.id)}>Revisar y aprobar</button> : null}
                 {isPending ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "reject", note: "Rechazado desde Owner Approval Center." })}>Rechazar</button> : null}
                 {isApproved ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/execute", { action_id: action.id })}>Ejecutar acción aprobada</button> : null}
               </div>
@@ -339,11 +343,12 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
           );
         })}
       </div>
+      {inlineReviewId ? <OwnerInlineActionReview projectId={projectId} actionId={inlineReviewId} onClose={() => setInlineReviewId(null)} onApproved={() => void load()} /> : null}
       {!selectedId ? <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginación de acciones">
-        <button type="button" disabled={loading || page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}
+        <button type="button" disabled={loading || Boolean(busyId) || page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}
           className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Anterior</button>
         <span className="text-xs text-slate-400">Página {page + 1} · {view === "needs_approval" ? "Pendientes" : view === "approved" ? "Aprobadas" : "Historial"}</span>
-        <button type="button" disabled={loading || !hasNext} onClick={() => setPage((value) => value + 1)}
+        <button type="button" disabled={loading || Boolean(busyId) || !hasNext} onClick={() => setPage((value) => value + 1)}
           className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Siguiente</button>
       </nav> : null}
     </section>

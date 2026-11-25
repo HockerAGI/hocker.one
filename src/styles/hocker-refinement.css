@@ -114,3 +114,23 @@ body, button, input, textarea, select { font-family: var(--hko-type); }
  .hko-refined-shell .hko-approval-card-top { flex-direction: column; align-items: stretch; }
  .hko-refined-shell .hko-approval-badges { justify-content: flex-start; }
 }
+
+/* Unify legacy module surfaces without changing their layout contracts. */
+.hko-refined-shell .hko-module-card,
+.hko-refined-shell .hocker-panel-pro,
+.hko-refined-shell .hko-page-card {
+  border: 1px solid #29394b;
+  border-radius: 16px;
+  background: #101a29;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.hko-refined-shell .hko-kicker { font-size: .8rem; font-weight: 600; letter-spacing: .01em; text-transform: none; color: #91ddfa; }
+.hko-refined-shell .hko-mini-stat { background: #0b1320; border-radius: 12px; border-color: #29394b; }
+.hko-refined-shell .hko-mini-stat span { font-size: .85rem; letter-spacing: 0; text-transform: none; color: #b7c4d4; }
+.hko-refined-shell .hko-action-primary,.hko-refined-shell .hko-action-secondary { min-height: 44px; border-radius: 10px; font-size: .875rem; font-weight: 600; letter-spacing: 0; text-transform: none; box-shadow: none; }
+.hko-refined-shell .hko-action-primary:not(:disabled) { background: #62d7ff; color: #07121a; border-color: #62d7ff; }
+.hko-refined-shell .hko-action-secondary { background: #152438; color: #e3edf7; border-color: #35465b; }
+.hko-refined-shell .hko-owner-actions-page { width: 100%; max-width: 1450px; margin-inline: auto; }
+.hko-refined-shell .hko-approval-card strong { overflow-wrap: anywhere; }
+.hko-refined-shell .hko-approval-shell section[aria-label] { margin-bottom: 12px; }

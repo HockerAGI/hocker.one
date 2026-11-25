@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isOwnerReviewableGitHubAction, ownerActionReviewFingerprint } from "@/lib/owner-action-review";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
 import {
@@ -532,7 +533,7 @@ async function assertGuidedGithubExecutionOrder(projectId: string, item: AgiActi
 }
 
 
-export async function decideAgiAction(params: { project_id: string; action_id: string; decision: "approve" | "reject"; actor_id: string; note?: string }): Promise<AgiActionQueueRow> {
+export async function decideAgiAction(params: { project_id: string; action_id: string; decision: "approve" | "reject"; actor_id: string; note?: string; expected_review_fingerprint?: string }): Promise<AgiActionQueueRow> {
   const item = await getQueueItem(params.project_id, params.action_id);
 
   if (!["needs_approval", "dry_run_queued", "queued"].includes(String(item.status))) {
@@ -541,6 +542,23 @@ export async function decideAgiAction(params: { project_id: string; action_id: s
 
   if (params.decision === "approve") {
     await assertGuidedGithubApprovalOrder(params.project_id, item);
+
+    // The inline review opts into a compare-and-set decision. Existing callers
+    // retain their contract; no execution or provider writes occur here.
+    if (params.expected_review_fingerprint) {
+      if (!isOwnerReviewableGitHubAction(item) || ownerActionReviewFingerprint(item) !== params.expected_review_fingerprint) {
+        throw new Error("ACTION_REVIEW_CHANGED");
+      }
+      const sb = createAdminSupabase();
+      let query = sb.from("agi_action_queue").update({
+        status: "approved", approved_by: params.actor_id, approval_note: params.note ?? null,
+        approved_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("project_id", params.project_id).eq("id", item.id).eq("status", item.status);
+      query = item.updated_at ? query.eq("updated_at", item.updated_at) : query.is("updated_at", null);
+      const { data, error } = await query.select("*").maybeSingle<AgiActionQueueRow>();
+      if (error || !data) throw new Error("ACTION_REVIEW_CHANGED");
+      return data;
+    }
 
     return patchQueueItem(item.id, {
       status: "approved",

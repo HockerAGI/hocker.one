@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import OwnerInlineActionReview from "./OwnerInlineActionReview";
 import { Wand2 } from "lucide-react";
 import type { ChatActionDraft, RuntimeAction } from "./nova-chat-types";
-import { compact, formatScope, humanRisk, humanStatus, humanTool, statusTone, summarizeAction } from "./nova-chat-helpers";
+import { compact, formatScope, humanRisk, humanStatus, humanTool, isGuidedGithubMaterializerAction, statusTone, summarizeAction } from "./nova-chat-helpers";
 
-export function DraftCard({ draft, action, queueVerified, refreshing, onShowSummary, onCancel }: {
+export function DraftCard({ draft, action, projectId, queueVerified, refreshing, onShowSummary, onCancel }: {
   draft: ChatActionDraft;
+  projectId: string;
   action?: RuntimeAction;
   queueVerified: boolean;
   refreshing: boolean;
@@ -15,6 +17,7 @@ export function DraftCard({ draft, action, queueVerified, refreshing, onShowSumm
   onCancel: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const id = typeof draft.id === "string" && draft.id.length > 0 ? draft.id : null;
   const persisted = Boolean(id || draft.enqueued === true);
   const live = queueVerified && action && action.id === id ? action : undefined;
@@ -22,6 +25,7 @@ export function DraftCard({ draft, action, queueVerified, refreshing, onShowSumm
   const required = live ? live.requires_approval : persisted ? undefined : draft.draft?.owner_gate_required;
   const status = live ? humanStatus(live.status) : persisted ? "Estado sin verificar" : canCancelLocally ? "Borrador" : "Estado sin verificar";
   const info = live ? summarizeAction(live) : null;
+  const inlineReview = Boolean(live?.status === "needs_approval" && isGuidedGithubMaterializerAction(live));
   const flow = Array.isArray(draft.draft?.proposed_flow) ? draft.draft.proposed_flow : [];
   const href = id ? "/owner/actions?action_id=" + encodeURIComponent(id) : "/owner/actions";
   const title = live?.title || draft.title || draft.draft?.title || "Acción propuesta";
@@ -45,7 +49,7 @@ export function DraftCard({ draft, action, queueVerified, refreshing, onShowSumm
       {info ? <p className="mt-3 break-all text-sm text-slate-300">{info.repo}{info.branch !== "No aplica" ? " · " + info.branch : ""}</p> : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" aria-expanded={expanded} onClick={() => { setExpanded(value => !value); if (!expanded && persisted) onShowSummary(); }} className="min-h-11 rounded-xl border border-slate-600 px-4 text-sm font-medium text-slate-100 hover:bg-white/5">{expanded ? "Ocultar estado" : "Ver estado"}</button>
-        {persisted ? <Link href={href} className="inline-flex min-h-11 items-center rounded-xl bg-sky-300 px-4 text-sm font-semibold text-slate-950 hover:bg-sky-200">{live?.status === "needs_approval" ? "Revisar y aprobar" : "Abrir acción"}</Link> : null}
+        {inlineReview ? <button type="button" onClick={() => setReviewOpen(true)} className="min-h-11 rounded-xl bg-sky-300 px-4 text-sm font-semibold text-slate-950 hover:bg-sky-200">Revisar y aprobar</button> : persisted ? <Link href={href} className="inline-flex min-h-11 items-center rounded-xl bg-sky-300 px-4 text-sm font-semibold text-slate-950 hover:bg-sky-200">{live?.status === "needs_approval" ? "Revisar y aprobar" : "Abrir acción"}</Link> : null}
         {canCancelLocally ? <button type="button" disabled={!canCancelLocally} onClick={onCancel} className="min-h-11 rounded-xl border border-rose-300/25 px-4 text-sm text-rose-200">Descartar borrador</button> : null}
       </div>
       {expanded ? <div className="mt-4 space-y-2 border-t border-white/10 pt-4 text-sm text-slate-300" role="status">
@@ -58,6 +62,7 @@ export function DraftCard({ draft, action, queueVerified, refreshing, onShowSumm
         {persisted && !live && !refreshing ? <p>Abre la acción para consultar el registro exacto. No se ha confirmado su estado desde esta vista.</p> : null}
         {!persisted ? <p>{draft.next_step || draft.reason || "Revisa la propuesta antes de continuar."}</p> : null}
       </div> : null}
+      {reviewOpen && id ? <OwnerInlineActionReview projectId={projectId} actionId={id} onClose={() => setReviewOpen(false)} onApproved={onShowSummary} /> : null}
     </article>
   );
 }

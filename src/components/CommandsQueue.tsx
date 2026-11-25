@@ -10,6 +10,7 @@ import { humanCommandLabel } from "@/lib/hocker-human-labels";
 
 type QueueItem = CommandRow;
 type CommandsResponse = {
+  ok?: boolean;
   items?: unknown[];
   error?: string;
 };
@@ -19,7 +20,7 @@ const FILTERS: Array<{ value: "all" | CommandStatus; label: string }> = [
   { value: "needs_approval", label: "Revisión" },
   { value: "running", label: "En curso" },
   { value: "done", label: "Listas" },
-  { value: "error", label: "Histórico" },
+  { value: "error", label: "Errores" },
 ];
 
 function safeDate(input: string): string {
@@ -50,7 +51,7 @@ export default function CommandsQueue() {
         cache: "no-store",
       });
       const data = (await res.json().catch(() => ({}))) as CommandsResponse;
-      if (!res.ok) {
+      if (!res.ok || data.ok !== true || !Array.isArray(data.items)) {
         throw new Error(data.error || "No se pudo leer la cola de tareas.");
       }
 
@@ -84,23 +85,23 @@ export default function CommandsQueue() {
   }), [items]);
 
   if (loading && items.length === 0) return <div className="hko-module-card text-sm text-slate-400">Cargando tareas...</div>;
-  if (error) return <div className="rounded-[28px] border border-rose-400/20 bg-rose-500/10 p-5 text-sm text-rose-200">{error}</div>;
+  if (error) return <div className="rounded-[28px] border border-rose-400/20 bg-rose-500/10 p-5 text-sm text-rose-200">{error} <button type="button" onClick={() => void load()} className="ml-2 underline">Reintentar</button></div>;
 
   return (
     <section className="hko-module-card space-y-4">
       <div>
         <p className="hko-kicker">Seguimiento</p>
         <h3 className="mt-2 text-xl font-black text-white">Tareas</h3>
-        <p className="mt-2 text-sm text-slate-400">Qué falta, qué está en curso y qué ya quedó cerrado.</p>
+        <p className="mt-2 text-sm text-slate-400">Últimas 100 tareas registradas.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         <div className="hko-mini-stat"><span>Revisión</span><strong>{stats.pending}</strong></div>
         <div className="hko-mini-stat"><span>En curso</span><strong>{stats.running}</strong></div>
         <div className="hko-mini-stat"><span>Listas</span><strong>{stats.done}</strong></div>
-        <div className="hko-mini-stat"><span>Histórico</span><strong>{stats.errors}</strong></div>
+        <div className="hko-mini-stat"><span>Errores</span><strong>{stats.errors}</strong></div>
       </div>
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((item) => <button key={item.value} onClick={() => setFilter(item.value)} className={filter === item.value ? "hko-action-primary" : "hko-action-secondary"}>{item.label}</button>)}
+        {FILTERS.map((item) => <button key={item.value} onClick={() => setFilter(item.value)} aria-pressed={filter === item.value} className={filter === item.value ? "hko-action-primary" : "hko-action-secondary"}>{item.label}</button>)}
       </div>
       <div className="space-y-3">
         {filtered.length === 0 ? <p className="rounded-2xl border border-white/8 bg-slate-950/45 p-4 text-sm text-slate-500">No hay tareas en esta vista.</p> : filtered.map((item) => (

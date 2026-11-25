@@ -51,8 +51,9 @@ export default function CommandPalette() {
   useEffect(() => { if (open) { setQuery(""); setActiveIndex(0); setTimeout(() => inputRef.current?.focus(), 30); } }, [open]);
 
   const filtered = useMemo(() => {
-    const value = query.trim().toLocaleLowerCase("es-MX");
-    return value ? SEARCHABLE_ITEMS.filter((item) => `${item.label} ${item.group} ${item.keywords ?? ""}`.toLocaleLowerCase("es-MX").includes(value)) : [...PRIMARY_ITEMS, ...SECONDARY_ITEMS];
+    const normalize = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("es-MX");
+    const value = normalize(query.trim());
+    return value ? SEARCHABLE_ITEMS.filter((item) => normalize(`${item.label} ${item.group} ${item.keywords ?? ""}`).includes(value)) : [...PRIMARY_ITEMS, ...SECONDARY_ITEMS];
   }, [query]);
 
   const navigate = useCallback((item: PaletteItem) => { setOpen(false); router.push(item.href); }, [router]);
@@ -69,7 +70,7 @@ export default function CommandPalette() {
               if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.min(value + 1, Math.max(filtered.length - 1, 0))); }
               if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((value) => Math.max(value - 1, 0)); }
               if (event.key === "Enter" && filtered[activeIndex]) { event.preventDefault(); navigate(filtered[activeIndex]!); }
-            }} placeholder="Buscar en Hocker One…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-slate-600" aria-label="Buscar en Hocker One" />
+            }} placeholder="Buscar en Hocker One…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-slate-400" aria-label="Buscar en Hocker One" />
           </div>
           <div className="max-h-[68dvh] overflow-y-auto p-2">
             {filtered.length === 0 ? <p className="px-4 py-10 text-center text-sm text-slate-500">Sin resultados</p> : filtered.map((item, index) => {

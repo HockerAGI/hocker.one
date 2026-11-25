@@ -4,7 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { getErrorMessage } from "@/lib/errors";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import type { ControlRow } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "Sin fecha";
@@ -19,6 +19,7 @@ export default function GovernancePanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const saveLock = useRef(false);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -51,7 +52,8 @@ export default function GovernancePanel() {
   }, [load]);
 
   async function toggle(field: "kill_switch" | "allow_write"): Promise<void> {
-    if (!controls || saving) return;
+    if (!controls || saving || loading || saveLock.current) return;
+    saveLock.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -59,6 +61,7 @@ export default function GovernancePanel() {
         project_id: projectId,
         kill_switch: field === "kill_switch" ? !controls.kill_switch : controls.kill_switch,
         allow_write: field === "allow_write" ? !controls.allow_write : controls.allow_write,
+        meta: controls.meta ?? {},
       };
       const response = await fetch("/api/governance/killswitch", {
         method: "POST",
@@ -76,9 +79,10 @@ export default function GovernancePanel() {
       setControls(nextControls);
       setCheckedAt(new Date().toISOString());
     } catch (saveError: unknown) {
-      setError(getErrorMessage(saveError));
       await load();
+      setError(getErrorMessage(saveError));
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   }
@@ -89,7 +93,7 @@ export default function GovernancePanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.35em] text-rose-300">Seguridad</p>
-            <h3 className="mt-2 text-lg font-black text-white sm:text-xl">Registro de control</h3>
+            <h3 className="mt-2 text-lg font-black text-white sm:text-xl">Controles de seguridad</h3>
           </div>
           <button type="button" onClick={() => void load()} disabled={loading || saving} className="hko-action-secondary inline-flex items-center gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Actualizar
@@ -126,9 +130,9 @@ export default function GovernancePanel() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-[14px] font-black uppercase tracking-wide text-white">Pausa total</h4>
-                    <p className="mt-1 text-[11px] text-slate-400">Valor persistido: {String(controls.kill_switch)}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{controls.kill_switch ? "Activa" : "Inactiva"}</p>
                   </div>
-                  <button type="button" aria-pressed={controls.kill_switch} onClick={() => void toggle("kill_switch")} disabled={loading || saving} className={`relative inline-flex h-10 w-20 items-center rounded-full transition-all disabled:opacity-50 ${controls.kill_switch ? "bg-rose-600" : "border border-white/10 bg-slate-800"}`}>
+                  <button type="button" aria-label="Pausa total" aria-pressed={controls.kill_switch} onClick={() => void toggle("kill_switch")} disabled={loading || saving} className={`relative inline-flex h-10 w-20 items-center rounded-full transition-all disabled:opacity-50 ${controls.kill_switch ? "bg-rose-600" : "border border-white/10 bg-slate-800"}`}>
                     <span className={`inline-block h-8 w-8 rounded-full bg-white transition-transform ${controls.kill_switch ? "translate-x-11" : "translate-x-1"}`} />
                   </button>
                 </div>
@@ -141,9 +145,9 @@ export default function GovernancePanel() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-[14px] font-black uppercase tracking-wide text-white">Permiso de escritura</h4>
-                    <p className="mt-1 text-[11px] text-slate-400">Valor persistido: {String(controls.allow_write)}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{controls.allow_write ? "Permitida" : "Bloqueada"}</p>
                   </div>
-                  <button type="button" aria-pressed={controls.allow_write} onClick={() => void toggle("allow_write")} disabled={loading || saving} className={`relative inline-flex h-10 w-20 items-center rounded-full transition-all disabled:opacity-50 ${controls.allow_write ? "bg-amber-500" : "border border-white/10 bg-slate-800"}`}>
+                  <button type="button" aria-label="Permiso de escritura" aria-pressed={controls.allow_write} onClick={() => void toggle("allow_write")} disabled={loading || saving} className={`relative inline-flex h-10 w-20 items-center rounded-full transition-all disabled:opacity-50 ${controls.allow_write ? "bg-amber-500" : "border border-white/10 bg-slate-800"}`}>
                     <span className={`inline-block h-8 w-8 rounded-full bg-white transition-transform ${controls.allow_write ? "translate-x-11" : "translate-x-1"}`} />
                   </button>
                 </div>
