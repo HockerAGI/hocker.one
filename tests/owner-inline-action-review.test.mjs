@@ -35,3 +35,16 @@ test("task and governance surfaces report real results and preserve controls", a
   assert.match(governance, /meta: controls\.meta \?\? \{\}/);
   assert.match(governance, /await load\(\);\s*setError\(getErrorMessage\(saveError\)\)/);
 });
+
+test("guided approval cannot bypass exact review and preview cannot mutate action decisions or execution", async () => {
+  const [api, execute, execution, center] = await Promise.all(["src/app/api/agi/runtime/actions/decision/route.ts", "src/app/api/agi/runtime/actions/execute/route.ts", "src/lib/agi-action-execution.ts", "src/components/owner/OwnerApprovalCenter.tsx"].map(read));
+  assert.match(execution, /requiresOwnerGitHubReview\(item\) && !params.expected_review_fingerprint/);
+  assert.match(execution, /ACTION_REVIEW_REQUIRED/);
+  assert.match(execution, /item.status !== "needs_approval" \|\| !isOwnerReviewableGitHubAction/);
+  assert.match(execution, /process.env.VERCEL_ENV !== "production"/);
+  assert.match(api, /if \(process.env.VERCEL_ENV === "preview"\)[\s\S]*return json\([\s\S]*403\)/);
+  assert.match(execute, /if \(process.env.VERCEL_ENV === "preview"\)[\s\S]*return json\([\s\S]*403\)/);
+  assert.match(execute, /requireOwnerAal2Api\(ctx.project_id\)/);
+  assert.ok(execute.indexOf("if (!ownerGate.ok) return ownerGate.response") < execute.indexOf("const item = await executeApprovedAgiActionUniversal"));
+  assert.match(center, /isApproved && !previewReadOnly/);
+});

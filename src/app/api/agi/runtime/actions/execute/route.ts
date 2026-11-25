@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requireOwnerAal2Api } from "@/lib/owner-session-gate";
 import { executeApprovedAgiActionUniversal } from "@/lib/agi-action-execution-router";
 import { json, parseBody, requireProjectRole, toApiError } from "@/app/api/_lib";
 
@@ -14,6 +15,11 @@ export async function POST(req: Request): Promise<Response> {
   try {
     const parsed = ExecuteSchema.parse(await parseBody(req));
     const ctx = await requireProjectRole(parsed.project_id, ["owner"]);
+    if (process.env.VERCEL_ENV === "preview") {
+      return json({ ok: false, error: "Preview de solo lectura para ejecución de acciones." }, 403);
+    }
+    const ownerGate = await requireOwnerAal2Api(ctx.project_id);
+    if (!ownerGate.ok) return ownerGate.response;
     const item = await executeApprovedAgiActionUniversal({
       project_id: ctx.project_id,
       action_id: parsed.action_id,

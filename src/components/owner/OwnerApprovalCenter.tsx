@@ -77,7 +77,7 @@ function riskLabel(risk: string) {
   return labels[risk] ?? risk;
 }
 
-export default function OwnerApprovalCenter({ projectId, initialActionId }: { projectId: string; initialActionId?: string }) {
+export default function OwnerApprovalCenter({ projectId, initialActionId, previewReadOnly = false }: { projectId: string; initialActionId?: string; previewReadOnly?: boolean }) {
   const [actions, setActions] = useState<RuntimeAction[]>([]);
   const [selectedId, setSelectedId] = useState(initialActionId);
   const [reviewId, setReviewId] = useState<string | null>(null);
@@ -334,15 +334,16 @@ export default function OwnerApprovalCenter({ projectId, initialActionId }: { pr
               {action.execution_error ? <p className="hko-approval-error">{action.execution_error}</p> : null}
 
               <div className="hko-approval-actions">
-                {isPending ? <button type="button" disabled={isBusy} onClick={() => guidedReview ? setInlineReviewId(action.id) : setReviewId(reviewId === action.id ? null : action.id)}>Revisar y aprobar</button> : null}
-                {isPending ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "reject", note: "Rechazado desde Owner Approval Center." })}>Rechazar</button> : null}
-                {isApproved ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/execute", { action_id: action.id })}>Ejecutar acción aprobada</button> : null}
+                {isPending ? <button type="button" disabled={isBusy || (previewReadOnly && !guidedReview)} onClick={() => guidedReview ? setInlineReviewId(action.id) : setReviewId(reviewId === action.id ? null : action.id)}>{previewReadOnly && guidedReview ? "Revisar acción" : "Revisar y aprobar"}</button> : null}
+                {isPending && !previewReadOnly ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "reject", note: "Rechazado desde Owner Approval Center." })}>Rechazar</button> : null}
+                {isApproved && !previewReadOnly ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/execute", { action_id: action.id })}>Ejecutar acción aprobada</button> : null}
               </div>
-              {isPending && reviewId === action.id ? <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/5 p-4"><p className="text-sm text-slate-100">Confirma solo después de revisar el alcance, riesgo y detalles. La aprobación requiere MFA y no ejecuta el cambio.</p><div className="hko-approval-actions"><button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "approve", note: "Aprobado desde Owner Approval Center tras revisión explícita." })}>Confirmar aprobación</button><button type="button" disabled={isBusy} onClick={() => setReviewId(null)}>Volver</button></div></div> : null}
+              {isPending && !previewReadOnly && reviewId === action.id ? <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/5 p-4"><p className="text-sm text-slate-100">Confirma solo después de revisar el alcance, riesgo y detalles. La aprobación requiere MFA y no ejecuta el cambio.</p><div className="hko-approval-actions"><button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "approve", note: "Aprobado desde Owner Approval Center tras revisión explícita." })}>Confirmar aprobación</button><button type="button" disabled={isBusy} onClick={() => setReviewId(null)}>Volver</button></div></div> : null}
             </article>
           );
         })}
       </div>
+      {previewReadOnly ? <p role="status" className="mt-3 text-sm text-slate-300">Vista de evaluación: las decisiones y ejecuciones están deshabilitadas.</p> : null}
       {inlineReviewId ? <OwnerInlineActionReview projectId={projectId} actionId={inlineReviewId} onClose={() => setInlineReviewId(null)} onApproved={() => void load()} /> : null}
       {!selectedId ? <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginación de acciones">
         <button type="button" disabled={loading || Boolean(busyId) || page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}

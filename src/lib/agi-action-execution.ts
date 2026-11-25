@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { isOwnerReviewableGitHubAction, ownerActionReviewFingerprint } from "@/lib/owner-action-review";
+import { isOwnerReviewableGitHubAction, ownerActionReviewFingerprint, requiresOwnerGitHubReview } from "@/lib/owner-action-review";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
 import {
@@ -543,11 +543,17 @@ export async function decideAgiAction(params: { project_id: string; action_id: s
   if (params.decision === "approve") {
     await assertGuidedGithubApprovalOrder(params.project_id, item);
 
-    // The inline review opts into a compare-and-set decision. Existing callers
-    // retain their contract; no execution or provider writes occur here.
+    // Guided GitHub approvals require the exact review, including for
+    // callers outside the UI. Invalid plans cannot fall back to legacy approval.
+    if (requiresOwnerGitHubReview(item) && !params.expected_review_fingerprint) {
+      throw Object.assign(new Error("ACTION_REVIEW_REQUIRED"), { status: 409 });
+    }
     if (params.expected_review_fingerprint) {
-      if (!isOwnerReviewableGitHubAction(item) || ownerActionReviewFingerprint(item) !== params.expected_review_fingerprint) {
-        throw new Error("ACTION_REVIEW_CHANGED");
+      if (process.env.VERCEL_ENV !== "production") {
+        throw Object.assign(new Error("ACTION_REVIEW_PRODUCTION_REQUIRED"), { status: 403 });
+      }
+      if (item.status !== "needs_approval" || !isOwnerReviewableGitHubAction(item) || ownerActionReviewFingerprint(item) !== params.expected_review_fingerprint) {
+        throw Object.assign(new Error("ACTION_REVIEW_CHANGED"), { status: 409 });
       }
       const sb = createAdminSupabase();
       let query = sb.from("agi_action_queue").update({
@@ -556,7 +562,7 @@ export async function decideAgiAction(params: { project_id: string; action_id: s
       }).eq("project_id", params.project_id).eq("id", item.id).eq("status", item.status);
       query = item.updated_at ? query.eq("updated_at", item.updated_at) : query.is("updated_at", null);
       const { data, error } = await query.select("*").maybeSingle<AgiActionQueueRow>();
-      if (error || !data) throw new Error("ACTION_REVIEW_CHANGED");
+      if (error || !data) throw Object.assign(new Error("ACTION_REVIEW_CHANGED"), { status: 409 });
       return data;
     }
 

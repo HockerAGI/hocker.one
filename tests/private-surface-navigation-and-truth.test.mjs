@@ -38,7 +38,7 @@ test("failed data reads cannot be rendered as zero records", async () => {
 test("Owner review fingerprint changes on real changes but not JSON key order", async () => {
   const source = await read("src/lib/owner-action-review.ts");
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const { ownerActionReviewFingerprint: fingerprint, buildOwnerActionReview: review } =
+  const { ownerActionReviewFingerprint: fingerprint, buildOwnerActionReview: review, requiresOwnerGitHubReview: required } =
     await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
   const item = { id: "fixture-action", project_id: "fixture-project", action_type: "github.upsert_file",
     tool_key: "github", title: "Fixture", status: "needs_approval", risk_level: "high", dry_run: true, requires_approval: true,
@@ -50,6 +50,10 @@ test("Owner review fingerprint changes on real changes but not JSON key order", 
   assert.notEqual(fingerprint(item), fingerprint({ ...item, payload: { ...item.payload, content: "different" } }));
   assert.notEqual(fingerprint(item), fingerprint({ ...item, status: "approved" }));
   assert.notEqual(fingerprint(item), fingerprint({ ...item, project_id: "other" }));
+  assert.equal(required(item), true);
+  assert.equal(required({ ...item, requires_approval: false }), true);
+  assert.equal(required({ ...item, payload: { ...item.payload, write_plan: { valid: false } } }), true);
+  assert.equal(required({ ...item, tool_key: "vercel" }), false);
   assert.equal(review(item).content, "test");
   assert.equal(review(item).fingerprint, fingerprint(item));
   assert.equal(Object.hasOwn(review(item), "internal_fixture_key"), false);

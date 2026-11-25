@@ -21,9 +21,15 @@ export function ownerActionReviewFingerprint(item: AgiActionQueueRow): string {
   }))).digest("hex");
 }
 
-export function isOwnerReviewableGitHubAction(item: AgiActionQueueRow): boolean {
+// Identify the guided family independently of plan validity. Invalid plans
+// must fail closed rather than falling back to a legacy approval.
+export function requiresOwnerGitHubReview(item: AgiActionQueueRow): boolean {
   return item.tool_key === "github" && REVIEWABLE.has(item.action_type) &&
-    item.payload?.materializer_version === "12.7K-2A" && item.requires_approval === true &&
+    item.payload?.materializer_version === "12.7K-2A";
+}
+
+export function isOwnerReviewableGitHubAction(item: AgiActionQueueRow): boolean {
+  return requiresOwnerGitHubReview(item) && item.requires_approval === true &&
     record(item.payload?.write_plan).valid === true;
 }
 

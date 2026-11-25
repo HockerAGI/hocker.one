@@ -50,7 +50,7 @@ export default async function OwnerActionsPage({ searchParams }: { searchParams:
             Ninguna acción se aprueba automáticamente por abrir esta pantalla.
           </p>
         </details>
-        <OwnerApprovalCenter projectId={projectId} initialActionId={actionId} key={actionId ?? "all"} />
+        <OwnerApprovalCenter projectId={projectId} initialActionId={actionId} key={actionId ?? "all"} previewReadOnly={process.env.VERCEL_ENV === "preview"} />
       </div>
     </PageShell>
   );

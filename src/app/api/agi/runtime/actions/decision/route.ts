@@ -37,6 +37,11 @@ export async function POST(req: Request): Promise<Response> {
     const parsed = DecisionSchema.parse(await parseBody(req));
     const ctx = await requireProjectRole(parsed.project_id, ["owner"]);
 
+    // Preview can inspect the persisted queue, but cannot mutate its decisions.
+    if (process.env.VERCEL_ENV === "preview") {
+      return json({ ok: false, error: "Preview de solo lectura para decisiones de acciones." }, 403);
+    }
+
     if (parsed.decision === "approve") {
       const ownerGate = await requireOwnerAal2Api(parsed.project_id);
       if (!ownerGate.ok) return ownerGate.response;
