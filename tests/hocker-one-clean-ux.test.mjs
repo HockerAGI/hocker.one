@@ -19,7 +19,8 @@ test("NOVA route is immersive instead of a dashboard card", async () => {
 
 test("NOVA primary view hides operational counters and exposes optional detail", async () => {
   const chat = await read("src/components/NovaRealtimeChat.tsx");
-  assert.match(chat, /Detalle/);
+  assert.match(chat, /aria-expanded=\{showDetail\}/);
+  assert.match(chat, /\{showDetail \? \(/);
   assert.doesNotMatch(chat, /\{verifiedConnections\} verificadas · \{configuredConnections\} configuradas/);
   assert.doesNotMatch(chat, />Actualizar<\/button>/);
 });

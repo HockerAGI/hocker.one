@@ -54,10 +54,10 @@ export default function NovaRepositoryWorkspace() {
   const title = operation === "get_repo" ? "Repositorio" : operation === "list_tree" ? "Árbol" : operation === "read_file" ? "Archivo" : "Diff";
 
   return (
-    <div className="pointer-events-none absolute inset-x-3 bottom-[16.25rem] z-30 flex justify-center sm:inset-x-5">
-      <div className="pointer-events-auto flex w-full max-w-[860px] justify-end">
+    <div className="relative">
+      <div className="flex items-center">
         {open ? (
-          <section aria-label="Repository Workspace de NOVA" className="mb-2 w-full max-w-[620px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#07101d]/96 p-3 shadow-2xl backdrop-blur-xl">
+          <section aria-label="Repository Workspace de NOVA" className="absolute bottom-full left-0 z-40 mb-2 w-[min(86vw,520px)] max-h-[55dvh] overflow-auto rounded-2xl border border-white/[0.10] bg-[#07101d]/96 p-3 shadow-2xl backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3 px-1 pb-3">
               <div>
                 <p className="text-sm font-semibold text-white">Repository Workspace</p>
@@ -113,8 +113,9 @@ export default function NovaRepositoryWorkspace() {
           </section>
         ) : null}
 
-        <button type="button" onClick={() => setOpen((value) => !value)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.10] bg-[#07101d]/96 text-slate-300 shadow-xl backdrop-blur-xl hover:bg-white/[0.07] hover:text-white" aria-expanded={open} aria-label={open ? "Cerrar Repository Workspace" : "Abrir Repository Workspace"} title="Repository Workspace">
+        <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 bg-[#101b29] px-3 text-xs text-slate-200 hover:bg-white/5" aria-expanded={open} aria-label={open ? "Cerrar Repository Workspace" : "Abrir Repository Workspace"} title="Repository Workspace">
           {open ? <X className="h-5 w-5" /> : <Code2 className="h-5 w-5" />}
+          <span>Repositorios</span>
         </button>
       </div>
     </div>

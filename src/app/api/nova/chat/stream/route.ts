@@ -1,3 +1,4 @@
+import { novaProtectedAvailability, NOVA_PROTECTED_UNAVAILABLE } from "@/lib/nova-environment";
 import { z } from "zod";
 import { getRuntimeToolCatalog } from "@/lib/agi-runtime-core";
 import { buildNovaProductionGateContext, getAgiQueueLock } from "@/lib/agi-queue-lock";
@@ -128,6 +129,7 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
+  if (!novaProtectedAvailability().available) return new Response(JSON.stringify({ ok: false, error: NOVA_PROTECTED_UNAVAILABLE }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
   const queueLock = await getAgiQueueLock(chatCtx.project_id);
   const productionGateContext = buildNovaProductionGateContext(queueLock);
 

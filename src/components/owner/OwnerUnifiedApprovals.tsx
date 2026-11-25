@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 type RuntimeAction = {
   id: string;
@@ -21,33 +21,37 @@ function riskLabel(risk: string) {
   return labels[risk] ?? risk;
 }
 
-export default function OwnerUnifiedApprovals({ projectId }: { projectId: string }) {
+export default function OwnerUnifiedApprovals({ projectId, enabled = true, preview = false, initialPendingCount = null }: { projectId: string; enabled?: boolean; preview?: boolean; initialPendingCount?: number | null }) {
   const [actions, setActions] = useState<RuntimeAction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   const pending = useMemo(() => actions.filter((a) => a.status === "needs_approval"), [actions]);
 
   const load = useCallback(async () => {
+    if (!enabled) return;
     try {
-      const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&limit=10`, { cache: "no-store" });
+      const res = await fetch(`/api/agi/runtime/actions?project_id=${encodeURIComponent(projectId)}&status=needs_approval&limit=10`, { cache: "no-store" });
       const data = (await res.json()) as ApiListResponse;
-      if (!res.ok || data.error) throw new Error(data.error || "No se pudo consultar la cola.");
+      if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) throw new Error(data.error || "No se pudo consultar la cola.");
       setLoadError(false);
       setActions(data.actions ?? []);
+      setCheckedAt(new Date().toISOString());
     } catch {
       setLoadError(true);
       setActions([]);
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     const t = setTimeout(() => { void load(); }, 0);
     const interval = setInterval(() => { void load(); }, 30000);
     return () => { clearTimeout(t); clearInterval(interval); };
-  }, [load]);
+  }, [load, enabled]);
 
 
   return (
@@ -55,26 +59,26 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
       <div className="hko-uni-panel-head">
         <div>
           <p className="hko-uni-panel-kicker">Aprobaciones</p>
-          <p className="hko-uni-panel-title">Cola AGI · {pending.length} pendientes</p>
+          <p className="hko-uni-panel-title">{!enabled ? "Consulta protegida" : loading || loadError ? initialPendingCount !== null ? `${initialPendingCount} por aprobar · última consulta` : "Pendientes por verificar" : `${pending.length === 10 ? "10+" : pending.length} por aprobar`}</p>
         </div>
-        <span className={`hko-status-val ${loadError || pending.length > 0 ? "warn" : "ok"}`}>
-          {loadError ? "Sin verificar" : pending.length > 0 ? "Revisar" : "Limpia"}
+        <span className={`hko-status-val ${!enabled || loading || loadError || pending.length > 0 ? "warn" : "ok"}`}>
+          {!enabled ? preview ? "Producción" : "MFA" : loading ? "Consultando" : loadError ? "Sin verificar" : pending.length > 0 ? "Revisar" : "Sin pendientes"}
         </span>
       </div>
       <div className="hko-uni-panel-body">
-        {loading ? (
+        {!enabled ? <p className="text-sm leading-6 text-slate-300">{preview ? "La cola real se consulta en Producción; Preview no tiene acceso a los registros protegidos." : "Verifica tu sesión Owner con MFA para consultar la cola."}</p> : loading ? (
           <p className="hko-uni-appr-empty">Leyendo cola…</p>
         ) : loadError ? (
           <p className="hko-uni-appr-empty text-amber-200" role="status">
-            No fue posible consultar la cola. Revisa el centro Owner antes de asumir que no hay pendientes.
+            No se pudo consultar la cola. <button type="button" onClick={() => void load()} className="font-semibold text-sky-200 underline">Reintentar</button>.
           </p>
         ) : pending.length === 0 ? (
           <p className="hko-uni-appr-empty">
             <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-300/60" />
-            Sin acciones pendientes. Todo en orden.
+            Sin acciones pendientes de aprobación.
           </p>
         ) : (
-          pending.map((action) => (
+          pending.slice(0, 3).map((action) => (
             <div key={action.id} className="hko-uni-appr-item">
               <div className="hko-uni-appr-top">
                 <div style={{ minWidth: 0 }}>
@@ -87,18 +91,15 @@ export default function OwnerUnifiedApprovals({ projectId }: { projectId: string
                 </div>
               </div>
               <div className="hko-uni-appr-btns">
-                <Link href="/owner/actions" className="hko-uni-appr-btn approve inline-flex min-h-11 items-center justify-center">
-                  Revisar alcance y decidir en Owner Gate
+                <Link href={"/owner/actions?action_id=" + encodeURIComponent(action.id)} className="hko-uni-appr-btn approve inline-flex min-h-11 items-center justify-center">
+                  Revisar acción
                 </Link>
               </div>
             </div>
           ))
         )}
-        {!loading && pending.length === 0 && actions.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.68rem", color: "rgba(100,116,139,1)", marginTop: "0.3rem" }}>
-            <Clock3 className="h-3 w-3" /> {actions.length} acciones en historial
-          </div>
-        )}
+        {enabled && !loadError && checkedAt ? <p className="mt-2 text-xs text-slate-300">Consulta: {new Date(checkedAt).toLocaleTimeString("es-MX", {timeZone:"America/Tijuana"})} · Tijuana{pending.length > 3 ? " · mostrando 3" : ""}</p> : null}
+        {preview ? <a href="https://hockerone.vercel.app/owner/actions" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-sky-200">Abrir aprobaciones en Producción</a> : !enabled ? <Link href="/auth/mfa?returnTo=%2Fowner" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-sky-200">Verificar acceso</Link> : <Link href="/owner/actions" className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-sky-200">Ver todas las acciones</Link>}
       </div>
     </section>
   );

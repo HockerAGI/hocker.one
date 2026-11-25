@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Cloud, Database, GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
+import { Cloud, Database, GitBranch, RefreshCw, ShieldCheck } from "lucide-react";
 
 type ProviderStatus = {
   configured?: boolean;
@@ -23,9 +24,11 @@ type ReadinessResponse = {
 };
 
 type Props = {
+  preview?: boolean;
   supabase: {
     verified: boolean;
     agiCount: number | null;
+    nodeCount?: number | null;
     checkedAt: string | null;
   };
 };
@@ -33,17 +36,20 @@ type Props = {
 function safeTimestamp(value: string | null | undefined): string {
   if (!value) return "Sin comprobación";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Sin comprobación" : date.toLocaleString("es-MX");
+  return Number.isNaN(date.getTime()) ? "Sin comprobación" : date.toLocaleString("es-MX", { timeZone: "America/Tijuana" });
 }
 
-export default function OwnerProviderMirror({ supabase }: Props) {
+export default function OwnerProviderMirror({ supabase, preview = false }: Props) {
+  const router = useRouter();
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
   const [accessReason, setAccessReason] = useState<"session" | "mfa" | null>(null);
   const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!preview);
 
   const verify = useCallback(async (signal?: AbortSignal) => {
+    if (preview) return;
     setLoading(true);
+    setReadiness(null);
     try {
       const response = await fetch("/api/agi/runtime/integrations/readiness", {
         method: "GET",
@@ -71,7 +77,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, []);
+  }, [preview]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,13 +104,13 @@ export default function OwnerProviderMirror({ supabase }: Props) {
       <div className="hko-mirror-heading">
         <div>
           <p className="hko-uni-panel-kicker">Conexiones esenciales</p>
-          <h2 className="hko-mirror-title" id="hko-mirror-heading">Todo lo importante, en un vistazo</h2>
-          <p className="hko-mirror-description">Comprobaciones reales, no una lista de credenciales guardadas.</p>
+          <h2 className="hko-mirror-title" id="hko-mirror-heading">Conexiones</h2>
+          <p className="hko-mirror-description">Lecturas reales, no una lista de credenciales guardadas.</p>
         </div>
-        <button className="hko-mirror-refresh" type="button" onClick={() => void verify()}
+        <button className="hko-mirror-refresh" type="button" onClick={() => { router.refresh(); void verify(); }}
           disabled={loading} aria-label="Actualizar estado de integraciones">
           <RefreshCw size={17} aria-hidden="true" className={loading ? "hko-mirror-spin" : ""} />
-          <span>{loading ? "Comprobando" : "Actualizar"}</span>
+          <span>{loading ? "Comprobando" : preview ? "Actualizar datos" : "Actualizar conexiones"}</span>
         </button>
       </div>
 
@@ -118,20 +124,20 @@ export default function OwnerProviderMirror({ supabase }: Props) {
           </div>
           <h3>Supabase</h3>
           <p className="hko-mirror-card-value">
-            {supabase.verified && supabase.agiCount !== null ? String(supabase.agiCount) + " AGIs" : "Datos no disponibles"}
+            {supabase.verified && supabase.agiCount !== null ? String(supabase.agiCount) + " AGIs" : supabase.verified && typeof supabase.nodeCount === "number" ? String(supabase.nodeCount) + " nodos visibles" : "Datos no disponibles"}
           </p>
-          <p className="hko-mirror-card-caption">Registros persistidos · no actividad en tiempo real</p>
+          <p className="hko-mirror-card-caption">Lectura de registros · no actividad en vivo</p>
         </article>
 
         <article className="hko-mirror-card">
           <div className="hko-mirror-card-top">
             <span className="hko-mirror-icon"><GitBranch size={20} aria-hidden="true" /></span>
             <span className={"hko-mirror-state " + (githubVerified ? "is-verified" : "is-pending")}>
-              {loading && !readiness ? "Comprobando" : githubVerified ? "Lectura confirmada" : githubConfigured ? "Configurado" : "Sin verificar"}
+              {preview ? "En producción" : loading && !readiness ? "Comprobando" : githubVerified ? "Lectura confirmada" : githubConfigured ? "Configurado" : "Sin verificar"}
             </span>
           </div>
           <h3>GitHub</h3>
-          <p className="hko-mirror-card-value">{githubVerified ? String(repositoryCount) + " repositorios" : "Sin lectura confirmada"}</p>
+          <p className="hko-mirror-card-value">{githubVerified ? String(repositoryCount) + " repositorios" : preview ? "Consulta protegida" : "Sin lectura confirmada"}</p>
           <p className="hko-mirror-card-caption">{githubVerified ? "Autenticación utilizada: " + githubKind : "Validación protegida por Owner MFA"}</p>
         </article>
 
@@ -139,11 +145,11 @@ export default function OwnerProviderMirror({ supabase }: Props) {
           <div className="hko-mirror-card-top">
             <span className="hko-mirror-icon"><Cloud size={20} aria-hidden="true" /></span>
             <span className={"hko-mirror-state " + (vercelVerified ? "is-verified" : "is-pending")}>
-              {loading && !readiness ? "Comprobando" : vercelVerified ? "Lectura confirmada" : vercelConfigured ? "Configurado" : "Sin verificar"}
+              {preview ? "En producción" : loading && !readiness ? "Comprobando" : vercelVerified ? "Lectura confirmada" : vercelConfigured ? "Configurado" : "Sin verificar"}
             </span>
           </div>
           <h3>Vercel</h3>
-          <p className="hko-mirror-card-value">{vercelVerified ? "Proyecto accesible" : vercelConfigured ? "Pendiente de lectura" : production ? "Conexión pendiente" : "Sin comprobar"}</p>
+          <p className="hko-mirror-card-value">{vercelVerified ? "Proyecto accesible" : preview ? "Consulta protegida" : vercelConfigured ? "Pendiente de lectura" : production ? "Conexión pendiente" : "Sin comprobar"}</p>
           <p className="hko-mirror-card-caption">Acceso del runtime a la API · distinto del despliegue web</p>
         </article>
       </div>
@@ -151,7 +157,7 @@ export default function OwnerProviderMirror({ supabase }: Props) {
       <div className="hko-mirror-footer">
         <div className="hko-mirror-proof">
           <ShieldCheck size={16} aria-hidden="true" />
-          <span>{accessReason === "mfa" ? "Completa MFA Owner para consultar GitHub y Vercel." :
+          <span>{preview ? "GitHub y Vercel se comprueban en Producción con MFA Owner." : accessReason === "mfa" ? "Completa MFA Owner para consultar GitHub y Vercel." :
             accessReason === "session" ? "Inicia sesión como Owner para verificar las integraciones." :
             error ? "No se pudo consultar el estado de proveedores. Reintenta." :
             loading && !readiness ? "Consultando conexiones protegidas..." :
@@ -161,16 +167,18 @@ export default function OwnerProviderMirror({ supabase }: Props) {
         <div className="hko-mirror-links">
           {accessReason === "mfa" ? <Link href="/auth/mfa?returnTo=%2Fowner">Verificar MFA</Link> : null}
           {accessReason === "session" ? <Link href="/login">Iniciar sesión</Link> : null}
-          <Link href="/integrations">Ver todas las integraciones</Link>
+          {preview ? <a href="https://hockerone.vercel.app/owner">Verificar en Producción</a> : null}
+          <Link href="/integrations">Ver conexiones</Link>
         </div>
       </div>
 
       <details className="hko-mirror-details">
         <summary>Ver fuente y fecha de cada estado</summary>
         <div className="hko-mirror-details-grid">
-          <p><CheckCircle2 size={14} aria-hidden="true" /> Supabase: conteo consultado desde la base de datos. {safeTimestamp(supabase.checkedAt)}.</p>
-          <p><CheckCircle2 size={14} aria-hidden="true" /> GitHub: {githubVerified ? "lectura verificada con " + githubKind : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
-          <p><CheckCircle2 size={14} aria-hidden="true" /> Vercel: {vercelVerified ? "lectura verificada" : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
+          <p><Database size={14} aria-hidden="true" /> Supabase: {supabase.verified ? "conteo consultado desde la base de datos" : "conteo sin verificar"}. {safeTimestamp(supabase.checkedAt)}.</p>
+          <p><GitBranch size={14} aria-hidden="true" /> GitHub: {githubVerified ? "lectura verificada con " + githubKind : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
+          <p><Cloud size={14} aria-hidden="true" /> Vercel: {vercelVerified ? "lectura verificada" : "sin lectura certificada"}. {safeTimestamp(readiness?.checked_at)}.</p>
+          {preview ? <p className="hko-mirror-note">Evidencia histórica: <a className="underline" href="https://github.com/HockerAGI/hocker.one/pull/471">GitHub App · PR #471</a> y <a className="underline" href="https://github.com/HockerAGI/hocker.one/issues/306">registro de certificación #306</a>. No acreditan conexión actual.</p> : null}
           {readiness?.github_identity_kind === "pat" ? <p className="hko-mirror-note">La lectura por PAT no certifica la GitHub App.</p> : null}
         </div>
       </details>

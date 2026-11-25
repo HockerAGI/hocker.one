@@ -14,14 +14,17 @@ test("catalog and map require an authorized private session", async () => {
 
 test("enqueued NOVA actions cannot be dismissed as a local cancellation", async () => {
   const source = await read("src/components/DraftCard.tsx");
-  assert.match(source, /draft\.enqueued !== true/);
-  assert.match(source, /Rechazar en Owner Gate/);
+  assert.match(source, /Boolean\(id \|\| draft\.enqueued === true\)/);
+  assert.match(source, /!persisted && draft\.enqueued === false && draft\.executed === false/);
+  assert.match(source, /Para rechazar una acción registrada/);
   assert.match(source, /disabled=\{!canCancelLocally\}/);
 });
 
 test("NOVA chat preserves its thread and fails closed when approval state is unreadable", async () => {
   const source = await read("src/components/NovaRealtimeChat.tsx");
   assert.match(source, /const \[threadId\] = useState\(\(\) => requestedThreadId \|\| generateId\(\)\)/);
+  assert.match(source, /key=\{projectId \+ ":" \+ \(requestedThreadId \?\? params.get\("new"\) \?\? "new"\)\}/);
+  assert.match(source, /!historyReady \|\| !protectedAvailable \|\| abortRef\.current/);
   assert.equal((source.match(/thread_id: threadId/g) ?? []).length, 2);
   assert.match(source, /unreadableQueueLock/);
   assert.match(source, /can_start_new_task: false/);

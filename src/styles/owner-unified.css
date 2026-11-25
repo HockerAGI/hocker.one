@@ -666,3 +666,28 @@
 @media (prefers-reduced-motion: reduce) {
   .hko-mirror-spin { animation: none; }
 }
+
+/* Compact owner dashboard: independent rows, no reserved chat viewport. */
+.hko-refined-shell .hko-home-compact.hko-uni-grid,
+.hko-home-compact.hko-uni-grid {
+  display: grid; grid-template-columns: minmax(0,1fr); grid-template-areas: none;
+  align-items: start; gap: 16px;
+}
+.hko-home-compact > *, .hko-home-compact .hko-uni-panel, .hko-home-compact .hko-uni-hero { grid-area: auto; min-width: 0; }
+.hko-home-work, .hko-home-operation { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; align-items: start; }
+.hko-refined-shell .hko-home-compact .hko-uni-chat, .hko-home-compact .hko-uni-chat { min-height: 0; max-height: none; }
+.hko-refined-shell .hko-home-compact .hko-uni-chat .hko-uni-panel-body { padding: 16px; }
+.hko-refined-shell .hko-home-compact .hko-uni-chat a.group { min-height: 0; }
+.hko-refined-shell .hko-home-compact .hko-uni-hero { padding: 20px; gap: 12px; }
+.hko-home-compact .hko-uni-quick-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.hko-home-compact .hko-uni-quick .hko-uni-panel-head { padding-inline: 0; }
+.hko-home-compact .hko-uni-appr-empty, .hko-home-compact .hko-uni-feed-empty, .hko-home-compact .hko-uni-feed-time { color: #a7b4c7; }
+.hko-home-compact .hko-uni-panel-head { flex-wrap: wrap; }
+.hko-home-compact a:focus-visible, .hko-home-compact button:focus-visible { outline: 2px solid #67d9f7; outline-offset: 3px; }
+@media(min-width: 1150px) {
+  .hko-home-work, .hko-home-operation { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .hko-home-compact .hko-uni-quick-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@media(max-width: 420px) {
+  .hko-home-compact .hko-uni-quick-grid { grid-template-columns: minmax(0,1fr); }
+}

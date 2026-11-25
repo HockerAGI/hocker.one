@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Activity, Database, RefreshCw, ShieldCheck } from "lucide-react";
+import RefreshDataButton from "@/components/RefreshDataButton";
+import { Activity, Database, ShieldCheck } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hocker-operational-state";
@@ -63,18 +63,16 @@ export default async function StatusPage() {
             <p className="mt-2 text-sm text-slate-300">{formatDate(snapshot.checked_at)}</p>
             <p className="mt-1 text-xs text-slate-500">Fuente: {snapshot.source === "supabase+health" ? "Supabase + health checks" : "lectura parcial"}</p>
           </div>
-          <Link href="/status" className="hko-action-secondary inline-flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" /> Actualizar
-          </Link>
+          <RefreshDataButton />
         </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <article className="hko-mini-stat"><span>Servicios verificados</span><strong>{snapshot.metrics.verified_services}</strong></article>
         <article className="hko-mini-stat"><span>Herramientas configuradas</span><strong>{snapshot.metrics.configured_tools}</strong></article>
-        <article className="hko-mini-stat"><span>Nodos con señal</span><strong>{snapshot.metrics.fresh_nodes}</strong></article>
-        <article className="hko-mini-stat"><span>Runs en 24 h</span><strong>{snapshot.metrics.runs_24h}</strong></article>
-        <article className="hko-mini-stat"><span>Acciones pendientes</span><strong>{snapshot.metrics.pending_actions}</strong></article>
+        <article className="hko-mini-stat"><span>Nodos con señal</span><strong>{snapshot.source === "supabase+health" ? snapshot.metrics.fresh_nodes : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Runs en 24 h</span><strong>{snapshot.source === "supabase+health" ? snapshot.metrics.runs_24h : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Acciones pendientes</span><strong>{snapshot.source === "supabase+health" ? snapshot.metrics.pending_actions : "—"}</strong></article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

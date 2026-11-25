@@ -1,13 +1,14 @@
-import { OwnerCommandCenter, OwnerShell } from "@/components/hocker-2c/owner";
+import { OwnerCommandCenter } from "@/components/hocker-2c/owner";
+import PageShell from "@/components/PageShell";
 
 export default function OwnerCommandCenterPage() {
   return (
-    <OwnerShell
-      eyebrow="Owner Command Center"
-      title="Command Center"
-      description="Centro operativo para revisar estado, decisiones y accesos de Hocker ONE."
+    <PageShell
+      eyebrow="Operación"
+      title="Centro de control"
+      description="Estado, conexiones y accesos."
     >
       <OwnerCommandCenter />
-    </OwnerShell>
+    </PageShell>
   );
 }

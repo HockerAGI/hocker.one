@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isOwnerReviewableGitHubAction, ownerActionReviewFingerprint, requiresOwnerGitHubReview } from "@/lib/owner-action-review";
 import { createAdminSupabase } from "@/lib/supabase-admin";
 import { assertGithubRepositoryWriteAuthorized, assertGithubAgiExecutionRepositoryAllowed } from "@/lib/github-repository-governance";
 import {
@@ -365,7 +366,7 @@ async function patchQueueItem(actionId: string, patch: Partial<AgiActionQueueRow
   return data;
 }
 
-export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number; offset?: number }): Promise<AgiActionQueueRow[]> {
+export async function listAgiActions(params: { project_id: string; status?: string; tool_key?: string; limit?: number; offset?: number; action_id?: string }): Promise<AgiActionQueueRow[]> {
   const sb = createAdminSupabase();
   const limit = Math.max(1, Math.min(Number(params.limit || 30), 100));
   const offset = params.offset ?? 0;
@@ -383,6 +384,7 @@ export async function listAgiActions(params: { project_id: string; status?: stri
 
   if (params.status) query = query.eq("status", params.status);
   if (params.tool_key) query = query.eq("tool_key", params.tool_key);
+  if (params.action_id) query = query.eq("id", params.action_id);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -531,7 +533,7 @@ async function assertGuidedGithubExecutionOrder(projectId: string, item: AgiActi
 }
 
 
-export async function decideAgiAction(params: { project_id: string; action_id: string; decision: "approve" | "reject"; actor_id: string; note?: string }): Promise<AgiActionQueueRow> {
+export async function decideAgiAction(params: { project_id: string; action_id: string; decision: "approve" | "reject"; actor_id: string; note?: string; expected_review_fingerprint?: string }): Promise<AgiActionQueueRow> {
   const item = await getQueueItem(params.project_id, params.action_id);
 
   if (!["needs_approval", "dry_run_queued", "queued"].includes(String(item.status))) {
@@ -540,6 +542,29 @@ export async function decideAgiAction(params: { project_id: string; action_id: s
 
   if (params.decision === "approve") {
     await assertGuidedGithubApprovalOrder(params.project_id, item);
+
+    // Guided GitHub approvals require the exact review, including for
+    // callers outside the UI. Invalid plans cannot fall back to legacy approval.
+    if (requiresOwnerGitHubReview(item) && !params.expected_review_fingerprint) {
+      throw Object.assign(new Error("ACTION_REVIEW_REQUIRED"), { status: 409 });
+    }
+    if (params.expected_review_fingerprint) {
+      if (process.env.VERCEL_ENV !== "production") {
+        throw Object.assign(new Error("ACTION_REVIEW_PRODUCTION_REQUIRED"), { status: 403 });
+      }
+      if (item.status !== "needs_approval" || !isOwnerReviewableGitHubAction(item) || ownerActionReviewFingerprint(item) !== params.expected_review_fingerprint) {
+        throw Object.assign(new Error("ACTION_REVIEW_CHANGED"), { status: 409 });
+      }
+      const sb = createAdminSupabase();
+      let query = sb.from("agi_action_queue").update({
+        status: "approved", approved_by: params.actor_id, approval_note: params.note ?? null,
+        approved_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("project_id", params.project_id).eq("id", item.id).eq("status", item.status);
+      query = item.updated_at ? query.eq("updated_at", item.updated_at) : query.is("updated_at", null);
+      const { data, error } = await query.select("*").maybeSingle<AgiActionQueueRow>();
+      if (error || !data) throw Object.assign(new Error("ACTION_REVIEW_CHANGED"), { status: 409 });
+      return data;
+    }
 
     return patchQueueItem(item.id, {
       status: "approved",

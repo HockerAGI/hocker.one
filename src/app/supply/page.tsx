@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Database, Package, RefreshCw, ShoppingCart, Warehouse } from "lucide-react";
+import RefreshDataButton from "@/components/RefreshDataButton";
+import { Database, Package, ShoppingCart, Warehouse } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { createAdminSupabase } from "@/lib/supabase-admin";
@@ -34,7 +34,7 @@ async function loadSupplySummary(): Promise<SupplySummary> {
     const [products, activeProducts, stockRows, orders, pendingOrders, latestProduct, latestOrder] = await Promise.all([
       sb.from("supply_products").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one"),
       sb.from("supply_products").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one").eq("active", true),
-      sb.from("supply_products").select("stock").eq("project_id", "hocker-one"),
+      sb.from("supply_products").select("stock", { count: "exact" }).eq("project_id", "hocker-one"),
       sb.from("supply_orders").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one"),
       sb.from("supply_orders").select("*", { count: "exact", head: true }).eq("project_id", "hocker-one").in("status", ["pending", "queued", "processing"]),
       sb.from("supply_products").select("updated_at").eq("project_id", "hocker-one").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
@@ -49,13 +49,14 @@ async function loadSupplySummary(): Promise<SupplySummary> {
       latestProduct.error,
       latestOrder.error,
     ].find(Boolean);
+    const stockComplete = typeof stockRows.count === "number" && stockRows.count === (stockRows.data ?? []).length;
     const activityDates = [latestProduct.data?.updated_at, latestOrder.data?.updated_at]
       .filter((value): value is string => Boolean(value))
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
     return {
-      ok: !firstError,
-      error: firstError?.message ?? null,
+      ok: !firstError && stockComplete,
+      error: firstError?.message ?? (stockComplete ? null : "Inventario parcial: faltan filas para calcular el total."),
       checkedAt,
       products: products.count ?? 0,
       activeProducts: activeProducts.count ?? 0,
@@ -100,7 +101,7 @@ export default async function SupplyPage() {
       <HockerPageHeader
         eyebrow="Módulo interno parcial"
         title="Hocker Supply"
-        text="Lectura directa de productos, stock y pedidos almacenados. No se presenta como aplicación independiente ni como operación en vivo sin evidencia."
+        text="Productos, inventario y pedidos registrados. Módulo de consulta."
       />
 
       <section className="hko-map-panel">
@@ -110,39 +111,39 @@ export default async function SupplyPage() {
             <p className="mt-2 text-sm leading-6 text-slate-300">{supplyModule?.evidence ?? "No hay evidencia del módulo."}</p>
             <p className="mt-1 text-xs text-slate-500">Consulta: {formatDate(data.checkedAt)} · Última actividad: {formatDate(data.latestActivityAt)}</p>
           </div>
-          <Link href="/supply" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
+          <RefreshDataButton />
         </div>
       </section>
 
       {!data.ok ? (
         <section className="rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4 text-sm text-rose-100">
-          No se pudo verificar Supply. Los valores se muestran en cero y no deben interpretarse como ausencia confirmada de datos. {data.error}
+          No se pudo verificar Supply. Los valores sin verificar se muestran como —. {data.error}
         </section>
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <article className="hko-mini-stat"><span>Productos registrados</span><strong>{data.products}</strong></article>
-        <article className="hko-mini-stat"><span>Productos habilitados</span><strong>{data.activeProducts}</strong></article>
-        <article className="hko-mini-stat"><span>Unidades de stock</span><strong>{data.stockUnits}</strong></article>
-        <article className="hko-mini-stat"><span>Pedidos registrados</span><strong>{data.orders}</strong></article>
-        <article className="hko-mini-stat"><span>Pedidos pendientes</span><strong>{data.pendingOrders}</strong></article>
+        <article className="hko-mini-stat"><span>Productos registrados</span><strong>{data.ok ? data.products : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Productos habilitados</span><strong>{data.ok ? data.activeProducts : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Unidades de stock</span><strong>{data.ok ? data.stockUnits : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Pedidos registrados</span><strong>{data.ok ? data.orders : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Pedidos pendientes</span><strong>{data.ok ? data.pendingOrders : "—"}</strong></article>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
         <article className="hko-module-card hko-card-tight">
           <Package className="h-5 w-5 text-cyan-200" />
           <h2 className="mt-4 text-lg font-black text-white">Catálogo interno</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">Tabla `supply_products`. Hoy contiene {data.products} registro(s) para Hocker ONE.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{data.ok ? `Productos registrados: ${data.products}.` : "No se pudo verificar el catálogo."}</p>
         </article>
         <article className="hko-module-card hko-card-tight">
           <Warehouse className="h-5 w-5 text-cyan-200" />
           <h2 className="mt-4 text-lg font-black text-white">Inventario</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">La suma almacenada de stock es {data.stockUnits}. No existe telemetría de almacén independiente conectada.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{data.ok ? `Unidades registradas: ${data.stockUnits}.` : "Inventario sin verificar."} No hay telemetría de almacén conectada.</p>
         </article>
         <article className="hko-module-card hko-card-tight">
           <ShoppingCart className="h-5 w-5 text-cyan-200" />
           <h2 className="mt-4 text-lg font-black text-white">Pedidos</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">Tabla `supply_orders`. Hay {data.pendingOrders} pedido(s) en estados pendientes o de procesamiento.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{data.ok ? `${data.pendingOrders} pedidos pendientes o en proceso.` : "Pedidos sin verificar."}</p>
         </article>
       </section>
 

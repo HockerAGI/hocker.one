@@ -10,17 +10,18 @@ import { getActiveHockerSection, HOCKER_NAVIGATION, isHockerRouteActive } from "
 export default function Sidebar() {
   const pathname = usePathname() || "/owner";
   const activeSection = getActiveHockerSection(pathname);
+  const secondaryItems = activeSection.items.filter(item => item.href !== activeSection.href);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const fetchPending = async () => {
       try {
         const res = await fetch("/api/agi/runtime/actions?status=needs_approval", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json() as { actions?: unknown[] };
-          setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
-        }
+        const data = await res.json() as { ok?: boolean; actions?: unknown[] };
+        if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) throw new Error("Cola no disponible");
+        setPendingCount(data.actions.length);
       } catch {
+        setPendingCount(0);
         // Navigation must remain usable if the counter is offline.
       }
     };
@@ -41,7 +42,7 @@ export default function Sidebar() {
 
       {pendingCount > 0 ? (
         <Link href="/owner/actions" className="mx-3 mt-2 flex min-h-11 items-center gap-2.5 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-3.5 py-2.5 text-amber-100">
-          <Bell className="h-4 w-4" /><span className="flex-1 text-xs font-semibold">{pendingCount} por aprobar</span>
+          <Bell className="h-4 w-4" /><span className="flex-1 text-xs font-semibold">{pendingCount === 30 ? "30+" : pendingCount} por aprobar</span>
         </Link>
       ) : null}
 
@@ -58,13 +59,13 @@ export default function Sidebar() {
           })}
         </div>
 
-        {activeSection.items.length > 1 ? (
-          <details open={activeSection.id === "trabajo" || activeSection.id === "mas"} className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
+        {secondaryItems.length > 0 ? (
+          <details open className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-2">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-slate-400">
               <ChevronDown className="h-4 w-4" /> En {activeSection.label}
             </summary>
             <div className="mt-1 grid gap-0.5">
-              {activeSection.items.map((item) => {
+              {secondaryItems.map((item) => {
                 const Icon = item.icon;
                 const active = isHockerRouteActive(pathname, item.href);
                 return (

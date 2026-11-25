@@ -39,7 +39,8 @@ test("tools page shows MCP providers and preserves Owner Gate", async () => {
   assert.match(integrations, /isReadOnlyMcpTool/);
   assert.match(integrations, /Requiere aprobación/);
   assert.match(integrations, /Pedir acción a NOVA/);
-  assert.match(integrations, /\/commands/);
+  assert.match(integrations, /href="\/owner\/actions"/);
+  assert.doesNotMatch(integrations, /href="\/commands"[^>]*>\s*(?:Ver )?Aprobaciones/);
 });
 
 test("ecosystem map separates profiles, current signals and historical evidence", async () => {

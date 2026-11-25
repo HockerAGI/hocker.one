@@ -206,7 +206,7 @@ export default function HockerVfxLayer() {
         aria-pressed={paused}
         onClick={() => setPaused((value) => !value)}
       >
-        {paused ? "VFX ON" : "Pausar VFX"}
+        {paused ? "Activar efectos" : "Pausar efectos"}
       </button>
     </>
   );

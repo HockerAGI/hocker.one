@@ -7,6 +7,10 @@
  */
 
 export type ChatActionDraft = {
+  id?: string | null;
+  status?: string;
+  title?: string;
+  action_type?: string;
   version?: string;
   requested?: boolean;
   enqueued?: boolean;
@@ -63,6 +67,7 @@ export type RuntimeAction = {
   title: string;
   status: string;
   risk_level: string;
+  requires_approval?: boolean;
   created_at: string;
   execution_error?: string | null;
   payload?: Record<string, unknown>;

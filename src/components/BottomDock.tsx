@@ -15,11 +15,11 @@ export default function BottomDock() {
     const fetchPending = async () => {
       try {
         const res = await fetch("/api/agi/runtime/actions?status=needs_approval", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json() as { actions?: unknown[] };
-          setPendingCount(Array.isArray(data.actions) ? data.actions.length : 0);
-        }
+        const data = await res.json() as { ok?: boolean; actions?: unknown[] };
+        if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) throw new Error("Cola no disponible");
+        setPendingCount(data.actions.length);
       } catch {
+        setPendingCount(0);
         // Navigation remains available if the counter is unavailable.
       }
     };
@@ -38,7 +38,7 @@ export default function BottomDock() {
           return (
             <Link key={item.id} href={item.href} aria-label={item.label} aria-current={active ? "page" : undefined} className={[active ? "is-active" : "", item.id === "nova" ? "is-nova" : "", "relative"].join(" ")}>
               <Icon className="h-5 w-5" />
-              {showPending ? <span className="absolute right-[18%] top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[7px] font-black text-black">{pendingCount}</span> : null}
+              {showPending ? <span className="absolute right-[18%] top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 text-[7px] font-black text-black">{pendingCount === 30 ? "30+" : pendingCount}</span> : null}
               <span>{item.shortLabel ?? item.label}</span>
             </Link>
           );

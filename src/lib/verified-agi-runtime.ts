@@ -29,7 +29,8 @@ const VERIFIED_CHECK_MAX_AGE_MS = 10 * 60 * 1000;
 function isFresh(value: string | null | undefined, maxAgeMs = VERIFIED_CHECK_MAX_AGE_MS): boolean {
   if (!value) return false;
   const timestamp = new Date(value).getTime();
-  return Number.isFinite(timestamp) && Date.now() - timestamp <= maxAgeMs;
+  const age = Date.now() - timestamp;
+  return Number.isFinite(timestamp) && age >= 0 && age <= maxAgeMs;
 }
 
 function canonicalAgiId(value: string): string {
@@ -47,13 +48,14 @@ async function safeCount(table: string, projectId: string): Promise<CountResult>
       .select("*", { count: "exact", head: true })
       .eq("project_id", projectId);
 
-    return { count: error ? 0 : count ?? 0, ok: !error };
+    return { count: error ? 0 : count ?? 0, ok: !error && typeof count === "number" };
   } catch {
     return { count: 0, ok: false };
   }
 }
 
-export async function getVerifiedAgiRuntimeSummary(projectId: string) {
+export async function getVerifiedAgiRuntimeSummary(projectId: string, options: { allowProtectedReads?: boolean } = {}) {
+  const allowProtectedReads = options.allowProtectedReads !== false;
   const checkedAt = new Date().toISOString();
   const catalog = getRuntimeToolCatalog();
 
@@ -62,6 +64,7 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
   let checks: IntegrationCheckRow[] = [];
 
   try {
+    if (!allowProtectedReads) throw new Error("PROTECTED_READ_NOT_REQUESTED");
     const sb = createAdminSupabase();
     const [agentsRes, checksRes] = await Promise.all([
       sb.from("agi_agents").select("agi_id").eq("project_id", projectId),
@@ -104,7 +107,7 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
       };
 
   const supabaseState: VerifiedServiceState = {
-    status: databaseOnline ? "online" : "offline",
+    status: databaseOnline ? "online" : "unknown",
     checked_at: checkedAt,
     last_verified_at: databaseOnline ? checkedAt : null,
     detail: databaseOnline
@@ -128,7 +131,7 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
     const envConfigured = tool.status === "connected" || tool.status === "configured";
     const isNova = tool.tool_key === "nova_orchestrator";
     const isSupabase = tool.tool_key === "supabase";
-    const verified = checkVerified || (isNova && novaState.status === "online") || (isSupabase && databaseOnline);
+    const verified = isNova ? novaState.status === "online" : isSupabase ? databaseOnline : envConfigured && checkVerified;
 
     const status = verified
       ? "connected"
@@ -138,13 +141,7 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
           ? "partial"
           : tool.status;
 
-    const lastVerifiedAt = checkVerified
-      ? persistedCheck?.last_checked_at ?? null
-      : isNova
-        ? novaState.last_verified_at
-        : isSupabase
-          ? supabaseState.last_verified_at
-          : null;
+    const lastVerifiedAt = isNova ? novaState.last_verified_at : isSupabase ? supabaseState.last_verified_at : verified ? persistedCheck?.last_checked_at ?? null : null;
 
     return {
       ...tool,
@@ -163,18 +160,15 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
             : tool.status_hint,
       verified,
       last_verified_at: lastVerifiedAt,
-      latency_ms: checkVerified ? persistedCheck?.latency_ms ?? null : null,
+      latency_ms: verified && !isNova && !isSupabase && checkVerified ? persistedCheck?.latency_ms ?? null : null,
       check_message: persistedCheck?.message ?? null,
       execution_enabled: Boolean(verified && tool.execution_enabled),
     };
   });
 
+  const count = (table: string) => allowProtectedReads ? safeCount(table, projectId) : Promise.resolve({ count: 0, ok: false });
   const [tasks, runs, actions, feedback, threads] = await Promise.all([
-    safeCount("agi_tasks", projectId),
-    safeCount("agi_runs", projectId),
-    safeCount("agi_action_queue", projectId),
-    safeCount("agi_feedback", projectId),
-    safeCount("agi_chat_threads", projectId),
+    count("agi_tasks"), count("agi_runs"), count("agi_action_queue"), count("agi_feedback"), count("agi_chat_threads"),
   ]);
 
   const canonicalAgents = new Set(agentRows.map((row) => canonicalAgiId(row.agi_id)));
@@ -189,6 +183,7 @@ export async function getVerifiedAgiRuntimeSummary(projectId: string) {
     schema_ready: databaseOnline && [tasks, runs, actions, feedback, threads].every((item) => item.ok),
     catalog_synced: false,
     sync_error: null,
+    count_verified: { agents: databaseOnline, tasks: tasks.ok, runs: runs.ok, actions: actions.ok, feedback: feedback.ok, threads: threads.ok },
     counts: {
       agents: canonicalAgents.size,
       tasks: tasks.count,

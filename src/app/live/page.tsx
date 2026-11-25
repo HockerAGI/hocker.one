@@ -7,12 +7,14 @@ import { getHockerOperationalSnapshot, type OperationalStatus } from "@/lib/hock
 import PhysicalAgentPanel from "@/components/live/PhysicalAgentPanel";
 import NodeMirrorPanel from "@/components/live/NodeMirrorPanel";
 import MemoryMirrorPanel from "@/components/live/MemoryMirrorPanel";
+import LiveSessionSignals from "@/components/live/LiveSessionSignals";
+import RefreshDataButton from "@/components/RefreshDataButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function formatDate(value?: string | null) {
-  if (!value) return "Sin fecha";
+  if (!value || !Number.isFinite(Date.parse(value))) return "Sin fecha";
   return new Intl.DateTimeFormat("es-MX", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -78,20 +80,26 @@ function Section({ title, description, defaultOpen = false, children }: { title:
 
 export default async function LivePage() {
   await requirePrivateSession();
-  const [summary, nodeMirror, memoryMirror, operational] = await Promise.all([
+  const [summaryResult, nodeResult, memoryResult, operationalResult] = await Promise.allSettled([
     getHockerLiveSummary(),
     getHockerNodeMirrorSummary(),
     getHockerMemoryMirrorLiveSummary(),
     getHockerOperationalSnapshot(),
   ]);
 
-  const nova = operational.runtime.service_status.nova;
-  const supabase = operational.runtime.service_status.supabase;
-  const agentStatus: OperationalStatus = summary.agent.state === "activo"
+  const summary = summaryResult.status === "fulfilled" && summaryResult.value.ok ? summaryResult.value : null;
+  const nodeMirror = nodeResult.status === "fulfilled" ? nodeResult.value : null;
+  const memoryMirror = memoryResult.status === "fulfilled" && memoryResult.value.ok ? memoryResult.value : null;
+  const operational = operationalResult.status === "fulfilled" ? operationalResult.value : null;
+  const nova = operational?.runtime.service_status.nova;
+  const supabase = operational?.runtime.service_status.supabase;
+  const databaseVerified = operational?.source === "supabase+health";
+  const agentStatus: OperationalStatus = !summary ? "unknown" : summary.agent.state === "activo"
     ? "online"
     : summary.agent.state === "sin_senal_reciente"
       ? "stale"
       : "offline";
+  const partial = !summary || !nodeMirror || !memoryMirror || !databaseVerified;
 
   return (
     <main className="hko-page-flow space-y-4">
@@ -101,35 +109,40 @@ export default async function LivePage() {
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
           Solo se muestra como activo aquello que tiene health check, consulta o señal reciente.
         </p>
-        <p className="mt-3 text-xs text-slate-500">Actualizado: {formatDate(operational.checked_at)}</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-400">Última comprobación: {formatDate(operational?.checked_at)}</p>
+          <RefreshDataButton />
+        </div>
       </section>
 
+      {partial ? <p role="status" className="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-sm text-amber-100">Vista parcial: algunas fuentes protegidas no pudieron verificarse. Se muestran los datos disponibles con tu sesión, sin asumir estados ni totales.</p> : null}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatusCard label="Panel" title="Hocker ONE" text="Esta instancia respondió la solicitud actual." status="online" />
-        <StatusCard label="Orquestador" title="NOVA" text={nova.detail} status={nova.status} />
-        <StatusCard label="Datos" title="Supabase" text={supabase.detail} status={supabase.status} />
-        <StatusCard label="Nodo físico" title={summary.agent.node_id} text={`Última señal: ${formatDate(summary.agent.last_seen_at)}`} status={agentStatus} />
+        <StatusCard label="Orquestador" title="NOVA" text={nova?.detail ?? "Consulta no disponible."} status={nova?.status ?? "unknown"} />
+        <StatusCard label="Datos" title="Supabase" text={supabase?.detail ?? "Consulta no disponible."} status={supabase?.status ?? "unknown"} />
+        <StatusCard label="Nodo físico" title={summary?.agent.node_id ?? "Agente local"} text={summary ? `Última señal: ${formatDate(summary.agent.last_seen_at)}` : "Consulta protegida sin verificar."} status={agentStatus} />
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Servicios verificados" value={operational.metrics.verified_services} text="Health checks o consultas reales." />
-        <Metric label="Nodos con señal" value={operational.metrics.fresh_nodes} text="Últimos cinco minutos." />
-        <Metric label="Runs en 24 h" value={operational.metrics.runs_24h} text="Ejecuciones realmente registradas." />
-        <Metric label="Por aprobar" value={operational.metrics.pending_actions} text="Acciones bloqueantes en Owner Gate." />
+        <Metric label="Servicios verificados" value={operational?.metrics.verified_services ?? "—"} text="Health checks o consultas reales." />
+        <Metric label="Nodos con señal" value={databaseVerified && operational ? operational.metrics.fresh_nodes : "—"} text="Últimos cinco minutos." />
+        <Metric label="Runs en 24 h" value={databaseVerified && operational ? operational.metrics.runs_24h : "—"} text="Ejecuciones realmente registradas." />
+        <Metric label="Por aprobar" value={databaseVerified && operational ? operational.metrics.pending_actions : "—"} text="Acciones bloqueantes en Owner Gate." />
       </section>
 
       <Section title="Agente físico" description="Estado del nodo local y controles detectados." defaultOpen>
-        <PhysicalAgentPanel agent={summary.agent} />
+        {summary ? <PhysicalAgentPanel agent={summary.agent} /> : <p className="text-sm text-slate-300">Controles del agente sin verificar. Consulta las señales disponibles abajo.</p>}
       </Section>
+      {!summary || !nodeMirror ? <LiveSessionSignals projectId="hocker-one" /> : null}
 
       <Section title="Nodo espejo y memoria" description="Registros persistidos; no se presentan como actividad actual sin fecha reciente.">
         <div className="grid gap-4 xl:grid-cols-2">
-          <NodeMirrorPanel bridge={nodeMirror} />
-          <MemoryMirrorPanel summary={memoryMirror} />
+          {nodeMirror ? <NodeMirrorPanel bridge={nodeMirror} /> : <p className="text-sm text-slate-300">Nodo espejo: consulta protegida sin verificar.</p>}
+          {memoryMirror ? <MemoryMirrorPanel summary={memoryMirror} /> : <p className="text-sm text-slate-300">Memoria: consulta protegida sin verificar. <Link href="/memory" className="text-sky-200 underline">Abrir memoria</Link></p>}
         </div>
       </Section>
 
-      <Section title="Eventos y comandos" description="Historial reciente disponible en Supabase.">
+      {summary ? <Section title="Eventos y comandos" description="Historial reciente disponible en Supabase.">
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="space-y-3">
             <h3 className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Eventos</h3>
@@ -152,11 +165,11 @@ export default async function LivePage() {
             {summary.recent_commands.length === 0 ? <p className="text-sm text-slate-500">Sin comandos registrados.</p> : null}
           </div>
         </div>
-      </Section>
+      </Section> : null}
 
       <div className="flex flex-wrap gap-2">
         <Link href="/nodes" className="hocker-button-secondary">Ver nodos</Link>
-        <Link href="/commands" className="hocker-button-primary">Revisar aprobaciones</Link>
+        <Link href="/owner/actions" className="hocker-button-primary">Revisar aprobaciones</Link>
       </div>
     </main>
   );

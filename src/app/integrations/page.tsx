@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageShell from "@/components/PageShell";
-import { createAdminSupabase } from "@/lib/supabase-admin";
+import { createServerSupabase } from "@/lib/supabase-server";
+import RefreshDataButton from "@/components/RefreshDataButton";
+import { requirePrivateSession } from "@/lib/require-private-session";
 import type { JsonObject } from "@/lib/types";
 import {
   CANONICAL_INTEGRATIONS,
@@ -78,8 +80,8 @@ function toolMode(provider: string, tool: string): "Lectura" | "Requiere aprobac
 }
 
 async function loadIntegrationEvents(): Promise<EventRow[]> {
-  const sb = createAdminSupabase();
-  const { data } = await sb
+  const sb = await createServerSupabase();
+  const { data, error } = await sb
     .from("events")
     .select("id,type,message,created_at,data")
     .eq("project_id", "hocker-one")
@@ -91,12 +93,15 @@ async function loadIntegrationEvents(): Promise<EventRow[]> {
     .order("created_at", { ascending: false })
     .limit(80);
 
+  if (error) throw new Error("INTEGRATION_EVENTS_UNAVAILABLE");
   return (data ?? []) as EventRow[];
 }
 
 async function getLiveHealth(integration: HockerIntegrationContract) {
   try {
-    const response = await fetch(integration.health_endpoint, {
+    const endpoint = new URL(integration.health_endpoint);
+    endpoint.searchParams.delete("emit_event");
+    const response = await fetch(endpoint, {
       cache: "no-store",
       signal: AbortSignal.timeout(5_000),
       headers: { "User-Agent": "HockerONE-ToolsInventory/1.0" },
@@ -105,7 +110,7 @@ async function getLiveHealth(integration: HockerIntegrationContract) {
 
     return {
       ok: response.ok,
-      status: asText(remote.status, response.ok ? "online" : "offline"),
+      status: response.ok ? (["online", "degraded", "offline"].includes(asText(remote.status)) ? asText(remote.status) : "unknown") : "offline",
       httpStatus: response.status,
       remote,
     };
@@ -126,10 +131,11 @@ async function loadMcpStatus(): Promise<McpRegistryStatus> {
 }
 
 export default async function IntegrationsPage({ searchParams }: PageProps) {
+  await requirePrivateSession();
   const params = await searchParams;
   const query = String(params?.q ?? "").trim().toLocaleLowerCase("es-MX");
-  const [events, mcpStatus, liveHealthEntries] = await Promise.all([
-    loadIntegrationEvents(),
+  const [eventsResult, mcpStatus, liveHealthEntries] = await Promise.all([
+    loadIntegrationEvents().then(events => ({ ok: true, events })).catch(() => ({ ok: false, events: [] as EventRow[] })),
     loadMcpStatus(),
     Promise.all(
       CANONICAL_INTEGRATIONS.map(async (integration) => ({
@@ -139,6 +145,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
     ),
   ]);
 
+  const events = eventsResult.events;
   const healthByModule = new Map<string, EventRow>();
   const registeredByModule = new Map<string, EventRow>();
   for (const event of events) {
@@ -166,12 +173,13 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
 
   return (
     <PageShell
-      title="Herramientas y APIs"
-      subtitle="Inventario real de proveedores, herramientas MCP, módulos conectados, permisos y evidencia."
+      title="Conexiones"
+      subtitle="Herramientas, proveedores y permisos. Consulta su estado real."
       actions={
         <div className="flex flex-wrap gap-2">
+          <RefreshDataButton />
           <Link href="/catalog" className="hocker-button-secondary">Buscar ecosistema</Link>
-          <Link href="/commands" className="hocker-button-secondary">Aprobaciones</Link>
+          <Link href="/owner/actions" className="hocker-button-secondary">Aprobaciones</Link>
           <Link href="/chat" className="hocker-button-primary">Pedir acción a NOVA</Link>
         </div>
       }
@@ -313,11 +321,11 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
                     </div>
                     <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Última señal</p>
-                      <p className="mt-2 text-xs font-bold text-white">{healthEvent ? safeDate(healthEvent.created_at) : "Sin evento"}</p>
+                      <p className="mt-2 text-xs font-bold text-white">{healthEvent ? safeDate(healthEvent.created_at) : eventsResult.ok ? "Sin evento visible" : "Sin verificar"}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Registro</p>
-                      <p className="mt-2 text-xs font-bold text-white">{registerEvent ? safeDate(registerEvent.created_at) : "Pendiente"}</p>
+                      <p className="mt-2 text-xs font-bold text-white">{registerEvent ? safeDate(registerEvent.created_at) : eventsResult.ok ? "Sin registro visible" : "Sin verificar"}</p>
                     </div>
                     <div className="rounded-2xl border border-white/[0.07] bg-slate-950/40 p-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">HTTP</p>
@@ -331,7 +339,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={integration.dashboard_path} className="hocker-button-primary">Abrir módulo</Link>
-                      <Link href="/commands" className="hocker-button-secondary">Ver aprobaciones</Link>
+                      <Link href="/owner/actions" className="hocker-button-secondary">Ver aprobaciones</Link>
                     </div>
                   </div>
                 </article>
@@ -361,7 +369,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps) {
                 </article>
               );
             })}
-            {events.length === 0 ? <div className="p-5 text-sm text-slate-400">Todavía no hay eventos del registry.</div> : null}
+            {events.length === 0 ? <div className="p-5 text-sm text-slate-400">{eventsResult.ok ? "Sin eventos visibles con tu sesión." : "No se pudo verificar el historial."}</div> : null}
           </div>
         </section>
 

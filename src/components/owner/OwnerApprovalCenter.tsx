@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import OwnerInlineActionReview from "@/components/OwnerInlineActionReview";
 
 type RuntimeAction = {
   id: string;
@@ -15,6 +16,11 @@ type RuntimeAction = {
   created_at: string;
   execution_error?: string | null;
   payload?: {
+    trace_id?: string;
+    materializer_version?: string;
+    sequence_index?: number;
+    expected_base_sha?: string;
+    expected_sha?: string;
     write_plan?: {
       operation?: string;
       repository?: string;
@@ -23,6 +29,9 @@ type RuntimeAction = {
       title?: string | null;
       risk_level?: string;
       next_step?: string;
+      steps?: string[];
+      rollback_plan?: { steps?: string[] };
+      content_preview?: { bytes?: number; lines?: number };
     };
   };
 };
@@ -68,10 +77,15 @@ function riskLabel(risk: string) {
   return labels[risk] ?? risk;
 }
 
-export default function OwnerApprovalCenter({ projectId }: { projectId: string }) {
+export default function OwnerApprovalCenter({ projectId, initialActionId, previewReadOnly = false }: { projectId: string; initialActionId?: string; previewReadOnly?: boolean }) {
   const [actions, setActions] = useState<RuntimeAction[]>([]);
+  const [selectedId, setSelectedId] = useState(initialActionId);
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [inlineReviewId, setInlineReviewId] = useState<string | null>(null);
+  const requestVersion = useRef(0);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const mutationLock = useRef(false);
   const [message, setMessage] = useState<string>("");
   const [view, setView] = useState<ActionView>("needs_approval");
   const [page, setPage] = useState(0);
@@ -80,7 +94,21 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
   const [integrations, setIntegrations] = useState<EngineeringIntegrations | null>(null);
   const [integrationsLoading, setIntegrationsLoading] = useState(true);
 
-  const pendingCount = view === "needs_approval" ? actions.length : null;
+  const pendingCount = view === "needs_approval" && !selectedId && !loadError ? actions.length : null;
+  const groupKey = (action: RuntimeAction) => action.payload?.trace_id && Number.isInteger(action.payload.sequence_index)
+    ? "batch:" + action.payload.trace_id : "action:" + action.id;
+  const groupTimes = new Map<string, number>();
+  for (const action of actions) {
+    const key = groupKey(action);
+    groupTimes.set(key, Math.max(groupTimes.get(key) ?? 0, Date.parse(action.created_at) || 0));
+  }
+  const orderedActions = [...actions].sort((a, b) => {
+    const ak = groupKey(a); const bk = groupKey(b);
+    if (ak === bk && Number.isInteger(a.payload?.sequence_index) && Number.isInteger(b.payload?.sequence_index)) {
+      return Number(a.payload?.sequence_index) - Number(b.payload?.sequence_index);
+    }
+    return (groupTimes.get(bk) ?? 0) - (groupTimes.get(ak) ?? 0) || ak.localeCompare(bk);
+  });
 
   const checkIntegrations = useCallback(async () => {
     setIntegrationsLoading(true);
@@ -110,7 +138,8 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
   }, [checkIntegrations]);
 
   const load = useCallback(async () => {
-    queueMicrotask(() => setLoading(true));
+    const request = ++requestVersion.current;
+    setLoading(true);
     try {
       // Fetch the selected status before pagination. A pending approval must
       // never be hidden behind more recent closed actions.
@@ -119,24 +148,27 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
         limit: String(PAGE_SIZE),
         offset: String(page * PAGE_SIZE),
       });
-      if (view !== "history") params.set("status", view);
+      if (selectedId) params.set("action_id", selectedId);
+      else if (view !== "history") params.set("status", view);
       const res = await fetch(`/api/agi/runtime/actions?${params.toString()}`, { cache: "no-store" });
       const data = (await res.json()) as ApiListResponse;
       if (!res.ok || data.ok !== true || !Array.isArray(data.actions)) {
         throw new Error(data.error || "No se pudo leer la cola AGI.");
       }
+      if (request !== requestVersion.current) return;
       setActions(data.actions);
-      setHasNext(data.actions.length === PAGE_SIZE);
+      setHasNext(!selectedId && data.actions.length === PAGE_SIZE);
       setLoadError(false);
     } catch (error) {
+      if (request !== requestVersion.current) return;
       setActions([]);
       setHasNext(false);
       setLoadError(true);
       setMessage(error instanceof Error ? error.message : "No se pudo leer la cola AGI.");
     } finally {
-      setLoading(false);
+      if (request === requestVersion.current) setLoading(false);
     }
-  }, [projectId, view, page]);
+  }, [projectId, view, page, selectedId]);
 
   useEffect(() => {
     const timer = setTimeout(() => { void load(); }, 0);
@@ -144,6 +176,8 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
   }, [load]);
 
   async function mutate(path: string, payload: Record<string, unknown>) {
+    if (mutationLock.current) return;
+    mutationLock.current = true;
     setBusyId(String(payload.action_id ?? ""));
     setMessage("");
     try {
@@ -153,12 +187,14 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
         body: JSON.stringify({ project_id: projectId, ...payload }),
       });
       const data = (await res.json()) as MutateResponse;
-      if (!res.ok || data.error) throw new Error(data.error || "Operación no completada.");
+      if (!res.ok || data.ok !== true) throw new Error(res.status === 403 ? "Verifica tu sesión y MFA antes de continuar." : data.error || data.message || "Operación no completada.");
+      setReviewId(null);
       await load();
       setMessage(data.message || "Operación completada.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Operación no completada.");
     } finally {
+      mutationLock.current = false;
       setBusyId(null);
     }
   }
@@ -167,12 +203,12 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
     <section className="hko-approval-shell">
       <div className="hko-approval-head">
         <div>
-          <p className="hko-kicker">OWNER GATE · EJECUCIÓN CONTROLADA</p>
-          <h2>Centro de aprobación AGI</h2>
-          <p>NOVA y las AGIs dejan planes reales en cola. Tú apruebas, rechazas o ejecutas sin copiar comandos manuales.</p>
+          <h2>Acciones</h2>
+          <p>Decide qué cambios pueden ejecutarse.</p>
+          <span className="sr-only">Centro de aprobación AGI</span>
         </div>
-        <button type="button" onClick={() => void load()} className="hko-approval-refresh" disabled={loading}>
-          {loading ? "Leyendo..." : "Actualizar"}
+        <button type="button" onClick={() => void load()} className="hko-approval-refresh" disabled={loading || Boolean(busyId)}>
+          {loading ? "Consultando…" : "Actualizar"}
         </button>
       </div>
 
@@ -220,9 +256,10 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
         )}
       </section>
 
+      {selectedId ? <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-700 p-3"><span className="break-all text-sm">Acción: {selectedId}</span><button type="button" disabled={loading || Boolean(busyId)} onClick={() => { setSelectedId(undefined); setPage(0); setView("needs_approval"); setActions([]); setLoading(true); }}>Ver todas</button></div> : null}
       <div className="hko-approval-metrics">
-        <div><span>{view === "needs_approval" ? "Pendientes visibles" : "Vista actual"}</span><strong>{pendingCount ?? (view === "approved" ? "Aprobadas" : "Historial")}</strong></div>
-        <div><span>Registros en página</span><strong>{actions.length}</strong></div>
+        <div><span>{view === "needs_approval" ? "Pendientes visibles" : "Vista actual"}</span><strong>{loadError || loading ? "—" : selectedId ? "Individual" : pendingCount ?? (view === "approved" ? "Aprobadas" : "Historial")}</strong></div>
+        <div><span>Registros en página</span><strong>{loadError || loading ? "—" : actions.length}</strong></div>
         <div><span>Modo</span><strong>Owner Gate</strong></div>
       </div>
 
@@ -236,8 +273,8 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
             key={key}
             type="button"
             aria-pressed={view === key}
-            disabled={loading}
-            onClick={() => { setView(key); setPage(0); setMessage(""); }}
+            disabled={loading || Boolean(busyId)}
+            onClick={() => { if (key === view && !selectedId && page === 0) return; setSelectedId(undefined); setView(key); setPage(0); setActions([]); setLoading(true); setReviewId(null); setMessage(""); }}
             className={`min-h-11 rounded-xl border px-4 text-sm font-semibold transition ${view === key
               ? "border-sky-300/35 bg-sky-400/10 text-sky-100"
               : "border-white/10 text-slate-400 hover:bg-white/[0.05]"}`}
@@ -245,27 +282,28 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
         ))}
       </div>
 
-      {message ? <p className="hko-approval-message">{message}</p> : null}
+      {message ? <p className="hko-approval-message" role="status">{message}</p> : null}
 
       <div className="hko-approval-list">
         {actions.length === 0 && !loading && !loadError ? (
           <article className="hko-approval-empty">
-            <h3>{view === "needs_approval" ? "Sin aprobaciones en esta página" : "Sin registros en esta página"}</h3>
+            <h3>{selectedId ? "Acción no disponible" : view === "needs_approval" ? "Sin pendientes en esta página" : "Sin registros en esta página"}</h3>
             <p>Cuando NOVA proponga cambios reales, aparecerán aquí con plan, riesgo y rollback.</p>
           </article>
         ) : null}
 
-        {actions.map((action) => {
+        {orderedActions.map((action) => {
           const plan = action.payload?.write_plan;
           const isPending = action.status === "needs_approval";
+          const guidedReview = action.tool_key === "github" && action.payload?.materializer_version === "12.7K-2A" && ["github.create_branch", "github.upsert_file", "github.create_pr"].includes(action.action_type);
           const isApproved = action.status === "approved";
-          const isBusy = busyId === action.id;
+          const isBusy = loading || Boolean(busyId);
 
           return (
-            <article key={action.id} className="hko-approval-card">
+            <article key={action.id} id={"action-" + action.id} className="hko-approval-card">
               <div className="hko-approval-card-top">
                 <div>
-                  <p className="hko-approval-meta">{action.agi_id} · {action.tool_key || "tool"} · {action.action_type}</p>
+                  <p className="hko-approval-meta">{Number.isInteger(action.payload?.sequence_index) ? "Paso " + (Number(action.payload?.sequence_index) + 1) + " · " : ""}{action.agi_id} · {action.tool_key || "Acción"}</p>
                   <h3>{action.title}</h3>
                 </div>
                 <div className="hko-approval-badges">
@@ -275,30 +313,45 @@ export default function OwnerApprovalCenter({ projectId }: { projectId: string }
               </div>
 
               <div className="hko-approval-grid">
-                <div><span>Repo</span><strong>{plan?.repository || "No definido"}</strong></div>
+                <div><span>Repositorio</span><strong>{plan?.repository || "No definido"}</strong></div>
                 <div><span>Rama</span><strong>{plan?.target_branch || "No aplica"}</strong></div>
-                <div><span>Path</span><strong>{plan?.path || "No aplica"}</strong></div>
+                <div><span>Archivo</span><strong>{plan?.path || "No aplica"}</strong></div>
               </div>
 
-              {plan?.next_step ? <p className="hko-approval-next">{plan.next_step}</p> : null}
+              <details className="mt-4 rounded-xl border border-slate-700 p-3">
+                <summary className="cursor-pointer py-1 text-sm font-semibold text-sky-200">Detalles y evidencia</summary>
+                <div className="mt-3 space-y-2 text-sm text-slate-300">
+                  <p className="break-all">ID: {action.id}</p>
+                  <p>Operación: {action.action_type}</p>
+                  {action.payload?.expected_base_sha ? <p className="break-all">SHA de origen: {action.payload.expected_base_sha}</p> : null}
+                  {action.payload?.expected_sha ? <p className="break-all">SHA del archivo: {action.payload.expected_sha}</p> : null}
+                  {plan?.content_preview?.bytes ? <p>Contenido propuesto: {plan.content_preview.bytes} bytes · {plan.content_preview.lines ?? "—"} líneas</p> : null}
+                  {plan?.steps?.length ? <ul className="list-disc space-y-1 pl-5">{plan.steps.map((step, index) => <li key={index}>{step}</li>)}</ul> : null}
+                  {plan?.rollback_plan?.steps?.length ? <div><strong>Reversión</strong><ul className="list-disc space-y-1 pl-5">{plan.rollback_plan.steps.map((step, index) => <li key={index}>{step}</li>)}</ul></div> : null}
+                  {plan?.next_step ? <p>{plan.next_step}</p> : null}
+                </div>
+              </details>
               {action.execution_error ? <p className="hko-approval-error">{action.execution_error}</p> : null}
 
               <div className="hko-approval-actions">
-                <button type="button" disabled={!isPending || isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "approve", note: "Aprobado desde Owner Approval Center." })}>Aprobar</button>
-                <button type="button" disabled={!isPending || isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "reject", note: "Rechazado desde Owner Approval Center." })}>Rechazar</button>
-                <button type="button" disabled={!isApproved || isBusy} onClick={() => void mutate("/api/agi/runtime/actions/execute", { action_id: action.id })}>Ejecutar aprobada</button>
+                {isPending ? <button type="button" disabled={isBusy || (previewReadOnly && !guidedReview)} onClick={() => guidedReview ? setInlineReviewId(action.id) : setReviewId(reviewId === action.id ? null : action.id)}>{previewReadOnly && guidedReview ? "Revisar acción" : "Revisar y aprobar"}</button> : null}
+                {isPending && !previewReadOnly ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "reject", note: "Rechazado desde Owner Approval Center." })}>Rechazar</button> : null}
+                {isApproved && !previewReadOnly ? <button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/execute", { action_id: action.id })}>Ejecutar acción aprobada</button> : null}
               </div>
+              {isPending && !previewReadOnly && reviewId === action.id ? <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/5 p-4"><p className="text-sm text-slate-100">Confirma solo después de revisar el alcance, riesgo y detalles. La aprobación requiere MFA y no ejecuta el cambio.</p><div className="hko-approval-actions"><button type="button" disabled={isBusy} onClick={() => void mutate("/api/agi/runtime/actions/decision", { action_id: action.id, decision: "approve", note: "Aprobado desde Owner Approval Center tras revisión explícita." })}>Confirmar aprobación</button><button type="button" disabled={isBusy} onClick={() => setReviewId(null)}>Volver</button></div></div> : null}
             </article>
           );
         })}
       </div>
-      <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginación de acciones">
-        <button type="button" disabled={loading || page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}
+      {previewReadOnly ? <p role="status" className="mt-3 text-sm text-slate-300">Vista de evaluación: las decisiones y ejecuciones están deshabilitadas.</p> : null}
+      {inlineReviewId ? <OwnerInlineActionReview projectId={projectId} actionId={inlineReviewId} onClose={() => setInlineReviewId(null)} onApproved={() => void load()} /> : null}
+      {!selectedId ? <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginación de acciones">
+        <button type="button" disabled={loading || Boolean(busyId) || page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}
           className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Anterior</button>
         <span className="text-xs text-slate-400">Página {page + 1} · {view === "needs_approval" ? "Pendientes" : view === "approved" ? "Aprobadas" : "Historial"}</span>
-        <button type="button" disabled={loading || !hasNext} onClick={() => setPage((value) => value + 1)}
+        <button type="button" disabled={loading || Boolean(busyId) || !hasNext} onClick={() => setPage((value) => value + 1)}
           className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Siguiente</button>
-      </nav>
+      </nav> : null}
     </section>
   );
 }

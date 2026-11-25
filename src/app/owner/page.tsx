@@ -1,160 +1,78 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowUpRight, Brain, Network, ShieldCheck, Workflow } from "lucide-react";
-
 import "@/styles/owner-unified.css";
-
-import { getHockerLivePulseSummary } from "@/lib/hocker-live-pulse-summary";
-import { getHockerLiveSummary } from "@/lib/hocker-live-summary";
-import { getHockerOperationalSnapshot } from "@/lib/hocker-operational-state";
-import type { AgiRuntimeSummaryLike } from "@/types/agi-runtime-summary";
-
-import OwnerUnifiedStatus from "@/components/owner/OwnerUnifiedStatus";
+import { getOwnerHomeEvidence } from "@/lib/owner-home-evidence";
+import { getVerifiedAgiRuntimeSummary } from "@/lib/verified-agi-runtime";
+import OwnerUnifiedStatus, { OwnerHomeActivity } from "@/components/owner/OwnerUnifiedStatus";
 import OwnerProviderMirror from "@/components/owner/OwnerProviderMirror";
 import OwnerUnifiedApprovals from "@/components/owner/OwnerUnifiedApprovals";
 import OwnerUnifiedTools from "@/components/owner/OwnerUnifiedTools";
+import RefreshDataButton from "@/components/RefreshDataButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
 export const metadata: Metadata = {
-  title: "Inicio | Hocker ONE",
-  description: "Centro privado de control del ecosistema HOCKER.",
-  robots: {
-    index: false,
-    follow: false,
-    noarchive: true,
-    nosnippet: true,
-    noimageindex: true,
-  },
+  title: "Inicio | Hocker ONE", description: "Centro privado de control del ecosistema HOCKER.",
+  robots: { index: false, follow: false, noarchive: true, nosnippet: true, noimageindex: true },
 };
-
 const QUICK_LINKS = [
-  { href: "/owner/actions", icon: ShieldCheck, title: "Aprobaciones", text: "Revisar decisiones con MFA Owner" },
-  { href: "/owner/context-bridge", icon: Network, title: "Continuidad", text: "Context Bridge y fuentes verificadas" },
-  { href: "/agis", icon: Brain, title: "AGIs", text: "Perfiles y capacidades con evidencia" },
-  { href: "/integrations", icon: Workflow, title: "Conexiones", text: "Integraciones configuradas frente a verificadas" },
+  { href: "/owner/context-bridge", icon: Network, title: "Continuidad", text: "Fuentes y contexto" },
+  { href: "/agis", icon: Brain, title: "AGIs", text: "Perfiles y capacidades" },
+  { href: "/apps", icon: Workflow, title: "Aplicaciones", text: "Productos del ecosistema" },
+  { href: "/integrations", icon: ShieldCheck, title: "Conexiones", text: "Servicios y permisos" },
 ];
-
-function novaLabel(status: string): string {
-  if (status === "online") return "NOVA verificada";
-  if (status === "offline") return "NOVA sin señal";
-  if (status === "configured") return "NOVA configurada";
-  return "NOVA sin verificar";
-}
 
 export default async function OwnerPage() {
   const projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
-
-  const [pulse, liveSummary, operational] = await Promise.all([
-    getHockerLivePulseSummary(),
-    getHockerLiveSummary().catch(() => null),
-    getHockerOperationalSnapshot(projectId),
-  ]);
-
-  const liveSummaryTyped = liveSummary as Awaited<ReturnType<typeof getHockerLiveSummary>> | null;
-  const runtimeTyped = operational.runtime as AgiRuntimeSummaryLike;
-  const novaService = operational.runtime.service_status.nova;
-  const pendingCount = operational.metrics.pending_actions;
-  const novaIsOnline = novaService.status === "online";
-  const supabaseAgiMetric = liveSummary?.counts.find((item) => item.table === "agis");
-
+  const evidence = await getOwnerHomeEvidence(projectId);
+  const runtime = await getVerifiedAgiRuntimeSummary(projectId, { allowProtectedReads: evidence.protectedReads });
+  const novaService = runtime.service_status.nova;
+  const pendingCount = evidence.pendingCount;
+  const preview = evidence.environment === "preview";
   return (
-    <div className="hko-uni-grid">
-      <div className="hko-uni-hero">
+    <div className="hko-uni-grid hko-home-compact">
+      <header className="hko-uni-hero">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="relative grid h-9 w-9 place-items-center rounded-xl border border-sky-300/25 bg-sky-300/10 text-sky-100">
-              <Image src="/ecosystem/apps/hocker-one/icon.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" priority />
-              <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${novaIsOnline ? "bg-emerald-400" : novaService.status === "offline" ? "bg-rose-400" : "bg-amber-400"}`} />
-            </span>
-            <h1 className="hko-uni-hero-title">
-              <span className="sr-only">Hocker ONE</span>
-              <span className="relative block h-14 w-[232px] max-w-full" aria-hidden="true">
-                <Image src="/brand/hocker-one-logo.png" alt="" fill sizes="232px"
-                  className="object-contain object-left" priority />
-              </span>
-            </h1>
-          </div>
-          <p className="hko-uni-hero-sub">
-            El estado de tu ecosistema en un vistazo: NOVA, conexiones y decisiones que necesitan atención.
-          </p>
+          <h1 className="hko-uni-hero-title">Inicio</h1>
+          <p className="hko-uni-hero-sub">Tu operación en un solo lugar.</p>
         </div>
         <div className="hko-uni-hero-pills">
-          <span className={`hko-uni-hero-pill ${novaIsOnline ? "is-live" : novaService.status === "offline" ? "is-pending" : "is-protect"}`}>
-            <span className="dot" /> {novaLabel(novaService.status)}
-          </span>
-          <span className="hko-uni-hero-pill is-protect"><span className="dot" /> Owner Gate</span>
-          {pendingCount > 0 ? (
-            <span className="hko-uni-hero-pill is-pending"><span className="dot" /> {pendingCount} por revisar</span>
-          ) : null}
+          <span className="hko-uni-hero-pill is-protect">{preview ? "Preview" : evidence.environment === "production" ? "Producción" : "Entorno sin confirmar"}</span>
+          {evidence.ownerRole && evidence.ownerMfa === true ? <span className="hko-uni-hero-pill is-live">MFA verificado</span> : evidence.ownerRole ? <Link href="/auth/mfa?returnTo=%2Fowner" className="hko-uni-hero-pill is-protect">{evidence.ownerMfa === false ? "Verificar MFA" : "MFA sin comprobar"}</Link> : null}
+          <RefreshDataButton />
         </div>
-      </div>
-
-      <OwnerProviderMirror supabase={{
-        verified: supabaseAgiMetric?.ok === true && typeof supabaseAgiMetric.count === "number",
-        agiCount: supabaseAgiMetric?.ok ? supabaseAgiMetric.count : null,
-        checkedAt: liveSummary?.generated_at ?? null,
-      }} />
-
-      <section className="hko-uni-panel hko-uni-chat" aria-labelledby="nova-entry-title">
-        <div className="hko-uni-panel-head">
-          <div>
-            <p className="hko-uni-panel-kicker">Workspace central</p>
-            <p className="hko-uni-panel-title" id="nova-entry-title">NOVA</p>
+        {preview ? <p className="w-full rounded-xl border border-sky-300/20 bg-sky-300/5 px-3 py-2 text-sm text-slate-200">Vista de evaluación. Los datos de sesión son reales; las comprobaciones protegidas se realizan en <a className="font-semibold text-sky-200 underline" href="https://hockerone.vercel.app/owner">Producción</a>.</p> : null}
+      </header>
+      <div className="hko-home-work">
+        <section className="hko-uni-panel hko-uni-chat" aria-labelledby="nova-entry-title">
+          <div className="hko-uni-panel-head">
+            <h2 className="hko-uni-panel-title" id="nova-entry-title">NOVA</h2>
+            <span className="hko-status-val info">Asistente</span>
           </div>
-          <span className={`hko-status-val ${novaIsOnline ? "ok" : novaService.status === "offline" ? "err" : "warn"}`}>
-            {novaIsOnline ? "Conectada" : novaService.status === "offline" ? "Sin señal" : "Sin verificar"}
-          </span>
-        </div>
-        <div className="hko-uni-panel-body">
-          <Link
-            href="/chat"
-            className="group flex min-h-[180px] flex-col justify-between rounded-2xl border border-sky-300/15 bg-sky-300/[0.04] p-6 transition hover:border-sky-300/35 hover:bg-sky-300/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
-          >
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-sky-200/80">Abrir workspace</p>
-              <h2 className="mt-3 text-2xl font-black tracking-tight text-white">Habla con NOVA</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Conversación inmersiva, capacidades, herramientas y acciones aprobadas viven en un solo canal.
-              </p>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-xs font-semibold text-slate-400">
-                {pendingCount > 0 ? `${pendingCount} acción${pendingCount === 1 ? "" : "es"} por revisar` : "Sin acciones pendientes"}
-              </span>
-              <span className="inline-flex items-center gap-2 text-sm font-black text-sky-200 transition-transform group-hover:translate-x-0.5">
-                Entrar <ArrowUpRight className="h-4 w-4" />
-              </span>
-            </div>
-          </Link>
-        </div>
-      </section>
-
-      <OwnerUnifiedStatus liveSummary={liveSummaryTyped} pulse={pulse} novaService={novaService} checkedAt={operational.checked_at} />
-      <OwnerUnifiedApprovals projectId={projectId} />
-      <OwnerUnifiedTools summary={runtimeTyped} />
-
-      <section className="hko-uni-panel hko-uni-quick">
-        <div className="hko-uni-panel-head" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: 0, paddingBottom: "0.85rem", marginBottom: "0.85rem" }}>
-          <div>
-            <p className="hko-uni-panel-kicker">Navegación rápida</p>
-            <p className="hko-uni-panel-title">Vistas de control y evidencia</p>
-          </div>
-        </div>
-        <div className="hko-uni-quick-grid">
-          {QUICK_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="hko-uni-quick-card">
-              <div className="hko-uni-quick-card-head">
-                <span className="hko-uni-quick-card-icon">
-                  <link.icon className="h-4 w-4" />
-                </span>
-              </div>
-              <div className="hko-uni-quick-card-title">{link.title}</div>
-              <div className="hko-uni-quick-card-text">{link.text}</div>
+          <div className="hko-uni-panel-body">
+            <Link href="/chat" className="group flex flex-col gap-4 rounded-xl border border-sky-300/20 bg-sky-300/[0.04] p-4 transition hover:border-sky-300/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70">
+              <div><h3 className="text-xl font-semibold text-white">Habla con NOVA</h3><p className="mt-1 text-sm leading-6 text-slate-300">Consulta, prepara cambios y revisa acciones.</p></div>
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-sky-200">Abrir NOVA <ArrowUpRight className="h-4 w-4" /></span>
             </Link>
-          ))}
+            <p className="mt-3 text-sm text-slate-300">Motor dedicado: {novaService.status === "online" ? "Responde" : novaService.status === "offline" ? "Sin respuesta" : "Sin verificar"}. El chat tiene su propia ruta de inferencia.</p>
+          </div>
+        </section>
+        <OwnerUnifiedApprovals projectId={projectId} enabled={evidence.protectedReads} preview={preview} initialPendingCount={pendingCount} />
+      </div>
+      <OwnerProviderMirror preview={preview} supabase={{
+        verified: evidence.nodeCount !== null || evidence.agiCount !== null,
+        agiCount: evidence.agiCount, nodeCount: evidence.nodeCount, checkedAt: evidence.checkedAt,
+      }} />
+      <div className="hko-home-operation"><OwnerUnifiedStatus evidence={evidence} novaService={novaService} /><OwnerHomeActivity evidence={evidence} /></div>
+      <OwnerUnifiedTools summary={runtime} preview={preview} sessionReadVerified={evidence.nodeCount !== null} />
+      <section className="hko-uni-panel hko-uni-quick">
+        <div className="hko-uni-panel-head"><h2 className="hko-uni-panel-title">Accesos rápidos</h2></div>
+        <div className="hko-uni-quick-grid">
+          {QUICK_LINKS.map(link => <Link key={link.href} href={link.href} className="hko-uni-quick-card">
+            <span className="hko-uni-quick-card-icon"><link.icon className="h-4 w-4" /></span>
+            <span className="hko-uni-quick-card-title">{link.title}</span><span className="hko-uni-quick-card-text">{link.text}</span>
+          </Link>)}
         </div>
       </section>
     </div>

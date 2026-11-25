@@ -83,3 +83,54 @@ body, button, input, textarea, select { font-family: var(--hko-type); }
 @media (prefers-reduced-motion:reduce) {
  .hko-login *, .hko-refined-shell * { animation:none !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
 }
+
+/* 2026-11-25: operational UI, scoped to existing private surfaces. */
+.hko-refined-shell { background: #080d15 !important; }
+.hko-refined-shell .hko-page-shell { background: none; padding: 0; }
+.hko-refined-shell .hko-page-shell::before { display: none; }
+.hko-refined-shell .hko-approval-shell { background: #0b1320; border: 1px solid #28384a; border-radius: 20px; box-shadow: none; padding: clamp(14px,2vw,24px); }
+.hko-refined-shell .hko-approval-shell::before { display: none; }
+.hko-refined-shell .hko-approval-head h2 { font-size: clamp(1.4rem,2vw,1.85rem); line-height: 1.2; font-weight: 600; letter-spacing: -.025em; }
+.hko-refined-shell .hko-approval-head p:not(.hko-kicker) { font-size: .95rem; line-height: 1.5; }
+.hko-refined-shell .hko-approval-card,.hko-refined-shell .hko-approval-empty,.hko-refined-shell .hko-approval-metrics div { background: #101a29; border: 1px solid #2b3b4d; border-radius: 14px; box-shadow: none; backdrop-filter: none; }
+.hko-refined-shell .hko-approval-card h3 { font-size: clamp(1.1rem,1.5vw,1.35rem); font-weight: 600; line-height: 1.35; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.hko-refined-shell .hko-approval-meta,.hko-refined-shell .hko-approval-grid span,.hko-refined-shell .hko-approval-metrics span { font-size: .82rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: #aebed0; }
+.hko-refined-shell .hko-approval-grid div { border-radius: 10px; background: #0b1320; border-color: #273749; }
+.hko-refined-shell .hko-approval-grid strong { font-size: .95rem; font-weight: 500; line-height: 1.4; }
+.hko-refined-shell .hko-approval-badges span { font-size: .78rem; letter-spacing: 0; text-transform: none; font-weight: 600; border-radius: 8px; }
+.hko-refined-shell .hko-approval-actions button,.hko-refined-shell .hko-approval-refresh { min-height: 44px; border-radius: 10px; font-size: .875rem; font-weight: 600; letter-spacing: 0; text-transform: none; box-shadow: none; background: #152438; }
+.hko-refined-shell .hko-approval-actions button:first-child:not(:disabled) { color: #07121a; background: #62d7ff; border-color: #62d7ff; }
+.hko-refined-shell .hko-approval-actions button:disabled { cursor: not-allowed; }
+.hko-refined-shell .hko-approval-card-top > div:first-child { min-width: 0; }
+.hko-refined-shell .hko-approval-card { scroll-margin-top: 90px; }
+.hko-login { background: radial-gradient(ellipse at 18% 30%,rgba(98,215,255,.10),transparent 42%), #080d15; }
+@media (min-width: 960px) {
+ .hko-login-center { width: min(100%, 1050px); display: grid; grid-template-columns: minmax(0,1.12fr) minmax(0,.88fr); gap: clamp(36px,7vw,100px); align-items: center; }
+ .hko-login-intro { margin-bottom: 0; }
+ .hko-login-intro h1 { font-size: clamp(2.9rem,4.5vw,4.15rem); }
+}
+@media (max-width: 720px) {
+ .hko-refined-shell .hko-approval-grid { grid-template-columns: minmax(0,1fr); }
+ .hko-refined-shell .hko-approval-card-top { flex-direction: column; align-items: stretch; }
+ .hko-refined-shell .hko-approval-badges { justify-content: flex-start; }
+}
+
+/* Unify legacy module surfaces without changing their layout contracts. */
+.hko-refined-shell .hko-module-card,
+.hko-refined-shell .hocker-panel-pro,
+.hko-refined-shell .hko-page-card {
+  border: 1px solid #29394b;
+  border-radius: 16px;
+  background: #101a29;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.hko-refined-shell .hko-kicker { font-size: .8rem; font-weight: 600; letter-spacing: .01em; text-transform: none; color: #91ddfa; }
+.hko-refined-shell .hko-mini-stat { background: #0b1320; border-radius: 12px; border-color: #29394b; }
+.hko-refined-shell .hko-mini-stat span { font-size: .85rem; letter-spacing: 0; text-transform: none; color: #b7c4d4; }
+.hko-refined-shell .hko-action-primary,.hko-refined-shell .hko-action-secondary { min-height: 44px; border-radius: 10px; font-size: .875rem; font-weight: 600; letter-spacing: 0; text-transform: none; box-shadow: none; }
+.hko-refined-shell .hko-action-primary:not(:disabled) { background: #62d7ff; color: #07121a; border-color: #62d7ff; }
+.hko-refined-shell .hko-action-secondary { background: #152438; color: #e3edf7; border-color: #35465b; }
+.hko-refined-shell .hko-owner-actions-page { width: 100%; max-width: 1450px; margin-inline: auto; }
+.hko-refined-shell .hko-approval-card strong { overflow-wrap: anywhere; }
+.hko-refined-shell .hko-approval-shell section[aria-label] { margin-bottom: 12px; }

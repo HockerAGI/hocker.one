@@ -18,7 +18,7 @@ export function HockerOwnerLoginSurface() {
           <div className="hko-login-intro">
             <p className="hko-login-overline">HOCKER ONE <span aria-hidden="true">/</span> Tu espacio</p>
             <h1 id="hko-login-title">Bienvenido a <span>tu espacio.</span></h1>
-            <p>Una entrada. Tu ecosistema conectado. NOVA y las decisiones importantes, sin distracciones.</p>
+            <p>Accede a NOVA, tus aplicaciones y decisiones importantes.</p>
           </div>
           <AuthBox className="hko-auth-card" />
         </section>

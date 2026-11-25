@@ -124,7 +124,8 @@ function newestDate(...values: Array<string | null | undefined>): string | null 
 function isFresh(value: string | null, maxAgeMs: number): boolean {
   if (!value) return false;
   const time = new Date(value).getTime();
-  return Number.isFinite(time) && Date.now() - time <= maxAgeMs;
+  const age = Date.now() - time;
+  return Number.isFinite(time) && age >= 0 && age <= maxAgeMs;
 }
 
 function isSuccessfulRun(status: string | null): boolean {
@@ -212,6 +213,7 @@ async function loadOperationalData(projectId: string): Promise<OperationalData> 
     }
 
     const databaseOk =
+      typeof actionsRes.count === "number" && typeof runs24hRes.count === "number" &&
       !agentsRes.error &&
       !nodesRes.error &&
       !actionsRes.error &&
@@ -259,10 +261,10 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
       ? newestDate(latestRun.finished_at, latestRun.started_at, latestRun.created_at)
       : null;
 
-    let status: OperationalStatus = registry ? "configured" : "not_created";
+    let status: OperationalStatus = registry ? "configured" : databaseOk ? "not_created" : "unknown";
     let evidence = registry
       ? "Perfil registrado; no hay ejecución reciente que pruebe un worker activo."
-      : "No existe un worker verificable registrado para este perfil.";
+      : databaseOk ? "No hay un perfil registrado en la consulta." : "Registro de AGI sin verificar.";
 
     if (key === "nova") {
       const primaryNovaFresh = Boolean(latestRun && isFresh(lastActivityAt, AGI_RUNTIME_FRESH_MS));
@@ -380,9 +382,9 @@ export async function getHockerOperationalSnapshot(projectId = "hocker-one"): Pr
       key,
       title,
       kind: "application",
-      status: "not_created",
-      summary,
-      evidence: "Concepto documentado sin repositorio, despliegue ni health check operativo verificado.",
+      status: "planned",
+      summary: "Concepto del catálogo; desarrollo no comprobado desde esta vista.",
+      evidence: `Catálogo documentado (${summary}). No se verificó en vivo la existencia de repositorio o deployment.`,
       href: null,
       repository: null,
       last_activity_at: null,

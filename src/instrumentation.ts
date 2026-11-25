@@ -16,17 +16,7 @@ export async function register() {
     const shutdown = async (signal: string) => {
       log.info(`Received ${signal}. Starting graceful shutdown…`);
 
-      // Flush Langfuse if configured
-      try {
-        const { getLangfuse } = await import("@/lib/langfuse-safe");
-        const langfuse = getLangfuse();
-        if (langfuse) {
-          await langfuse.flushAsync();
-          log.info("Langfuse flushed successfully");
-        }
-      } catch {
-        // Langfuse flush failure is non-critical
-      }
+      // Operational traces are exported in each request's finally block.
 
       log.info("Graceful shutdown complete");
     };

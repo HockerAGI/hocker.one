@@ -15,17 +15,20 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true, nosnippet: true },
 };
 
-export default async function OwnerActionsPage() {
+export default async function OwnerActionsPage({ searchParams }: { searchParams: Promise<{ action_id?: string | string[] }> }) {
   const projectId = process.env.NEXT_PUBLIC_HOCKER_PROJECT_ID || "hocker-one";
   // Server-side Owner membership + real Supabase MFA assurance; never an
   // optimistic client flag. Existing API authorization remains in force.
-  await requireOwnerAal2Page("/owner/actions", projectId);
+  const params = await searchParams;
+  const actionId = typeof params.action_id === "string" && /^[0-9a-f-]{36}$/i.test(params.action_id) ? params.action_id : undefined;
+  if (actionId) await requireOwnerAal2Page(`/owner/actions?action_id=${encodeURIComponent(actionId)}`, projectId);
+  else await requireOwnerAal2Page("/owner/actions", projectId);
 
   return (
     <PageShell
-      eyebrow="Trabajo · Owner Gate"
+      eyebrow="Trabajo"
       title="Aprobaciones"
-      description="Revisa el alcance, riesgo y plan de cada acción antes de autorizarla. NOVA no ejecuta cambios sensibles desde el chat."
+      description="Revisa y autoriza cambios. Aprobar no ejecuta la acción."
       compact
       className="hko-owner-actions-page"
       actions={
@@ -47,7 +50,7 @@ export default async function OwnerActionsPage() {
             Ninguna acción se aprueba automáticamente por abrir esta pantalla.
           </p>
         </details>
-        <OwnerApprovalCenter projectId={projectId} />
+        <OwnerApprovalCenter projectId={projectId} initialActionId={actionId} key={actionId ?? "all"} previewReadOnly={process.env.VERCEL_ENV === "preview"} />
       </div>
     </PageShell>
   );

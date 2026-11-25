@@ -81,7 +81,7 @@ function resolveCoreArea(item: OperationsCatalogItem, snapshot: OperationalSnaps
     return {
       ...item,
       status: snapshot.metrics.fresh_nodes > 0 ? "operational" : "limited",
-      internalTruth: snapshot.metrics.fresh_nodes > 0
+      internalTruth: snapshot.source !== "supabase+health" ? "Señales de nodos sin verificar." : snapshot.metrics.fresh_nodes > 0
         ? `${snapshot.metrics.fresh_nodes} nodo(s) reportaron señal durante los últimos cinco minutos.`
         : "No hay nodos con heartbeat dentro de los últimos cinco minutos.",
     };
@@ -91,7 +91,7 @@ function resolveCoreArea(item: OperationsCatalogItem, snapshot: OperationalSnaps
     return {
       ...item,
       status: snapshot.runtime.schema_ready && snapshot.metrics.runs_24h > 0 ? "operational" : "limited",
-      internalTruth: snapshot.runtime.schema_ready
+      internalTruth: snapshot.runtime.schema_ready && snapshot.source === "supabase+health"
         ? `${snapshot.metrics.runs_24h} ejecución(es) registradas durante las últimas 24 horas.`
         : "El esquema de workers no pudo verificarse completamente.",
     };
@@ -111,7 +111,7 @@ function resolveCoreArea(item: OperationsCatalogItem, snapshot: OperationalSnaps
     return {
       ...item,
       status: snapshot.runtime.schema_ready ? "operational" : "limited",
-      internalTruth: snapshot.runtime.schema_ready
+      internalTruth: snapshot.runtime.schema_ready && snapshot.source === "supabase+health"
         ? `${snapshot.metrics.pending_actions} acción(es) pendientes de revisión o ejecución.`
         : "La lectura del esquema de acciones no quedó completamente verificada.",
     };

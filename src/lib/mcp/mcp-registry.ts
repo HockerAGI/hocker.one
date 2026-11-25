@@ -96,9 +96,7 @@ class McpBase44Connector {
       this.state.lastError = "BASE44_API_KEY not configured";
       throw new Error("BASE44_API_KEY not configured");
     }
-    this.state.status = "connected";
-    this.state.lastError = null;
-    this.state.lastPingAt = new Date().toISOString();
+    if (!(await this.ping())) throw new Error("BASE44_READ_PROBE_UNAVAILABLE");
     return {
       capabilities: this.state.capabilities,
       version: this.state.version ?? "base44-mcp-v1.0.0",
@@ -111,7 +109,17 @@ class McpBase44Connector {
   }
 
   async ping(): Promise<boolean> {
-    return isBase44McpConfigured();
+    if (!isBase44McpConfigured()) return false;
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/apps`, { headers: { Authorization: `Bearer ${this.apiKey}`, Accept: "application/json" }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5000) });
+      const data: unknown = await response.json();
+      if (!response.ok || !(Array.isArray(data) || (data && typeof data === "object" && "apps" in data && Array.isArray(data.apps)))) throw new Error("BASE44_READ_PROBE_UNAVAILABLE");
+      this.state.status = "connected"; this.state.lastError = null; this.state.lastPingAt = new Date().toISOString();
+      return true;
+    } catch {
+      this.state.status = "disconnected"; this.state.lastError = "No se pudo verificar la lectura de aplicaciones."; this.state.lastPingAt = null;
+      return false;
+    }
   }
 
   disconnect(): void {
@@ -409,7 +417,7 @@ class McpRegistrySingleton {
         name: this.getProviderName(id),
         type: entry.type,
         configured: entry.configured,
-        connected: state.status === "connected",
+        connected: state.status === "connected" && Boolean(state.lastPingAt && Date.now() - Date.parse(state.lastPingAt) >= 0 && Date.now() - Date.parse(state.lastPingAt) <= 10 * 60 * 1000),
         capabilities: state.capabilities,
         toolCount: this.tools.get(id)?.length ?? 0,
         lastPingAt: state.lastPingAt,

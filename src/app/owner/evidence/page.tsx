@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import RefreshDataButton from "@/components/RefreshDataButton";
 import Link from "next/link";
-import { FileCheck2, RefreshCw, ShieldCheck } from "lucide-react";
+import { FileCheck2, ShieldCheck } from "lucide-react";
 
 import HockerPageHeader from "@/components/ui-hocker/HockerPageHeader";
 import { createAdminSupabase } from "@/lib/supabase-admin";
@@ -141,23 +142,23 @@ export default async function OwnerEvidencePage() {
             <p className="mt-1 text-xs text-slate-500">Fuente: tablas `audit_logs`, `audit_chain`, `agi_runs` y `events`.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/owner/evidence" className="hko-action-secondary inline-flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Actualizar</Link>
-            <Link href="/commands" className="hko-action-primary">Ver aprobaciones</Link>
+            <RefreshDataButton />
+            <Link href="/owner/actions" className="hko-action-primary">Ver aprobaciones</Link>
           </div>
         </div>
       </section>
 
       {!evidence.ok ? (
         <section className="rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4 text-sm text-rose-100">
-          La evidencia no pudo verificarse. Los contadores se muestran en cero y no deben interpretarse como ausencia confirmada. {evidence.error}
+          La evidencia no pudo verificarse. Los contadores sin verificar se muestran como —. {evidence.error}
         </section>
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="hko-mini-stat"><span>Audit logs</span><strong>{evidence.counts.auditLogs}</strong></article>
-        <article className="hko-mini-stat"><span>Cadena de auditoría</span><strong>{evidence.counts.auditChain}</strong></article>
-        <article className="hko-mini-stat"><span>Runs AGI</span><strong>{evidence.counts.runs}</strong></article>
-        <article className="hko-mini-stat"><span>Eventos</span><strong>{evidence.counts.events}</strong></article>
+        <article className="hko-mini-stat"><span>Auditorías</span><strong>{evidence.ok ? evidence.counts.auditLogs : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Cadena de auditoría</span><strong>{evidence.ok ? evidence.counts.auditChain : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Ejecuciones AGI</span><strong>{evidence.ok ? evidence.counts.runs : "—"}</strong></article>
+        <article className="hko-mini-stat"><span>Eventos</span><strong>{evidence.ok ? evidence.counts.events : "—"}</strong></article>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -173,12 +174,12 @@ export default async function OwnerEvidencePage() {
                 <p className="mt-2 text-xs text-slate-500">{formatDate(row.created_at)} · hash {shortHash(row.row_hash)}</p>
               </div>
             ))}
-            {evidence.auditLogs.length === 0 ? <p className="text-sm text-slate-500">Sin registros de auditoría disponibles.</p> : null}
+            {evidence.auditLogs.length === 0 ? <p className="text-sm text-slate-400">{evidence.ok ? "Sin registros de auditoría disponibles." : "Consulta sin verificar."}</p> : null}
           </div>
         </article>
 
         <article className="hko-map-panel">
-          <div className="mb-4 flex items-center gap-3"><FileCheck2 className="h-5 w-5 text-cyan-200" /><h2 className="text-lg font-black text-white">Runs recientes</h2></div>
+          <div className="mb-4 flex items-center gap-3"><FileCheck2 className="h-5 w-5 text-cyan-200" /><h2 className="text-lg font-black text-white">Ejecuciones recientes</h2></div>
           <div className="space-y-3">
             {evidence.runs.map((run) => (
               <div key={run.id} className="rounded-2xl border border-white/8 bg-slate-950/40 p-4">
@@ -190,7 +191,7 @@ export default async function OwnerEvidencePage() {
                 <p className="mt-1 text-xs text-slate-600">Trace: {shortHash(run.trace_id)} · result: {shortHash(run.result_hash)}</p>
               </div>
             ))}
-            {evidence.runs.length === 0 ? <p className="text-sm text-slate-500">Sin runs disponibles.</p> : null}
+            {evidence.runs.length === 0 ? <p className="text-sm text-slate-400">{evidence.ok ? "Sin ejecuciones disponibles." : "Consulta sin verificar."}</p> : null}
           </div>
         </article>
       </section>
@@ -208,7 +209,7 @@ export default async function OwnerEvidencePage() {
               <p className="mt-2 text-xs text-slate-600">{formatDate(event.created_at)}</p>
             </article>
           ))}
-          {evidence.events.length === 0 ? <p className="text-sm text-slate-500">Sin eventos disponibles.</p> : null}
+          {evidence.events.length === 0 ? <p className="text-sm text-slate-400">{evidence.ok ? "Sin eventos disponibles." : "Consulta sin verificar."}</p> : null}
         </div>
       </section>
     </div>

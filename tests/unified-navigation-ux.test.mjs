@@ -98,7 +98,8 @@ test("official verified repository assets are used as wordmark and isotype", asy
   ]);
   assert.match(sidebar, /src="\/ecosystem\/apps\/hocker-one\/logo\.png"/);
   assert.match(topbar, /src="\/ecosystem\/apps\/hocker-one\/icon\.png"/);
-  assert.match(home, /src="\/ecosystem\/apps\/hocker-one\/icon\.png"/);
+  assert.match(home, /<h1 className="hko-uni-hero-title">Inicio<\/h1>/);
+  assert.doesNotMatch(home, /src="\/ecosystem\/apps\/hocker-one\/(icon|logo)\.png"/);
   assert.doesNotMatch(sidebar, /src="\/brand\/hocker-one-logo\.png"/);
   assert.equal(manifest["hocker-one"].logo.dest, "ecosystem/apps/hocker-one/logo.png");
   assert.equal(manifest["hocker-one"].icon.dest, "ecosystem/apps/hocker-one/icon.png");
