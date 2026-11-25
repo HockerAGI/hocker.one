@@ -245,6 +245,10 @@ Commit: `feat(storage): define HKR persistence boundary`
 
 ---
 
+### Dependency checkpoint — re-query before locking
+
+Evidence cut 2026-11-24/25 UTC boundary: official MCP TypeScript SDK latest observed is `@modelcontextprotocol/server@2.4.0`; its release pairs `@modelcontextprotocol/node@2.1.2`. Stable TypeScript observed is `7.0.2`. These are research checkpoints, not perpetual pins: re-query official package/release sources immediately before generating the production lockfile, then lock exact reviewed versions.
+
 ### Task 6: Standards-compliant MCP server
 
 **Files:**
