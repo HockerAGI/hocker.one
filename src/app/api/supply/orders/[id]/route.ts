@@ -77,7 +77,7 @@ export async function GET(
     });
     return json(ex.payload, ex.status);
   } finally {
-    await langfuse.flushAsync();
+    await trace.flushAsync();
   }
 }
 
@@ -172,6 +172,6 @@ export async function PATCH(
     });
     return json(ex.payload, ex.status);
   } finally {
-    await langfuse.flushAsync();
+    await trace.flushAsync();
   }
 }

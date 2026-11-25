@@ -48,7 +48,7 @@ function statusClass(status: OperationalStatus) {
   return "is-missing";
 }
 
-function CoreMetric({ label, value, text, tone }: { label: string; value: number; text: string; tone: string }) {
+function CoreMetric({ label, value, text, tone }: { label: string; value: number | string; text: string; tone: string }) {
   return (
     <article className={`hko-final-map-metric is-${tone}`}>
       <span>{label}</span>
@@ -65,8 +65,8 @@ export default async function EcosystemVfxNetwork({ summary }: { summary: Hocker
   const visibleProfiles = AGI_REGISTRY.slice(0, 16);
   const verifiedWorkers = operational.agis.filter((agi) => agi.status === "online").length;
   const historicalWorkers = operational.agis.filter((agi) => agi.status === "stale").length;
-  const createdApps = operational.apps.filter((app) => app.status !== "not_created").length;
-  const notCreatedApps = operational.apps.filter((app) => app.status === "not_created").length;
+  const createdApps = operational.apps.filter((app) => !["not_created", "planned", "unknown"].includes(app.status)).length;
+  const notCreatedApps = operational.apps.filter((app) => ["planned", "not_created", "unknown"].includes(app.status)).length;
 
   return (
     <section className="hko-final-map" aria-labelledby="final-map-title">
@@ -153,7 +153,7 @@ export default async function EcosystemVfxNetwork({ summary }: { summary: Hocker
             <Network className="h-5 w-5" />
             <div>
               <span>Aplicaciones y módulos</span>
-              <strong>{createdApps} existentes · {notCreatedApps} no creados</strong>
+              <strong>{createdApps} con estado documentado · {notCreatedApps} sin desarrollo verificado</strong>
             </div>
           </div>
           <p>Hocker Hub, Hocker Ads y otros conceptos permanecen identificados como no creados hasta tener repositorio y runtime verificable.</p>

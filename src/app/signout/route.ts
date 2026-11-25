@@ -54,6 +54,6 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     return NextResponse.redirect(new URL("/", req.url), { status: 302 });
   } finally {
-    await langfuse.flushAsync();
+    await trace.flushAsync();
   }
 }

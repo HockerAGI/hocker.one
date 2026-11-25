@@ -78,7 +78,7 @@ export async function GET(req: Request): Promise<Response> {
     });
     return json(apiErr.payload, apiErr.status);
   } finally {
-    await langfuse.flushAsync();
+    await trace.flushAsync();
   }
 }
 
@@ -141,6 +141,6 @@ export async function POST(req: Request): Promise<Response> {
     });
     return json(apiErr.payload, apiErr.status);
   } finally {
-    await langfuse.flushAsync();
+    await trace.flushAsync();
   }
 }
